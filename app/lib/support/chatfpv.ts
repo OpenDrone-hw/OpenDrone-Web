@@ -414,6 +414,7 @@ function parseDraft(raw: unknown): DraftResponse | null {
     citations,
     confidence: confidenceOf(r.confidence),
     note: typeof r.note === 'string' ? r.note.replace(/\s+/g, ' ').trim().slice(0, 300) : '',
+    ...(r.route === 'community' || r.route === 'team' ? {route: r.route} : {}),
   };
 }
 

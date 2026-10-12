@@ -58,6 +58,14 @@ SUPPORT_EMAIL_NOTIFY_ENABLED = "1"
 # Gmail draft for each customer mail; a person sends it. "0" off, "dry" reports
 # counts only, "1" on. Needs the founder's go; the Gmail credentials are Worker secrets.
 SUPPORT_MAIL_INTAKE_ENABLED = "dry"
+
+# Support CRM (README "Support tickets"): the staff API under /api/staff/support
+# for the internal app, and the community route to the public #help forum.
+# "0" off; each needs the founder's go. SUPPORT_STAFF_API_TOKEN is a Worker
+# secret. The community route also needs DISCORD_HELP_CHANNEL_ID and the
+# wording marked TODO-LEGAL in app/lib/support/community.ts approved.
+SUPPORT_CRM_API = "0"
+SUPPORT_COMMUNITY_ROUTE = "0"
 # ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
 # /support Ask box and the product/preorder widget. "1" turns each on.
 # CHATFPV_KEY is a Worker secret.
@@ -95,3 +103,10 @@ migrations_dir = "migrations"
 [[services]]
 binding = "CHATFPV"
 service = "chatfpv"
+
+# Ticket attachments of the CRM (README "Support tickets"). Declare this binding
+# only after the bucket exists, or the deploy fails:
+#   npx wrangler r2 bucket create opendrone-support-files
+# [[r2_buckets]]
+# binding = "SUPPORT_FILES"
+# bucket_name = "opendrone-support-files"

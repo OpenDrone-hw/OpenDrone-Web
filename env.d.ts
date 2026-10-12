@@ -56,6 +56,19 @@ declare global {
     batch(statements: D1PreparedStatement[]): Promise<D1Result[]>;
   }
 
+  // Minimal R2 shape (the ticket attachment bucket, `SUPPORT_FILES`).
+  interface R2ObjectBody {
+    body: ReadableStream;
+    size: number;
+    httpMetadata?: {contentType?: string};
+  }
+  interface R2Bucket {
+    put(key: string, value: ArrayBuffer | Uint8Array, options?: {httpMetadata?: {contentType?: string}}): Promise<unknown>;
+    get(key: string): Promise<R2ObjectBody | null>;
+    delete(keys: string | string[]): Promise<void>;
+    list(options?: {prefix?: string; limit?: number; cursor?: string}): Promise<{objects: Array<{key: string}>; truncated: boolean; cursor?: string}>;
+  }
+
   // Cloudflare Workers Rate Limiting binding (wrangler.toml
   // `[[ratelimits]]`), declared minimally like KVNamespace above.
   interface RateLimit {
@@ -168,6 +181,19 @@ declare global {
     SUPPORT_SESSION_SECRET?: string;
     // Bearer token for POST /api/support/cleanup.
     SUPPORT_CLEANUP_SECRET?: string;
+    // Support CRM (app/lib/support/crm.ts, README "Support tickets"). Both
+    // flags are [vars], "1" on, off by default. SUPPORT_FILES is the R2
+    // bucket for attachments (declared in the wrangler files once it exists).
+    // The token and the Access settings are Worker secrets.
+    SUPPORT_CRM_API?: string;
+    SUPPORT_COMMUNITY_ROUTE?: string;
+    SUPPORT_FILES?: R2Bucket;
+    SUPPORT_STAFF_API_TOKEN?: string;
+    SUPPORT_STAFF_ACCESS_TEAM_DOMAIN?: string;
+    SUPPORT_STAFF_ACCESS_AUD?: string;
+    SUPPORT_STAFF_ACCESS_CLIENT_ID?: string;
+    // Forum channel (public #help) that community questions are posted to.
+    DISCORD_HELP_CHANNEL_ID?: string;
     // '1' emails "you have a new reply" (no content) through Resend.
     // Anything else sends nothing; turning it on needs the founder's go.
     SUPPORT_EMAIL_NOTIFY_ENABLED?: string;

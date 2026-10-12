@@ -105,7 +105,8 @@ function Message({m}: {m: PublicMessage}) {
       <div className="sp-msg-head">
         <span className="sp-msg-author">
           {mine ? t('you') : m.author}
-          {mine ? null : <span className="sp-msg-team-label"> · {t('team')}</span>}
+          {mine ? null : <span className="sp-msg-team-label"> · {m.role === 'community' ? t('community_label') : t('team')}</span>}
+          {m.answer ? <span className="sp-msg-team-label"> · {t('community_answer')}</span> : null}
         </span>
         <Stamp at={m.at} />
       </div>

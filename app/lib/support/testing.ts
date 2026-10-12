@@ -73,6 +73,7 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
   const threads = new Map<string, FakeThread>();
   const channelPosts: Array<{channel: string; content: string; id: string; deleted: boolean}> = [];
   const reactions: Array<{thread: string; message: string; emoji: string}> = [];
+  const forumPosts: Array<{channel: string; id: string}> = [];
   const reactorMap = new Map<string, string[]>();
   let roleMembers: string[] = [];
   const botUsers = new Set<string>();
@@ -104,6 +105,15 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
       threads.set(id, {id, name, archived: false, locked: false, deleted: false, messages: []});
       add(id, card, bot);
       return id;
+    },
+    async createForumPostIn(channel, {name, content}) {
+      if (opts.failCreate) throw new Error('discord createForumPost 500');
+      const id = nextSnowflake();
+      threads.set(id, {id, name, archived: false, locked: false, deleted: false, messages: []});
+      forumPosts.push({channel, id});
+      const first = add(id, content, bot);
+      first.id = id;
+      return {threadId: id, messageId: id};
     },
     async post(threadId, content, files = []) {
       return add(threadId, content, bot, files).id;
@@ -162,10 +172,15 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
     client,
     threads,
     channelPosts,
+    forumPosts,
     reactions,
     lookups,
     /** A staff member writes in a thread. */
     staff(threadId: string, content: string, who = {id: 'u1', username: 'jan', globalName: 'Jan Peeters'}) {
+      return add(threadId, content, {...who, bot: false});
+    },
+    /** A community member answers in a forum post. */
+    member(threadId: string, content: string, who = {id: 'm1', username: 'builder', globalName: 'Some Builder'}) {
       return add(threadId, content, {...who, bot: false});
     },
     /** A staff member edits or deletes a message already in the thread. */
@@ -291,4 +306,25 @@ export function fakeChatFpv(opts: {
     },
   };
   return {client, drafts, outcomes, asks, streamAsks, state};
+}
+
+/** An in-memory R2 bucket (the calls files.ts makes). */
+export function fakeR2() {
+  const objects = new Map<string, {data: Uint8Array; type?: string}>();
+  const bucket: R2Bucket = {
+    async put(key, value, options) {
+      objects.set(key, {data: new Uint8Array(value instanceof Uint8Array ? value : new Uint8Array(value)), type: options?.httpMetadata?.contentType});
+    },
+    async get(key) {
+      const o = objects.get(key);
+      return o ? {body: new Blob([o.data as BlobPart]).stream(), size: o.data.byteLength, httpMetadata: {contentType: o.type}} : null;
+    },
+    async delete(keys) {
+      for (const k of Array.isArray(keys) ? keys : [keys]) objects.delete(k);
+    },
+    async list(options) {
+      return {objects: [...objects.keys()].filter((k) => k.startsWith(options?.prefix ?? '')).map((key) => ({key})), truncated: false};
+    },
+  };
+  return {bucket, objects};
 }

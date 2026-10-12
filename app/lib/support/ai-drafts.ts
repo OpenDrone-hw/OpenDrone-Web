@@ -33,6 +33,8 @@ import {approveEmoji, isModerator} from './moderation.ts';
 import {scrubForPublic} from './scrubber.ts';
 import type {Ticket, TicketTopic} from './store.ts';
 import type {Deps} from './tickets.ts';
+import {communityEnabled, hasThread} from './flags.ts';
+import {routeTicket} from './community.ts';
 
 export type DraftStatus = 'pending' | 'approved' | 'replaced' | 'rejected' | 'superseded';
 
@@ -307,6 +309,22 @@ export async function requestDraft(deps: Deps, ticket: Ticket, firmware?: string
 
   const res = await c.client.draft(await draftRequest(deps, ticket, firmware));
   if (!res) return;
+  await storeDraft(deps, ticket, res);
+  // The AI label feeds the triage; the hard rules there still decide (community.ts).
+  if (communityEnabled(deps.env)) await routeTicket(deps, ticket, res.route);
+}
+
+/**
+ * Keep a draft. A ticket with a staff thread gets it as a thread post for the
+ * approve reaction; a CRM ticket (no thread) keeps it in D1 for the staff API.
+ */
+async function storeDraft(deps: Deps, ticket: Ticket, res: DraftResponse): Promise<void> {
+  const c = deps.chatfpv!;
+  if (!hasThread(ticket)) {
+    if (!res.draft) return;
+    await c.drafts.insert({draftId: res.draftId, ref: ticket.ref, discordMessageId: null, body: res.draft, citations: res.citations, createdAt: (deps.now ?? Date.now)()});
+    return;
+  }
   const post = draftPost(approveEmoji(deps.env), res);
   if (!post) {
     const line = noDraftLine(res.draft ? 'the draft is too long for one Discord message' : res.note);

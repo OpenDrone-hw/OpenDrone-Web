@@ -43,9 +43,24 @@ export type Ticket = {
   notifiedAt: number | null;
   syncedAt: number | null;
   closedAt: number | null;
+  /** CRM (migration 0011). */
+  assignee: string | null;
+  priority: Priority;
+  route: Route;
+  tags: string[];
+  communityConsent: boolean;
+  communityPostId: string | null;
+  communityCursor: string | null;
+  communitySyncedAt: number | null;
+  lastCommunityAt: number | null;
 };
 
-export type MessageRole = 'customer' | 'staff' | 'system';
+export type Priority = 'low' | 'normal' | 'high' | 'urgent';
+export const PRIORITIES: Priority[] = ['low', 'normal', 'high', 'urgent'];
+/** team: only staff see it. community: an anonymised question stands in the public help forum. */
+export type Route = 'team' | 'community';
+
+export type MessageRole = 'customer' | 'staff' | 'system' | 'community';
 
 export type StoredAttachment = {id: string; filename: string; size: number};
 
@@ -58,6 +73,23 @@ export type TicketMessage = {
   body: string;
   attachments: StoredAttachment[];
   createdAt: number;
+  /** A community reply a person marked as the answer. */
+  answer: boolean;
+};
+
+export type Note = {id: number; ref: string; author: string; body: string; createdAt: number};
+export type SavedReply = {id: number; title: string; body: string; updatedBy: string; createdAt: number; updatedAt: number};
+export type AuditRow = {id: number; at: number; actor: string; action: string; ref: string | null; detail: string};
+
+export type TicketFilter = {
+  status?: TicketStatus[];
+  route?: Route;
+  /** A login, or 'none' for unassigned. */
+  assignee?: string;
+  priority?: Priority;
+  topic?: TicketTopic;
+  tag?: string;
+  q?: string;
 };
 
 type TicketRow = {
@@ -86,6 +118,15 @@ type TicketRow = {
   notified_at: number | null;
   synced_at: number | null;
   closed_at: number | null;
+  assignee: string | null;
+  priority: string;
+  route: string;
+  tags: string;
+  community_consent: number;
+  community_post_id: string | null;
+  community_cursor: string | null;
+  community_synced_at: number | null;
+  last_community_at: number | null;
 };
 
 type MessageRow = {
@@ -97,7 +138,22 @@ type MessageRow = {
   body: string;
   attachments: string;
   created_at: number;
+  answer: number;
 };
+
+function parseTags(s: string): string[] {
+  try {
+    const v = JSON.parse(s) as unknown;
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+type SavedReplyRow = {id: number; title: string; body: string; updated_by: string; created_at: number; updated_at: number};
+function toSaved(r: SavedReplyRow): SavedReply {
+  return {id: Number(r.id), title: r.title, body: r.body, updatedBy: r.updated_by, createdAt: Number(r.created_at), updatedAt: Number(r.updated_at)};
+}
 
 function toTicket(r: TicketRow): Ticket {
   return {
@@ -126,6 +182,15 @@ function toTicket(r: TicketRow): Ticket {
     notifiedAt: r.notified_at === null ? null : Number(r.notified_at),
     syncedAt: r.synced_at === null ? null : Number(r.synced_at),
     closedAt: r.closed_at === null ? null : Number(r.closed_at),
+    assignee: r.assignee ?? null,
+    priority: (PRIORITIES.includes(r.priority as Priority) ? r.priority : 'normal') as Priority,
+    route: r.route === 'community' ? 'community' : 'team',
+    tags: parseTags(r.tags ?? '[]'),
+    communityConsent: Number(r.community_consent) === 1,
+    communityPostId: r.community_post_id ?? null,
+    communityCursor: r.community_cursor ?? null,
+    communitySyncedAt: r.community_synced_at == null ? null : Number(r.community_synced_at),
+    lastCommunityAt: r.last_community_at == null ? null : Number(r.last_community_at),
   };
 }
 
@@ -148,6 +213,7 @@ function toMessage(r: MessageRow): TicketMessage {
     body: r.body,
     attachments: parseAttachments(r.attachments),
     createdAt: Number(r.created_at),
+    answer: Number(r.answer) === 1,
   };
 }
 
@@ -167,11 +233,20 @@ const COLUMNS = {
   notifiedAt: 'notified_at',
   syncedAt: 'synced_at',
   closedAt: 'closed_at',
+  assignee: 'assignee',
+  priority: 'priority',
+  route: 'route',
+  tags: 'tags',
+  communityConsent: 'community_consent',
+  communityPostId: 'community_post_id',
+  communityCursor: 'community_cursor',
+  communitySyncedAt: 'community_synced_at',
+  lastCommunityAt: 'last_community_at',
 } as const;
 
 export type TicketPatch = Partial<Pick<Ticket, keyof typeof COLUMNS>>;
 
-export type NewMessage = Omit<TicketMessage, 'seq'>;
+export type NewMessage = Omit<TicketMessage, 'seq' | 'answer'> & {answer?: boolean};
 
 export function createStore(db: D1Database) {
   return {
@@ -180,13 +255,15 @@ export function createStore(db: D1Database) {
         .prepare(
           `INSERT INTO support_tickets (ref, topic, subject, status, name, email, order_number, order_verified, locked, meta_message_id, preview, product, thread_id, cursor,
             customer_id, customer_match, link_version, created_at, updated_at, last_customer_at, last_staff_at,
-            customer_seen_at, notified_at, synced_at, closed_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            customer_seen_at, notified_at, synced_at, closed_at,
+            assignee, priority, route, tags, community_consent, community_post_id, community_cursor, community_synced_at, last_community_at)
+           VALUES (${new Array(34).fill('?').join(', ')})`,
         )
         .bind(
           t.ref, t.topic, t.subject, t.status, t.name, t.email, t.orderNumber, t.orderVerified ? 1 : 0, t.locked ? 1 : 0, t.metaMessageId, t.preview, t.product, t.threadId, t.cursor,
           t.customerId, t.customerMatch, t.linkVersion, t.createdAt, t.updatedAt, t.lastCustomerAt, t.lastStaffAt,
           t.customerSeenAt, t.notifiedAt, t.syncedAt, t.closedAt,
+          t.assignee, t.priority, t.route, JSON.stringify(t.tags), t.communityConsent ? 1 : 0, t.communityPostId, t.communityCursor, t.communitySyncedAt, t.lastCommunityAt,
         )
         .run();
     },
@@ -202,7 +279,13 @@ export function createStore(db: D1Database) {
       const sets = keys.map((k) => `${COLUMNS[k]} = ?`).join(', ');
       await db
         .prepare(`UPDATE support_tickets SET ${sets} WHERE ref = ?`)
-        .bind(...keys.map((k) => (typeof patch[k] === 'boolean' ? (patch[k] ? 1 : 0) : (patch[k] ?? null))), ref)
+        .bind(
+          ...keys.map((k) => {
+            const v = patch[k];
+            return Array.isArray(v) ? JSON.stringify(v) : typeof v === 'boolean' ? (v ? 1 : 0) : (v ?? null);
+          }),
+          ref,
+        )
         .run();
     },
 
@@ -303,6 +386,8 @@ export function createStore(db: D1Database) {
 
     async deleteTicket(ref: string): Promise<void> {
       await db.batch([
+        db.prepare('DELETE FROM support_notes WHERE ref = ?').bind(ref),
+        db.prepare('DELETE FROM support_audit WHERE ref = ?').bind(ref),
         db.prepare('DELETE FROM support_messages WHERE ref = ?').bind(ref),
         db.prepare('DELETE FROM support_tickets WHERE ref = ?').bind(ref),
       ]);
@@ -355,6 +440,139 @@ export function createStore(db: D1Database) {
         .bind(before, limit)
         .all<TicketRow>();
       return results.map(toTicket);
+    },
+
+    // ---- CRM (staff API) ----
+
+    /** Newest activity first. `before` is an updated_at cursor. */
+    async listTickets(f: TicketFilter, limit: number, before?: number): Promise<Ticket[]> {
+      const where: string[] = [];
+      const args: unknown[] = [];
+      if (f.status?.length) {
+        where.push(`status IN (${f.status.map(() => '?').join(', ')})`);
+        args.push(...f.status);
+      }
+      if (f.route) {
+        where.push('route = ?');
+        args.push(f.route);
+      }
+      if (f.assignee === 'none') where.push('assignee IS NULL');
+      else if (f.assignee) {
+        where.push('assignee = ?');
+        args.push(f.assignee);
+      }
+      if (f.priority) {
+        where.push('priority = ?');
+        args.push(f.priority);
+      }
+      if (f.topic) {
+        where.push('topic = ?');
+        args.push(f.topic);
+      }
+      if (f.tag) {
+        where.push('tags LIKE ?');
+        args.push(`%${JSON.stringify(f.tag).replace(/[%_\\]/g, '\\$&')}%`);
+      }
+      if (f.q) {
+        const like = `%${f.q.toLowerCase().replace(/[%_\\]/g, '\\$&')}%`;
+        where.push(`(lower(ref) LIKE ? ESCAPE '\\' OR lower(subject) LIKE ? ESCAPE '\\' OR lower(email) LIKE ? ESCAPE '\\' OR lower(preview) LIKE ? ESCAPE '\\' OR lower(COALESCE(order_number, '')) LIKE ? ESCAPE '\\')`);
+        args.push(like, like, like, like, like);
+      }
+      if (before !== undefined) {
+        where.push('updated_at < ?');
+        args.push(before);
+      }
+      const sql = `SELECT * FROM support_tickets ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY updated_at DESC LIMIT ?`;
+      const {results} = await db.prepare(sql).bind(...args, limit).all<TicketRow>();
+      return results.map(toTicket);
+    },
+
+    /** Open community tickets whose forum post should be read. */
+    async communityToSync(limit: number): Promise<Ticket[]> {
+      const {results} = await db
+        .prepare(
+          `SELECT * FROM support_tickets WHERE route = 'community' AND community_post_id IS NOT NULL AND status != 'closed'
+           ORDER BY COALESCE(community_synced_at, 0) ASC LIMIT ?`,
+        )
+        .bind(limit)
+        .all<TicketRow>();
+      return results.map(toTicket);
+    },
+
+    async lastMessage(ref: string): Promise<TicketMessage | null> {
+      const row = await db.prepare('SELECT * FROM support_messages WHERE ref = ? ORDER BY seq DESC LIMIT 1').bind(ref).first<MessageRow>();
+      return row ? toMessage(row) : null;
+    },
+
+    async messageBySeq(ref: string, seq: number): Promise<TicketMessage | null> {
+      const row = await db.prepare('SELECT * FROM support_messages WHERE ref = ? AND seq = ?').bind(ref, seq).first<MessageRow>();
+      return row ? toMessage(row) : null;
+    },
+
+    /** Mark one community reply as the answer (and unmark the others). False when it is not a community reply of this ticket. */
+    async markAnswer(ref: string, seq: number, on: boolean): Promise<boolean> {
+      const m = await db.prepare('SELECT role FROM support_messages WHERE ref = ? AND seq = ?').bind(ref, seq).first<{role: string}>();
+      if (!m || m.role !== 'community') return false;
+      await db.batch([
+        db.prepare('UPDATE support_messages SET answer = 0 WHERE ref = ?').bind(ref),
+        db.prepare('UPDATE support_messages SET answer = ? WHERE ref = ? AND seq = ?').bind(on ? 1 : 0, ref, seq),
+      ]);
+      return true;
+    },
+
+    async addNote(ref: string, author: string, body: string, at: number): Promise<Note> {
+      const res = await db.prepare('INSERT INTO support_notes (ref, author, body, created_at) VALUES (?, ?, ?, ?)').bind(ref, author, body, at).run();
+      return {id: Number(res.meta?.last_row_id ?? 0), ref, author, body, createdAt: at};
+    },
+
+    async notes(ref: string): Promise<Note[]> {
+      const {results} = await db.prepare('SELECT * FROM support_notes WHERE ref = ? ORDER BY id ASC').bind(ref).all<{id: number; ref: string; author: string; body: string; created_at: number}>();
+      return results.map((r) => ({id: Number(r.id), ref: r.ref, author: r.author, body: r.body, createdAt: Number(r.created_at)}));
+    },
+
+    async savedReplies(): Promise<SavedReply[]> {
+      const {results} = await db.prepare('SELECT * FROM support_saved_replies ORDER BY title COLLATE NOCASE ASC').all<SavedReplyRow>();
+      return results.map(toSaved);
+    },
+
+    async savedReply(id: number): Promise<SavedReply | null> {
+      const row = await db.prepare('SELECT * FROM support_saved_replies WHERE id = ?').bind(id).first<SavedReplyRow>();
+      return row ? toSaved(row) : null;
+    },
+
+    async createSavedReply(title: string, body: string, by: string, at: number): Promise<SavedReply> {
+      const res = await db
+        .prepare('INSERT INTO support_saved_replies (title, body, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
+        .bind(title, body, by, at, at)
+        .run();
+      return {id: Number(res.meta?.last_row_id ?? 0), title, body, updatedBy: by, createdAt: at, updatedAt: at};
+    },
+
+    async updateSavedReply(id: number, title: string, body: string, by: string, at: number): Promise<boolean> {
+      const res = await db
+        .prepare('UPDATE support_saved_replies SET title = ?, body = ?, updated_by = ?, updated_at = ? WHERE id = ?')
+        .bind(title, body, by, at, id)
+        .run();
+      return Number(res.meta?.changes ?? 0) > 0;
+    },
+
+    async deleteSavedReply(id: number): Promise<boolean> {
+      const res = await db.prepare('DELETE FROM support_saved_replies WHERE id = ?').bind(id).run();
+      return Number(res.meta?.changes ?? 0) > 0;
+    },
+
+    async audit(actor: string, action: string, ref: string | null, detail: string, at: number): Promise<void> {
+      await db.prepare('INSERT INTO support_audit (at, actor, action, ref, detail) VALUES (?, ?, ?, ?, ?)').bind(at, actor, action, ref, detail).run();
+    },
+
+    async auditFor(ref: string, limit = 100): Promise<AuditRow[]> {
+      const {results} = await db.prepare('SELECT * FROM support_audit WHERE ref = ? ORDER BY id DESC LIMIT ?').bind(ref, limit).all<AuditRow>();
+      return results.map((r) => ({id: Number(r.id), at: Number(r.at), actor: r.actor, action: r.action, ref: r.ref, detail: r.detail}));
+    },
+
+    /** Audit rows without a ticket (saved replies) older than `before`. */
+    async pruneAudit(before: number): Promise<void> {
+      await db.prepare('DELETE FROM support_audit WHERE ref IS NULL AND at < ?').bind(before).run();
     },
 
     async messageByDiscordId(ref: string, discordId: string): Promise<TicketMessage | null> {
