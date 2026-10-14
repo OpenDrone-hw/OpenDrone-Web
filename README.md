@@ -1188,7 +1188,7 @@ tracking are switched in the Plausible site settings, not in code. Details:
 flowchart LR
   L["Link: ?ref=slug or utm_*"] --> S["sessionStorage od-attribution (first touch)"]
   S --> E["Plausible page views and events: source, ref props"]
-  S -->|first add to cart| C["Cart attributes _ref _utm_* _landing"]
+  S -->|first add to cart| C["Cart attributes _ref _utm_* _referrer _landing"]
   C --> O["Shopify order note attributes"]
   O --> R["scripts/attribution-report.mjs"]
   O -->|orders/paid webhook| P["Plausible Purchase + revenue"]
@@ -1198,6 +1198,7 @@ flowchart LR
 | --- | --- |
 | `https://opendrone.be/?ref=<slug>` | Creator link. Slug: lowercase letters, digits, `-`, `_`, at most 32 characters, one per creator (`alice-fpv`). Any page works: `/products/openfc?ref=alice-fpv` |
 | `?utm_source=&utm_medium=&utm_campaign=` | Channel links, canonical values in the growth doc |
+| `?utm_source=youtube&utm_content=<video id>` | Video description links: the order carries the video id (`_utm_content`, case kept) |
 
 The slug reaches the order only when the visitor adds to cart with
 JavaScript in the same browser session (tab) as the link visit; the

@@ -12,7 +12,9 @@ utm_* on inbound links we control
   -> Plausible props on every funnel event, including the Checkout Click
      fired as the visitor leaves for the shop
   -> first add to cart of the session: cart attributes `_ref`,
-     `_utm_source`, `_utm_medium`, `_utm_campaign`, `_landing`
+     `_utm_source`, `_utm_medium`, `_utm_campaign`, `_utm_content` (the
+     video id, case kept), `_referrer` (host of an external referrer when
+     the visit had no link parameter), `_landing`
   -> Shopify order note attributes (same keys)
   -> orders/paid webhook: Plausible `Purchase` with revenue (gated)
   -> scripts/attribution-report.mjs: paid orders by ref and utm_source
