@@ -1188,7 +1188,7 @@ tracking are switched in the Plausible site settings, not in code. Details:
 flowchart LR
   L["Link: ?ref=slug or utm_*"] --> S["sessionStorage od-attribution (first touch)"]
   S --> E["Plausible page views and events: source, ref props"]
-  S -->|first add to cart| C["Cart attributes _ref _utm_* _landing"]
+  S -->|first add to cart| C["Cart attributes _ref _utm_* _referrer _landing"]
   C --> O["Shopify order note attributes"]
   O --> R["scripts/attribution-report.mjs"]
   O -->|orders/paid webhook| P["Plausible Purchase + revenue"]
@@ -1198,10 +1198,13 @@ flowchart LR
 | --- | --- |
 | `https://opendrone.be/?ref=<slug>` | Creator link. Slug: lowercase letters, digits, `-`, `_`, at most 32 characters, one per creator (`alice-fpv`). Any page works: `/products/openfc?ref=alice-fpv` |
 | `?utm_source=&utm_medium=&utm_campaign=` | Channel links, canonical values in the growth doc |
+| `&utm_content=<YouTube video id>` | Video links: the id reaches the order as `_utm_content`, case kept |
 
 The slug reaches the order only when the visitor adds to cart with
 JavaScript in the same browser session (tab) as the link visit; the
-cookie policy keeps it session-only. Plausible shows the slug as a source
+cookie policy keeps it session-only. A visit from another site without
+any tag keeps only the referrer's host (`_referrer`, `youtube.com`, never
+a path) for the order; its events still say `source: direct`. Plausible shows the slug as a source
 for visits whatever happens next.
 
 Sales per creator and channel, read only:

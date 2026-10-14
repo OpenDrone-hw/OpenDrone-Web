@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {attributionFields, cartAttributesFromForm, refSlug} from './attribution.ts';
+import {attributionFields, cartAttributesFromForm, contentId, referrerHost, refSlug} from './attribution.ts';
 
 describe('attribution', () => {
   it('accepts creator slugs only', () => {
@@ -43,6 +43,46 @@ describe('attribution', () => {
     const bad = new FormData();
     bad.set('attr_landing', 'https://evil.example/');
     bad.set('attr_ref', '../x');
+    assert.deepEqual(cartAttributesFromForm(bad), []);
+  });
+
+  it('keeps a video id as utm_content, case and all', () => {
+    assert.equal(contentId(' dQw4w9WgXcQ '), 'dQw4w9WgXcQ');
+    assert.equal(contentId('a b'), undefined);
+    assert.equal(contentId('x'.repeat(65)), undefined);
+    assert.equal(contentId(null), undefined);
+  });
+
+  it('keeps only the host of an outside referrer', () => {
+    assert.equal(referrerHost('https://www.youtube.com/watch?v=abc', 'opendrone.be'), 'youtube.com');
+    assert.equal(referrerHost('https://discord.com/channels/1/2', 'opendrone.be'), 'discord.com');
+    assert.equal(referrerHost('https://opendrone.be/products/openfc', 'opendrone.be'), undefined);
+    assert.equal(referrerHost('https://www.opendrone.be/', 'opendrone.be'), undefined);
+    assert.equal(referrerHost('https://checkout.shopify.com/x', 'opendrone.be'), undefined);
+    assert.equal(referrerHost('https://od.myshopify.com/', 'opendrone.be'), undefined);
+    assert.equal(referrerHost('not a url', 'opendrone.be'), undefined);
+    assert.equal(referrerHost('', 'opendrone.be'), undefined);
+  });
+
+  it('sends content and referrer to the order, never utm_source for a referrer-only visit', () => {
+    assert.deepEqual(
+      attributionFields({source: 'youtube', utmSource: 'youtube', content: 'dQw4w9WgXcQ', referrer: 'youtube.com', landing: '/', ts: 1}),
+      [['attr_utmSource', 'youtube'], ['attr_content', 'dQw4w9WgXcQ'], ['attr_referrer', 'youtube.com'], ['attr_landing', '/']],
+    );
+    assert.deepEqual(
+      attributionFields({source: 'unknown', referrer: 'discord.com', referrerOnly: true, landing: '/', ts: 1}),
+      [['attr_referrer', 'discord.com'], ['attr_landing', '/']],
+    );
+    const form = new FormData();
+    form.set('attr_content', 'dQw4w9WgXcQ');
+    form.set('attr_referrer', 'YouTube.com');
+    assert.deepEqual(cartAttributesFromForm(form), [
+      {key: '_utm_content', value: 'dQw4w9WgXcQ'},
+      {key: '_referrer', value: 'youtube.com'},
+    ]);
+    const bad = new FormData();
+    bad.set('attr_content', '<script>');
+    bad.set('attr_referrer', 'evil.example/path');
     assert.deepEqual(cartAttributesFromForm(bad), []);
   });
 });

@@ -18,6 +18,13 @@
  * Creator links are `https://opendrone.be/?ref=<slug>`: `ref` is kept on
  * its own (`ref`) as well as being the `source` fallback, so a creator's
  * orders and events group by slug.
+ *
+ * Two more fields reach the order only, never the event props:
+ * `utm_content` as given (case kept: it carries the YouTube video id of a
+ * description link) and the host of an outside referrer (`youtube.com`,
+ * never a path or query), so an order without UTM tags still names where
+ * the visit came from. A visit with only a referrer keeps the event
+ * source `direct`, as before.
  */
 
 export type Attribution = {
@@ -25,6 +32,12 @@ export type Attribution = {
   source: string;
   medium?: string;
   campaign?: string;
+  /** utm_content, case kept (a YouTube video id). */
+  content?: string;
+  /** Host of an outside referrer, lowercased, without `www.`. */
+  referrer?: string;
+  /** True when only a referrer was captured: no UTM tag, no ref. */
+  referrerOnly?: boolean;
   /** utm_source exactly as given, when the link had one. */
   utmSource?: string;
   /** The `ref` slug (creator links), when the link had a valid one. */
@@ -42,6 +55,36 @@ const MAX_LEN = 64;
 function clean(value: string | null | undefined): string | undefined {
   const v = value?.trim().toLowerCase().slice(0, MAX_LEN);
   return v || undefined;
+}
+
+/** A utm_content value: URL-safe id characters only, case kept. */
+const CONTENT = /^[A-Za-z0-9_-]{1,64}$/;
+
+/** utm_content as an id (a YouTube video id keeps its case), or undefined. */
+export function contentId(value: string | null | undefined): string | undefined {
+  const v = value?.trim();
+  return v && CONTENT.test(v) ? v : undefined;
+}
+
+/** A referrer host: lowercase letters, digits, dots and dashes. */
+const HOST = /^[a-z0-9.-]{1,64}$/;
+
+/** Hosts that are this shop's own checkout, not a visit source. */
+const OWN_SUFFIXES = ['shopify.com', 'myshopify.com', 'shop.app'];
+
+/** The host of a referrer URL from another site, without `www.`; undefined
+ *  for none, an unparsable URL, this site itself or the Shopify checkout. */
+export function referrerHost(referrer: string | null | undefined, ownHost: string): string | undefined {
+  if (!referrer) return undefined;
+  try {
+    const host = new URL(referrer).hostname.toLowerCase().replace(/^www\./, '');
+    const own = ownHost.toLowerCase().replace(/^www\./, '');
+    if (!host || host === own || host.endsWith(`.${own}`)) return undefined;
+    if (OWN_SUFFIXES.some((s) => host === s || host.endsWith(`.${s}`))) return undefined;
+    return HOST.test(host) ? host : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** A creator slug: lowercase letters, digits, `-` and `_`, 1 to 32
@@ -76,11 +119,17 @@ export function captureAttribution(): void {
     const source = utmSource ?? ref;
     const medium = clean(params.get('utm_medium'));
     const campaign = clean(params.get('utm_campaign'));
-    if (!source && !medium && !campaign) return;
+    const content = contentId(params.get('utm_content'));
+    const referrer = referrerHost(typeof document === 'undefined' ? '' : document.referrer, window.location.hostname);
+    const tagged = Boolean(source || medium || campaign || content);
+    if (!tagged && !referrer) return;
     const record: Attribution = {
       source: source ?? 'unknown',
       medium,
       campaign,
+      content,
+      referrer,
+      ...(tagged ? {} : {referrerOnly: true}),
       utmSource,
       ref,
       landing: window.location.pathname.slice(0, MAX_LEN),
@@ -146,7 +195,7 @@ export function attributionSource(): string {
 export function attributionProps(): {source: string; ref?: string} {
   captureAttribution();
   const record = getAttribution();
-  const source = foldSource(record?.source);
+  const source = record?.referrerOnly ? 'direct' : foldSource(record?.source);
   return record?.ref ? {source, ref: record.ref} : {source};
 }
 
@@ -161,6 +210,8 @@ export const ORDER_ATTRIBUTE = {
   utmSource: '_utm_source',
   medium: '_utm_medium',
   campaign: '_utm_campaign',
+  content: '_utm_content',
+  referrer: '_referrer',
   landing: '_landing',
 } as const;
 
@@ -178,6 +229,8 @@ export function attributionFields(record: Attribution | null = getAttribution())
     utmSource,
     medium: record.medium,
     campaign: record.campaign,
+    content: record.content,
+    referrer: record.referrer,
     landing: record.landing,
   };
   return Object.entries(values)
@@ -200,9 +253,10 @@ export function cartAttributesFromForm(form: FormData): Array<{key: string; valu
   for (const key of Object.keys(ORDER_ATTRIBUTE) as AttributionKey[]) {
     const raw = form.get(`${FIELD_PREFIX}${key}`);
     if (typeof raw !== 'string') continue;
-    const value = key === 'landing' ? raw.trim() : key === 'ref' ? refSlug(raw) : clean(raw);
+    const value = key === 'landing' ? raw.trim() : key === 'ref' ? refSlug(raw) : key === 'content' ? contentId(raw) : clean(raw);
     if (!value) continue;
-    if (key === 'landing' ? !LANDING.test(value) : !VALUE.test(value)) continue;
+    const valid = key === 'landing' ? LANDING : key === 'content' ? CONTENT : key === 'referrer' ? HOST : VALUE;
+    if (!valid.test(value)) continue;
     attributes.push({key: ORDER_ATTRIBUTE[key], value});
   }
   return attributes;

@@ -32,7 +32,9 @@ this repository keeps no subscriber or order data.
   to cents; a missing or zero amount is dropped, never sent as 0).
 - `app/lib/growth/attribution.ts`: first-touch capture in `sessionStorage`;
   `ref=<slug>` is kept as `ref` and is the `source` fallback when no
-  `utm_source` is given. `postCart` (`app/lib/cart-client.ts`) sends the
+  `utm_source` is given; `utm_content` (case kept, the video id) and the
+  host of an outside referrer go to the order only (`_utm_content`,
+  `_referrer`), never to event props. `postCart` (`app/lib/cart-client.ts`) sends the
   record as `attr_*` fields with the session's first add; the cart action
   validates them (`cartAttributesFromForm`) and writes them as cart
   attributes, best effort: a failed write never fails the add.
