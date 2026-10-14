@@ -17,6 +17,7 @@
  * read_orders.
  */
 
+import type {DraftOrder} from './chatfpv-contract.ts';
 import {devOverride} from './dev-overrides.ts';
 
 const DEFAULT_VERSION = '2026-07';
@@ -211,6 +212,122 @@ export async function ownedOrder(
     return hit ? summarize(hit) : null;
   } catch (err) {
     console.warn('[support] shopify order lookup failed', err instanceof Error ? err.message : 'error');
+    return null;
+  }
+}
+
+// Read-only order facts for a ChatFPV ticket draft. No address (only the
+// country code), phone, customer name or payment detail is queried.
+const DRAFT_ORDER_QUERY = `query DraftOrderFacts($q: String!) {
+  orders(first: 3, query: $q) {
+    nodes {
+      email name createdAt cancelledAt displayFinancialStatus displayFulfillmentStatus tags
+      shippingAddress { countryCodeV2 }
+      totalPriceSet { shopMoney { amount currencyCode } }
+      lineItems(first: 20) { nodes { sku title quantity customAttributes { key value } } }
+      fulfillments(first: 5) { trackingInfo { company url } }
+    }
+  }
+}`;
+
+// The hold reason is the enum only: reasonNotes is free text staff may write.
+const DRAFT_HOLDS_QUERY = `query DraftOrderHolds($q: String!) {
+  orders(first: 3, query: $q) {
+    nodes { name email fulfillmentOrders(first: 10) { nodes { status fulfillmentHolds { handle reason } } } }
+  }
+}`;
+
+const PREORDER_HOLD_HANDLE = 'opendrone-preorder';
+const PREORDER_LINE_ATTRIBUTE = 'Preorder';
+
+type DraftRawOrder = {
+  email?: string | null;
+  name: string;
+  createdAt: string;
+  cancelledAt?: string | null;
+  displayFinancialStatus?: string | null;
+  displayFulfillmentStatus?: string | null;
+  tags?: string[];
+  shippingAddress?: {countryCodeV2?: string | null} | null;
+  totalPriceSet?: {shopMoney?: {amount?: string; currencyCode?: string}} | null;
+  lineItems?: {nodes: Array<{sku: string | null; title: string; quantity: number; customAttributes?: Array<{key: string; value: string | null}>}>};
+  fulfillments?: Array<{trackingInfo?: Array<{company?: string | null; url?: string | null}>}>;
+};
+
+const label = (v: string | null | undefined): string | undefined => (v ? v.toLowerCase().replace(/_/g, ' ') : undefined);
+
+/**
+ * The facts a ChatFPV draft may use about order `orderNumber`, read-only,
+ * only when the order's email equals `email` (the same rule as
+ * `ownedOrder`). Null when it does not exist, belongs to someone else or
+ * Shopify cannot answer; the draft is then generic. Never throws. A failed
+ * hold lookup only leaves `holds` out.
+ */
+export async function orderForDraft(
+  env: ShopifyEnv,
+  orderNumber: string,
+  email: string,
+  fetcher: Fetcher = fetch,
+): Promise<DraftOrder | null> {
+  const name = normalizeOrderNumber(orderNumber);
+  if (!name || !email || !shopifyConfigured(env)) return null;
+  const mine = (o: {name: string; email?: string | null}) => o.name === name && (o.email ?? '').toLowerCase() === email.toLowerCase();
+  try {
+    const data = await gql<{orders: {nodes: DraftRawOrder[]}}>(env, DRAFT_ORDER_QUERY, {q: `name:"${name}"`}, fetcher);
+    const o = data.orders.nodes.find(mine);
+    if (!o) return null;
+    const batches = (o.tags ?? []).flatMap((t) => {
+      const m = /^batch:(.+):(\d+)$/i.exec(t);
+      return m ? [{sku: m[1]!, n: m[2]!}] : [];
+    });
+    const lineItems: DraftOrder['lineItems'] = (o.lineItems?.nodes ?? []).map((l) => {
+      const promise = l.customAttributes?.find((a) => a.key === PREORDER_LINE_ATTRIBUTE)?.value?.trim();
+      const batch = l.sku ? batches.find((b) => b.sku === l.sku)?.n : undefined;
+      return {
+        title: l.title,
+        quantity: l.quantity,
+        ...(batch ? {preorderBatch: `Batch ${batch}`} : {}),
+        ...(promise ? {shipBy: promise.slice(0, 160)} : {}),
+      };
+    });
+    const tracking: NonNullable<DraftOrder['tracking']> = [];
+    for (const f of o.fulfillments ?? []) {
+      for (const t of f.trackingInfo ?? []) {
+        const url = t.url && /^https:\/\//i.test(t.url) ? t.url : undefined;
+        if (t.company || url) tracking.push({...(t.company ? {carrier: t.company} : {}), ...(url ? {url} : {})});
+      }
+    }
+    const money = o.totalPriceSet?.shopMoney;
+    const out: DraftOrder = {
+      name: o.name,
+      createdAt: o.createdAt,
+      lineItems,
+      ...(label(o.displayFinancialStatus) ? {financialStatus: label(o.displayFinancialStatus)} : {}),
+      ...(o.cancelledAt ? {fulfillmentStatus: 'cancelled'} : label(o.displayFulfillmentStatus) ? {fulfillmentStatus: label(o.displayFulfillmentStatus)} : {}),
+      ...(o.shippingAddress?.countryCodeV2 ? {shippingCountry: o.shippingAddress.countryCodeV2} : {}),
+      ...(money?.amount ? {totalPrice: money.amount, ...(money.currencyCode ? {currency: money.currencyCode} : {})} : {}),
+      ...(tracking.length ? {tracking} : {}),
+    };
+    try {
+      const h = await gql<{orders: {nodes: Array<{name: string; email?: string | null; fulfillmentOrders?: {nodes: Array<{fulfillmentHolds: Array<{handle: string | null; reason: string | null}>}>}}>}}>(
+        env,
+        DRAFT_HOLDS_QUERY,
+        {q: `name:"${name}"`},
+        fetcher,
+      );
+      const ho = h.orders.nodes.find(mine);
+      if (ho?.fulfillmentOrders) {
+        const holds = ho.fulfillmentOrders.nodes.flatMap((fo) => fo.fulfillmentHolds);
+        if (holds.some((x) => x.handle === PREORDER_HOLD_HANDLE)) out.holds = {preorderHold: true, reason: 'preorder batch not yet released'};
+        else if (holds.length) out.holds = {preorderHold: false, reason: `on hold: ${label(holds[0]!.reason) ?? 'other'}`};
+        else out.holds = {preorderHold: false};
+      }
+    } catch (err) {
+      console.warn('[support] shopify order holds lookup failed', err instanceof Error ? err.message : 'error');
+    }
+    return out;
+  } catch (err) {
+    console.warn('[support] shopify order facts lookup failed', err instanceof Error ? err.message : 'error');
     return null;
   }
 }

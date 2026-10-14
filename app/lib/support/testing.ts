@@ -197,16 +197,31 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
 export type ShopifyScript = {
   customers?: Array<{id: string; email: string; numberOfOrders?: number; orders?: unknown[]; metafield?: {value: string} | null}>;
   orders?: Array<Record<string, unknown>>;
+  /** DraftOrderHolds answers by order name: the fulfillmentOrders nodes; absent: the query fails. */
+  holds?: Record<string, unknown[]>;
 };
 
 /** A Shopify Admin GraphQL endpoint answering from `script`, recording mutations. */
 export function fakeShopify(script: ShopifyScript) {
   const writes: Array<{op: string; variables: Record<string, unknown>}> = [];
   const metafields = new Map<string, string>();
+  const queries: Array<{query: string; variables: Record<string, unknown>}> = [];
   for (const c of script.customers ?? []) if (c.metafield?.value) metafields.set(c.id, c.metafield.value);
   const fetcher = (async (_url: string, init: RequestInit) => {
     const {query, variables} = JSON.parse(String(init.body)) as {query: string; variables: Record<string, unknown>};
     const json = (data: unknown) => new Response(JSON.stringify({data}), {status: 200});
+    queries.push({query, variables});
+    if (query.includes('DraftOrderFacts')) {
+      const name = String(variables.q).replace(/^name:"|"$/g, '');
+      return json({orders: {nodes: (script.orders ?? []).filter((o) => o.name === name)}});
+    }
+    if (query.includes('DraftOrderHolds')) {
+      const name = String(variables.q).replace(/^name:"|"$/g, '');
+      const nodes = script.holds?.[name];
+      if (!nodes) return new Response('no scope', {status: 403});
+      const o = (script.orders ?? []).find((x) => x.name === name);
+      return json({orders: {nodes: o ? [{name, email: o.email, fulfillmentOrders: {nodes}}] : []}});
+    }
     if (query.includes('SupportCustomer')) {
       const q = String(variables.q);
       const needle = q.replace(/^email:"|"$/g, '').toLowerCase();
@@ -237,7 +252,7 @@ export function fakeShopify(script: ShopifyScript) {
     }
     return new Response('unknown', {status: 400});
   }) as unknown as typeof fetch;
-  return {fetcher, writes, metafields};
+  return {fetcher, writes, metafields, queries};
 }
 
 /**

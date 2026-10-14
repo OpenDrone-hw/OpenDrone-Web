@@ -13,6 +13,7 @@ import {
   threadName,
 } from './discord.ts';
 import {_resetModCache, cursorAfter, decide, resolveMode} from './moderation.ts';
+import {staffNotePost} from './ai-drafts.ts';
 import {fakeDiscord} from './testing.ts';
 
 type Call = {method: string; url: string; body: unknown};
@@ -81,6 +82,15 @@ describe('Discord client', () => {
       ]),
     );
     assert.deepEqual(await client.reactors('9', '10', '✅'), ['2', '3']);
+  });
+
+  it('posts a staff-only note and a draft with allowed_mentions parse [] and no live mention', async () => {
+    const calls: Call[] = [];
+    const client = createDiscordClient(ENV, fakeFetch([['POST /api/v10/channels/9/messages', () => ({id: '10'})]], calls));
+    await client.post('9', staffNotePost('Ping @everyone and <@&555> about this order.')!);
+    const body = calls[0]!.body as {content: string; allowed_mentions: unknown};
+    assert.deepEqual(body.allowed_mentions, {parse: []});
+    assert.ok(!/(^|[^\\])@everyone/.test(body.content) && !body.content.includes('<@&'), body.content);
   });
 
   it('never lets a relayed message ping anyone and strips bidi overrides', async () => {

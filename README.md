@@ -513,8 +513,9 @@ Worker on the same account (error 1042), so the public URL fails from here.
 
 ```mermaid
 flowchart LR
-  N[new ticket or customer follow-up<br/>topic product or other] -->|scrubbed conversation, no name, email, phone, order| D[POST /v1/draft]
-  D -->|one bot message: AI draft, sources, note, confidence| T[(ticket thread)]
+  N[new ticket or customer follow-up<br/>any topic] -->|scrubbed conversation, no name, email, phone; verified order facts only| D[POST /v1/draft]
+  D -->|one bot message: AI draft, sources, note, confidence, needs-a-team-member reason| T[(ticket thread)]
+  D -->|staffNote: separate staff-only message, never relayed| T
   T -->|support-role approve reaction| A[stored body + AI note + sources<br/>scrubbed, sent as OpenDrone]
   T -->|support-role reply instead| R[outcome replaced, final text<br/>name, email, order redacted]
   T -->|reply by anyone else| X
@@ -523,6 +524,33 @@ flowchart LR
   R --> O
   X --> O
 ```
+
+**What leaves for ChatFPV.** Before this change only product and other tickets
+were sent. Now the redacted text of every ticket, including order and
+warranty tickets, goes to ChatFPV (name, email and order references removed,
+the scrubber applied), and for a verified order its facts as below. The
+privacy policy must say so before this ships.
+
+**Order-aware drafts.** When the ticket's order was verified at creation (its
+email equals the ticket email) and Shopify still says so when the draft is
+requested, the request carries `order`: name, date, payment and fulfillment
+status, preorder hold, line items with batch and the ship promise shown at
+purchase, shipping country (code only), total and currency, tracking links.
+It never carries an address, phone, email, customer name or payment detail
+(`orderForDraft` in `app/lib/support/shopify.ts` queries only those fields,
+read-only, with the existing admin token; a failed hold lookup only leaves the
+hold out). An unverified ticket, a product ticket or a Shopify failure sends no
+order, and ChatFPV then drafts a generic policy reply that asks for the order
+number. Warranty, injury, legal and payment-dispute tickets get no draft.
+When ChatFPV sets `needsHumanAction` (order change, refund, cancellation,
+claim) the draft post carries "Needs a team member: reason".
+
+**Staff note.** A `staffNote` from ChatFPV is posted as its own bot message
+after the draft, starting with "Staff only, not sent to the customer." It is
+never stored as a draft, so no reaction on it relays anything, and
+`reviewDrafts` rejects a draft whose message carries that label. Every thread
+post sets `allowed_mentions` `parse: []` (the mod role ping is only on the
+ticket card).
 
 **Drafts in the thread.** A draft is one bot message: "AI draft by ChatFPV,
 not sent to the customer", the text, its sources, ChatFPV's note and a

@@ -1,7 +1,7 @@
 /**
  * The ChatFPV service contract, vendored from incutec-org/chatfpv
- * `worker/src/contract.ts` at commit
- * 9c1e95e967fc302a7613bf76bf3a446b1faa87e7. Only the shapes the storefront
+ * `worker/src/contract.ts` at commit (branch chatfpv/order-drafts, PR 191; re-pin to the merge commit)
+ * 819703c8d656b86c3e749fe51462b60245b19ef6. Only the shapes the storefront
  * uses, unchanged. A shape change there is a breaking change here: update
  * this file and the commit above together.
  */
@@ -67,6 +67,26 @@ export type DraftRequest = {
   product?: string;
   firmware?: string;
   conversation: Array<{role: 'customer' | 'staff'; text: string}>;
+  /**
+   * Additive, optional: the ticket's order, sent only when it is VERIFIED to
+   * belong to the customer's email. Never an address, phone, email or payment
+   * detail. Absent: the draft is generic.
+   */
+  order?: DraftOrder;
+};
+
+/** The order facts a draft may use (POST /v1/draft `order`). */
+export type DraftOrder = {
+  name: string; // '#1042'
+  createdAt: string; // ISO 8601
+  financialStatus?: string;
+  fulfillmentStatus?: string;
+  holds?: {preorderHold: boolean; reason?: string};
+  lineItems: Array<{title: string; quantity: number; preorderBatch?: string; shipBy?: string}>;
+  shippingCountry?: string;
+  totalPrice?: string;
+  currency?: string;
+  tracking?: Array<{carrier?: string; url?: string}>;
 };
 
 export type DraftResponse = {
@@ -75,6 +95,11 @@ export type DraftResponse = {
   citations: Citation[];
   confidence: number;
   note: string; // one line for staff: why this draft, or why none
+  /** Additive, optional: a team-audience note for the staff thread only, never for the customer. */
+  staffNote?: string;
+  /** Additive, optional: a team member must act (order change, refund, cancellation, claim). */
+  needsHumanAction?: boolean;
+  humanActionReason?: string;
 };
 
 /**

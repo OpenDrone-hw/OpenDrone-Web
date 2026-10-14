@@ -2,11 +2,17 @@
  * ChatFPV ticket drafts: a suggested answer posted into the ticket's
  * Discord thread for the team, never straight to the customer.
  *
- *   new ticket or customer follow-up (topic product or other)
+ *   new ticket or customer follow-up (any topic)
  *     -> older pending drafts of the ticket: superseded (outcome rejected)
- *     -> POST /v1/draft (scrubbed conversation, no name, email, phone,
- *        order data or attachments)
- *     -> one bot message in the thread, marked as an AI draft
+ *     -> POST /v1/draft (scrubbed conversation, no name, email, phone or
+ *        attachments; with a verified order, its read-only facts without
+ *        address, phone, email or payment details)
+ *     -> one bot message in the thread, marked as an AI draft, with the
+ *        reason when a team member must act (needsHumanAction)
+ *     -> when ChatFPV sends a staffNote: a second bot message labelled
+ *        "Staff only, not sent to the customer". It is never stored as a
+ *        draft, so no reaction on it relays anything, and a draft whose
+ *        message carries that label is never approved
  *   support-role approve reaction on that message (checked on every sync,
  *   whatever SUPPORT_MODERATION_MODE says: 'log' and 'off' never approve)
  *     -> the STORED body plus the AI suffix and source links, through
@@ -31,6 +37,7 @@ import type {Citation, DraftOutcomeRequest, DraftRequest, DraftResponse} from '.
 import {compareSnowflakes, escapeDiscord, type DiscordMessage} from './discord.ts';
 import {approveEmoji, isModerator} from './moderation.ts';
 import {scrubForPublic} from './scrubber.ts';
+import {orderForDraft} from './shopify.ts';
 import type {Ticket, TicketTopic} from './store.ts';
 import type {Deps} from './tickets.ts';
 
@@ -169,7 +176,11 @@ export type ChatFpvDeps = {client: ChatFpvClient; drafts: DraftStore};
 // Request
 // --------------------------------------------------------------------------
 
-export const DRAFT_TOPICS: ReadonlySet<TicketTopic> = new Set<TicketTopic>(['product', 'other']);
+/**
+ * Every topic is sent: ChatFPV drafts product, other and order tickets and
+ * answers warranty tickets with no draft and at most a staff-only note.
+ */
+export const DRAFT_TOPICS: ReadonlySet<TicketTopic> = new Set<TicketTopic>(['product', 'other', 'order', 'warranty']);
 /** decidedBy for decisions no person made (superseded, closed, blocked). */
 export const SYSTEM_DECIDER = 'system';
 const MAX_POST = 1990;
@@ -224,9 +235,12 @@ function sourceLines(citations: Citation[], forDiscord: boolean, body = ''): str
  * the note and the confidence, in one message under 1990 characters. Null
  * when the body alone does not fit (a draft is never shown cut short).
  */
-export function draftPost(emoji: string, d: Pick<DraftResponse, 'draft' | 'citations' | 'note' | 'confidence'>): string | null {
+export function draftPost(
+  emoji: string,
+  d: Pick<DraftResponse, 'draft' | 'citations' | 'note' | 'confidence'> & Partial<Pick<DraftResponse, 'needsHumanAction' | 'humanActionReason'>>,
+): string | null {
   if (!d.draft) return null;
-  const head = `**AI draft by ChatFPV, not sent to the customer.** React with ${emoji} to send it, or reply normally to send your own.`;
+  const head = `**AI draft by ChatFPV, not sent to the customer.** React with ${emoji} to send it, or reply normally to send your own.${humanActionLine(d)}`;
   const tail = `*${d.note ? `Note: ${escapeDiscord(d.note)} · ` : ''}confidence ${Math.round(d.confidence * 100)}%*`;
   const base = `${head}\n\n${d.draft}\n\n`;
   if (base.length + tail.length > MAX_POST) return null;
@@ -239,10 +253,32 @@ export function draftPost(emoji: string, d: Pick<DraftResponse, 'draft' | 'citat
   return `${base}${sources.length ? `${['Sources:', ...sources].join('\n')}\n` : ''}${tail}`;
 }
 
+/** "Needs a team member: reason" when ChatFPV flagged the ticket, else an empty string. */
+export function humanActionLine(d: Partial<Pick<DraftResponse, 'needsHumanAction' | 'humanActionReason'>>): string {
+  if (!d.needsHumanAction) return '';
+  const reason = d.humanActionReason?.trim();
+  return `\n**Needs a team member:**${reason ? ` ${escapeDiscord(reason).slice(0, 200)}` : ' a person must handle this ticket.'}`;
+}
+
 /** The line posted when ChatFPV answered without a draft. */
-export function noDraftLine(note: string): string | null {
+export function noDraftLine(note: string, d: Partial<Pick<DraftResponse, 'needsHumanAction' | 'humanActionReason'>> = {}): string | null {
   const n = note.trim();
-  return n ? `*ChatFPV has no draft for this ticket: ${escapeDiscord(n).slice(0, 300)}*` : null;
+  return n || d.needsHumanAction ? `${n ? `*ChatFPV has no draft for this ticket: ${escapeDiscord(n).slice(0, 300)}*` : ''}${humanActionLine(d)}`.trim() : null;
+}
+
+/** First line of the staff-only note post. The marker is how code recognises it. */
+export const STAFF_NOTE_LABEL = '**Staff only, not sent to the customer.**';
+
+/** True for a thread message that is a staff-only note: never a draft, never relayed. */
+export function isStaffNotePost(content: string): boolean {
+  return content.trimStart().startsWith(STAFF_NOTE_LABEL);
+}
+
+/** The staff-only note post (under 2000 characters), or null without a note. */
+export function staffNotePost(note: string | undefined): string | null {
+  const n = note?.trim();
+  if (!n) return null;
+  return `${STAFF_NOTE_LABEL} ChatFPV summary for the team.\n\n${escapeDiscord(n)}`.slice(0, MAX_POST);
 }
 
 export const APPROVED_SUFFIX = 'This reply was drafted with AI (ChatFPV) and checked by the OpenDrone team.';
@@ -305,11 +341,19 @@ export async function requestDraft(deps: Deps, ticket: Ticket, firmware?: string
   if (!c || !DRAFT_TOPICS.has(ticket.topic)) return;
   for (const old of await c.drafts.pending(ticket.ref)) await settleDraft(deps, old, 'superseded', SYSTEM_DECIDER);
 
-  const res = await c.client.draft(await draftRequest(deps, ticket, firmware));
+  const req = await draftRequest(deps, ticket, firmware);
+  // The order travels only for a ticket whose order was verified at creation
+  // AND still belongs to the ticket's email in Shopify; a product ticket has
+  // no use for it.
+  if (ticket.orderVerified && ticket.orderNumber && ticket.topic !== 'product') {
+    const order = await orderForDraft(deps.env, ticket.orderNumber, ticket.email, deps.fetcher ?? fetch);
+    if (order) req.order = order;
+  }
+  const res = await c.client.draft(req);
   if (!res) return;
   const post = draftPost(approveEmoji(deps.env), res);
   if (!post) {
-    const line = noDraftLine(res.draft ? 'the draft is too long for one Discord message' : res.note);
+    const line = noDraftLine(res.draft ? 'the draft is too long for one Discord message' : res.note, res);
     if (line) await deps.discord.post(ticket.threadId, line);
     if (res.draft) {
       const at = (deps.now ?? Date.now)();
@@ -317,6 +361,7 @@ export async function requestDraft(deps: Deps, ticket: Ticket, firmware?: string
       const row = await c.drafts.get(res.draftId);
       if (row) await settleDraft(deps, row, 'rejected', SYSTEM_DECIDER);
     }
+    await postStaffNote(deps, ticket, res);
     return;
   }
   const messageId = await deps.discord.post(ticket.threadId, post);
@@ -328,6 +373,18 @@ export async function requestDraft(deps: Deps, ticket: Ticket, firmware?: string
     citations: res.citations,
     createdAt: (deps.now ?? Date.now)(),
   });
+  await postStaffNote(deps, ticket, res);
+}
+
+/** The staff-only note as its own message after the draft; a failure never loses the draft. */
+async function postStaffNote(deps: Deps, ticket: Ticket, res: DraftResponse): Promise<void> {
+  const note = staffNotePost(res.staffNote);
+  if (!note) return;
+  try {
+    await deps.discord.post(ticket.threadId, note);
+  } catch (err) {
+    console.warn('[support] staff note not posted', ticket.ref, err instanceof Error ? err.message : 'error');
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -388,6 +445,11 @@ export async function reviewDrafts(
       let live = byId.get(d.discordMessageId) ?? null;
       if (!live) live = await deps.discord.message(ticket.threadId, d.discordMessageId).catch(() => null);
       if (!live) {
+        await settleDraft(deps, d, 'rejected', SYSTEM_DECIDER);
+        continue;
+      }
+      if (isStaffNotePost(live.content)) {
+        // Never approvable, whatever its reactions: a staff note is not a draft.
         await settleDraft(deps, d, 'rejected', SYSTEM_DECIDER);
         continue;
       }

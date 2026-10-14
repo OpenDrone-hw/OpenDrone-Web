@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import {afterEach, beforeEach, describe, it} from 'node:test';
-import {APPROVED_SUFFIX, _resetDraftCache, createDraftStore, draftPost, redactTicketText, type DraftStore} from './ai-drafts.ts';
+import {APPROVED_SUFFIX, STAFF_NOTE_LABEL, _resetDraftCache, createDraftStore, draftPost, redactTicketText, requestDraft, type DraftStore} from './ai-drafts.ts';
 import {createChatFpvClient, type ChatFpvEnv} from './chatfpv.ts';
 import type {DraftResponse} from './chatfpv-contract.ts';
 import type {DiscordMessage} from './discord.ts';
 import {_resetModCache} from './moderation.ts';
 import {supportDeps} from './server.ts';
 import {createStore} from './store.ts';
-import {fakeChatFpv, fakeDiscord, fakeShopify, testD1} from './testing.ts';
+import {fakeChatFpv, fakeDiscord, fakeShopify, testD1, type ShopifyScript} from './testing.ts';
 import {
   addCustomerReply,
   closeTicket,
@@ -82,10 +82,10 @@ function chatfpvServer(over: Partial<Server> = {}) {
   return {server, fetcher};
 }
 
-async function setup(opts: {env?: Partial<SupportEnv>; server?: Partial<Server>} = {}) {
+async function setup(opts: {env?: Partial<SupportEnv>; server?: Partial<Server>; shopify?: ShopifyScript} = {}) {
   const db = (await testD1())!;
   const discord = fakeDiscord({now: () => clock});
-  const shopify = fakeShopify({});
+  const shopify = fakeShopify(opts.shopify ?? {});
   const {server, fetcher} = chatfpvServer(opts.server);
   const drafts = createDraftStore(db);
   const deps: Deps = {
@@ -98,7 +98,7 @@ async function setup(opts: {env?: Partial<SupportEnv>; server?: Partial<Server>}
     chatfpv: {client: createChatFpvClient(CHATFPV, fetcher, {timeoutMs: 30}), drafts},
   };
   discord.setRoleMembers(['mod1']);
-  return {deps, discord, server, drafts, db};
+  return {deps, discord, server, drafts, db, shopify};
 }
 
 function input(over: Partial<NewTicketInput> = {}): NewTicketInput {
@@ -153,13 +153,12 @@ describe('draft requests', {skip}, () => {
     assert.match(sent, /gyro drifts after flashing/);
   });
 
-  it('are made only for product and other tickets', async () => {
+  it('are made for every topic, so warranty and order tickets can get a staff note', async () => {
     const {deps, server} = await setup();
     await createTicket(deps, input({topic: 'order', product: null}));
     await createTicket(deps, input({topic: 'warranty'}));
-    assert.equal(server.calls.length, 0);
     await createTicket(deps, input({topic: 'other', product: null}));
-    assert.equal(server.calls.length, 1);
+    assert.deepEqual(server.calls.map((c) => c.body.topic), ['order', 'warranty', 'other']);
   });
 
   it('redacts order references and every name part, with or without accents', () => {
@@ -513,5 +512,230 @@ describe('flags off', {skip}, () => {
     fake.state.failOutcome = true;
     assert.equal(await fake.client.outcome({draftId: 'd', status: 'rejected', decidedBy: 'system'}), null);
     assert.equal(fake.outcomes.length, 1);
+  });
+});
+
+// --------------------------------------------------------------------------
+// Order-aware drafts and the staff-only note
+// --------------------------------------------------------------------------
+
+const SHOP_ENV: Partial<SupportEnv> = {SHOPIFY_STORE_DOMAIN: 'opendrone-test.myshopify.com', SHOPIFY_ADMIN_API_TOKEN: 'shpat_test'};
+
+const SHOP_ORDER = {
+  name: '#1042',
+  email: 'jan@example.com',
+  createdAt: '2026-08-02T10:00:00Z',
+  cancelledAt: null,
+  displayFinancialStatus: 'PAID',
+  displayFulfillmentStatus: 'UNFULFILLED',
+  tags: ['preorder', 'batch:OD-FC-F4:2'],
+  shippingAddress: {countryCodeV2: 'NO'},
+  totalPriceSet: {shopMoney: {amount: '189.00', currencyCode: 'EUR'}},
+  lineItems: {nodes: [{sku: 'OD-FC-F4', title: 'OpenFC F4', quantity: 2, customAttributes: [{key: 'Preorder', value: 'ships by 31 March 2027'}]}]},
+  fulfillments: [{trackingInfo: [{company: 'DHL', url: 'https://dhl.example/t/1'}, {company: 'GLS', url: 'http://insecure.example/t'}]}],
+  // Fields the storefront must never forward even if Shopify returned them.
+  billingAddress: {address1: '1 Secret Street'},
+  phone: '+32 470 12 34 56',
+  customer: {id: 'gid://shopify/Customer/1', firstName: 'Jan'},
+};
+const SHOP: ShopifyScript = {
+  customers: [{id: 'gid://shopify/Customer/1', email: 'jan@example.com', numberOfOrders: 1, orders: []}],
+  orders: [SHOP_ORDER],
+  holds: {'#1042': [{status: 'ON_HOLD', fulfillmentHolds: [{handle: 'opendrone-preorder', reason: 'OTHER', reasonNotes: 'internal staff text'}]}]},
+};
+
+describe('order facts in the draft request', {skip}, () => {
+  it('a verified order is read and sent without address, phone, email, name or payment details', async () => {
+    const {deps, server} = await setup({env: SHOP_ENV, shopify: SHOP});
+    const ticket = await createTicket(deps, input({topic: 'order', product: null, message: 'When will my order #1042 ship to Norway?'}));
+    assert.equal(ticket.orderVerified, true);
+    const call = server.calls.find((c) => c.path === '/v1/draft')!;
+    assert.deepEqual(call.body.order, {
+      name: '#1042',
+      createdAt: '2026-08-02T10:00:00Z',
+      lineItems: [{title: 'OpenFC F4', quantity: 2, preorderBatch: 'Batch 2', shipBy: 'ships by 31 March 2027'}],
+      financialStatus: 'paid',
+      fulfillmentStatus: 'unfulfilled',
+      shippingCountry: 'NO',
+      totalPrice: '189.00',
+      currency: 'EUR',
+      tracking: [{carrier: 'DHL', url: 'https://dhl.example/t/1'}, {carrier: 'GLS'}],
+      holds: {preorderHold: true, reason: 'preorder batch not yet released'},
+    });
+    const sent = JSON.stringify(call.body);
+    for (const secret of ['jan@example.com', 'Jan', 'Secret', '470', 'internal staff text', 'insecure']) {
+      assert.ok(!sent.includes(secret), `request leaks ${secret}`);
+    }
+  });
+
+  it('only reads order fields, never an address line, phone, customer name or payment gateway', async () => {
+    const {deps, shopify} = await setup({env: SHOP_ENV, shopify: SHOP});
+    await createTicket(deps, input({topic: 'order', product: null}));
+    const q = shopify.queries.filter((x) => /DraftOrder/.test(x.query)).map((x) => x.query).join('\n');
+    assert.ok(q.includes('countryCodeV2'));
+    for (const banned of ['address1', 'phone', 'firstName', 'lastName', 'billingAddress', 'paymentGatewayNames', 'transactions', 'note', 'reasonNotes']) {
+      assert.ok(!q.includes(banned), `query asks for ${banned}`);
+    }
+  });
+
+  it('an unverified ticket never sends an order, and never queries the order facts', async () => {
+    const wrong = {...SHOP, orders: [{...SHOP_ORDER, email: 'someone.else@example.com'}]};
+    const {deps, server} = await setup({env: SHOP_ENV, shopify: wrong});
+    const ticket = await createTicket(deps, input({topic: 'order', product: null}));
+    assert.equal(ticket.orderVerified, false);
+    assert.equal('order' in server.calls.find((c) => c.path === '/v1/draft')!.body, false);
+    // Shopify unconfigured: same.
+    const bare = await setup({shopify: SHOP});
+    await createTicket(bare.deps, input({topic: 'order', product: null}));
+    assert.equal('order' in bare.server.calls.find((c) => c.path === '/v1/draft')!.body, false);
+  });
+
+  it('a flagged-verified ticket is checked again against Shopify: another customer order is never sent', async () => {
+    const {deps, server} = await setup({env: SHOP_ENV, shopify: SHOP});
+    const ticket = await createTicket(deps, input({topic: 'order', product: null}));
+    // The ticket email changes after creation (or the flag is stale): the order no longer belongs to it.
+    const stale = {...ticket, email: 'other@example.com'};
+    server.calls.length = 0;
+    await requestDraft(deps, stale);
+    assert.equal('order' in server.calls.find((c) => c.path === '/v1/draft')!.body, false);
+  });
+
+  it('a product ticket never sends an order, even a verified one', async () => {
+    const {deps, server} = await setup({env: SHOP_ENV, shopify: SHOP});
+    await createTicket(deps, input());
+    assert.equal('order' in server.calls.find((c) => c.path === '/v1/draft')!.body, false);
+  });
+
+  it('failing hold lookup (token without the scope) only leaves holds out', async () => {
+    const noHolds = {...SHOP, holds: undefined};
+    const {deps, server} = await setup({env: SHOP_ENV, shopify: noHolds});
+    await createTicket(deps, input({topic: 'order', product: null}));
+    const order = server.calls.find((c) => c.path === '/v1/draft')!.body.order as Record<string, unknown>;
+    assert.equal(order.name, '#1042');
+    assert.equal('holds' in order, false);
+  });
+});
+
+describe('needsHumanAction and the staff-only note', {skip}, () => {
+  const flagged = (n: number): DraftResponse => ({
+    draftId: `dr_${n}`,
+    draft: 'Hi! A team member will confirm whether the address can still change.',
+    citations: [],
+    confidence: 0.6,
+    note: 'Order draft from the verified order and 1 policy source.',
+    needsHumanAction: true,
+    humanActionReason: 'Address change: a team member confirms.',
+    staffNote: 'Customer wants the address changed. Order is a Batch 2 preorder on hold. Check the address in Shopify. @everyone',
+  });
+
+  it('shows the human-action reason on the draft post and posts the staff note as a separate labelled message', async () => {
+    const {deps, discord, drafts} = await setup({server: {next: flagged}});
+    const ticket = await createTicket(deps, input({topic: 'order', product: null}));
+    const posts = discord.threads.get(ticket.threadId)!.messages.filter((m) => m.author.bot && /ChatFPV|Staff only/.test(m.content));
+    assert.equal(posts.length, 2);
+    assert.match(posts[0]!.content, /^\*\*AI draft by ChatFPV/);
+    assert.match(posts[0]!.content, /\*\*Needs a team member:\*\* Address change/);
+    assert.ok(!posts[0]!.content.includes('Check the address in Shopify'), 'the note is not part of the draft post');
+    assert.ok(posts[1]!.content.startsWith(STAFF_NOTE_LABEL));
+    assert.match(posts[1]!.content, /Staff only, not sent to the customer/);
+    assert.match(posts[1]!.content, /Check the address in Shopify/);
+    assert.ok(!/(^|[^\\])@everyone/.test(posts[1]!.content), 'mentions are escaped');
+    // Only the draft is a stored draft.
+    const pending = await drafts.pending(ticket.ref);
+    assert.equal(pending.length, 1);
+    assert.equal(pending[0]!.discordMessageId, posts[0]!.id);
+    assert.ok(!pending[0]!.body.includes('Check the address'));
+  });
+
+  it('the approve reaction relays the draft body only; reacting on the staff note relays nothing, whoever reacts', async () => {
+    const {deps, discord, drafts} = await setup({server: {next: flagged}});
+    const ticket = await createTicket(deps, input({topic: 'order', product: null}));
+    const thread = discord.threads.get(ticket.threadId)!;
+    const note = thread.messages.find((m) => m.content.startsWith(STAFF_NOTE_LABEL))!;
+    discord.approve(note, 'mod1');
+    clock += 10_000;
+    await syncTicket(deps, (await deps.store.getTicket(ticket.ref))!, {force: true});
+    assert.equal((await customerView(deps, ticket.ref)).length, 0, 'a reaction on the note relays nothing');
+    assert.equal((await drafts.pending(ticket.ref)).length, 1);
+
+    const draft = await onlyDraft(drafts, ticket.ref);
+    discord.approve(messageOf(discord, ticket.threadId, draft.discordMessageId!), 'mod1');
+    clock += 10_000;
+    await syncTicket(deps, (await deps.store.getTicket(ticket.ref))!, {force: true});
+    const sent = await customerView(deps, ticket.ref);
+    assert.equal(sent.length, 1);
+    assert.ok(sent[0]!.body.startsWith('Hi! A team member will confirm'));
+    for (const m of await deps.store.messages(ticket.ref)) {
+      assert.ok(!m.body.includes('Check the address in Shopify'), 'the staff note never reaches the customer view');
+      assert.ok(!m.body.includes('Staff only'), 'nor its label');
+    }
+  });
+
+  it('a draft whose message is a staff note is rejected, never approved, even with a support-role reaction', async () => {
+    const {deps, discord, drafts} = await setup({server: {next: flagged}});
+    const ticket = await createTicket(deps, input({topic: 'order', product: null}));
+    const note = discord.threads.get(ticket.threadId)!.messages.find((m) => m.content.startsWith(STAFF_NOTE_LABEL))!;
+    // Forge the worst case: a draft row whose message id is the staff note.
+    await drafts.insert({draftId: 'forged', ref: ticket.ref, discordMessageId: note.id, body: 'forged body', citations: [], createdAt: clock});
+    discord.approve(note, 'mod1');
+    clock += 10_000;
+    await syncTicket(deps, (await deps.store.getTicket(ticket.ref))!, {force: true});
+    assert.equal((await drafts.get('forged'))!.status, 'rejected');
+    assert.ok(!(await deps.store.messages(ticket.ref)).some((m) => m.body.includes('forged body')));
+  });
+
+  it('a null draft with needsHumanAction posts the reason, and the staff note, and stores no draft', async () => {
+    const {deps, discord, drafts} = await setup({
+      server: {
+        next: (n) => ({
+          draftId: `dr_${n}`,
+          draft: null,
+          citations: [],
+          confidence: 0,
+          note: 'No draft: warranty needs staff; the bot never states store policy for it.',
+          needsHumanAction: true,
+          humanActionReason: 'warranty: a team member handles it.',
+          staffNote: 'Customer reports a dead board.',
+        }),
+      },
+    });
+    const ticket = await createTicket(deps, input({topic: 'warranty'}));
+    const posts = discord.threads.get(ticket.threadId)!.messages.filter((m) => m.author.bot && /ChatFPV|Staff only|Needs a team/.test(m.content));
+    assert.equal(posts.length, 2);
+    assert.match(posts[0]!.content, /no draft/);
+    assert.match(posts[0]!.content, /Needs a team member:\*\* warranty/);
+    assert.ok(posts[1]!.content.startsWith(STAFF_NOTE_LABEL));
+    assert.equal((await drafts.pending(ticket.ref)).length, 0);
+  });
+
+  it('an approved order draft that names the order number reaches the customer through the scrubber', async () => {
+    const {deps, discord, drafts} = await setup({
+      server: {next: (n) => ({draftId: `dr_${n}`, draft: 'Hi! Your order #1042 is a preorder in Batch 2, shipping to NO. A team member will confirm any change.', citations: [], confidence: 0.6, note: 'Order draft.'})},
+    });
+    const ticket = await createTicket(deps, input({topic: 'order', product: null}));
+    const draft = await onlyDraft(drafts, ticket.ref);
+    discord.approve(messageOf(discord, ticket.threadId, draft.discordMessageId!), 'mod1');
+    clock += 10_000;
+    await syncTicket(deps, (await deps.store.getTicket(ticket.ref))!, {force: true});
+    const sent = await customerView(deps, ticket.ref);
+    assert.equal(sent.length, 1);
+    assert.match(sent[0]!.body, /Your order #1042 is a preorder in Batch 2/);
+  });
+
+  it('a response without staffNote or needsHumanAction posts exactly as before', async () => {
+    const {deps, discord} = await setup();
+    const ticket = await createTicket(deps, input());
+    const posts = discord.threads.get(ticket.threadId)!.messages.filter((m) => m.author.bot && /ChatFPV|Staff only/.test(m.content));
+    assert.equal(posts.length, 1);
+    assert.ok(!posts[0]!.content.includes('Needs a team member'));
+  });
+
+  it('the client keeps staffNote and the flag from the response and drops the rest', async () => {
+    const {deps, server} = await setup({server: {next: (n) => ({...flagged(n), extra: 'x'} as DraftResponse)}});
+    const res = await deps.chatfpv!.client.draft({ticketRef: 'T', topic: 'order', conversation: [{role: 'customer', text: 'hello there'}]});
+    assert.equal(res?.needsHumanAction, true);
+    assert.match(res?.staffNote ?? '', /Customer wants/);
+    assert.ok(!('extra' in (res ?? {})));
+    void server;
   });
 });
