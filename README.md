@@ -266,7 +266,14 @@ locale, and `LangToggle` appears only on legal paths. They are drafted and
 reviewed in the private `operations` repository; this repository receives only
 the approved text, in one publish PR. The site UI is English-only. `/recycling` adds the
 producer (EPR) registration numbers per EU country from
-`content/registrations.json`; a number still `null` is not shown.
+`content/registrations.json`; a number still `null` is not shown. Each
+product page ends in a "Product safety" block (`app/components/GpsrBlock.tsx`):
+manufacturer, postal and electronic address, product type and SKU, and the
+framing line `gpsr_warnings_<lang>` from `content/copy/product-chrome.json`.
+Until `content/product-safety.json` is approved, the block shows the existing
+`gpsr_warnings_<kind>_<lang>` lines; once `approved` is `true` and
+`documentVersion` is set, it shows only the statements in that file, copied
+unchanged from the approved safety leaflet.
 
 **Other routes.**
 

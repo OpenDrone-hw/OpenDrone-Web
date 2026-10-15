@@ -156,25 +156,22 @@
   "related_aria": "Related products",
   "related_heading": "Goes with it",
   "render_chip": "Render",
-  "gpsr_heading": "Manufacturer & safety information",
+  "gpsr_heading": "Product safety",
   "gpsr_product_label": "Product type",
   "gpsr_manufacturer_label": "Brand and manufacturer",
   "gpsr_importer_label": "EU importer",
-  "gpsr_aria": "Manufacturer and safety information",
+  "gpsr_aria": "Product safety",
   "gpsr_reg_weee": "WEEE reg. no.",
   "gpsr_reg_packaging": "Packaging reg. no.",
   "gpsr_reg_idu": "IDU",
   "gpsr_warnings_en": [
-    "Not a toy. Not for persons under 14; minors only under adult supervision.",
-    "Component for self-built unmanned aircraft: the builder is responsible for the assembled aircraft and its lawful operation."
+    "FPV and RC parts. Not a toy. Not for children under 14; minors only under adult supervision."
   ],
   "gpsr_warnings_nl": [
-    "Geen speelgoed. Niet voor personen onder 14 jaar; minderjarigen alleen onder toezicht van een volwassene.",
-    "Component voor zelfgebouwde onbemande luchtvaartuigen: de bouwer is verantwoordelijk voor het samengestelde toestel en het wettige gebruik ervan."
+    "FPV- en RC-onderdelen. Geen speelgoed. Niet voor kinderen onder 14 jaar; minderjarigen alleen onder toezicht van een volwassene."
   ],
   "gpsr_warnings_fr": [
-    "Ceci n'est pas un jouet. Interdit aux moins de 14 ans ; mineurs uniquement sous surveillance d'un adulte.",
-    "Composant pour aéronefs sans équipage auto-construits : le constructeur est responsable de l'appareil assemblé et de son utilisation licite."
+    "Pièces FPV et RC. Ceci n'est pas un jouet. Ne convient pas aux enfants de moins de 14 ans ; mineurs uniquement sous surveillance d'un adulte."
   ],
   "buy_terms_link": "Pre-order terms",
   "compare_spec": "Spec",
@@ -221,8 +218,7 @@
     "Les moteurs chauffent en fonctionnement ; laissez-les refroidir avant de les manipuler."
   ],
   "gpsr_warnings_de": [
-    "Kein Spielzeug. Nicht für Personen unter 14 Jahren; Minderjährige nur unter Aufsicht eines Erwachsenen.",
-    "Bauteil für selbstgebaute unbemannte Luftfahrzeuge: Der Erbauer ist für das zusammengebaute Luftfahrzeug und dessen rechtmäßigen Betrieb verantwortlich."
+    "FPV- und RC-Teile. Kein Spielzeug. Nicht für Kinder unter 14 Jahren; Minderjährige nur unter Aufsicht eines Erwachsenen."
   ],
   "gpsr_warnings_electronics_de": [
     "LiPo-Akkus können sich bei Beschädigung, Kurzschluss oder Überladung entzünden; niemals unbeaufsichtigt laden.",
@@ -239,8 +235,7 @@
     "Motoren werden im Betrieb heiß; vor dem Anfassen abkühlen lassen."
   ],
   "gpsr_warnings_it": [
-    "Non è un giocattolo. Non adatto a persone di età inferiore a 14 anni; i minori solo sotto la supervisione di un adulto.",
-    "Componente per aeromobili senza equipaggio autocostruiti: il costruttore è responsabile dell'aeromobile assemblato e del suo utilizzo conforme alla legge."
+    "Componenti FPV e RC. Non è un giocattolo. Non adatto ai bambini di età inferiore a 14 anni; i minori solo sotto la supervisione di un adulto."
   ],
   "gpsr_warnings_electronics_it": [
     "Le batterie LiPo possono incendiarsi se danneggiate, in cortocircuito o sovraccaricate; non caricarle mai senza sorveglianza.",
@@ -257,8 +252,7 @@
     "I motori si scaldano durante l'uso; lasciarli raffreddare prima di maneggiarli."
   ],
   "gpsr_warnings_es": [
-    "No es un juguete. No apto para menores de 14 años; los menores solo bajo la supervisión de un adulto.",
-    "Componente para aeronaves no tripuladas de construcción propia: el constructor es responsable de la aeronave montada y de su uso conforme a la ley."
+    "Piezas de FPV y RC. No es un juguete. No apto para menores de 14 años; los menores solo bajo la supervisión de un adulto."
   ],
   "gpsr_warnings_electronics_es": [
     "Las baterías LiPo pueden incendiarse si se dañan, se cortocircuitan o se sobrecargan; nunca las cargue sin vigilancia.",
@@ -275,8 +269,7 @@
     "Los motores se calientan durante el uso; déjelos enfriar antes de manipularlos."
   ],
   "gpsr_warnings_pt": [
-    "Não é um brinquedo. Não se destina a pessoas com menos de 14 anos; menores apenas sob supervisão de um adulto.",
-    "Componente para aeronaves não tripuladas de construção própria: o construtor é responsável pela aeronave montada e pela sua utilização legal."
+    "Peças FPV e RC. Não é um brinquedo. Não se destina a crianças com menos de 14 anos; menores apenas sob supervisão de um adulto."
   ],
   "gpsr_warnings_electronics_pt": [
     "As baterias LiPo podem incendiar-se se danificadas, em curto-circuito ou sobrecarregadas; nunca as carregue sem vigilância.",
@@ -293,8 +286,7 @@
     "Os motores aquecem durante a utilização; deixe-os arrefecer antes de os manusear."
   ],
   "gpsr_warnings_pl": [
-    "To nie jest zabawka. Nie dla osób poniżej 14 lat; osoby niepełnoletnie wyłącznie pod nadzorem dorosłego.",
-    "Podzespół do samodzielnie budowanych bezzałogowych statków powietrznych: za zmontowany statek powietrzny i jego zgodne z prawem użytkowanie odpowiada konstruktor."
+    "Części FPV i RC. To nie jest zabawka. Nie dla dzieci poniżej 14 lat; osoby niepełnoletnie wyłącznie pod nadzorem dorosłego."
   ],
   "gpsr_warnings_electronics_pl": [
     "Akumulatory LiPo mogą się zapalić w razie uszkodzenia, zwarcia lub przeładowania; nigdy nie ładuj ich bez nadzoru.",
@@ -311,8 +303,7 @@
     "Silniki nagrzewają się podczas pracy; przed dotknięciem odczekaj, aż ostygną."
   ],
   "gpsr_warnings_cs": [
-    "Není to hračka. Není určeno osobám mladším 14 let; nezletilí pouze pod dohledem dospělé osoby.",
-    "Součást pro svépomocně stavěná bezpilotní letadla: za sestavené letadlo a jeho provoz v souladu s právem odpovídá stavitel."
+    "Díly pro FPV a RC. Není to hračka. Není určeno dětem mladším 14 let; nezletilí pouze pod dohledem dospělé osoby."
   ],
   "gpsr_warnings_electronics_cs": [
     "Akumulátory LiPo se mohou vznítit při poškození, zkratu nebo přebití; nikdy je nenabíjejte bez dozoru.",
@@ -329,8 +320,7 @@
     "Motory se během provozu zahřívají; před manipulací je nechte vychladnout."
   ],
   "gpsr_warnings_sk": [
-    "Nie je to hračka. Nie je určené pre osoby mladšie ako 14 rokov; maloletí iba pod dohľadom dospelej osoby.",
-    "Súčiastka pre svojpomocne stavané bezpilotné lietadlá: za zostavené lietadlo a jeho prevádzku v súlade so zákonom zodpovedá staviteľ."
+    "Diely pre FPV a RC. Nie je to hračka. Nie je určené deťom mladším ako 14 rokov; maloletí iba pod dohľadom dospelej osoby."
   ],
   "gpsr_warnings_electronics_sk": [
     "Akumulátory LiPo sa môžu vznietiť pri poškodení, skrate alebo prebití; nikdy ich nenabíjajte bez dozoru.",
@@ -347,8 +337,7 @@
     "Motory sa počas prevádzky zahrievajú; pred manipuláciou ich nechajte vychladnúť."
   ],
   "gpsr_warnings_sl": [
-    "To ni igrača. Ni za osebe, mlajše od 14 let; mladoletni samo pod nadzorom odrasle osebe.",
-    "Sestavni del za doma izdelane brezpilotne zrakoplove: za sestavljeni zrakoplov in njegovo zakonito uporabo je odgovoren graditelj."
+    "Deli za FPV in RC. To ni igrača. Ni za otroke, mlajše od 14 let; mladoletni samo pod nadzorom odrasle osebe."
   ],
   "gpsr_warnings_electronics_sl": [
     "Baterije LiPo se lahko vžgejo, če so poškodovane, v kratkem stiku ali prenapolnjene; nikoli jih ne polnite brez nadzora.",
@@ -365,8 +354,7 @@
     "Motorji se med uporabo segrejejo; pred rokovanjem jih pustite, da se ohladijo."
   ],
   "gpsr_warnings_hr": [
-    "Nije igračka. Nije za osobe mlađe od 14 godina; maloljetnici samo pod nadzorom odrasle osobe.",
-    "Komponenta za samostalno izrađene bespilotne zrakoplove: graditelj je odgovoran za sastavljeni zrakoplov i njegovu zakonitu uporabu."
+    "Dijelovi za FPV i RC. Nije igračka. Nije za djecu mlađu od 14 godina; maloljetnici samo pod nadzorom odrasle osobe."
   ],
   "gpsr_warnings_electronics_hr": [
     "LiPo baterije mogu se zapaliti ako su oštećene, u kratkom spoju ili prepunjene; nikad ih ne punite bez nadzora.",
@@ -383,8 +371,7 @@
     "Motori se tijekom rada zagrijavaju; prije rukovanja pustite ih da se ohlade."
   ],
   "gpsr_warnings_hu": [
-    "Nem játék. 14 év alattiak számára nem alkalmas; kiskorúak csak felnőtt felügyelete mellett használhatják.",
-    "Alkatrész saját építésű pilóta nélküli légi járművekhez: az összeszerelt légi járműért és annak jogszerű üzemeltetéséért az építő felel."
+    "FPV- és RC-alkatrészek. Nem játék. 14 év alatti gyermekek számára nem alkalmas; kiskorúak csak felnőtt felügyelete mellett használhatják."
   ],
   "gpsr_warnings_electronics_hu": [
     "A LiPo akkumulátorok sérülés, rövidzárlat vagy túltöltés esetén meggyulladhatnak; soha ne töltse őket felügyelet nélkül.",
@@ -401,8 +388,7 @@
     "A motorok használat közben felforrósodnak; kezelés előtt hagyja kihűlni őket."
   ],
   "gpsr_warnings_ro": [
-    "Nu este o jucărie. Nu este destinat persoanelor sub 14 ani; minorii numai sub supravegherea unui adult.",
-    "Componentă pentru aeronave fără pilot construite de utilizator: constructorul răspunde de aeronava asamblată și de utilizarea ei legală."
+    "Piese FPV și RC. Nu este o jucărie. Nu este destinat copiilor sub 14 ani; minorii numai sub supravegherea unui adult."
   ],
   "gpsr_warnings_electronics_ro": [
     "Bateriile LiPo se pot aprinde dacă sunt deteriorate, scurtcircuitate sau supraîncărcate; nu le încărcați niciodată nesupravegheate.",
@@ -419,8 +405,7 @@
     "Motoarele se încălzesc în timpul utilizării; lăsați-le să se răcească înainte de a le manipula."
   ],
   "gpsr_warnings_bg": [
-    "Това не е играчка. Не е предназначено за лица под 14 години; непълнолетни само под надзора на възрастен.",
-    "Компонент за самостоятелно изградени безпилотни летателни апарати: конструкторът отговаря за сглобения летателен апарат и за законосъобразната му експлоатация."
+    "Части за FPV и RC. Това не е играчка. Не е предназначено за деца под 14 години; непълнолетни само под надзора на възрастен."
   ],
   "gpsr_warnings_electronics_bg": [
     "LiPo батериите могат да се запалят при повреда, късо съединение или презареждане; никога не ги зареждайте без надзор.",
@@ -437,8 +422,7 @@
     "Двигателите се нагряват по време на работа; оставете ги да изстинат, преди да ги пипате."
   ],
   "gpsr_warnings_el": [
-    "Δεν είναι παιχνίδι. Δεν προορίζεται για άτομα κάτω των 14 ετών· ανήλικοι μόνο υπό την επίβλεψη ενήλικα.",
-    "Εξάρτημα για ιδιοκατασκευαζόμενα μη επανδρωμένα αεροσκάφη: αυτός που το συναρμολογεί ευθύνεται για το συναρμολογημένο αεροσκάφος και τη νόμιμη χρήση του."
+    "Εξαρτήματα FPV και RC. Δεν είναι παιχνίδι. Δεν προορίζεται για παιδιά κάτω των 14 ετών· ανήλικοι μόνο υπό την επίβλεψη ενήλικα."
   ],
   "gpsr_warnings_electronics_el": [
     "Οι μπαταρίες LiPo μπορεί να αναφλεγούν όταν έχουν υποστεί ζημιά, βραχυκύκλωμα ή υπερφόρτιση· μην τις φορτίζετε ποτέ χωρίς επίβλεψη.",
@@ -455,8 +439,7 @@
     "Οι κινητήρες θερμαίνονται κατά τη λειτουργία· αφήστε τους να κρυώσουν πριν τους πιάσετε."
   ],
   "gpsr_warnings_da": [
-    "Ikke legetøj. Ikke til personer under 14 år; mindreårige kun under opsyn af en voksen.",
-    "Komponent til selvbyggede ubemandede luftfartøjer: byggeren er ansvarlig for det samlede luftfartøj og for lovlig brug af det."
+    "FPV- og RC-dele. Ikke legetøj. Ikke til børn under 14 år; mindreårige kun under opsyn af en voksen."
   ],
   "gpsr_warnings_electronics_da": [
     "LiPo-batterier kan bryde i brand, hvis de beskadiges, kortsluttes eller overoplades; oplad dem aldrig uden opsyn.",
@@ -473,8 +456,7 @@
     "Motorerne bliver varme under brug; lad dem køle af, før du rører dem."
   ],
   "gpsr_warnings_sv": [
-    "Ingen leksak. Inte för personer under 14 år; minderåriga endast under uppsikt av en vuxen.",
-    "Komponent för egenbyggda obemannade luftfartyg: byggaren ansvarar för det monterade luftfartyget och för att det används lagligt."
+    "FPV- och RC-delar. Inte en leksak. Inte för barn under 14 år; minderåriga endast under uppsikt av en vuxen."
   ],
   "gpsr_warnings_electronics_sv": [
     "LiPo-batterier kan fatta eld om de skadas, kortsluts eller överladdas; ladda aldrig utan tillsyn.",
@@ -491,8 +473,7 @@
     "Motorerna blir varma vid användning; låt dem svalna innan du hanterar dem."
   ],
   "gpsr_warnings_fi": [
-    "Ei lelu. Ei alle 14-vuotiaille; alaikäiset vain aikuisen valvonnassa.",
-    "Komponentti itse rakennettuihin miehittämättömiin ilma-aluksiin: rakentaja vastaa kootusta ilma-aluksesta ja sen lainmukaisesta käytöstä."
+    "FPV- ja RC-osia. Ei lelu. Ei alle 14-vuotiaille lapsille; alaikäiset vain aikuisen valvonnassa."
   ],
   "gpsr_warnings_electronics_fi": [
     "LiPo-akut voivat syttyä palamaan, jos ne vaurioituvat, oikosulkeutuvat tai ylilatautuvat; älä koskaan lataa niitä valvomatta.",
@@ -509,8 +490,7 @@
     "Moottorit kuumenevat käytössä; anna niiden jäähtyä ennen käsittelyä."
   ],
   "gpsr_warnings_et": [
-    "Ei ole mänguasi. Ei ole mõeldud alla 14-aastastele; alaealised ainult täiskasvanu järelevalve all.",
-    "Komponent isetehtud mehitamata õhusõidukitele: kokkupandud õhusõiduki ja selle seadusliku kasutamise eest vastutab ehitaja."
+    "FPV- ja RC-osad. Ei ole mänguasi. Ei sobi alla 14-aastastele lastele; alaealised ainult täiskasvanu järelevalve all."
   ],
   "gpsr_warnings_electronics_et": [
     "LiPo-akud võivad kahjustuse, lühise või ülelaadimise korral süttida; ärge laadige neid kunagi järelevalveta.",
@@ -527,8 +507,7 @@
     "Mootorid lähevad kasutamisel kuumaks; laske neil enne käsitsemist jahtuda."
   ],
   "gpsr_warnings_lv": [
-    "Nav rotaļlieta. Nav paredzēts personām, kas jaunākas par 14 gadiem; nepilngadīgie tikai pieaugušā uzraudzībā.",
-    "Detaļa pašbūvētiem bezpilota gaisa kuģiem: par samontēto gaisa kuģi un tā likumīgu lietošanu atbild būvētājs."
+    "FPV un RC detaļas. Nav rotaļlieta. Nav paredzēts bērniem, kas jaunāki par 14 gadiem; nepilngadīgie tikai pieaugušā uzraudzībā."
   ],
   "gpsr_warnings_electronics_lv": [
     "LiPo akumulatori var aizdegties, ja tie ir bojāti, īssavienoti vai pārlādēti; nekad nelādējiet tos bez uzraudzības.",
@@ -545,8 +524,7 @@
     "Motori lietošanas laikā sakarst; pirms pieskaršanās ļaujiet tiem atdzist."
   ],
   "gpsr_warnings_lt": [
-    "Tai ne žaislas. Neskirta jaunesniems nei 14 metų asmenims; nepilnamečiai tik prižiūrimi suaugusiojo.",
-    "Komponentas savadarbiams bepiločiams orlaiviams: už surinktą orlaivį ir teisėtą jo naudojimą atsako jo surinkėjas."
+    "FPV ir RC dalys. Ne žaislas. Neskirta jaunesniems nei 14 metų vaikams; nepilnamečiai tik prižiūrimi suaugusiojo."
   ],
   "gpsr_warnings_electronics_lt": [
     "LiPo akumuliatoriai gali užsidegti, jei yra pažeisti, trumpai sujungti ar perkrauti; niekada nekraukite be priežiūros.",

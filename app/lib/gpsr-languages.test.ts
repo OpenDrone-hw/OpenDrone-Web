@@ -32,10 +32,18 @@ describe('warningLanguages', () => {
     }
   });
 
-  it('covers the EU27, with warnings in every language it names', () => {
+  it('covers the EU27, with the framing line in every language it names', () => {
     assert.deepEqual(Object.keys(COUNTRY_LANGUAGES).sort(), [...EU_COUNTRIES].sort());
     for (const lang of WARNING_LANGUAGES) {
-      for (const key of [`gpsr_warnings_${lang}`, ...['electronics', 'frame', 'motor'].map((k) => `gpsr_warnings_${k}_${lang}`)]) {
+      const key = `gpsr_warnings_${lang}`;
+      assert.ok(Array.isArray(COPY[key]) && (COPY[key] as unknown[]).length > 0, key);
+    }
+  });
+
+  it('keeps the legacy per-kind warnings until the leaflet is approved', () => {
+    for (const lang of WARNING_LANGUAGES) {
+      for (const k of ['electronics', 'frame', 'motor']) {
+        const key = `gpsr_warnings_${k}_${lang}`;
         assert.ok(Array.isArray(COPY[key]) && (COPY[key] as unknown[]).length > 0, key);
       }
     }
