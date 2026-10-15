@@ -10,7 +10,7 @@
     "lead": ""
   },
   "whatIsThis": {
-    "intro": "A 4-in-1 ESC: it takes battery power and drives four brushless motors. Each motor has its own microcontroller running AM32, a gate driver and six MOSFETs. It takes throttle from the flight controller over DShot and sends motor RPM back on the same wire, which Betaflight uses for RPM filtering. Current sensing is on board and goes to the flight controller through the connector.",
+    "intro": "A 4-in-1 ESC: it takes battery power and drives four brushless motors. Each motor has its own microcontroller running AM32, a gate driver and six MOSFETs. It takes throttle from the flight controller over DShot and sends motor RPM back on the same wire, which Betaflight uses for RPM filtering. Current sensing is on board and goes to the flight controller through the connector. A multirotor is the usual load. The same drivers can run other three-phase motors, including a blaster mechanism.",
     "needs": [
       "A flight controller to command it (OpenFC Lite; the 8-pin cable comes in its box)",
       "Four brushless motors soldered to the pads",

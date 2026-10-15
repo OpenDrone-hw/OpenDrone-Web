@@ -10,7 +10,7 @@
     "lead": ""
   },
   "whatIsThis": {
-    "intro": "The flight controller is the drone's onboard computer. It runs Betaflight on an RP2354 (Raspberry Pi) and reads a 6-axis IMU to keep the drone stable and follow your sticks. It logs blackbox to a microSD card, draws an OSD on analog video, sends OSD data to digital video systems, and has a switchable 10 V output to power your VTX.",
+    "intro": "The flight controller is the drone's onboard computer. It runs Betaflight on an RP2354 (Raspberry Pi) and reads a 6-axis IMU to keep the drone stable and follow your sticks. It logs blackbox to a microSD card, draws an OSD on analog video, sends OSD data to digital video systems, and has a switchable 10 V output to power your VTX. The same RP2354 board can run other firmware and be used as a programmable I/O controller.",
     "needs": [
       "A 4-in-1 ESC and four motors (OpenESC pairs directly, one plug)",
       "A receiver wired to a UART (OpenRX, CRSF)",
