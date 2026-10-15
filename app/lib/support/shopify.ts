@@ -215,6 +215,80 @@ export async function ownedOrder(
   }
 }
 
+export type StaffOrderDetails = {
+  total: string | null;
+  shippingAddress: string[];
+  shippingPhone: string | null;
+  trackingNumbers: string[];
+};
+
+const STAFF_CUSTOMER_QUERY = `query SupportStaffCustomer($id: ID!) {
+  customer(id: $id) {
+    displayName email
+    defaultPhoneNumber { phoneNumber }
+    defaultAddress { formatted(withName: true, withCompany: true) }
+    orders(first: 8, sortKey: CREATED_AT, reverse: true) {
+      nodes {
+        name
+        currentTotalPriceSet { shopMoney { amount currencyCode } }
+        shippingAddress { formatted(withName: true, withCompany: true) phone }
+        fulfillments(first: 5) { trackingInfo(first: 5) { number } }
+      }
+    }
+  }
+}`;
+
+type StaffCustomerData = {
+  customer: {
+    displayName: string | null;
+    email: string | null;
+    defaultPhoneNumber?: {phoneNumber: string | null} | null;
+    defaultAddress?: {formatted: string[]} | null;
+    orders: {
+      nodes: Array<{
+        name: string;
+        currentTotalPriceSet?: {shopMoney: {amount: string; currencyCode: string}} | null;
+        shippingAddress?: {formatted: string[]; phone: string | null} | null;
+        fulfillments?: Array<{trackingInfo: Array<{number: string | null}>}>;
+      }>;
+    };
+  } | null;
+};
+
+/**
+ * What fulfilment needs, unmasked, for signed-in staff only (never for the
+ * customer-facing pages): the customer's contact record and, per order, the
+ * shipping address, phone, total and tracking numbers. A Shopify failure
+ * yields an empty result, never an error: the rest of the card still works.
+ */
+export async function staffOrderDetails(
+  env: ShopifyEnv,
+  customerId: string,
+  orderNames: string[],
+  fetcher: Fetcher = fetch,
+): Promise<{contact: {name: string | null; email: string | null; phone: string | null; address: string[]} | null; orders: Record<string, StaffOrderDetails>}> {
+  try {
+    const data = await gql<StaffCustomerData>(env, STAFF_CUSTOMER_QUERY, {id: customerId}, fetcher);
+    const c = data.customer;
+    if (!c) return {contact: null, orders: {}};
+    const orders: Record<string, StaffOrderDetails> = {};
+    for (const o of c.orders.nodes) {
+      if (!orderNames.includes(o.name)) continue;
+      const m = o.currentTotalPriceSet?.shopMoney;
+      orders[o.name] = {
+        total: m ? `${m.amount} ${m.currencyCode}` : null,
+        shippingAddress: o.shippingAddress?.formatted ?? [],
+        shippingPhone: o.shippingAddress?.phone ?? null,
+        trackingNumbers: (o.fulfillments ?? []).flatMap((f) => f.trackingInfo.map((t) => t.number ?? '')).filter(Boolean),
+      };
+    }
+    return {contact: {name: c.displayName, email: c.email, phone: c.defaultPhoneNumber?.phoneNumber ?? null, address: c.defaultAddress?.formatted ?? []}, orders};
+  } catch (err) {
+    console.warn('[support] shopify staff details failed', err instanceof Error ? err.message : 'error');
+    return {contact: null, orders: {}};
+  }
+}
+
 const TAGS_ADD = `mutation SupportTag($id: ID!, $tags: [String!]!) {
   tagsAdd(id: $id, tags: $tags) { userErrors { message } }
 }`;

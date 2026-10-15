@@ -48,7 +48,7 @@ import {
   type ChatFpvDeps,
 } from './ai-drafts.ts';
 import {approveEmoji, decide, resolveMode, type ModerationEnv} from './moderation.ts';
-import {sendReplyNotice} from './notify.ts';
+import {sendReplyNotice, sendTicketReceived} from './notify.ts';
 import {extractFirstName, scrubForDiscord, scrubForPublic} from './scrubber.ts';
 import {
   customerAdminUrl,
@@ -352,7 +352,8 @@ export async function createTicket(deps: Deps, input: NewTicketInput, files: Out
 
   // With the CRM on, the team works the ticket in the internal app: no staff
   // thread, attachments in R2 (a Discord thread is kept only behind the flag).
-  const crm = crmEnabled(deps.env);
+  // Until the R2 bucket exists, a ticket with files keeps the Discord thread path (files in the thread) instead of failing.
+  const crm = crmEnabled(deps.env) && (files.length === 0 || Boolean(deps.files));
   let threadId = '';
   let firstId: string | null = null;
   let attachments: StoredAttachment[];
@@ -424,8 +425,21 @@ export async function createTicket(deps: Deps, input: NewTicketInput, files: Out
   if (customerId) {
     await run(deps, () => recordOnCustomer(deps.env, customerId, shopifyEntry(deps, ticket), {tag: true}, fetcher));
   }
+  await run(deps, () => sendConfirmation(deps, ticket));
   if (deps.chatfpv) await run(deps, () => requestDraft(deps, ticket, input.firmware));
   return ticket;
+}
+
+/**
+ * The "we have your ticket" mail. The outcome is a support_audit row (actor
+ * `system`, action `confirmation_sent` or `confirmation_failed`, never the
+ * address), so a missing mail is visible in the CRM audit trail and in the
+ * ticket's detail. Returns whether the provider accepted it.
+ */
+export async function sendConfirmation(deps: Deps, ticket: Ticket, actor = 'system'): Promise<boolean> {
+  const sent = await sendTicketReceived(deps.env, ticket.email, ticket.ref, await freshResumeUrl(deps, ticket), deps.fetcher ?? fetch);
+  await deps.store.audit(actor, sent ? 'confirmation_sent' : 'confirmation_failed', ticket.ref, '', (deps.now ?? Date.now)()).catch(() => {});
+  return sent;
 }
 
 export type ReplyError = 'too_short' | 'too_long' | 'filtered' | 'locked';
@@ -450,7 +464,7 @@ export async function addCustomerReply(deps: Deps, ticket: Ticket, rawText: stri
   const now = (deps.now ?? Date.now)();
 
   const reopening = ticket.status === 'closed';
-  const toR2 = crmEnabled(deps.env);
+  const toR2 = crmEnabled(deps.env) && (Boolean(deps.files) || !hasThread(ticket));
   let id: string | null = null;
   let attachments: StoredAttachment[] = [];
   try {

@@ -61,10 +61,11 @@ SUPPORT_MAIL_INTAKE_ENABLED = "dry"
 
 # Support CRM (README "Support tickets"): the staff API under /api/staff/support
 # for the internal app, and the community route to the public #help forum.
-# "0" off; each needs the founder's go. SUPPORT_STAFF_API_TOKEN is a Worker
-# secret. The community route also needs DISCORD_HELP_CHANNEL_ID and the
-# wording marked TODO-LEGAL in app/lib/support/community.ts approved.
-SUPPORT_CRM_API = "0"
+# "0" off; each needs the founder's go. SUPPORT_CRM_API is on by the founder's
+# go of 2026-10-15. SUPPORT_STAFF_API_TOKEN is a Worker secret. The community
+# route also needs DISCORD_HELP_CHANNEL_ID and the wording marked TODO-LEGAL in
+# app/lib/support/community.ts approved.
+SUPPORT_CRM_API = "1"
 SUPPORT_COMMUNITY_ROUTE = "0"
 # ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
 # /support Ask box and the product/preorder widget. "1" turns each on.
@@ -104,8 +105,10 @@ migrations_dir = "migrations"
 binding = "CHATFPV"
 service = "chatfpv"
 
-# Ticket attachments of the CRM (README "Support tickets"). Declare this binding
-# only after the bucket exists, or the deploy fails:
+# Ticket attachments of the CRM (README "Support tickets"). R2 is not enabled on
+# the Cloudflare account yet (API error 10042): until it is, tickets with files
+# keep the Discord thread path. Declare this binding only after the bucket exists
+# (enable R2 in the dashboard first), or the deploy fails:
 #   npx wrangler r2 bucket create opendrone-support-files
 # [[r2_buckets]]
 # binding = "SUPPORT_FILES"

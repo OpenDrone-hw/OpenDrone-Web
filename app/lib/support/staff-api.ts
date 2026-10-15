@@ -13,7 +13,7 @@ import {authenticateStaff, type StaffAuthEnv} from './staff-auth.ts';
 import {PRIORITIES, type Priority, type Route, type Ticket, type TicketFilter, type TicketMessage, type TicketStatus} from './store.ts';
 import {supportDeps, supportReady, type SupportWorkerEnv} from './server.ts';
 import {parseTicketRef} from './tokens.ts';
-import {TOPICS, normalizeText, type Deps} from './tickets.ts';
+import {TOPICS, normalizeText, sendConfirmation, type Deps} from './tickets.ts';
 import {extractAttachments} from './uploads.ts';
 
 export const STAFF_BASE = '/api/staff/support';
@@ -215,6 +215,12 @@ export async function handleStaff(request: Request, env: StaffEnv, opts: StaffOp
   }
 
   if (seg.length === 3 && sub === 'customer' && method === 'GET') return json({ok: true, customer: await customerCard(deps, ticket)});
+
+  // Send the ticket-received mail again to the address on the ticket (one click of a person; audited).
+  if (seg.length === 3 && sub === 'resend-confirmation' && method === 'POST') {
+    const sent = await sendConfirmation(deps, ticket, login);
+    return sent ? json({ok: true, sent: true}) : fail(502, 'mail_not_sent');
+  }
 
   if (seg.length === 3 && sub === 'draft' && method === 'GET') {
     const pending = deps.chatfpv ? await deps.chatfpv.drafts.pending(ref) : [];

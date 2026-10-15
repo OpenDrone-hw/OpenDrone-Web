@@ -44,15 +44,38 @@ export function replyMail(ref: string, link: string): {subject: string; text: st
   };
 }
 
-export async function sendReplyNotice(
-  env: Env,
-  to: string,
-  ref: string,
-  link: string,
-  fetcher: typeof fetch = fetch,
-): Promise<boolean> {
-  if (!notifyEnabled(env)) return false;
-  const mail = replyMail(ref, link);
+/** "We have your ticket" email, sent once when a ticket is opened. Carries no message content. */
+export function receivedMail(ref: string, link: string): {subject: string; text: string; html: string} {
+  const html = shell({
+    title: `We received your OpenDrone ticket ${escapeHtml(ref)}`,
+    badge: 'Support',
+    preheader: `Your support ticket ${escapeHtml(ref)} is open. Keep this email: the link opens it.`,
+    body:
+      head(`Ticket ${escapeHtml(ref)}`, 'We have your request.') +
+      para('Thank you for contacting OpenDrone. Your ticket is open and our team will answer on the ticket page; we also send you an email when there is a reply.') +
+      para('Use the button to read the conversation, add details or files, and mark the ticket solved. Keep this email: the link is your way back.') +
+      para('For your privacy the message itself is not in this email. This is an automatic message; replies to this email are not read.', {small: true, last: true}) +
+      button(escapeHtml(link), 'Open your ticket &rarr;'),
+  });
+  return {
+    html,
+    subject: `We received your OpenDrone ticket ${ref}`,
+    text: [
+      `Thank you for contacting OpenDrone. Your support ticket ${ref} is open.`,
+      '',
+      'Our team will answer on the ticket page, and we email you when there is a reply.',
+      `Open your ticket, add details or files: ${link}`,
+      '',
+      'Keep this email: the link is your way back.',
+      'For your privacy the message itself is not in this email.',
+      'This is an automatic message; replies to this email are not read.',
+      '',
+      'OpenDrone by Incutec BV',
+    ].join('\n'),
+  };
+}
+
+async function sendResend(env: Env, to: string, mail: {subject: string; text: string; html: string}, label: string, ref: string, fetcher: typeof fetch): Promise<boolean> {
   try {
     const res = await fetcher('https://api.resend.com/emails', {
       method: 'POST',
@@ -66,10 +89,33 @@ export async function sendReplyNotice(
       }),
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) console.warn('[support] reply notice not sent', ref, res.status);
+    if (!res.ok) console.warn(`[support] ${label} not sent`, ref, res.status);
     return res.ok;
   } catch {
-    console.warn('[support] reply notice failed', ref);
+    console.warn(`[support] ${label} failed`, ref);
     return false;
   }
+}
+
+export async function sendReplyNotice(
+  env: Env,
+  to: string,
+  ref: string,
+  link: string,
+  fetcher: typeof fetch = fetch,
+): Promise<boolean> {
+  if (!notifyEnabled(env)) return false;
+  return sendResend(env, to, replyMail(ref, link), 'reply notice', ref, fetcher);
+}
+
+/** The ticket-received confirmation. Same switch and sender as the reply notice. */
+export async function sendTicketReceived(
+  env: Env,
+  to: string,
+  ref: string,
+  link: string,
+  fetcher: typeof fetch = fetch,
+): Promise<boolean> {
+  if (!notifyEnabled(env)) return false;
+  return sendResend(env, to, receivedMail(ref, link), 'ticket confirmation', ref, fetcher);
 }

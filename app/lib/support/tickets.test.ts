@@ -510,6 +510,9 @@ describe('notifications', {skip}, () => {
       return base(url, init);
     }) as unknown as typeof fetch;
     const t = await createTicket(deps, input());
+    assert.equal(sent.length, 1, 'the ticket confirmation goes out at creation');
+    assert.match(sent[0]!.text, /Your support ticket OD-/);
+    sent.length = 0;
     clock += 60_000;
     discord.staff(t.threadId, 'The secret answer is kumquat');
     clock += 11 * 60_000;
@@ -520,6 +523,37 @@ describe('notifications', {skip}, () => {
     assert.match(sent[0]!.text, /https:\/\/opendrone\.test\/support\/resume\?t=/);
     // A word that cannot occur in the random token, so the check never flakes.
     assert.doesNotMatch(sent[0]!.text, /kumquat/);
+  });
+
+  it('confirms a new ticket by email, with a link and no message, and records the outcome', async () => {
+    const mails: Array<{to: string[]; subject: string; text: string}> = [];
+    let status = 200;
+    const {deps} = await setup({env: {SUPPORT_EMAIL_NOTIFY_ENABLED: '1', RESEND_API_KEY: 're_test'}});
+    const base = deps.fetcher!;
+    deps.fetcher = (async (url: string, init: RequestInit) => {
+      if (String(url).includes('resend')) {
+        mails.push(JSON.parse(String(init.body)) as {to: string[]; subject: string; text: string});
+        return new Response('{}', {status});
+      }
+      return base(url, init);
+    }) as unknown as typeof fetch;
+    const ok = await createTicket(deps, input({message: 'A very private kumquat question'}));
+    assert.deepEqual(mails[0]!.to, ['jan@example.com']);
+    assert.match(mails[0]!.subject, /^We received your OpenDrone ticket OD-/);
+    assert.match(mails[0]!.text, /resume\?t=/);
+    assert.doesNotMatch(mails[0]!.text, /kumquat/);
+    assert.deepEqual((await deps.store.auditFor(ok.ref)).map((a) => [a.actor, a.action]), [['system', 'confirmation_sent']]);
+
+    status = 500;
+    const bad = await createTicket(deps, input());
+    assert.equal(bad.ref.startsWith('OD-'), true, 'a mail failure never fails the ticket');
+    assert.deepEqual((await deps.store.auditFor(bad.ref)).map((a) => a.action), ['confirmation_failed']);
+  });
+
+  it('sends no confirmation while mail is off', async () => {
+    const {deps} = await setup();
+    const t = await createTicket(deps, input());
+    assert.deepEqual((await deps.store.auditFor(t.ref)).map((a) => a.action), ['confirmation_failed']);
   });
 });
 

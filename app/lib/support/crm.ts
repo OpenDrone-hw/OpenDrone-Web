@@ -10,8 +10,8 @@ import {chunkMessage, cleanText, escapeDiscord, type OutboundFile} from './disco
 import {approvedText, settleDraft} from './ai-drafts.ts';
 import {fileLine, storeFiles} from './files.ts';
 import {hasThread} from './flags.ts';
-import {customerAdminUrl, lookupCustomer, type OrderSummary} from './shopify.ts';
-import {scrubForPublic} from './scrubber.ts';
+import {customerAdminUrl, lookupCustomer, staffOrderDetails, type OrderSummary, type StaffOrderDetails} from './shopify.ts';
+import {scrubForDiscord} from './scrubber.ts';
 import {PRIORITIES, type Priority, type StoredAttachment, type Ticket, type TicketMessage, type TicketStatus} from './store.ts';
 import {validLogin} from './staff-auth.ts';
 import {closeTicket, humanTag, normalizeText, type Deps} from './tickets.ts';
@@ -33,7 +33,8 @@ export async function sendStaffReply(
   if (!text && !files.length) return {ok: false, error: 'empty'};
   if (text.length > MAX_STAFF_REPLY) return {ok: false, error: 'too_long'};
   if (files.length && !deps.files) return {ok: false, error: 'files_unavailable'};
-  const scrubbed = scrubForPublic(text, {keepPhones: deps.env.PUBLIC_COMPANY_TEL ? [deps.env.PUBLIC_COMPANY_TEL] : []});
+  // Staff may write phone numbers, emails and addresses to a customer: only card numbers and tokens are refused.
+  const scrubbed = scrubForDiscord(text);
   if (scrubbed.blocked) return {ok: false, error: 'filtered'};
 
   const now = (deps.now ?? Date.now)();
@@ -143,11 +144,28 @@ export type CustomerCard = {
   /** An order of this email matched the order number given on the ticket (not proof of identity). */
   orderMatched: boolean;
   shopifyUrl: string | null;
-  orders: Array<{name: string; createdAt: string; financial: string | null; fulfillment: string | null; preorderBatches: string[]; items: Array<{sku: string | null; title: string; quantity: number}>}>;
+  /** Shopify's own record of the customer, for fulfilment: shown unmasked to signed-in staff. Null when unavailable. */
+  contact: {name: string | null; email: string | null; phone: string | null; address: string[]} | null;
+  orders: Array<{
+    name: string;
+    createdAt: string;
+    financial: string | null;
+    fulfillment: string | null;
+    preorderBatches: string[];
+    items: Array<{sku: string | null; title: string; quantity: number}>;
+    total: string | null;
+    shippingAddress: string[];
+    shippingPhone: string | null;
+    trackingNumbers: string[];
+  }>;
   earlierTickets: Array<{ref: string; status: TicketStatus; subject: string; createdAt: number; orderVerified: boolean}>;
 };
 
-const cardOrder = (o: OrderSummary) => ({
+const cardOrder = (o: OrderSummary, d?: StaffOrderDetails) => ({
+  total: d?.total ?? null,
+  shippingAddress: d?.shippingAddress ?? [],
+  shippingPhone: d?.shippingPhone ?? null,
+  trackingNumbers: d?.trackingNumbers ?? [],
   name: o.name,
   createdAt: o.createdAt,
   financial: o.financial,
@@ -157,29 +175,34 @@ const cardOrder = (o: OrderSummary) => ({
 });
 
 /**
- * Orders and preorder batch only for a ticket whose order number Shopify
- * confirmed for the ticket's email, like the Discord staff card. No address,
- * phone or payment detail is read or returned.
+ * The customer card for signed-in staff (the app sits behind Cloudflare Access):
+ * Shopify's name, phone and address, each order with its shipping address,
+ * phone, total and tracking. Nothing is masked: staff need it to fulfil and
+ * help. Card numbers are never stored or read. The orders of a matching email
+ * are shown even when the ticket's order number did not match, with
+ * `orderMatched` false so the app flags the email as not verified.
  */
 export async function customerCard(deps: Deps, ticket: Ticket): Promise<CustomerCard> {
   const earlier = (await deps.store.ticketsByEmail(ticket.email, 10)).filter((t) => t.ref !== ticket.ref);
   let orders: CustomerCard['orders'] = [];
   let shopifyUrl: string | null = null;
-  if (ticket.orderVerified && ticket.customerMatch === 'matched') {
-    try {
-      const ctx = await lookupCustomer(deps.env, ticket.email, deps.fetcher ?? fetch);
-      if (ctx.match === 'matched') {
-        orders = ctx.orders.slice(0, 8).map(cardOrder);
-        shopifyUrl = customerAdminUrl(deps.env, ctx.customerId);
-      }
-    } catch (err) {
-      console.warn('[support] customer card lookup failed', ticket.ref, err instanceof Error ? err.message : 'error');
+  let contact: CustomerCard['contact'] = null;
+  try {
+    const ctx = await lookupCustomer(deps.env, ticket.email, deps.fetcher ?? fetch);
+    if (ctx.match === 'matched') {
+      const details = await staffOrderDetails(deps.env, ctx.customerId, ctx.orders.slice(0, 8).map((o) => o.name), deps.fetcher ?? fetch);
+      orders = ctx.orders.slice(0, 8).map((o) => cardOrder(o, details.orders[o.name]));
+      shopifyUrl = customerAdminUrl(deps.env, ctx.customerId);
+      contact = details.contact;
     }
+  } catch (err) {
+    console.warn('[support] customer card lookup failed', ticket.ref, err instanceof Error ? err.message : 'error');
   }
   return {
     match: ticket.customerMatch,
     orderMatched: ticket.orderVerified,
     shopifyUrl,
+    contact,
     orders,
     earlierTickets: earlier.map((t) => ({ref: t.ref, status: t.status, subject: t.subject, createdAt: t.createdAt, orderVerified: t.orderVerified})),
   };

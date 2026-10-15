@@ -212,6 +212,8 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
 export type ShopifyScript = {
   customers?: Array<{id: string; email: string; numberOfOrders?: number; orders?: unknown[]; metafield?: {value: string} | null}>;
   orders?: Array<Record<string, unknown>>;
+  /** The staff card's customer record (`SupportStaffCustomer`), by customer id. */
+  staff?: Record<string, unknown>;
 };
 
 /** A Shopify Admin GraphQL endpoint answering from `script`, recording mutations. */
@@ -231,6 +233,9 @@ export function fakeShopify(script: ShopifyScript) {
         .filter((c) => c.email.toLowerCase().includes(local))
         .map((c) => ({...c, metafield: metafields.has(c.id) ? {value: metafields.get(c.id)} : null, orders: {nodes: c.orders ?? []}}));
       return json({customers: {nodes}});
+    }
+    if (query.includes('SupportStaffCustomer')) {
+      return json({customer: script.staff?.[String(variables.id)] ?? null});
     }
     if (query.includes('SupportOrder')) {
       const name = String(variables.q).replace(/^name:"|"$/g, '');

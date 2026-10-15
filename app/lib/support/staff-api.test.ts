@@ -35,7 +35,23 @@ const JAN_ORDER = {
   tags: ['preorder', 'batch:OD-FC-F4:2'],
   lineItems: {nodes: [{sku: 'OD-FC-F4', title: 'OpenFC F4', quantity: 1}]},
 };
-const SCRIPT = {customers: [{id: 'gid://shopify/Customer/1', email: 'jan@example.com', numberOfOrders: 1, orders: [JAN_ORDER]}], orders: [JAN_ORDER]};
+const STAFF_JAN = {
+  displayName: 'Jan Peeters',
+  email: 'jan@example.com',
+  defaultPhoneNumber: {phoneNumber: '+32 470 12 34 56'},
+  defaultAddress: {formatted: ['Jan Peeters', 'Kerkstraat 1', '9000 Gent', 'Belgium']},
+  orders: {
+    nodes: [
+      {
+        name: '#1042',
+        currentTotalPriceSet: {shopMoney: {amount: '89.00', currencyCode: 'EUR'}},
+        shippingAddress: {formatted: ['Jan Peeters', 'Kerkstraat 1', '9000 Gent', 'Belgium'], phone: '+32 470 12 34 56'},
+        fulfillments: [{trackingInfo: [{number: 'BPOST123'}]}],
+      },
+    ],
+  },
+};
+const SCRIPT = {customers: [{id: 'gid://shopify/Customer/1', email: 'jan@example.com', numberOfOrders: 1, orders: [JAN_ORDER]}], orders: [JAN_ORDER], staff: {'gid://shopify/Customer/1': STAFF_JAN}};
 
 let clock = Date.parse('2026-10-12T09:00:00Z');
 
@@ -141,7 +157,7 @@ describe('tickets with the CRM on', {skip}, () => {
     const report = await runScheduled(deps);
     assert.equal(report.synced, 1);
     assert.equal(report.notified, 1);
-    assert.equal(sent.length, 1);
+    assert.equal(sent.length, 2, 'the ticket confirmation, then the reply notice');
   });
 });
 
@@ -216,7 +232,7 @@ describe('staff API tickets', {skip}, () => {
       assert.equal((await call('PATCH', `/tickets/${t.ref}`, bad)).status, 400, JSON.stringify(bad));
     }
     const audit = await deps.store.auditFor(t.ref);
-    assert.ok(audit.every((a) => a.actor === 'stan'));
+    assert.ok(audit.filter((a) => a.actor !== 'system').every((a) => a.actor === 'stan'));
     assert.equal(audit.filter((a) => a.action === 'update').length, 3);
   });
 
@@ -250,14 +266,26 @@ describe('staff replies', {skip}, () => {
     assert.equal(ai.outcomes[0]!.decidedBy, 'stan');
     assert.ok((await deps.store.auditFor(t.ref)).some((a) => a.action === 'reply' && a.detail.includes(`draft=${draft.draftId}`)));
 
-    // An edited text is a replacement; personal data is scrubbed; empty and oversized are refused.
+    // An edited text is a replacement; contact details are kept (staff may write them), card numbers are not; empty and oversized are refused.
     const second = await createTicket(deps, input({topic: 'product', orderNumber: null, email: 'eva@example.com', message: 'The motor stutters on throttle punch outs.'}));
-    const edited = await call('POST', `/tickets/${second.ref}/reply`, {body: 'Mail us at someone@example.com or try a lower gain.', draftId: 'dr_2', status: 'waiting'});
+    const edited = await call('POST', `/tickets/${second.ref}/reply`, {body: 'Mail us at someone@example.com, call +32 9 123 45 67 or try a lower gain.', draftId: 'dr_2', status: 'waiting'});
     assert.equal(edited.json.ticket.status, 'waiting');
-    assert.ok(!edited.json.message.body.includes('someone@example.com'));
+    assert.ok(edited.json.message.body.includes('someone@example.com') && edited.json.message.body.includes('+32 9 123 45 67'));
     assert.equal(ai.outcomes[1]!.status, 'replaced');
     assert.equal((await call('POST', `/tickets/${second.ref}/reply`, {body: '  '})).status, 422);
     assert.equal((await call('POST', `/tickets/${second.ref}/reply`, {body: 'x'.repeat(8001)})).status, 422);
+  });
+
+  it('sends the ticket confirmation again on a person\'s request and audits it', async () => {
+    const { deps, call, sent } = await setup();
+    const t = await createTicket(deps, input());
+    sent.length = 0;
+    const r = await call('POST', `/tickets/${t.ref}/resend-confirmation`);
+    assert.equal(r.status, 200);
+    assert.equal(sent.length, 1);
+    assert.ok(sent[0]!.body.includes('jan@example.com') && sent[0]!.body.includes('We received your OpenDrone ticket'));
+    const audit = await deps.store.auditFor(t.ref);
+    assert.ok(audit.some((a) => a.actor === 'stan' && a.action === 'confirmation_sent'));
   });
 
   it('mails the customer through the existing reply notice', async () => {
@@ -267,9 +295,10 @@ describe('staff replies', {skip}, () => {
     await call('POST', `/tickets/${t.ref}/reply`, {body: 'Batch 2 ships in November.'});
     clock += 11 * 60_000;
     await runScheduled(deps);
-    assert.equal(sent.length, 1);
-    assert.ok(sent[0]!.body.includes('jan@example.com'));
-    assert.ok(!sent[0]!.body.includes('Batch 2 ships'), 'the notice carries no message content');
+    assert.equal(sent.length, 2, 'the ticket confirmation, then the reply notice');
+    assert.ok(sent[1]!.body.includes('jan@example.com'));
+    assert.ok(sent[1]!.body.includes('new reply'));
+    assert.ok(!sent[1]!.body.includes('Batch 2 ships'), 'the notice carries no message content');
   });
 
   it('stores staff attachments in R2 and streams them back', async () => {
@@ -343,19 +372,20 @@ describe('community tickets in the staff API', {skip}, () => {
 });
 
 describe('customer card', {skip}, () => {
-  it('shows orders and the preorder batch only for an order Shopify confirmed', async () => {
+  it('shows orders, the preorder batch and the unmasked contact and shipping details', async () => {
     const { deps, call } = await setup();
     const matched = await createTicket(deps, input());
     const card = (await call('GET', `/tickets/${matched.ref}/customer`)).json.customer;
     assert.equal(card.orderMatched, true);
     assert.equal(card.orders[0].name, '#1042');
     assert.deepEqual(card.orders[0].preorderBatches, ['batch 2 of OD-FC-F4']);
-    assert.ok(!JSON.stringify(card).match(/address|phone|iban/i));
+    assert.equal(card.contact.phone, '+32 470 12 34 56');
+    assert.deepEqual(card.orders[0].shippingAddress, ['Jan Peeters', 'Kerkstraat 1', '9000 Gent', 'Belgium']);
+    assert.deepEqual([card.orders[0].total, card.orders[0].trackingNumbers], ['89.00 EUR', ['BPOST123']]);
 
     const unverified = await createTicket(deps, input({orderNumber: '#9999'}));
     const bare = (await call('GET', `/tickets/${unverified.ref}/customer`)).json.customer;
-    assert.equal(bare.orders.length, 0);
-    assert.equal(bare.orderMatched, false);
+    assert.equal(bare.orderMatched, false, 'flagged: the order number did not match');
     assert.ok(bare.earlierTickets.some((t: any) => t.ref === matched.ref));
   });
 });

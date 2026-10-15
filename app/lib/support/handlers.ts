@@ -10,7 +10,7 @@ import {clientIp} from '../rate-limit.ts';
 import {verifyTurnstile} from '../turnstile.ts';
 import type {NewTicketInput, FieldError} from './tickets.ts';
 import {addCustomerReply, closeTicket, createTicket, parseNewTicket, resetLink} from './tickets.ts';
-import {crmEnabled} from './flags.ts';
+import {crmEnabled, hasThread} from './flags.ts';
 import {doorAllowed, ticketRateLimit} from './limits.ts';
 import {authorizedTicket, originOf, sameOrigin, secureCookies, supportDeps, supportReady} from './server.ts';
 import {parseTicketRef, readTicketCookie, withTicket} from './tokens.ts';
@@ -55,8 +55,6 @@ export async function handleCreate(request: Request, context: AppLoadContext): P
   if (!files.ok) return fail({failure: 'files', file: {problem: files.problem, name: files.file ?? ''}}, 400);
 
   const deps = supportDeps(env, originOf(request), context.waitUntil);
-  // With the CRM on, attachments are kept in R2: no bucket, no files.
-  if (crmEnabled(env) && files.files.length && !deps.files) return fail({failure: 'unavailable'}, 503);
   // Counted only for complete submissions, so fixing a typo never locks anyone out.
   const allowed = await doorAllowed(deps.store, env.SUPPORT_SESSION_SECRET || env.SESSION_SECRET, [
     ['createPerIp', ip],
@@ -128,7 +126,7 @@ export async function handleTicketAction(
     }
     const files = await extractAttachments(form);
     if (!files.ok) return answer({ok: false, intent, error: `file_${files.problem}`, file: files.file}, 400);
-    if (crmEnabled(env) && files.files.length && !deps.files) return answer({ok: false, intent, error: 'err_unavailable'}, 503);
+    if (crmEnabled(env) && files.files.length && !deps.files && !hasThread(ticket)) return answer({ok: false, intent, error: 'err_unavailable'}, 503);
     const result = await addCustomerReply(deps, ticket, String(form.get('message') ?? ''), files.files);
     if (!result.ok) {
       const locked = result.error === 'locked';
