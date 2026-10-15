@@ -41,8 +41,8 @@ export function resumeRateLimit(ip: string): RateLimitResult {
 
 /** Anonymous doors, counted in D1. */
 export const DOOR_LIMITS = {
-  createPerIp: {limit: 6, windowMs: HOUR},
-  createPerIpEmail: {limit: 5, windowMs: DAY},
+  createPerIp: {limit: 20, windowMs: HOUR},
+  createPerIpEmail: {limit: 20, windowMs: DAY},
   findPerIp: {limit: 10, windowMs: HOUR},
   findPerIpEmail: {limit: 5, windowMs: HOUR},
 } as const;
