@@ -105,11 +105,7 @@ migrations_dir = "migrations"
 binding = "CHATFPV"
 service = "chatfpv"
 
-# Ticket attachments of the CRM (README "Support tickets"). R2 is not enabled on
-# the Cloudflare account yet (API error 10042): until it is, tickets with files
-# keep the Discord thread path. Declare this binding only after the bucket exists
-# (enable R2 in the dashboard first), or the deploy fails:
-#   npx wrangler r2 bucket create opendrone-support-files
-# [[r2_buckets]]
-# binding = "SUPPORT_FILES"
-# bucket_name = "opendrone-support-files"
+# Ticket attachments of the CRM (README "Support tickets"), bucket created 2026-10-15.
+[[r2_buckets]]
+binding = "SUPPORT_FILES"
+bucket_name = "opendrone-support-files"
