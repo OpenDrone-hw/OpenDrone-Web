@@ -1009,13 +1009,19 @@ noindex header. Both workflows use the repository secrets
 updates the public repository timeline.
 
 **D1 migrations.** `cloudflare-production.yml` runs `scripts/d1-migrations.sh
-apply` before `wrangler deploy`: pending migrations of `SUPPORT_DB` are applied,
-so a deploy never runs code whose tables are missing. That needs the repository
-secret `CLOUDFLARE_API_TOKEN` to carry the account permission **D1: Edit**
-(edit the token at <https://dash.cloudflare.com/profile/api-tokens>, Account,
-D1, Edit); a token without it fails the run before the deploy with that
-instruction. `d1-migrations.yml` probes the same on a pull request that touches
-`migrations/` and warns about pending migrations without applying anything.
+apply` before `wrangler deploy`, so a deploy never runs code whose tables are
+missing (PR 672 shipped without migration 0011). With the account permission
+**D1: Edit** on the repository secret `CLOUDFLARE_API_TOKEN` it applies the pending
+migrations of `SUPPORT_DB`. The current token does not have it (the probe fails
+with Cloudflare error 7403, 2026-10-15). Without the permission the script
+compares `migrations/` with the live Worker's `GET /api/support/schema` (applied
+migration names, no ticket data) and **fails the run before the deploy** when one
+is pending; apply it by hand
+(`npx wrangler d1 migrations apply SUPPORT_DB --remote --config wrangler.production.toml`)
+and re-run. Founder step to automate it: edit the token at
+<https://dash.cloudflare.com/profile/api-tokens>, Account, D1, Edit.
+`d1-migrations.yml` probes the same on a pull request that touches `migrations/`
+and only warns.
 
 ## Open or close the shop
 
