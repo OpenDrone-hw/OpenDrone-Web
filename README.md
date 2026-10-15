@@ -355,7 +355,10 @@ waited out once, a longer one ends that sync until the next pass.
 
 **Status.** Open (the team is up), Answered, Waiting on you, Closed.
 
-**Email.** Replies are not emailed while `SUPPORT_EMAIL_NOTIFY_ENABLED` is
+**Email.** A new ticket sends one "we received your ticket" mail (reference and a
+fresh link, no message content) from `SUPPORT_FROM_EMAIL` through Resend, under the same
+switch as the reply notice. The outcome is a `support_audit` row (`confirmation_sent` or
+`confirmation_failed`, actor `system`), visible in the CRM audit trail. Replies are not emailed while `SUPPORT_EMAIL_NOTIFY_ENABLED` is
 not `1`; the ticket page and the private link carry the conversation. It is
 `1` in `wrangler.production.toml`: the cron sends one "new reply" mail per unseen reply, with a
 fresh link and no message content.
@@ -373,8 +376,9 @@ answer `410`.
 
 ### Support CRM (staff API and community route)
 
-Two switches, both `"0"` in `wrangler.toml` and `wrangler.production.toml`;
-merging the code changes nothing live. Turning either on needs the founder's go.
+Two switches. `SUPPORT_CRM_API` is `"1"` in `wrangler.production.toml` (founder's
+go of 2026-10-15) and `"0"` in `wrangler.toml`; `SUPPORT_COMMUNITY_ROUTE` is `"0"`
+in both. Turning the community route on needs the founder's go.
 
 | Flag | On | Needs |
 |---|---|---|
@@ -426,7 +430,8 @@ Errors are `{"ok":false,"error":"<code>"}`; success is `{"ok":true,...}`.
 | `GET /status` | | `crm`, `communityRoute`, `files`, `drafts` booleans |
 | `GET /tickets` | `status` (comma list of open,waiting,answered,closed), `route` (team,community), `assignee` (login or `none`), `priority`, `topic`, `tag`, `q` (ref, subject, email, order, preview), `limit` (1-100, default 50), `before` (an `updatedAt`) | `tickets[]` (ticket object), `next` (cursor or null) |
 | `GET /tickets/:ref` | | `ticket`, `messages[]`, `notes[]`, `drafts[]` (pending AI drafts), `audit[]` (last 50). Reads the community post first |
-| `GET /tickets/:ref/customer` | | `customer`: `match`, `orderMatched`, `shopifyUrl`, `orders[]` (name, createdAt, financial, fulfillment, `preorderBatches`, items; only for an order Shopify confirmed), `earlierTickets[]`. No address, phone or payment data |
+| `GET /tickets/:ref/customer` | | `customer`: `match`, `orderMatched` (the ticket's order number matched this email; false means flag the email as not verified), `shopifyUrl`, `contact` (Shopify name, email, phone, default address), `orders[]` (name, createdAt, financial, fulfillment, `preorderBatches`, items, `total`, `shippingAddress`, `shippingPhone`, `trackingNumbers`; for a Shopify customer whose email equals the ticket's), `earlierTickets[]`. Unmasked: the app is behind Cloudflare Access and staff need it to fulfil. No card or bank data exists in it |
+| `POST /tickets/:ref/resend-confirmation` | | sends the "we received your ticket" mail again to the ticket's address (a person's click; audited); 502 `mail_not_sent` |
 | `GET /tickets/:ref/draft` | | `draft` (`draftId`, `body`, `text` = body plus the AI disclosure line, `citations`) or null |
 | `PATCH /tickets/:ref` | any of `status`, `assignee` (login or null), `priority` (low,normal,high,urgent), `tags` (at most 10, `[a-z0-9 ._:-]` up to 30) | `ticket`; `status: closed` closes like `!close`; leaving closed reopens |
 | `POST /tickets/:ref/notes` | `{body}` (internal, never shown to the customer) | `note` (201) |
@@ -445,14 +450,17 @@ lastStaffAt, lastCommunityAt, closedAt` (times in ms). Message object: `seq, rol
 size, href}]`; a `system` body is an event code (`closed_by_team`, `reopened_by_team`,
 `sent_to_community`, `taken_over_by_team`, ...).
 
-A staff reply is scrubbed like a Discord reply (emails, phone numbers, IBANs and cards
-redacted), stored for the ticket page, and mailed as the usual content-free "new reply"
+A staff reply keeps what staff write (emails, phone numbers, addresses); only card
+numbers and tokens are refused (`filtered`). It is stored for the ticket page, and mailed as the usual content-free "new reply"
 notice by the cron once `SUPPORT_EMAIL_NOTIFY_ENABLED` is `1`. The moderation gate is not
 applied: Send is the person's approval. An AI draft is only ever a draft: the reply that
 carries its `draftId` is reported to ChatFPV as approved (text unchanged) or replaced.
 
 **Attachments.** R2 bucket `SUPPORT_FILES`, key `<ref>/<id>`, deleted with the ticket's
-24-month retention. Create the bucket, then uncomment the `[[r2_buckets]]` block in both
+24-month retention. R2 is not enabled on the Cloudflare account yet (the API answers
+error 10042 "Please enable R2 through the Cloudflare Dashboard"). Until the bucket is
+bound, a ticket or reply with files keeps the Discord thread path (files in the thread,
+`href: null` in the staff API). Enable R2, create the bucket, then uncomment the `[[r2_buckets]]` block in both
 wrangler files (declaring a missing bucket fails the deploy):
 
 ```sh
@@ -999,6 +1007,21 @@ noindex header. Both workflows use the repository secrets
 `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` and pin wrangler 4.
 `community-sync.yml` refreshes the contributor roster; `timeline-ledger.yml`
 updates the public repository timeline.
+
+**D1 migrations.** `cloudflare-production.yml` runs `scripts/d1-migrations.sh
+apply` before `wrangler deploy`, so a deploy never runs code whose tables are
+missing (PR 672 shipped without migration 0011). With the account permission
+**D1: Edit** on the repository secret `CLOUDFLARE_API_TOKEN` it applies the pending
+migrations of `SUPPORT_DB`. The current token does not have it (the probe fails
+with Cloudflare error 7403, 2026-10-15). Without the permission the script
+compares `migrations/` with the live Worker's `GET /api/support/schema` (applied
+migration names, no ticket data) and **fails the run before the deploy** when one
+is pending; apply it by hand
+(`npx wrangler d1 migrations apply SUPPORT_DB --remote --config wrangler.production.toml`)
+and re-run. Founder step to automate it: edit the token at
+<https://dash.cloudflare.com/profile/api-tokens>, Account, D1, Edit.
+`d1-migrations.yml` probes the same on a pull request that touches `migrations/`
+and only warns.
 
 ## Open or close the shop
 

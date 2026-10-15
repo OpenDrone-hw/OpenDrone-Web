@@ -1,0 +1,35 @@
+name: D1 migrations
+
+# Probe, no writes: can CLOUDFLARE_API_TOKEN read the support D1 database, and
+# which migrations are pending? Pending ones are applied by the production deploy
+# (cloudflare-production.yml) before the Worker is deployed. A token without
+# "D1: Edit" fails this job with the founder's step. Pull requests from forks
+# have no secrets and skip the job.
+on:
+  pull_request:
+    paths:
+      - "migrations/**"
+      - "scripts/d1-migrations.sh"
+      - ".github/workflows/d1-migrations.yml"
+      - ".github/workflows/cloudflare-production.yml"
+      - "wrangler.production.toml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: D1 migrations probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: List pending migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: scripts/d1-migrations.sh check

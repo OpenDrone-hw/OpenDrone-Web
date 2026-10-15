@@ -34,6 +34,16 @@ jobs:
           SESSION_SECRET: "ci-build-only-not-the-runtime-secret"
         run: npm run build
 
+      # The support D1 schema must exist before the code that uses it runs
+      # (PR 672 shipped without migration 0011). Applies pending migrations, or
+      # fails the run before the deploy with the token permission the founder
+      # must add (scripts/d1-migrations.sh).
+      - name: Apply D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: scripts/d1-migrations.sh apply
+
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v4
         with:
