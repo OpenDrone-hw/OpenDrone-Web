@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {attributionFields, cartAttributesFromForm, refSlug} from './attribution.ts';
+import {attributionFields, cartAttributesFromForm, contentValue, foldSource, referrerHost, refSlug} from './attribution.ts';
 
 describe('attribution', () => {
   it('accepts creator slugs only', () => {
@@ -43,6 +43,50 @@ describe('attribution', () => {
     const bad = new FormData();
     bad.set('attr_landing', 'https://evil.example/');
     bad.set('attr_ref', '../x');
+    assert.deepEqual(cartAttributesFromForm(bad), []);
+  });
+
+  it('keeps the video id of utm_content with its case', () => {
+    assert.equal(contentValue(' dQw4w9WgXcQ '), 'dQw4w9WgXcQ');
+    assert.equal(contentValue('a b'), undefined);
+    assert.equal(contentValue('x'.repeat(65)), 'x'.repeat(64));
+    assert.equal(contentValue(null), undefined);
+  });
+
+  it('keeps only the host of an external referrer', () => {
+    assert.equal(referrerHost('https://www.youtube.com/watch?v=abc', 'opendrone.be'), 'www.youtube.com');
+    assert.equal(referrerHost('https://opendrone.be/products/openfc', 'opendrone.be'), undefined);
+    assert.equal(referrerHost('https://www.opendrone.be/', 'www.opendrone.be'), undefined);
+    assert.equal(referrerHost('android-app://com.google.android.youtube/', 'opendrone.be'), undefined);
+    assert.equal(referrerHost('', 'opendrone.be'), undefined);
+    assert.equal(referrerHost('not a url', 'opendrone.be'), undefined);
+  });
+
+  it('a referrer-only visit stays direct in event props and sends no utm_source', () => {
+    assert.equal(foldSource('referrer'), 'direct');
+    assert.deepEqual(
+      attributionFields({source: 'referrer', referrer: 'www.youtube.com', landing: '/', ts: 1}),
+      [['attr_referrer', 'www.youtube.com'], ['attr_landing', '/']],
+    );
+    assert.deepEqual(
+      attributionFields({source: 'youtube', utmSource: 'youtube', content: 'dQw4w9WgXcQ', landing: '/', ts: 1}),
+      [['attr_utmSource', 'youtube'], ['attr_content', 'dQw4w9WgXcQ'], ['attr_landing', '/']],
+    );
+  });
+
+  it('validates utm_content and the referrer host into order attributes', () => {
+    const form = new FormData();
+    form.set('attr_utmSource', 'youtube');
+    form.set('attr_content', 'dQw4w9WgXcQ');
+    form.set('attr_referrer', 'www.youtube.com');
+    assert.deepEqual(cartAttributesFromForm(form), [
+      {key: '_utm_source', value: 'youtube'},
+      {key: '_utm_content', value: 'dQw4w9WgXcQ'},
+      {key: '_referrer', value: 'www.youtube.com'},
+    ]);
+    const bad = new FormData();
+    bad.set('attr_content', '<script>');
+    bad.set('attr_referrer', 'https://evil.example/path');
     assert.deepEqual(cartAttributesFromForm(bad), []);
   });
 });

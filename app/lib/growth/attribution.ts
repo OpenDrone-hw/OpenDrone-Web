@@ -21,10 +21,18 @@
  */
 
 export type Attribution = {
-  /** utm_source, or `ref` fallback - e.g. 'youtube', 'discord'. */
+  /** utm_source, or `ref` fallback - e.g. 'youtube', 'discord'.
+   *  'referrer' when the visit carried no link parameter, only an
+   *  external referrer (`referrer`). */
   source: string;
   medium?: string;
   campaign?: string;
+  /** utm_content exactly as given (case kept): the YouTube video id on
+   *  video description links. */
+  content?: string;
+  /** Host of an external referrer (`www.youtube.com`), never a path or
+   *  query: the channel of an untagged visit. */
+  referrer?: string;
   /** utm_source exactly as given, when the link had one. */
   utmSource?: string;
   /** The `ref` slug (creator links), when the link had a valid one. */
@@ -42,6 +50,34 @@ const MAX_LEN = 64;
 function clean(value: string | null | undefined): string | undefined {
   const v = value?.trim().toLowerCase().slice(0, MAX_LEN);
   return v || undefined;
+}
+
+/** utm_content: a video id or a short tag. Case is kept (YouTube ids are
+ *  case sensitive). */
+const CONTENT = /^[A-Za-z0-9._~-]{1,64}$/;
+
+export function contentValue(value: string | null | undefined): string | undefined {
+  const v = value?.trim().slice(0, MAX_LEN);
+  return v && CONTENT.test(v) ? v : undefined;
+}
+
+/** A referrer host: lowercase letters, digits, dots and dashes. */
+const HOST = /^[a-z0-9.-]{1,64}$/;
+
+/** The host of an external referrer, or undefined for none, our own
+ *  site or anything that is not a plain http(s) URL. */
+export function referrerHost(referrer: string | null | undefined, ownHost: string): string | undefined {
+  if (!referrer) return undefined;
+  try {
+    const url = new URL(referrer);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return undefined;
+    const host = url.hostname.toLowerCase();
+    const own = ownHost.toLowerCase().replace(/^www\./, '');
+    if (host === own || host.endsWith(`.${own}`)) return undefined;
+    return HOST.test(host) ? host : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** A creator slug: lowercase letters, digits, `-` and `_`, 1 to 32
@@ -76,11 +112,15 @@ export function captureAttribution(): void {
     const source = utmSource ?? ref;
     const medium = clean(params.get('utm_medium'));
     const campaign = clean(params.get('utm_campaign'));
-    if (!source && !medium && !campaign) return;
+    const content = contentValue(params.get('utm_content'));
+    const referrer = referrerHost(typeof document === 'undefined' ? '' : document.referrer, window.location.hostname ?? '');
+    if (!source && !medium && !campaign && !content && !referrer) return;
     const record: Attribution = {
-      source: source ?? 'unknown',
+      source: source ?? (medium || campaign || content ? 'unknown' : 'referrer'),
       medium,
       campaign,
+      content,
+      referrer,
       utmSource,
       ref,
       landing: window.location.pathname.slice(0, MAX_LEN),
@@ -126,7 +166,7 @@ export const CANONICAL_SOURCES: ReadonlySet<string> = new Set([
 /** Fold a raw utm_source into the bounded event-prop vocabulary:
  *  canonical value, 'other' (non-canonical), or 'direct' (absent). */
 export function foldSource(source: string | null | undefined): string {
-  if (!source) return 'direct';
+  if (!source || source === 'referrer') return 'direct';
   return CANONICAL_SOURCES.has(source) ? source : 'other';
 }
 
@@ -161,6 +201,8 @@ export const ORDER_ATTRIBUTE = {
   utmSource: '_utm_source',
   medium: '_utm_medium',
   campaign: '_utm_campaign',
+  content: '_utm_content',
+  referrer: '_referrer',
   landing: '_landing',
 } as const;
 
@@ -172,12 +214,14 @@ const FIELD_PREFIX = 'attr_';
 export function attributionFields(record: Attribution | null = getAttribution()): Array<[string, string]> {
   if (!record) return [];
   // A record from before `utmSource` existed: its source was utm_source.
-  const utmSource = record.utmSource ?? (record.ref || record.source === 'unknown' ? undefined : record.source);
+  const utmSource = record.utmSource ?? (record.ref || record.source === 'unknown' || record.source === 'referrer' ? undefined : record.source);
   const values: Partial<Record<AttributionKey, string | undefined>> = {
     ref: record.ref,
     utmSource,
     medium: record.medium,
     campaign: record.campaign,
+    content: record.content,
+    referrer: record.referrer,
     landing: record.landing,
   };
   return Object.entries(values)
@@ -200,9 +244,10 @@ export function cartAttributesFromForm(form: FormData): Array<{key: string; valu
   for (const key of Object.keys(ORDER_ATTRIBUTE) as AttributionKey[]) {
     const raw = form.get(`${FIELD_PREFIX}${key}`);
     if (typeof raw !== 'string') continue;
-    const value = key === 'landing' ? raw.trim() : key === 'ref' ? refSlug(raw) : clean(raw);
+    const value = key === 'landing' ? raw.trim() : key === 'ref' ? refSlug(raw) : key === 'content' ? contentValue(raw) : clean(raw);
     if (!value) continue;
-    if (key === 'landing' ? !LANDING.test(value) : !VALUE.test(value)) continue;
+    const pattern = key === 'landing' ? LANDING : key === 'content' ? CONTENT : key === 'referrer' ? HOST : VALUE;
+    if (!pattern.test(value)) continue;
     attributes.push({key: ORDER_ATTRIBUTE[key], value});
   }
   return attributes;
