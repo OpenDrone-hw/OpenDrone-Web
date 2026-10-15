@@ -33,6 +33,8 @@ const DEFAULT_ADMIN_API_VERSION = '2026-07';
 const FRESH_MS = 60_000;
 const PAGE_SIZE = 250;
 const MAX_PAGES = 40;
+const THROTTLE_RETRIES = 2;
+const THROTTLE_WAIT_MS = 500;
 const COUNTED_STATES = new Set(['PAID', 'PARTIALLY_REFUNDED']);
 
 export const PAID_ORDERS_QUERY = `#graphql
@@ -73,6 +75,13 @@ type OrdersPage = {
     }>;
   };
 };
+
+function isThrottled(errors: unknown[] | undefined): boolean {
+  return (errors ?? []).some((error) => {
+    const e = error as {message?: unknown; extensions?: {code?: unknown}} | null;
+    return e?.extensions?.code === 'THROTTLED' || e?.message === 'Throttled';
+  });
+}
 
 const memo = new Map<string, {units: Record<string, UnitRuns>; fetchedAt: number}>();
 
@@ -130,21 +139,32 @@ export async function fetchPaidUnitRuns(
   const units: Record<string, UnitRuns> = {};
   let after: string | null = null;
   for (let page = 0; page < MAX_PAGES; page += 1) {
-    const response = await fetcher(url, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'X-Shopify-Access-Token': token},
-      body: JSON.stringify({
-        query: PAID_ORDERS_QUERY,
-        variables: {first: PAGE_SIZE, after, query: paidOrdersSearch(countFrom)},
-      }),
-      redirect: 'manual',
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!response.ok) {
-      await response.body?.cancel();
-      throw new Error(`shopify orders: Admin API returned ${response.status}`);
+    let result: {data?: OrdersPage; errors?: unknown[]} = {};
+    // A throttled page (the cost bucket is shared with the cron and every
+    // isolate) is retried after the bucket refills a little, instead of
+    // closing every campaign SKU for that visitor.
+    for (let attempt = 0; attempt <= THROTTLE_RETRIES; attempt += 1) {
+      const response = await fetcher(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-Shopify-Access-Token': token},
+        body: JSON.stringify({
+          query: PAID_ORDERS_QUERY,
+          variables: {first: PAGE_SIZE, after, query: paidOrdersSearch(countFrom)},
+        }),
+        redirect: 'manual',
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!response.ok) {
+        await response.body?.cancel();
+        throw new Error(`shopify orders: Admin API returned ${response.status}`);
+      }
+      result = (await response.json()) as {data?: OrdersPage; errors?: unknown[]};
+      if (attempt < THROTTLE_RETRIES && isThrottled(result.errors)) {
+        await new Promise((resolve) => setTimeout(resolve, THROTTLE_WAIT_MS * (attempt + 1)));
+        continue;
+      }
+      break;
     }
-    const result = (await response.json()) as {data?: OrdersPage; errors?: unknown[]};
     if (result.errors?.length || !result.data) {
       throw new Error('shopify orders: Admin API rejected the query');
     }
