@@ -327,6 +327,23 @@ export function createDiscordClient(env: DiscordEnv, fetcher: Fetcher = fetch, r
       return thread.id;
     },
 
+    /**
+     * A post in a forum channel other than the support channel (the public
+     * #help). A forum post is a thread: its id is the thread id and the first
+     * message has the same id. Never pings anyone.
+     */
+    async createForumPostIn(channelId: string, opts: {name: string; content: string}): Promise<{threadId: string; messageId: string}> {
+      const thread = (await call('createCommunityPost', `/channels/${channelId}/threads`, {
+        method: 'POST',
+        body: {
+          name: cleanText(opts.name).slice(0, 96) || 'Question',
+          auto_archive_duration: 10080,
+          message: {content: cleanText(opts.content).slice(0, 1990), allowed_mentions: {parse: []}},
+        },
+      })) as {id: string; last_message_id?: string};
+      return {threadId: thread.id, messageId: thread.id};
+    },
+
     /** Post into a thread. Never pings anyone. Returns the message id. */
     async post(threadId: string, content: string, files: OutboundFile[] = []): Promise<string> {
       const msg = (await call('post', `/channels/${threadId}/messages`, {

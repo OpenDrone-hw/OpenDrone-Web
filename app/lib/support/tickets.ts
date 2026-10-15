@@ -62,14 +62,18 @@ import {
   type OrderSummary,
   type ShopifyEnv,
 } from './shopify.ts';
-import type {SupportStore, Ticket, TicketMessage, TicketStatus, TicketTopic} from './store.ts';
+import type {StoredAttachment, SupportStore, Ticket, TicketMessage, TicketStatus, TicketTopic} from './store.ts';
 import {newTicketRef, parseTicketRef, resumeUrl, signResumeToken} from './tokens.ts';
 import {FIND_MISS_CAPACITY, FIND_MISS_DRAIN_MS, orderGuessAllowed, recordOrderMiss} from './limits.ts';
 import {LIMITS, TOPIC_FIELDS, TOPICS, normalizeText} from './form.ts';
+import {communityEnabled, crmEnabled, hasThread, type CrmFlagEnv} from './flags.ts';
+import {deleteTicketFiles, fileLine, isR2Attachment, storeFiles} from './files.ts';
+import {COMMUNITY_TOPICS, syncCommunity} from './community.ts';
 
 export {LIMITS, TOPIC_FIELDS, TOPICS, normalizeText};
 
 export type SupportEnv = DiscordEnv &
+  CrmFlagEnv &
   ModerationEnv &
   ShopifyEnv & {
     SUPPORT_SESSION_SECRET?: string;
@@ -84,6 +88,8 @@ export type Deps = {
   env: SupportEnv;
   store: SupportStore;
   discord: DiscordClient;
+  /** The R2 bucket for attachments while SUPPORT_CRM_API is on (SUPPORT_FILES). */
+  files?: R2Bucket;
   /** Shopify and Resend calls; Discord has its own client. */
   fetcher?: typeof fetch;
   now?: () => number;
@@ -121,6 +127,8 @@ export type NewTicketInput = {
   product: string | null;
   firmware: string | null;
   message: string;
+  /** The form's "let the community help" box. Used only while the community route is on. */
+  communityConsent?: boolean;
 };
 
 export type FieldError = 'required' | 'invalid' | 'too_short' | 'too_long' | 'filtered';
@@ -165,7 +173,8 @@ export function parseNewTicket(
     else message = scrubbed.content;
   }
   if (Object.keys(errors).length) return {ok: false, errors};
-  return {ok: true, input: {topic, name, email, orderNumber, product, firmware, message}};
+  const communityConsent = ['on', '1', 'true'].includes(String(form.get('community') ?? '').toLowerCase());
+  return {ok: true, input: {topic, name, email, orderNumber, product, firmware, message, communityConsent}};
 }
 
 /** A short subject from the form, for lists and the page title. */
@@ -341,12 +350,22 @@ export async function createTicket(deps: Deps, input: NewTicketInput, files: Out
   const customerId = customer.match === 'matched' ? customer.customerId : null;
   const earlier = order ? await deps.store.ticketsByEmail(input.email, 4) : [];
 
-  const threadId = await deps.discord.createThread({
-    name: `${ref} ${input.topic} ${threadName(firstName(input.name))}`,
-    card: staffCard({env: deps.env, ref, input, customer, order, earlier}),
-  });
-  const firstId = await postCustomerText(deps, threadId, input.name, input.message, files);
-  const attachments = await attachmentsOf(deps, threadId, firstId, files);
+  // With the CRM on, the team works the ticket in the internal app: no staff
+  // thread, attachments in R2 (a Discord thread is kept only behind the flag).
+  const crm = crmEnabled(deps.env);
+  let threadId = '';
+  let firstId: string | null = null;
+  let attachments: StoredAttachment[];
+  if (crm) {
+    attachments = files.length ? await storeFiles(deps.files!, ref, files) : [];
+  } else {
+    threadId = await deps.discord.createThread({
+      name: `${ref} ${input.topic} ${threadName(firstName(input.name))}`,
+      card: staffCard({env: deps.env, ref, input, customer, order, earlier}),
+    });
+    firstId = await postCustomerText(deps, threadId, input.name, input.message, files);
+    attachments = await attachmentsOf(deps, threadId, firstId, files);
+  }
 
   const ticket: Ticket = {
     ref,
@@ -374,11 +393,20 @@ export async function createTicket(deps: Deps, input: NewTicketInput, files: Out
     notifiedAt: null,
     syncedAt: now,
     closedAt: null,
+    assignee: null,
+    priority: 'normal',
+    route: 'team',
+    tags: [],
+    communityConsent: Boolean(input.communityConsent) && communityEnabled(deps.env) && COMMUNITY_TOPICS.has(input.topic),
+    communityPostId: null,
+    communityCursor: null,
+    communitySyncedAt: null,
+    lastCommunityAt: null,
   };
   await deps.store.insertTicket(ticket);
   await deps.store.addMessage({ref, discordId: firstId, role: 'customer', author: firstName(input.name), body: input.message, attachments, createdAt: now});
 
-  const metaChannel = deps.env.DISCORD_STAFF_METADATA_CHANNEL_ID;
+  const metaChannel = crm ? undefined : deps.env.DISCORD_STAFF_METADATA_CHANNEL_ID;
   if (metaChannel) {
     await run(deps, async () => {
       const id = await deps.discord.postToChannel(
@@ -422,10 +450,22 @@ export async function addCustomerReply(deps: Deps, ticket: Ticket, rawText: stri
   const now = (deps.now ?? Date.now)();
 
   const reopening = ticket.status === 'closed';
-  let id: string;
+  const toR2 = crmEnabled(deps.env);
+  let id: string | null = null;
+  let attachments: StoredAttachment[] = [];
   try {
-    if (reopening) await deps.discord.post(ticket.threadId, `*${ticket.ref}: the customer reopened this ticket.*`);
-    id = await postCustomerText(deps, ticket.threadId, ticket.name, scrubbed.content, files);
+    if (toR2) {
+      attachments = files.length ? await storeFiles(deps.files!, ticket.ref, files) : [];
+      if (hasThread(ticket)) {
+        // A thread from before the CRM: text and a file line, never the files.
+        if (reopening) await deps.discord.post(ticket.threadId, `*${ticket.ref}: the customer reopened this ticket.*`);
+        const note = fileLine(attachments);
+        id = await postCustomerText(deps, ticket.threadId, ticket.name, `${scrubbed.content}${note ? `\n${escapeDiscord(note)}` : ''}`, []);
+      }
+    } else {
+      if (reopening) await deps.discord.post(ticket.threadId, `*${ticket.ref}: the customer reopened this ticket.*`);
+      id = await postCustomerText(deps, ticket.threadId, ticket.name, scrubbed.content, files);
+    }
   } catch (err) {
     // The team locked or deleted the thread since the last sync.
     if (err instanceof DiscordError && (err.status === 403 || err.status === 404)) {
@@ -434,7 +474,7 @@ export async function addCustomerReply(deps: Deps, ticket: Ticket, rawText: stri
     }
     throw err;
   }
-  const attachments = await attachmentsOf(deps, ticket.threadId, id, files);
+  if (!toR2) attachments = await attachmentsOf(deps, ticket.threadId, id!, files);
   if (reopening) {
     await deps.store.addMessage({ref: ticket.ref, discordId: null, role: 'system', author: '', body: 'reopened_by_you', attachments: [], createdAt: now});
   }
@@ -466,8 +506,11 @@ export async function closeTicket(deps: Deps, ticket: Ticket, by: CloseBy): Prom
   await deps.store.addMessage({ref: ticket.ref, discordId: null, role: 'system', author: '', body: CLOSE_EVENT[by], attachments: [], createdAt: now});
   const next = {...ticket, ...patch};
   await run(deps, async () => {
-    if (by !== 'team') await deps.discord.post(ticket.threadId, `*${ticket.ref} closed: ${CLOSE_NOTE[by]}. A reply from the customer reopens it.*`);
-    await deps.discord.setArchived(ticket.threadId, true);
+    if (hasThread(ticket)) {
+      if (by !== 'team') await deps.discord.post(ticket.threadId, `*${ticket.ref} closed: ${CLOSE_NOTE[by]}. A reply from the customer reopens it.*`);
+      await deps.discord.setArchived(ticket.threadId, true);
+    }
+    if (ticket.communityPostId) await deps.discord.setArchived(ticket.communityPostId, true);
   });
   if (ticket.customerId) {
     await run(deps, () => recordOnCustomer(deps.env, ticket.customerId!, shopifyEntry(deps, next), {}, deps.fetcher ?? fetch));
@@ -515,16 +558,19 @@ export type SyncResult = {ticket: Ticket; added: number; held: number};
  * conversation instead of an error page; the next read or cron pass retries.
  */
 export async function syncOrStored(deps: Deps, ticket: Ticket): Promise<Ticket> {
+  let current = ticket;
   try {
-    return (await syncTicket(deps, ticket)).ticket;
+    current = (await syncTicket(deps, ticket)).ticket;
   } catch (err) {
     console.warn('[support] sync failed', ticket.ref, err instanceof Error ? err.message : 'error');
-    return ticket;
   }
+  return syncCommunity(deps, current);
 }
 
 export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: boolean} = {}): Promise<SyncResult> {
   const now = (deps.now ?? Date.now)();
+  // A ticket without a staff thread (CRM) has nothing to read from Discord.
+  if (!hasThread(ticket)) return {ticket, added: 0, held: 0};
   if (!opts.force && ticket.syncedAt && now - ticket.syncedAt < SYNC_THROTTLE_MS) return {ticket, added: 0, held: 0};
 
   let thread;
@@ -759,7 +805,9 @@ export async function cleanupExpired(deps: Deps, opts: {dryRun?: boolean; limit?
           continue;
         }
       }
-      await deps.discord.deleteThread(t.threadId);
+      if (hasThread(t)) await deps.discord.deleteThread(t.threadId);
+      if (t.communityPostId) await deps.discord.deleteThread(t.communityPostId);
+      if (deps.files) await deleteTicketFiles(deps.files, t.ref);
       const meta = deps.env.DISCORD_STAFF_METADATA_CHANNEL_ID;
       if (t.metaMessageId && meta) await deps.discord.deleteMessage(meta, t.metaMessageId);
       await deps.store.deleteTicket(t.ref);
@@ -781,6 +829,12 @@ export async function runScheduled(deps: Deps): Promise<JobReport> {
     let ticket: Ticket;
     try {
       ({ticket} = await syncTicket(deps, t, {force: true}));
+      if (!hasThread(t)) {
+        // Rotate: a ticket without a thread must not hold its place in the sync queue.
+        await deps.store.updateTicket(t.ref, {syncedAt: now});
+        ticket = {...t, syncedAt: now};
+      }
+      ticket = await syncCommunity(deps, ticket, {force: true});
     } catch (err) {
       // One failing thread must not stop the other tickets' sync.
       console.warn('[support] scheduled sync failed', t.ref, err instanceof Error ? err.message : 'error');
@@ -788,7 +842,8 @@ export async function runScheduled(deps: Deps): Promise<JobReport> {
     }
     report.synced++;
     const seen = Math.max(ticket.customerSeenAt ?? 0, ticket.notifiedAt ?? 0);
-    if (ticket.status !== 'closed' && ticket.lastStaffAt && ticket.lastStaffAt > seen && now - ticket.lastStaffAt >= NOTIFY_DELAY_MS) {
+    const lastReply = Math.max(ticket.lastStaffAt ?? 0, ticket.lastCommunityAt ?? 0);
+    if (ticket.status !== 'closed' && lastReply > seen && now - lastReply >= NOTIFY_DELAY_MS) {
       const sent = await sendReplyNotice(deps.env, ticket.email, ticket.ref, await freshResumeUrl(deps, ticket), deps.fetcher ?? fetch);
       if (sent) {
         await deps.store.updateTicket(ticket.ref, {notifiedAt: now});
@@ -808,8 +863,11 @@ export async function runScheduled(deps: Deps): Promise<JobReport> {
     report.autoClosed.push(t.ref);
   }
 
+  // Threadless (CRM) tickets never reach syncTicket's own sweep.
+  if (deps.chatfpv) await sweepDrafts(deps);
   report.deleted = await cleanupExpired(deps, {limit: 10});
   await deps.store.pruneRate(now - DAY, now - FIND_MISS_CAPACITY * FIND_MISS_DRAIN_MS).catch(() => {});
+  await deps.store.pruneAudit(now - RETENTION_MS).catch(() => {});
   return report;
 }
 
@@ -824,6 +882,8 @@ export type PublicMessage = {
   body: string;
   attachments: Array<{id: string; filename: string; size: number; href: string | null}>;
   at: number;
+  /** A community reply a person marked as the answer. */
+  answer: boolean;
 };
 
 export type PublicTicket = {
@@ -867,9 +927,14 @@ export function publicMessage(m: TicketMessage): PublicMessage {
       id: a.id,
       filename: a.filename,
       size: a.size,
-      href: m.discordId && /^\d+$/.test(a.id) ? `/api/support/tickets/${m.ref}/files/${m.discordId}/${a.id}` : null,
+      href: isR2Attachment(a)
+        ? `/api/support/tickets/${m.ref}/files/r2/${a.id}`
+        : m.discordId && /^\d+$/.test(a.id)
+          ? `/api/support/tickets/${m.ref}/files/${m.discordId}/${a.id}`
+          : null,
     })),
     at: m.createdAt,
+    answer: m.answer,
   };
 }
 

@@ -285,7 +285,8 @@ producer (EPR) registration numbers per EU country from
 
 Orders, payment, shipping, warranty and any private question go through a
 ticket. The customer opens and follows it on the site; the team answers in
-Discord; Shopify's customer record is the CRM view. No Discord account is
+Discord (or, with `SUPPORT_CRM_API` on, in the internal app: "Support CRM");
+Shopify's customer record is the CRM view. No Discord account is
 needed to open a ticket. Public board questions go to `#help` on the
 OpenDrone Discord, which the `/support` Community card links; the
 OpenDrone-hw/discord README, "Support", has the routing for all three
@@ -369,6 +370,94 @@ the whole cron pass).
 
 **Retired.** `/api/support/{start,send,poll,list,lookup,status,thread,close,notify,feedback}`
 answer `410`.
+
+### Support CRM (staff API and community route)
+
+Two switches, both `"0"` in `wrangler.toml` and `wrangler.production.toml`;
+merging the code changes nothing live. Turning either on needs the founder's go.
+
+| Flag | On | Needs |
+|---|---|---|
+| `SUPPORT_CRM_API` | the staff API answers; a new ticket opens **no Discord staff thread and no staff-metadata post**; customer and staff attachments go to R2, Discord never gets a file | secret `SUPPORT_STAFF_API_TOKEN`; R2 bucket `SUPPORT_FILES` when attachments are used |
+| `SUPPORT_COMMUNITY_ROUTE` | a consenting customer's community-labelled question is posted, anonymised, to the public help forum | `SUPPORT_CRM_API`, `CHATFPV_DRAFTS_ENABLED`, `DISCORD_HELP_CHANNEL_ID` (forum channel, the bot can read and post), final consent wording |
+
+Tickets opened before the flag keep their Discord thread: the thread is still read
+(customer and staff messages), a CRM reply is mirrored into it as text, files are not.
+
+```mermaid
+flowchart TD
+  C[Customer form] -->|ticket, optional community consent| W[Worker]
+  W --> T{triage}
+  T -->|"hard rule: order, address, payment, warranty, refund, personal data, internal; or no consent; or ChatFPV label team"| TEAM[team route]
+  T -->|"consent + ChatFPV label community + no hard rule"| P[anonymised post, scrubbed, in public help forum]
+  P -->|member replies, scrubbed, every 5 min and on read| M[community messages on the ticket]
+  M --> CP[customer ticket page and reply mail]
+  M --> CRM
+  TEAM --> CRM[internal app via staff API]
+  CRM -->|reply, a person clicks Send| CP
+  CRM -->|take over| TEAM
+  CRM -->|mark a community reply as the answer| M
+  W -->|AI draft stored in D1, never sent| CRM
+```
+
+The hard rules (`app/lib/support/community.ts`) run before and beat the AI label.
+They are keyword and scrubber checks, deliberately broad: a false positive costs a
+team reply, a false negative publishes a customer's matter. ChatFPV's draft response
+may carry `route: "community" | "team"` (`chatfpv-contract.ts`); absent means team.
+
+The consent checkbox and the post footer are placeholders marked `TODO-LEGAL` in
+`app/lib/support/community.ts` (not final text); the privacy notice must name the
+public post before the flag is turned on. The consent is stored per ticket
+(`community_consent`); the forum post is deleted with the ticket after 24 months.
+
+**Staff API.** Base `/api/staff/support`, JSON, `Cache-Control: no-store`. Every
+request: `Authorization: Bearer $SUPPORT_STAFF_API_TOKEN`. Writes also need
+`X-Staff-Login: <login>` (`[A-Za-z0-9._@+-]{1,64}`, the person in the app); it is
+the audit label (`support_audit`: login, action, ticket, ids; never message text),
+not a credential. When `SUPPORT_STAFF_ACCESS_TEAM_DOMAIN` and
+`SUPPORT_STAFF_ACCESS_AUD` are set, the request must also carry a valid Cloudflare
+Access JWT (`Cf-Access-Jwt-Assertion`, RS256 against the team certs, audience, issuer,
+expiry, and the service token when `SUPPORT_STAFF_ACCESS_CLIENT_ID` is set). Status:
+404 flag off, 401 bad token, 403 Access refused, 400 `staff_login_required`, 503 not configured.
+Errors are `{"ok":false,"error":"<code>"}`; success is `{"ok":true,...}`.
+
+| Method and path | Body or query | Returns |
+|---|---|---|
+| `GET /status` | | `crm`, `communityRoute`, `files`, `drafts` booleans |
+| `GET /tickets` | `status` (comma list of open,waiting,answered,closed), `route` (team,community), `assignee` (login or `none`), `priority`, `topic`, `tag`, `q` (ref, subject, email, order, preview), `limit` (1-100, default 50), `before` (an `updatedAt`) | `tickets[]` (ticket object), `next` (cursor or null) |
+| `GET /tickets/:ref` | | `ticket`, `messages[]`, `notes[]`, `drafts[]` (pending AI drafts), `audit[]` (last 50). Reads the community post first |
+| `GET /tickets/:ref/customer` | | `customer`: `match`, `orderMatched`, `shopifyUrl`, `orders[]` (name, createdAt, financial, fulfillment, `preorderBatches`, items; only for an order Shopify confirmed), `earlierTickets[]`. No address, phone or payment data |
+| `GET /tickets/:ref/draft` | | `draft` (`draftId`, `body`, `text` = body plus the AI disclosure line, `citations`) or null |
+| `PATCH /tickets/:ref` | any of `status`, `assignee` (login or null), `priority` (low,normal,high,urgent), `tags` (at most 10, `[a-z0-9 ._:-]` up to 30) | `ticket`; `status: closed` closes like `!close`; leaving closed reopens |
+| `POST /tickets/:ref/notes` | `{body}` (internal, never shown to the customer) | `note` (201) |
+| `POST /tickets/:ref/reply` | JSON `{body, draftId?, status?: "answered"\|"waiting", authorName?}` or multipart with the same fields plus `files` (the form's limits) | `ticket`, `message` (201). 409 `locked`, 422 `empty`, `too_long`, `filtered`, 503 `files_unavailable` |
+| `POST /tickets/:ref/takeover` | | community ticket to the team route, assigned to the caller, forum post told; 409 `not_a_community_ticket` |
+| `POST` or `DELETE /tickets/:ref/messages/:seq/answer` | | mark or unmark a community reply as the answer (a mark also sets Open to Answered); 409 `not_a_community_reply` |
+| `GET /tickets/:ref/files/:id` | | the R2 attachment, always a download |
+| `GET /saved-replies` | | `replies[]` (`id`, `title`, `body`, `updatedBy`, `createdAt`, `updatedAt`) |
+| `POST /saved-replies`, `PUT /saved-replies/:id`, `DELETE /saved-replies/:id` | `{title (80), body (8000)}` | `reply` (201 on create); 404 unknown id |
+
+Ticket object: `ref, subject, preview, topic, status, route, assignee, priority, tags,
+name, email, orderNumber, orderVerified, product, customerMatch, locked,
+communityConsent, inCommunity, hasDiscordThread, createdAt, updatedAt, lastCustomerAt,
+lastStaffAt, lastCommunityAt, closedAt` (times in ms). Message object: `seq, role
+(customer|staff|community|system), author, body, at, answer, attachments[{id, filename,
+size, href}]`; a `system` body is an event code (`closed_by_team`, `reopened_by_team`,
+`sent_to_community`, `taken_over_by_team`, ...).
+
+A staff reply is scrubbed like a Discord reply (emails, phone numbers, IBANs and cards
+redacted), stored for the ticket page, and mailed as the usual content-free "new reply"
+notice by the cron once `SUPPORT_EMAIL_NOTIFY_ENABLED` is `1`. The moderation gate is not
+applied: Send is the person's approval. An AI draft is only ever a draft: the reply that
+carries its `draftId` is reported to ChatFPV as approved (text unchanged) or replaced.
+
+**Attachments.** R2 bucket `SUPPORT_FILES`, key `<ref>/<id>`, deleted with the ticket's
+24-month retention. Create the bucket, then uncomment the `[[r2_buckets]]` block in both
+wrangler files (declaring a missing bucket fails the deploy):
+
+```sh
+npx wrangler r2 bucket create opendrone-support-files
+```
 
 ### Mail
 

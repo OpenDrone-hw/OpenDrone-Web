@@ -10,7 +10,7 @@ import {createStore, type Ticket} from './store.ts';
 import type {Deps, SupportEnv} from './tickets.ts';
 import {readTicketCookie, type CookieTicket} from './tokens.ts';
 
-export type SupportWorkerEnv = SupportEnv & ChatFpvEnv & {SUPPORT_DB?: D1Database};
+export type SupportWorkerEnv = SupportEnv & ChatFpvEnv & {SUPPORT_DB?: D1Database; SUPPORT_FILES?: R2Bucket};
 
 /** Tickets can be opened: storage, Discord and a signing secret are there. */
 export function supportReady(env: SupportWorkerEnv): boolean {
@@ -25,6 +25,8 @@ export function supportDeps(env: SupportWorkerEnv, origin: string, defer?: (p: P
     discord: createDiscordClient(env),
     origin,
     defer,
+    // R2 attachments of the CRM; absent until the bucket is declared in the wrangler file.
+    files: env.SUPPORT_FILES,
     // ChatFPV ticket drafts: absent unless CHATFPV_DRAFTS_ENABLED is "1".
     chatfpv: draftsEnabled(env) ? {client: createChatFpvClient(env), drafts: createDraftStore(env.SUPPORT_DB)} : undefined,
   };

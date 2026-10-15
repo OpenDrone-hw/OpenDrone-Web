@@ -21,6 +21,8 @@ import {
 } from '~/components/SupportUi';
 import {AskChatFPV} from '~/components/support/AskChatFPV';
 import {askEnabled} from '~/lib/support/chatfpv';
+import {COMMUNITY_CONSENT_LABEL} from '~/lib/support/community';
+import {communityEnabled} from '~/lib/support/flags';
 import {handleCreate, type CreateResult} from '~/lib/support/handlers';
 import {notifyEnabled} from '~/lib/support/notify';
 import {originOf, supportDeps, supportReady, supportHeaders} from '~/lib/support/server';
@@ -138,6 +140,8 @@ export async function loader({request, context}: Route.LoaderArgs) {
       ready,
       ask,
       notify: notifyEnabled(env),
+      // The consent checkbox; null (no box) while SUPPORT_COMMUNITY_ROUTE is off. Wording is a TODO-LEGAL placeholder.
+      communityLabel: communityEnabled(env) ? COMMUNITY_CONSENT_LABEL : null,
       products,
       yours,
       initialTopic: TOPICS.includes(topic as TicketTopic) ? (topic as TicketTopic) : null,
@@ -171,7 +175,7 @@ function FieldError({error, field}: {error?: FieldError; field: string}) {
 /** `onTryChatFpv` is only passed when the ChatFPV tile exists (`ask`); its one-line
  *  hint under "Product or build" opens that tile and scrolls to it. */
 function TicketForm({onTryChatFpv}: {onTryChatFpv?: () => void}) {
-  const {products, notify, initialTopic} = useLoaderData<typeof loader>();
+  const {products, notify, initialTopic, communityLabel} = useLoaderData<typeof loader>();
   const root = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
   // Without JavaScript the page's action answers; with it, the fetch below.
   const actionResult = useActionData<ActionResult>();
@@ -420,6 +424,13 @@ function TicketForm({onTryChatFpv}: {onTryChatFpv?: () => void}) {
               }}
             />
           </div>
+
+          {communityLabel && (topic === 'product' || topic === 'other') ? (
+            <label className="sp-consent">
+              <input type="checkbox" name="community" value="on" />
+              <span>{communityLabel}</span>
+            </label>
+          ) : null}
 
           <TurnstileBox siteKey={root?.turnstileSiteKey ?? null} active={touched} resetKey={result?.at} />
 

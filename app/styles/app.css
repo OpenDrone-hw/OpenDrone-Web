@@ -18060,6 +18060,8 @@ html.light .plugs {
 .sp-input[aria-invalid='true']:focus-visible {border-color: var(--color-error);}
 .sp-textarea {resize: vertical; min-height: 7.5rem;}
 .sp-hint {margin: 0; font-size: 13px; line-height: 1.5; color: var(--color-text-muted);}
+.sp-consent {display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.5;}
+.sp-consent input {margin-top: 3px;}
 .sp-hint a {color: inherit; text-decoration: underline; text-underline-offset: 2px;}
 .sp-field-error, .sp-error {margin: 0; font-size: 13px; color: var(--color-error);}
 .sp-banner {

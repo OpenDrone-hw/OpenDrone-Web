@@ -75,6 +75,8 @@ export type DraftResponse = {
   citations: Citation[];
   confidence: number;
   note: string; // one line for staff: why this draft, or why none
+  /** Triage label: 'community' when the question is technical, general and holds nothing about the person. Optional; absent means team. The storefront applies its own hard rules on top. */
+  route?: 'community' | 'team';
 };
 
 /**
