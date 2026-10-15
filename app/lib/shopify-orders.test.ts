@@ -55,6 +55,24 @@ describe('fetchPaidUnits', () => {
     assert.deepEqual(units, {'OPENESC-2020': 4});
   });
 
+  it('retries a throttled page instead of failing the count', async () => {
+    let calls = 0;
+    const units = await fetchPaidUnits(ENV, '2026-09-21', SKUS, async () => {
+      calls += 1;
+      if (calls < 3) return Response.json({errors: [{message: 'Throttled', extensions: {code: 'THROTTLED'}}]});
+      return page([{displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 2]]}]);
+    });
+    assert.equal(calls, 3);
+    assert.deepEqual(units, {'OPENESC-2020': 2});
+  });
+
+  it('still fails when the throttle does not clear', async () => {
+    await assert.rejects(
+      fetchPaidUnits(ENV, '2026-09-21', SKUS, async () => Response.json({errors: [{message: 'Throttled'}]})),
+      /rejected the query/,
+    );
+  });
+
   it('follows pagination and sends the countFrom filter', async () => {
     const queries: string[] = [];
     let call = 0;
