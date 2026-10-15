@@ -251,6 +251,12 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     throw redirect('/products/openfc-lite', 301);
   }
 
+  // The hardware kit (screws, nuts, standoffs) was a Shopify accessory and is
+  // sold with the frame; old cart links land on the frame page.
+  if (handle === 'hardware-kit') {
+    throw redirect('/products/openframe', 301);
+  }
+
   // A link that names a version by its label or another spelling
   // (?Model=5" or the retired ?Model=2207 for the 2306 value) lands on the catalog value instead of
   // silently falling back to the first version.
