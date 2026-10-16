@@ -54,7 +54,7 @@ export async function sendStaffReply(
       const committed = await deps.store.commitReply(key, {
         ok: true, ticket: next,
         message: {seq: 0, ref: ticket.ref, discordId: null, role: 'staff', author, body: scrubbed.content, attachments, createdAt: now, answer: false},
-      }, opts.login, opts.draftId, ticket.status === 'closed');
+      }, opts.login, opts.draftId, ticket.status === 'closed', !ticket.assignee);
       message = committed.message;
     } catch (err) {
       // Another isolate may have won, or D1 may have committed before the connection failed.

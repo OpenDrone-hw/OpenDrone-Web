@@ -253,6 +253,32 @@ describe('staff reply idempotency', {skip}, () => {
   const headers = {'Idempotency-Key': 'reply-test-1'};
   const body = {body: 'Please check the cable.', status: 'waiting', authorName: 'Support'};
 
+  for (const initialAssignee of ['agent-a', null]) {
+    for (const assignee of ['agent-b', null]) {
+      it(`preserves assignment changes from ${initialAssignee} to ${assignee} during a keyed reply`, async () => {
+        const {db, deps, call} = await setup();
+        const t = await createTicket(deps, input());
+        await deps.store.updateTicket(t.ref, {assignee: initialAssignee});
+        const commit = deps.store.commitReply;
+        deps.store.commitReply = async (...args) => {
+          await createStore(db).updateTicket(t.ref, {assignee});
+          return commit(...args);
+        };
+        const path = `/tickets/${t.ref}/reply`;
+        const first = await call('POST', path, body, headers);
+        deps.store.commitReply = commit;
+        assert.equal(first.status, 201);
+        const expected = initialAssignee === null && assignee === null ? 'stan' : assignee;
+        assert.equal((await deps.store.getTicket(t.ref))!.assignee, expected);
+        const retry = await call('POST', path, body, headers);
+        assert.equal(retry.status, 201);
+        assert.deepEqual(retry.json, first.json);
+        assert.equal((await deps.store.getTicket(t.ref))!.assignee, expected);
+        assert.equal((await deps.store.messages(t.ref)).filter((m) => m.role === 'staff').length, 1);
+      });
+    }
+  }
+
   it('replays the original result after 25 hours and a store restart without another notice', async () => {
     const {db, deps, call, sent} = await setup();
     const t = await createTicket(deps, input());

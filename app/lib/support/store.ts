@@ -403,7 +403,7 @@ export function createStore(db: D1Database) {
     },
 
     /** The unique key and all customer-visible writes commit together, or all roll back. */
-    async commitReply(key: ReplyKey, result: StoredReply, login: string, draftId: string | undefined, reopen: boolean): Promise<StoredReply> {
+    async commitReply(key: ReplyKey, result: StoredReply, login: string, draftId: string | undefined, reopen: boolean, claimUnassigned: boolean): Promise<StoredReply> {
       const {ticket: t, message: m} = result;
       const statements = [
         db.prepare('INSERT INTO support_reply_idempotency (key_hash, request_hash, ref, result, created_at) VALUES (?, ?, ?, ?, ?)')
@@ -413,8 +413,9 @@ export function createStore(db: D1Database) {
           .bind(t.ref, m.author, m.body, JSON.stringify(m.attachments), m.createdAt),
         db.prepare("UPDATE support_reply_idempotency SET result = json_set(result, '$.message.seq', last_insert_rowid()) WHERE key_hash = ?")
           .bind(key.keyHash),
-        db.prepare(`UPDATE support_tickets SET status = ?, closed_at = NULL, updated_at = ?, last_staff_at = ?, assignee = ? WHERE ref = ?`)
-          .bind(t.status, t.updatedAt, t.lastStaffAt, t.assignee, t.ref),
+        db.prepare(`UPDATE support_tickets SET status = ?, closed_at = NULL, updated_at = ?, last_staff_at = ?,
+          assignee = CASE WHEN ? THEN COALESCE(assignee, ?) ELSE assignee END WHERE ref = ?`)
+          .bind(t.status, t.updatedAt, t.lastStaffAt, claimUnassigned ? 1 : 0, login, t.ref),
         db.prepare(`INSERT INTO support_audit (at, actor, action, ref, detail)
           SELECT ?, ?, 'reply', ?, 'seq=' || json_extract(result, '$.message.seq') || ?
           FROM support_reply_idempotency WHERE key_hash = ?`)
