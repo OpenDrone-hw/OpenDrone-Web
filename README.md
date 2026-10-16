@@ -425,6 +425,19 @@ expiry, and the service token when `SUPPORT_STAFF_ACCESS_CLIENT_ID` is set). Sta
 404 flag off, 401 bad token, 403 Access refused, 400 `staff_login_required`, 503 not configured.
 Errors are `{"ok":false,"error":"<code>"}`; success is `{"ok":true,...}`.
 
+`POST /tickets/:ref/reply` accepts `Idempotency-Key` (1-255 visible ASCII
+characters, no spaces). Reuse the key after an unknown outcome: the same
+ticket, staff login, body, draft, status, author and attachments return the
+original 201 result, even if the ticket has since changed. JSON property order
+and multipart boundaries do not matter; attachment names, types, order and
+bytes do. Changed content with the same key returns 409 `idempotency_conflict`.
+Successful results and hashed keys are stored in D1 with the ticket's retention
+(at least 24 hours), and removed with the ticket. Validation failures do not
+reserve a key. Calls without the header retain the existing behavior.
+Migration `0012_support_reply_idempotency.sql` is applied by the production
+deploy's migration step before the Worker is deployed. An unverifiable schema
+blocks production deployment.
+
 | Method and path | Body or query | Returns |
 |---|---|---|
 | `GET /status` | | `crm`, `communityRoute`, `files`, `drafts` booleans |

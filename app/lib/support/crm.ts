@@ -12,7 +12,7 @@ import {fileLine, storeFiles} from './files.ts';
 import {hasThread} from './flags.ts';
 import {customerAdminUrl, lookupCustomer, staffOrderDetails, type OrderSummary, type StaffOrderDetails} from './shopify.ts';
 import {scrubForDiscord} from './scrubber.ts';
-import {PRIORITIES, type Priority, type StoredAttachment, type Ticket, type TicketMessage, type TicketStatus} from './store.ts';
+import {PRIORITIES, type Priority, type ReplyKey, type StoredAttachment, type Ticket, type TicketMessage, type TicketStatus} from './store.ts';
 import {validLogin} from './staff-auth.ts';
 import {closeTicket, humanTag, normalizeText, type Deps} from './tickets.ts';
 
@@ -20,13 +20,18 @@ export const MAX_STAFF_REPLY = 8000;
 export const MAX_NOTE = 4000;
 
 export type ReplyOk = {ok: true; ticket: Ticket; message: TicketMessage | null};
-export type ReplyFail = {ok: false; error: 'locked' | 'empty' | 'too_long' | 'filtered' | 'files_unavailable'};
+export type ReplyFail = {ok: false; error: 'locked' | 'empty' | 'too_long' | 'filtered' | 'files_unavailable' | 'idempotency_conflict'};
 
 export async function sendStaffReply(
   deps: Deps,
   ticket: Ticket,
-  opts: {login: string; author?: string; body: string; draftId?: string; status?: 'answered' | 'waiting'; files?: OutboundFile[]},
+  opts: {login: string; author?: string; body: string; draftId?: string; status?: 'answered' | 'waiting'; files?: OutboundFile[]; idempotency?: ReplyKey},
 ): Promise<ReplyOk | ReplyFail> {
+  const key = opts.idempotency;
+  if (key) {
+    const saved = await deps.store.replyResult(key.keyHash);
+    if (saved) return saved.requestHash === key.requestHash ? saved.result : {ok: false, error: 'idempotency_conflict'};
+  }
   if (ticket.locked) return {ok: false, error: 'locked'};
   const files = opts.files ?? [];
   const text = normalizeText(opts.body);
@@ -40,16 +45,36 @@ export async function sendStaffReply(
   const now = (deps.now ?? Date.now)();
   const author = cleanText(opts.author ?? '').slice(0, 40) || 'OpenDrone';
   const attachments: StoredAttachment[] = files.length ? await storeFiles(deps.files!, ticket.ref, files) : [];
-  await deps.store.addMessage({ref: ticket.ref, discordId: null, role: 'staff', author, body: scrubbed.content, attachments, createdAt: now});
-  const message = await deps.store.lastMessage(ticket.ref);
-
-  if (ticket.status === 'closed') {
-    await deps.store.addMessage({ref: ticket.ref, discordId: null, role: 'system', author: '', body: 'reopened_by_team', attachments: [], createdAt: now});
-  }
   const status: TicketStatus = opts.status ?? 'answered';
   const patch = {status, closedAt: null, updatedAt: now, lastStaffAt: now, ...(ticket.assignee ? {} : {assignee: opts.login})};
-  await deps.store.updateTicket(ticket.ref, patch);
   const next = {...ticket, ...patch};
+  let message: TicketMessage | null;
+  if (key) {
+    try {
+      const committed = await deps.store.commitReply(key, {
+        ok: true, ticket: next,
+        message: {seq: 0, ref: ticket.ref, discordId: null, role: 'staff', author, body: scrubbed.content, attachments, createdAt: now, answer: false},
+      }, opts.login, opts.draftId, ticket.status === 'closed', !ticket.assignee);
+      message = committed.message;
+    } catch (err) {
+      // Another isolate may have won, or D1 may have committed before the connection failed.
+      const saved = await deps.store.replyResult(key.keyHash);
+      if (!saved) throw err;
+      if (deps.files) {
+        const used = new Set(saved.result.message.attachments.map((a) => a.id));
+        const unused = attachments.filter((a) => !used.has(a.id)).map((a) => `${ticket.ref}/${a.id}`);
+        if (unused.length) await deps.files.delete(unused).catch(() => {});
+      }
+      return saved.requestHash === key.requestHash ? saved.result : {ok: false, error: 'idempotency_conflict'};
+    }
+  } else {
+    await deps.store.addMessage({ref: ticket.ref, discordId: null, role: 'staff', author, body: scrubbed.content, attachments, createdAt: now});
+    message = await deps.store.lastMessage(ticket.ref);
+    if (ticket.status === 'closed') {
+      await deps.store.addMessage({ref: ticket.ref, discordId: null, role: 'system', author: '', body: 'reopened_by_team', attachments: [], createdAt: now});
+    }
+    await deps.store.updateTicket(ticket.ref, patch);
+  }
 
   // Settle the AI drafts this reply answers: the unmodified draft is approved, anything else replaces it.
   if (deps.chatfpv) {
@@ -58,7 +83,7 @@ export async function sendStaffReply(
       await settleDraft(deps, d, sent ? 'approved' : 'replaced', opts.login, sent ? null : scrubbed.content).catch(() => {});
     }
   }
-  await deps.store.audit(opts.login, 'reply', ticket.ref, `seq=${message?.seq ?? 0} files=${attachments.length}${opts.draftId ? ` draft=${opts.draftId}` : ''} status=${status}`, now);
+  if (!key) await deps.store.audit(opts.login, 'reply', ticket.ref, `seq=${message?.seq ?? 0} files=${attachments.length}${opts.draftId ? ` draft=${opts.draftId}` : ''} status=${status}`, now);
 
   // A thread from before the CRM still shows the conversation: text and a file line only.
   if (hasThread(ticket)) {
