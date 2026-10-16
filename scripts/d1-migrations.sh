@@ -35,6 +35,10 @@ if [ $rc -ne 0 ]; then
     applied="$(curl -fsS --max-time 20 "$site/api/support/schema" 2>/dev/null | python3 -c 'import sys,json; print(" ".join(json.load(sys.stdin)["migrations"]))' 2>/dev/null)"
     if [ -z "$applied" ]; then
       annotate warning "Could not read the applied migrations from $site/api/support/schema either (the endpoint ships with the Worker): pending migrations are NOT verified."
+      if [ "$mode" = "apply" ]; then
+        annotate error "The Worker was NOT deployed because its D1 schema could not be verified. Restore D1 access and re-run the deploy."
+        exit 1
+      fi
       exit 0
     fi
     missing=""

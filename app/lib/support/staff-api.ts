@@ -10,7 +10,7 @@ import {addInternalNote, applyChanges, customerCard, parseChanges, sendStaffRepl
 import {fileResponse, isR2Attachment} from './files.ts';
 import {communityEnabled, crmEnabled, hasThread} from './flags.ts';
 import {authenticateStaff, type StaffAuthEnv} from './staff-auth.ts';
-import {PRIORITIES, type Priority, type Route, type Ticket, type TicketFilter, type TicketMessage, type TicketStatus} from './store.ts';
+import {PRIORITIES, type Priority, type ReplyKey, type Route, type Ticket, type TicketFilter, type TicketMessage, type TicketStatus} from './store.ts';
 import {supportDeps, supportReady, type SupportWorkerEnv} from './server.ts';
 import {parseTicketRef} from './tokens.ts';
 import {TOPICS, normalizeText, sendConfirmation, type Deps} from './tickets.ts';
@@ -90,6 +90,11 @@ async function readJson(request: Request): Promise<Record<string, unknown> | nul
 }
 
 const csv = (v: string | null) => (v ? v.split(',').map((x) => x.trim()).filter(Boolean) : []);
+
+async function digest(data: string | ArrayBuffer | Uint8Array): Promise<string> {
+  const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : new Uint8Array(data);
+  return [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 function filterOf(q: URLSearchParams): TicketFilter {
   const f: TicketFilter = {};
@@ -235,6 +240,8 @@ export async function handleStaff(request: Request, env: StaffEnv, opts: StaffOp
   }
 
   if (seg.length === 3 && sub === 'reply' && method === 'POST') {
+    const key = request.headers.get('Idempotency-Key');
+    if (key !== null && !/^[\x21-\x7e]{1,255}$/.test(key)) return fail(400, 'invalid_idempotency_key');
     let body = '';
     let draftId: string | undefined;
     let status: 'answered' | 'waiting' | undefined;
@@ -256,8 +263,16 @@ export async function handleStaff(request: Request, env: StaffEnv, opts: StaffOp
       authorName = typeof b.authorName === 'string' ? b.authorName : undefined;
     }
     if (!files.ok) return fail(400, `file_${files.problem}`, {file: files.file});
-    const result = await sendStaffReply(deps, ticket, {login, author: authorName, body, draftId, status, files: files.files});
-    if (!result.ok) return fail(result.error === 'locked' ? 409 : result.error === 'files_unavailable' ? 503 : 422, result.error);
+    let idempotency: ReplyKey | undefined;
+    if (key !== null) {
+      const attachments = await Promise.all(files.files.map(async (f) => ({name: f.name, type: f.type, hash: await digest(f.data)})));
+      idempotency = {
+        keyHash: await digest(key),
+        requestHash: await digest(JSON.stringify({ref, login, body, draftId: draftId || null, status: status ?? 'answered', authorName: authorName || null, attachments})),
+      };
+    }
+    const result = await sendStaffReply(deps, ticket, {login, author: authorName, body, draftId, status, files: files.files, idempotency});
+    if (!result.ok) return fail(result.error === 'locked' || result.error === 'idempotency_conflict' ? 409 : result.error === 'files_unavailable' ? 503 : 422, result.error);
     return json({ok: true, ticket: staffTicket(result.ticket), message: result.message ? staffMessage(result.message) : null}, 201);
   }
 

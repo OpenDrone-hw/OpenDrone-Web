@@ -94,7 +94,7 @@ async function setup(env: Partial<typeof ENV> = {}) {
     const type = res.headers.get('Content-Type') ?? '';
     return {status: res.status, json: type.includes('json') ? ((await res.json()) as any) : null, res};
   };
-  return {deps, discord, r2, ai, sent, call};
+  return {db, deps, discord, r2, ai, sent, call};
 }
 
 const input = (over: Partial<NewTicketInput> = {}): NewTicketInput => ({
@@ -246,6 +246,173 @@ describe('staff API tickets', {skip}, () => {
     assert.equal((await call('POST', '/saved-replies', {title: '', body: 'x'})).status, 400);
     assert.equal((await call('DELETE', `/saved-replies/${id}`)).status, 200);
     assert.equal((await call('DELETE', `/saved-replies/${id}`)).status, 404);
+  });
+});
+
+describe('staff reply idempotency', {skip}, () => {
+  const headers = {'Idempotency-Key': 'reply-test-1'};
+  const body = {body: 'Please check the cable.', status: 'waiting', authorName: 'Support'};
+
+  it('replays the original result after 25 hours and a store restart without another notice', async () => {
+    const {db, deps, call, sent} = await setup();
+    const t = await createTicket(deps, input());
+    clock += 60_000;
+    const path = `/tickets/${t.ref}/reply`;
+    const first = await call('POST', path, body, headers);
+    assert.equal(first.status, 201);
+    clock += 11 * 60_000;
+    await runScheduled(deps);
+    assert.equal(sent.length, 2);
+    await deps.store.updateTicket(t.ref, {status: 'closed', locked: true, closedAt: clock});
+    clock += 25 * 60 * 60_000;
+    deps.store = createStore(db);
+    const retry = await call('POST', path, {authorName: body.authorName, status: body.status, body: body.body}, headers);
+    assert.equal(retry.status, 201);
+    assert.deepEqual(retry.json, first.json);
+    assert.equal(retry.res.headers.get('Cache-Control'), 'no-store');
+    assert.equal((await deps.store.getTicket(t.ref))!.status, 'closed');
+    assert.equal((await deps.store.messages(t.ref)).filter((m) => m.role === 'staff').length, 1);
+    assert.equal((await deps.store.auditFor(t.ref)).filter((a) => a.action === 'reply').length, 1);
+    await runScheduled(deps);
+    assert.equal(sent.length, 2);
+    clock += RETENTION_MS;
+    await cleanupExpired(deps);
+    assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM support_reply_idempotency').first<{n: number}>())!.n, 0);
+  });
+
+  it('refuses changed content, staff identity or ticket with the same key', async () => {
+    const {deps, call} = await setup();
+    const t = await createTicket(deps, input());
+    const other = await createTicket(deps, input({message: 'A separate support question.'}));
+    const path = `/tickets/${t.ref}/reply`;
+    assert.equal((await call('POST', path, body, headers)).status, 201);
+    for (const change of [{body: 'Changed reply.'}, {status: 'answered'}, {authorName: 'Other'}, {draftId: 'different'}]) {
+      const response = await call('POST', path, {...body, ...change}, headers);
+      assert.equal(response.status, 409);
+      assert.equal(response.json.error, 'idempotency_conflict');
+    }
+    assert.equal((await call('POST', path, body, {...headers, 'X-Staff-Login': 'other'})).status, 409);
+    assert.equal((await call('POST', `/tickets/${other.ref}/reply`, body, headers)).status, 409);
+    assert.equal((await call('POST', path, body, {...headers, Authorization: 'Bearer invalid'})).status, 401);
+    assert.equal((await call('POST', path, body, {'Idempotency-Key': 'reply-test-2'})).status, 201);
+  });
+
+  for (const conflicting of [false, true]) {
+    it(`serializes concurrent ${conflicting ? 'conflicting' : 'identical'} replies across stores`, async () => {
+      const {db, deps, call} = await setup();
+      const t = await createTicket(deps, input());
+      await deps.store.updateTicket(t.ref, {status: 'closed', closedAt: clock});
+      let arrived = 0;
+      let release!: () => void;
+      const ready = new Promise<void>((resolve) => { release = resolve; });
+      const commit = deps.store.commitReply;
+      deps.store.commitReply = async (...args) => {
+        if (++arrived === 2) release();
+        await ready;
+        return createStore(db).commitReply(...args);
+      };
+      const path = `/tickets/${t.ref}/reply`;
+      const replies = await Promise.all([
+        call('POST', path, body, headers),
+        call('POST', path, conflicting ? {...body, body: 'A different reply.'} : body, headers),
+      ]);
+      deps.store.commitReply = commit;
+      assert.deepEqual(replies.map((r) => r.status).sort(), conflicting ? [201, 409] : [201, 201]);
+      if (!conflicting) assert.deepEqual(replies[0]!.json, replies[1]!.json);
+      const messages = await deps.store.messages(t.ref);
+      assert.equal(messages.filter((m) => m.role === 'staff').length, 1);
+      assert.equal(messages.filter((m) => m.body === 'reopened_by_team').length, 1);
+      assert.equal((await deps.store.auditFor(t.ref)).filter((a) => a.action === 'reply').length, 1);
+    });
+  }
+
+  it('rolls back the message, ticket and key if any statement fails, allowing a safe retry', async () => {
+    const {db, deps, call} = await setup();
+    const t = await createTicket(deps, input());
+    const before = await deps.store.getTicket(t.ref);
+    await db.prepare("CREATE TRIGGER fail_reply BEFORE INSERT ON support_audit WHEN NEW.action = 'reply' BEGIN SELECT RAISE(ABORT, 'test failure'); END").run();
+    const path = `/tickets/${t.ref}/reply`;
+    await assert.rejects(call('POST', path, body, headers), /test failure/);
+    assert.deepEqual(await deps.store.getTicket(t.ref), before);
+    assert.equal((await deps.store.messages(t.ref)).filter((m) => m.role === 'staff').length, 0);
+    assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM support_reply_idempotency').first<{n: number}>())!.n, 0);
+    await db.prepare('DROP TRIGGER fail_reply').run();
+    assert.equal((await call('POST', path, body, headers)).status, 201);
+  });
+
+  it('recovers a committed result when D1 loses its acknowledgement', async () => {
+    const {db, deps, call} = await setup();
+    const t = await createTicket(deps, input());
+    const batch = db.batch;
+    db.batch = async (statements) => {
+      await batch(statements);
+      throw new Error('test connection lost after commit');
+    };
+    const first = await call('POST', `/tickets/${t.ref}/reply`, body, headers);
+    db.batch = batch;
+    assert.equal(first.status, 201);
+    const retry = await call('POST', `/tickets/${t.ref}/reply`, body, headers);
+    assert.deepEqual(retry.json, first.json);
+    assert.equal((await deps.store.messages(t.ref)).filter((m) => m.role === 'staff').length, 1);
+  });
+
+  it('replays after an interruption between the commit and the HTTP response', async () => {
+    const {deps, call} = await setup();
+    const t = await createTicket(deps, input());
+    const pending = deps.chatfpv!.drafts.pending;
+    deps.chatfpv!.drafts.pending = async () => { throw new Error('test interruption'); };
+    await assert.rejects(call('POST', `/tickets/${t.ref}/reply`, body, headers), /test interruption/);
+    deps.chatfpv!.drafts.pending = pending;
+    const retry = await call('POST', `/tickets/${t.ref}/reply`, body, headers);
+    assert.equal(retry.status, 201);
+    assert.equal(retry.json.message.seq, (await deps.store.lastMessage(t.ref))!.seq);
+    assert.equal((await deps.store.messages(t.ref)).filter((m) => m.role === 'staff').length, 1);
+  });
+
+  it('hashes multipart content independently of boundaries and detects changed attachment bytes and metadata', async () => {
+    const {deps, call, r2} = await setup();
+    const t = await createTicket(deps, input());
+    const form = (content = 'log one', name = 'test.txt', type = 'text/plain') => {
+      const f = new FormData();
+      f.set('body', body.body);
+      f.append('files', new File([content], name, {type}));
+      return f;
+    };
+    const path = `/tickets/${t.ref}/reply`;
+    const first = await call('POST', path, form(), headers);
+    const retry = await call('POST', path, form(), headers);
+    assert.equal(first.status, 201);
+    assert.deepEqual(retry.json, first.json);
+    for (const changed of [form('log two'), form('log one', 'other.txt'), form('log one', 'test.txt', 'text/csv')]) {
+      assert.equal((await call('POST', path, changed, headers)).status, 409);
+    }
+    assert.equal(r2.objects.size, 1);
+  });
+
+  it('settles drafts and mirrors legacy threads only once', async () => {
+    const {deps, call, discord, ai} = await setup();
+    const t = await createTicket({...deps, env: {...deps.env, SUPPORT_CRM_API: '0'}}, input({topic: 'product', orderNumber: null}));
+    const path = `/tickets/${t.ref}/reply`;
+    const first = await call('POST', path, body, headers);
+    const outcomes = ai.outcomes.length;
+    assert.equal(outcomes, 1);
+    assert.deepEqual((await call('POST', path, body, headers)).json, first.json);
+    assert.equal(ai.outcomes.length, outcomes);
+    assert.equal(discord.threads.get(t.threadId)!.messages.filter((m) => m.content.includes('staff (CRM)')).length, 1);
+  });
+
+  it('validates keys, leaves failed validation retryable and preserves calls without a key', async () => {
+    const {deps, call} = await setup();
+    const t = await createTicket(deps, input());
+    const path = `/tickets/${t.ref}/reply`;
+    for (const key of ['', 'with space', 'x'.repeat(256)]) {
+      assert.equal((await call('POST', path, body, {'Idempotency-Key': key})).status, 400);
+    }
+    assert.equal((await call('POST', path, {body: ''}, headers)).status, 422);
+    assert.equal((await call('POST', path, body, headers)).status, 201);
+    assert.equal((await call('POST', path, body)).status, 201);
+    assert.equal((await call('POST', path, body)).status, 201);
+    assert.equal((await deps.store.messages(t.ref)).filter((m) => m.role === 'staff').length, 3);
   });
 });
 

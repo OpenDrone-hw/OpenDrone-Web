@@ -35,20 +35,34 @@ export async function testD1(): Promise<D1Database | null> {
   const dir = new URL('../../../migrations/', import.meta.url);
   for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(f, dir), 'utf8'));
   const norm = (v: unknown) => (v === undefined ? null : typeof v === 'boolean' ? Number(v) : v);
+  const runners = new WeakMap<D1PreparedStatement, () => D1Result>();
   function statement(sql: string, params: unknown[] = []): D1PreparedStatement {
-    return {
+    const run = () => {
+      const r = db.prepare(sql).run(...params);
+      return {results: [], success: true, meta: {changes: Number(r.changes), last_row_id: Number(r.lastInsertRowid)}};
+    };
+    const stmt: D1PreparedStatement = {
       bind: (...values: unknown[]) => statement(sql, values.map(norm)),
       first: async <T,>() => ((db.prepare(sql).get(...params) as T | undefined) ?? null),
       all: async <T,>() => ({results: db.prepare(sql).all(...params) as T[], success: true, meta: {}}),
-      run: async () => {
-        const r = db.prepare(sql).run(...params);
-        return {results: [], success: true, meta: {changes: Number(r.changes), last_row_id: Number(r.lastInsertRowid)}};
-      },
+      run: async () => run(),
     };
+    runners.set(stmt, run);
+    return stmt;
   }
   return {
     prepare: (sql: string) => statement(sql),
-    batch: async (stmts: D1PreparedStatement[]) => Promise.all(stmts.map((s) => s.run())),
+    batch: async (stmts: D1PreparedStatement[]) => {
+      db.exec('BEGIN');
+      try {
+        const results = stmts.map((s) => runners.get(s)!());
+        db.exec('COMMIT');
+        return results;
+      } catch (err) {
+        db.exec('ROLLBACK');
+        throw err;
+      }
+    },
   };
 }
 

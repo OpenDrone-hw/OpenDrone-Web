@@ -247,6 +247,8 @@ const COLUMNS = {
 export type TicketPatch = Partial<Pick<Ticket, keyof typeof COLUMNS>>;
 
 export type NewMessage = Omit<TicketMessage, 'seq' | 'answer'> & {answer?: boolean};
+export type ReplyKey = {keyHash: string; requestHash: string};
+export type StoredReply = {ok: true; ticket: Ticket; message: TicketMessage};
 
 export function createStore(db: D1Database) {
   return {
@@ -386,11 +388,43 @@ export function createStore(db: D1Database) {
 
     async deleteTicket(ref: string): Promise<void> {
       await db.batch([
+        db.prepare('DELETE FROM support_reply_idempotency WHERE ref = ?').bind(ref),
         db.prepare('DELETE FROM support_notes WHERE ref = ?').bind(ref),
         db.prepare('DELETE FROM support_audit WHERE ref = ?').bind(ref),
         db.prepare('DELETE FROM support_messages WHERE ref = ?').bind(ref),
         db.prepare('DELETE FROM support_tickets WHERE ref = ?').bind(ref),
       ]);
+    },
+
+    async replyResult(keyHash: string): Promise<{requestHash: string; result: StoredReply} | null> {
+      const row = await db.prepare('SELECT request_hash, result FROM support_reply_idempotency WHERE key_hash = ?')
+        .bind(keyHash).first<{request_hash: string; result: string}>();
+      return row ? {requestHash: row.request_hash, result: JSON.parse(row.result) as StoredReply} : null;
+    },
+
+    /** The unique key and all customer-visible writes commit together, or all roll back. */
+    async commitReply(key: ReplyKey, result: StoredReply, login: string, draftId: string | undefined, reopen: boolean): Promise<StoredReply> {
+      const {ticket: t, message: m} = result;
+      const statements = [
+        db.prepare('INSERT INTO support_reply_idempotency (key_hash, request_hash, ref, result, created_at) VALUES (?, ?, ?, ?, ?)')
+          .bind(key.keyHash, key.requestHash, t.ref, JSON.stringify(result), m.createdAt),
+        db.prepare(`INSERT INTO support_messages (ref, discord_id, role, author, body, attachments, created_at)
+          VALUES (?, NULL, 'staff', ?, ?, ?, ?)`)
+          .bind(t.ref, m.author, m.body, JSON.stringify(m.attachments), m.createdAt),
+        db.prepare("UPDATE support_reply_idempotency SET result = json_set(result, '$.message.seq', last_insert_rowid()) WHERE key_hash = ?")
+          .bind(key.keyHash),
+        db.prepare(`UPDATE support_tickets SET status = ?, closed_at = NULL, updated_at = ?, last_staff_at = ?, assignee = ? WHERE ref = ?`)
+          .bind(t.status, t.updatedAt, t.lastStaffAt, t.assignee, t.ref),
+        db.prepare(`INSERT INTO support_audit (at, actor, action, ref, detail)
+          SELECT ?, ?, 'reply', ?, 'seq=' || json_extract(result, '$.message.seq') || ?
+          FROM support_reply_idempotency WHERE key_hash = ?`)
+          .bind(m.createdAt, login, t.ref, ` files=${m.attachments.length}${draftId ? ` draft=${draftId}` : ''} status=${t.status}`, key.keyHash),
+      ];
+      if (reopen) statements.push(db.prepare(`INSERT INTO support_messages (ref, discord_id, role, author, body, attachments, created_at)
+        VALUES (?, NULL, 'system', '', 'reopened_by_team', '[]', ?)`)
+        .bind(t.ref, m.createdAt));
+      const rows = await db.batch(statements);
+      return {...result, message: {...m, seq: Number(rows[1]!.meta.last_row_id)}};
     },
 
     /** Insert a message; a Discord id already stored is skipped. Returns whether it was new. */
