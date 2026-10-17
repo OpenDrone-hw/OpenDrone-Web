@@ -79,6 +79,18 @@ declare global {
     // Signs the locale and cart session cookies.
     SESSION_SECRET: string;
 
+    // The app as the commerce backend (/shop routes, app/lib/commerce/app-api.ts). Every /shop route answers 404
+    // unless COMMERCE_SOURCE is exactly 'app'. Neither wrangler file sets it; the founder turns it on in a test
+    // environment first. APP_API_URL: the app origin; APP_ACCESS_CLIENT_ID and APP_ACCESS_CLIENT_SECRET: the
+    // Cloudflare Access service token; APP_STOREFRONT_TOKEN: the app's storefront service bearer; APP_PROJECT:
+    // the project id whose catalog and posts this site shows.
+    COMMERCE_SOURCE?: string;
+    APP_API_URL?: string;
+    APP_ACCESS_CLIENT_ID?: string;
+    APP_ACCESS_CLIENT_SECRET?: string;
+    APP_STOREFRONT_TOKEN?: string;
+    APP_PROJECT?: string;
+
     // Checkout mutation gate. The catalog stays read-only unless this is
     // exactly '1'. Production and staging set it in their wrangler [vars].
     SHOPIFY_CHECKOUT_WRITE_ENABLED?: string;
