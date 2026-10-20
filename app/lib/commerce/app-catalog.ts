@@ -26,6 +26,8 @@ type WireVariant = {
   compare_at_minor?: number | null;
   available?: boolean;
   options?: Record<string, string> | null;
+  /** The variant's own photo, when the app has it. */
+  image?: {url: string; alt?: string | null} | null;
 };
 type WireProduct = {
   id: string;
@@ -45,6 +47,28 @@ function plain(html: string | null | undefined): string | null {
   return text || null;
 }
 
+type Img = {url: string; alt?: string | null};
+
+function norm(text: string): string {
+  return text.toLowerCase().replace(/\u00d7/g, 'x').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * The photo of one variant. The app's own `image` wins. Until the app carries variant photos, the first product photo
+ * whose alt text names the variant's option value as a whole word ("OpenFC Lite 30x30, front" for 30x30) stands in, so
+ * the two sizes of a board do not show the same picture in the grid. No match: the product's first photo.
+ */
+export function variantImage(variant: WireVariant, images: Img[]): Img | null {
+  if (variant.image?.url) return variant.image;
+  const values = Object.values(variant.options ?? {}).map(norm).filter(Boolean);
+  for (const value of values) {
+    const word = new RegExp(`(?<![\\w-])${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`);
+    const hit = images.find((m) => m.alt && word.test(norm(m.alt)));
+    if (hit) return hit;
+  }
+  return images[0] ?? null;
+}
+
 export function mapAppCatalog(wire: AppCatalogWire, now: Date = new Date()): Catalog {
   if (!wire || !Array.isArray(wire.products)) throw new Error('app catalog: not a catalog document');
   const currency = wire.currency || 'EUR';
@@ -57,6 +81,7 @@ export function mapAppCatalog(wire: AppCatalogWire, now: Date = new Date()): Cat
         const price = (v.price_minor as number) / 100;
         const compare = v.compare_at_minor != null ? v.compare_at_minor / 100 : null;
         const sku = v.sku as string;
+        const photo = variantImage(v, unique);
         return {
           sku,
           title: v.title ?? '',
@@ -67,8 +92,8 @@ export function mapAppCatalog(wire: AppCatalogWire, now: Date = new Date()): Cat
           currency,
           availability: v.available ? 'in_stock' : 'sold_out',
           ship_promise: null,
-          image: unique[0]?.url ?? null,
-          image_alt: unique[0]?.alt ?? null,
+          image: photo?.url ?? null,
+          image_alt: photo?.alt ?? null,
           url: `/products/${p.handle}`,
           cart_add_url: `${APP_ADD_PATH}?sku=${encodeURIComponent(sku)}&qty=1`,
           cart_add_method: 'POST',

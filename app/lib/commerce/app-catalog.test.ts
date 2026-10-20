@@ -215,3 +215,29 @@ describe('checkout return origin', () => {
     assert.equal(returnOrigin('https://shoptest.example', false), 'https://shoptest.example');
   });
 });
+
+describe('app catalog variant photos', () => {
+  const media = [
+    {url: 'https://img.example/lite-front.jpg', alt: 'Board Lite, front'},
+    {url: 'https://img.example/ufl-front.jpg', alt: 'Board Lite-UFL, front'},
+    {url: 'https://img.example/x-front.jpg', alt: 'Board 30x30, front'},
+  ];
+  const wire = (variants: any[]): AppCatalogWire => ({
+    products: [{id: 'p', handle: 'board', title: 'Board', image: media[0], media, variants}],
+  });
+  const v = (sku: string, options: Record<string, string>, image?: {url: string}) =>
+    ({id: sku, sku, title: sku, price_minor: 100, available: true, options, image});
+
+  it('gives each variant the photo whose alt names its option as a whole word', () => {
+    const catalog = mapAppCatalog(wire([v('A', {Model: 'Lite'}), v('B', {Model: 'Lite-UFL'}), v('C', {Model: '30×30'})]));
+    assert.equal(bySku(catalog, 'A')!.variant.image, 'https://img.example/lite-front.jpg');
+    assert.equal(bySku(catalog, 'B')!.variant.image, 'https://img.example/ufl-front.jpg');
+    assert.equal(bySku(catalog, 'C')!.variant.image, 'https://img.example/x-front.jpg');
+  });
+
+  it('prefers the app\'s own variant photo and falls back to the first product photo', () => {
+    const catalog = mapAppCatalog(wire([v('A', {Model: 'Lite'}, {url: 'https://img.example/own.jpg'}), v('B', {Model: 'Other'})]));
+    assert.equal(bySku(catalog, 'A')!.variant.image, 'https://img.example/own.jpg');
+    assert.equal(bySku(catalog, 'B')!.variant.image, 'https://img.example/lite-front.jpg');
+  });
+});
