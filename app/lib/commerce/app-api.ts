@@ -122,6 +122,8 @@ export type Quote = {
   total_minor: number;
   vat_rate: number;
   vat_included_minor: number;
+  /** Countries the app ships to (the picker); empty means no list was given. */
+  ship_countries?: string[];
 };
 
 export function formatMoney(minor: number | null | undefined, currency = 'EUR'): string {

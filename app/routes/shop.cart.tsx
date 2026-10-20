@@ -1,27 +1,27 @@
-import {Form, Link, redirect, useLoaderData} from 'react-router';
+import {Form, Link, redirect, useActionData, useLoaderData, useNavigate, useNavigation} from 'react-router';
+import {useEffect, useMemo, useState} from 'react';
 import type {Route} from './+types/shop.cart';
 import {
+  type AppCatalog,
   AppUnavailable,
+  type CartLine,
   type Quote,
   appOp,
   cleanLines,
+  edgeCache,
   formatMoney,
   orderCookie,
   readCart,
   requireAppCommerce,
   returnOrigin,
+  snapshot,
   writeCart,
 } from '~/lib/commerce/app-api';
 import {ShopFrame} from '~/components/commerce/ShopFrame';
+import {OrderSummary, type SummaryImages} from '~/components/commerce/OrderSummary';
+import {PaymentRails} from '~/components/commerce/PaymentRails';
 
-export const meta: Route.MetaFunction = () => [{title: 'Cart'}, {name: 'robots', content: 'noindex, nofollow'}];
-
-const RAILS = [
-  {id: 'mollie', label: 'Bancontact, iDEAL or card (Mollie)'},
-  {id: 'stripe', label: 'Card or wallet (Stripe)'},
-  {id: 'paypal', label: 'PayPal'},
-  {id: 'bank_transfer', label: 'Bank transfer'},
-] as const;
+export const meta: Route.MetaFunction = () => [{title: 'Checkout'}, {name: 'robots', content: 'noindex, nofollow'}];
 
 function countryOf(request: Request): string {
   const url = new URL(request.url);
@@ -29,122 +29,170 @@ function countryOf(request: Request): string {
   return /^[A-Z]{2}$/.test(q) ? q : 'BE';
 }
 
+async function imagesFor(env: Parameters<typeof snapshot>[0], lines: CartLine[]): Promise<SummaryImages> {
+  try {
+    const cat = await snapshot<AppCatalog>(env, 'storefront.catalog', edgeCache());
+    const out: SummaryImages = {};
+    for (const l of lines) out[l.variant] = cat.products.find((p) => p.variants.some((v) => v.id === l.variant))?.image ?? null;
+    return out;
+  } catch {
+    return {};
+  }
+}
+
 export async function loader({context, request}: Route.LoaderArgs) {
   requireAppCommerce(context.env);
   const lines = await readCart(request, context.env);
-  const country = countryOf(request);
-  if (!lines.length) return {lines, country, quote: null, problem: null};
+  let country = countryOf(request);
+  if (!lines.length) return {lines, country, quote: null, problem: null, images: {} as SummaryImages};
+  const images = await imagesFor(context.env, lines);
   try {
-    const out = await appOp<Quote>(context.env, 'storefront.quote', {lines, country});
-    return {lines, country, quote: out.ok ? out.data ?? null : null, problem: out.ok ? null : out.error?.detail ?? 'Cannot price this cart'};
+    let out = await appOp<Quote>(context.env, 'storefront.quote', {lines, country});
+    // A country the app does not ship to (a visitor's own, say): quote Belgium, the picker shows what is offered.
+    if (!out.ok && country !== 'BE' && /ship to this country/i.test(out.error?.detail ?? '')) {
+      country = 'BE';
+      out = await appOp<Quote>(context.env, 'storefront.quote', {lines, country});
+    }
+    return {lines, country, quote: out.ok ? out.data ?? null : null, problem: out.ok ? null : out.error?.detail ?? 'Cannot price this cart', images};
   } catch (err) {
-    if (err instanceof AppUnavailable) return {lines, country, quote: null, problem: 'Checkout cannot be reached right now. Try again in a minute.'};
+    if (err instanceof AppUnavailable) {
+      return {lines, country, quote: null, problem: 'Checkout cannot be reached right now. Try again in a minute.', images};
+    }
     throw err;
   }
 }
 
+const field = (form: FormData, name: string) => String(form.get(name) ?? '').trim();
+
 export async function action({context, request}: Route.ActionArgs) {
   requireAppCommerce(context.env);
   const form = await request.formData();
-  const intent = String(form.get('intent') ?? '');
+  const intent = field(form, 'intent');
   const lines = await readCart(request, context.env);
-  if (intent === 'remove') {
-    const v = String(form.get('variant') ?? '');
-    return redirect('/shop/cart', {headers: {'Set-Cookie': await writeCart(lines.filter((l) => l.variant !== v), context.env)}});
+  if (intent === 'remove' || intent === 'qty') {
+    const v = field(form, 'variant');
+    const qty = Number(field(form, 'qty'));
+    const next: CartLine[] =
+      intent === 'remove' ? lines.filter((l) => l.variant !== v) : lines.map((l) => (l.variant === v && Number.isInteger(qty) ? {...l, qty} : l));
+    return Response.json({ok: true}, {headers: {'Set-Cookie': await writeCart(cleanLines(next), context.env)}});
   }
   if (intent !== 'checkout') return redirect('/shop/cart');
   const origin = new URL(request.url).origin;
+  const country = field(form, 'country').toUpperCase();
   const out = await appOp<{number: string; token: string | null; redirect_url: string | null}>(context.env, 'storefront.checkout', {
     lines: cleanLines(lines),
-    country: String(form.get('country') ?? ''),
-    email: String(form.get('email') ?? ''),
-    rail: String(form.get('rail') ?? ''),
-    request_key: String(form.get('request_key') ?? ''),
+    country,
+    email: field(form, 'email'),
+    rail: field(form, 'rail'),
+    request_key: field(form, 'request_key') || crypto.randomUUID(),
     return_url: `${returnOrigin(origin, import.meta.env.DEV)}/shop/order`,
+    shipping_address: {
+      name: field(form, 'name'),
+      line1: field(form, 'line1'),
+      line2: field(form, 'line2'),
+      postal_code: field(form, 'postal_code'),
+      city: field(form, 'city'),
+      country,
+      phone: field(form, 'phone'),
+    },
+    billing_same: true,
   });
-  if (!out.ok || !out.data) {
-    return redirect(`/shop/cart?problem=${encodeURIComponent(out.error?.detail ?? 'Checkout failed')}`);
-  }
+  if (!out.ok || !out.data) return {problem: friendly(out.error?.code, out.error?.detail)};
   const headers = new Headers();
   if (out.data.token) headers.append('Set-Cookie', await orderCookie(context.env).serialize({number: out.data.number, token: out.data.token}));
   headers.append('Set-Cookie', await writeCart([], context.env));
   return redirect(out.data.redirect_url ?? `/shop/order?order=${encodeURIComponent(out.data.number)}`, {headers});
 }
 
-export default function ShopCart() {
-  const {lines, country, quote, problem} = useLoaderData<typeof loader>();
-  const key = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now());
+function friendly(code?: string, detail?: string): string {
+  if (code === 'bad_args') return 'Check the address and phone number, then try again.';
+  return detail || 'We could not place the order. Try again.';
+}
+
+function Field({label, name, optional, className = '', ...rest}: {label: string; name: string; optional?: boolean; className?: string} & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <ShopFrame title="Cart">
+    <label className={`co-field ${className}`}>
+      <span>
+        {label}
+        {optional ? <em> (optional)</em> : null}
+      </span>
+      <input name={name} required={!optional} {...rest} />
+    </label>
+  );
+}
+
+export default function ShopCart() {
+  const {lines, country, quote, problem, images} = useLoaderData<typeof loader>();
+  const actionData = useActionData<{problem?: string}>();
+  const navigation = useNavigation();
+  const navigate = useNavigate();
+  const [key, setKey] = useState('');
+  useEffect(() => setKey(crypto.randomUUID()), [actionData]);
+  const countries = useMemo(() => {
+    const names = typeof Intl !== 'undefined' && 'DisplayNames' in Intl ? new Intl.DisplayNames(['en'], {type: 'region'}) : null;
+    const codes = quote?.ship_countries?.length ? quote.ship_countries : [country];
+    return codes.map((c) => ({code: c, name: names?.of(c) ?? c})).sort((a, b) => a.name.localeCompare(b.name));
+  }, [quote, country]);
+  const busy = navigation.state !== 'idle';
+  const submitting = navigation.formData?.get('intent') === 'checkout';
+  const shown = actionData?.problem ?? problem;
+
+  return (
+    <ShopFrame title="Checkout" wide>
       {!lines.length ? (
         <p className="app-shop-note">
           Your cart is empty. <Link to="/products">Browse the products</Link>.
         </p>
       ) : null}
-      {problem ? (
+      {shown ? (
         <p role="alert" className="app-shop-problem">
-          {problem}
+          {shown}
         </p>
       ) : null}
       {quote ? (
-        <div className="app-shop-cart">
-          <table className="app-shop-lines">
-            <tbody>
-              {quote.lines.map((l) => (
-                <tr key={l.variant}>
-                  <td>
-                    {l.title} <span className="app-shop-dim">{l.variant_title}</span> <span className="app-shop-dim">x {l.qty}</span>
-                  </td>
-                  <td className="app-shop-num">{formatMoney(l.total_minor, quote.currency)}</td>
-                  <td className="app-shop-num">
-                    <Form method="post">
-                      <input type="hidden" name="intent" value="remove" />
-                      <input type="hidden" name="variant" value={l.variant} />
-                      <button type="submit" className="app-shop-link">
-                        Remove
-                      </button>
-                    </Form>
-                  </td>
-                </tr>
-              ))}
-              <tr>
-                <td className="app-shop-dim">Shipping to {country}</td>
-                <td className="app-shop-num">{formatMoney(quote.shipping_minor, quote.currency)}</td>
-                <td />
-              </tr>
-              <tr className="app-shop-total">
-                <td>Total</td>
-                <td className="app-shop-num">{formatMoney(quote.total_minor, quote.currency)}</td>
-                <td />
-              </tr>
-              <tr>
-                <td className="app-shop-dim">Includes VAT ({quote.vat_rate}%)</td>
-                <td className="app-shop-num app-shop-dim">{formatMoney(quote.vat_included_minor, quote.currency)}</td>
-                <td />
-              </tr>
-            </tbody>
-          </table>
-          <Form method="post" className="app-shop-form">
+        <div className="co">
+          <Form method="post" className="co-form" id="checkout">
             <input type="hidden" name="intent" value="checkout" />
-            <input type="hidden" name="country" value={country} />
             <input type="hidden" name="request_key" value={key} />
-            <label className="app-shop-field">
-              <span>Email</span>
-              <input name="email" type="email" required autoComplete="email" />
-            </label>
-            <fieldset className="app-shop-field">
-              <legend>Payment</legend>
-              {RAILS.map((r, i) => (
-                <label key={r.id} className="app-shop-rail">
-                  <input type="radio" name="rail" value={r.id} defaultChecked={i === 0} required />
-                  {r.label}
-                </label>
-              ))}
-            </fieldset>
-            <button type="submit" className="hero-cta-primary app-shop-pay">
-              Pay {formatMoney(quote.total_minor, quote.currency)}
+            <section className="co-section">
+              <h2 className="co-h">Contact</h2>
+              <Field label="Email" name="email" type="email" autoComplete="email" inputMode="email" />
+              <p className="co-quiet">Checking out as a guest. Accounts are optional.</p>
+            </section>
+            <section className="co-section">
+              <h2 className="co-h">Delivery</h2>
+              <label className="co-field">
+                <span>Country</span>
+                <select
+                  name="country"
+                  autoComplete="country"
+                  value={country}
+                  onChange={(e) => void navigate(`/shop/cart?country=${e.target.value}`, {replace: true, preventScrollReset: true})}
+                >
+                  {countries.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Field label="Full name" name="name" autoComplete="name" />
+              <Field label="Address" name="line1" autoComplete="address-line1" />
+              <Field label="Apartment, suite, etc." name="line2" autoComplete="address-line2" optional />
+              <div className="co-row">
+                <Field label="Postal code" name="postal_code" autoComplete="postal-code" />
+                <Field label="City" name="city" autoComplete="address-level2" />
+              </div>
+              <Field label="Phone" name="phone" type="tel" autoComplete="tel" inputMode="tel" optional />
+            </section>
+            <section className="co-section">
+              <PaymentRails />
+            </section>
+            <button type="submit" className="co-pay" disabled={busy}>
+              {submitting ? 'Placing order...' : `Pay ${formatMoney(quote.total_minor, quote.currency)}`}
             </button>
           </Form>
+          <OrderSummary quote={quote} country={country} images={images} pending={busy && !submitting} />
         </div>
       ) : null}
     </ShopFrame>
