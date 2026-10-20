@@ -25,15 +25,15 @@ import {AddressFields, type AddressFill} from '~/components/commerce/AddressFiel
 import {ExpressCheckout} from '~/components/commerce/ExpressCheckout';
 import {ContactSection} from '~/components/commerce/ContactSection';
 import {appAccountsEnabled, readAccount} from '~/lib/commerce/app-account';
-import {pickCountry, requestCountry} from '~/lib/commerce/address-fields';
+import {addressForCountry, defaultAddress, pickCountry, requestCountry} from '~/lib/commerce/address-fields';
 import {addressProvider} from '~/lib/commerce/address-provider';
 import {expressConfig, type ExpressResult} from '~/lib/commerce/payment-provider';
 
 export const meta: Route.MetaFunction = () => [{title: 'Checkout'}, {name: 'robots', content: 'noindex, nofollow'}];
 
-function countryOf(request: Request): string {
+function countryOf(request: Request, saved?: string | null): string {
   const url = new URL(request.url);
-  const q = (url.searchParams.get('country') ?? requestCountry(request) ?? 'BE').toUpperCase();
+  const q = (url.searchParams.get('country') ?? saved ?? requestCountry(request) ?? 'BE').toUpperCase();
   return /^[A-Z]{2}$/.test(q) ? q : 'BE';
 }
 
@@ -51,17 +51,19 @@ async function imagesFor(env: Parameters<typeof snapshot>[0], lines: CartLine[])
 /** The cart's loader plus the signed-in buyer (accounts on, a session cookie): their email fills the Contact step. */
 export async function loader(args: Route.LoaderArgs) {
   const {context, request} = args;
-  const [base, account] = await Promise.all([
-    cartLoader(args),
-    appAccountsEnabled(context.env) ? readAccount(request, context.env) : Promise.resolve(null),
-  ]);
-  return {...base, accounts: appAccountsEnabled(context.env), accountEmail: account?.account?.email ?? null};
+  requireAppCommerce(context.env);
+  const read = appAccountsEnabled(context.env) ? await readAccount(request, context.env) : null;
+  const account = read?.account ?? null;
+  // The signed-in buyer's newest address fills the delivery form (when it is in the country shown); a guest gets nothing.
+  const saved = defaultAddress(account?.addresses);
+  const base = await cartLoader(args, saved?.country ?? null);
+  const prefill = addressForCountry(saved, base.country);
+  return {...base, accountEmail: account?.email ?? null, prefill: prefill ? {name: prefill.name, line1: prefill.line1, line2: prefill.line2, postal_code: prefill.postal_code, city: prefill.city, phone: prefill.phone} : null};
 }
 
-async function cartLoader({context, request}: Route.LoaderArgs) {
-  requireAppCommerce(context.env);
+async function cartLoader({context, request}: Route.LoaderArgs, savedCountry: string | null) {
   const lines = await readCart(request, context.env);
-  let country = countryOf(request);
+  let country = countryOf(request, savedCountry);
   const smart = {suggest: addressProvider(context.env).id !== 'none', express: expressConfig(context.env)};
   const options = await readOptions(request, context.env);
   if (!lines.length) return {lines, country, quote: null, problem: null, images: {} as SummaryImages, code: '', ...smart};
@@ -170,7 +172,7 @@ function fillEmail(value: string) {
 }
 
 export default function ShopCart() {
-  const {lines, country, quote, problem, images, code, suggest, express, accounts, accountEmail} = useLoaderData<typeof loader>();
+  const {lines, country, quote, problem, images, code, suggest, express, accountEmail, prefill} = useLoaderData<typeof loader>();
   const [fill, setFill] = useState<AddressFill | null>(null);
   const actionData = useActionData<{problem?: string}>();
   const navigation = useNavigation();
@@ -205,10 +207,10 @@ export default function ShopCart() {
             <input type="hidden" name="request_key" value={key} />
             <ExpressCheckout config={express} total={quote.total_minor} currency={quote.currency} countries={countries.map((c) => c.code)}
               onFill={(r: ExpressResult) => { setFill({...r.address, name: r.name, phone: r.phone}); fillEmail(r.email); }} />
-            <ContactSection accounts={accounts} accountEmail={accountEmail} />
+            <ContactSection accountEmail={accountEmail} />
             <section className="co-section">
               <h2 className="co-h">Delivery</h2>
-              <AddressFields country={country} countries={countries} suggest={suggest} fill={fill} onCountry={(c) => void navigate(`/shop/cart?country=${c}`, {replace: true, preventScrollReset: true})} />
+              <AddressFields country={country} countries={countries} suggest={suggest} fill={fill} prefill={prefill} onCountry={(c) => void navigate(`/shop/cart?country=${c}`, {replace: true, preventScrollReset: true})} />
             </section>
             <section className="co-section">
               <PaymentRails />

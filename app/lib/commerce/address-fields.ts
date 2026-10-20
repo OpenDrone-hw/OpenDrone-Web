@@ -52,3 +52,29 @@ export function postcodeKey(country: string, raw: string): string | null {
   if (!shape || !shape.test(text)) return null;
   return cc === 'NL' ? text.slice(0, 4) : text;
 }
+
+type Saved = {saved: boolean; name: string; line1: string; line2: string; postal_code: string; city: string; country: string; phone: string};
+
+/** The address to prefill: the newest saved one (the account lists saved addresses oldest first), else the newest order's. */
+export function defaultAddress<T extends Pick<Saved, 'saved'>>(addresses: readonly T[] | null | undefined): T | null {
+  const list = addresses ?? [];
+  const saved = list.filter((a) => a.saved);
+  return saved.length ? saved[saved.length - 1] : list[0] ?? null;
+}
+
+/**
+ * Country precedence: the visitor's explicit pick (?country=) beats the signed-in buyer's default address, which beats
+ * the request's country (Cloudflare); a country the app does not ship to is skipped. Null when none is shipped.
+ */
+export function prefillCountry(opts: {query?: string | null; saved?: string | null; geo?: string | null; ship: readonly string[]}): string | null {
+  const ok = (c?: string | null) => {
+    const u = (c ?? '').toUpperCase();
+    return u && (!opts.ship.length || opts.ship.includes(u)) ? u : null;
+  };
+  return ok(opts.query) ?? ok(opts.saved) ?? ok(opts.geo);
+}
+
+/** The saved address fills the form only for the country it is in: another country asks for the address again. */
+export function addressForCountry<T extends Pick<Saved, 'country'>>(address: T | null, country: string): T | null {
+  return address && address.country.toUpperCase() === country.toUpperCase() ? address : null;
+}

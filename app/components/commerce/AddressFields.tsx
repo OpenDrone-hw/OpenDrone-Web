@@ -1,4 +1,5 @@
 import {useEffect, useId, useRef, useState} from 'react';
+import {formatPhone, phoneExample, phoneForCountry, phoneProblem, phonePrefix} from '~/lib/commerce/phone';
 import {AUTOCOMPLETE, POSTCODE_COUNTRIES, postcodeFirst, postcodeKey} from '~/lib/commerce/address-fields';
 import {MIN_CHARS, type Suggestion} from '~/lib/commerce/address-provider';
 import type {ExpressResult} from '~/lib/commerce/payment-provider';
@@ -19,26 +20,41 @@ function Text({label, optional, className = '', ...rest}: {label: string; option
 }
 
 /** The Delivery section: country, name, a street combobox with suggestions, postcode and city (order by country), phone. */
-export function AddressFields({country, countries, suggest, onCountry, fill}: {
+export function AddressFields({country, countries, suggest, onCountry, fill, prefill}: {
   country: string;
   countries: Country[];
   suggest: boolean;
   onCountry: (code: string) => void;
   fill: AddressFill | null;
+  prefill?: {name: string; line1: string; line2: string; postal_code: string; city: string; phone: string} | null;
 }) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [line1, setLine1] = useState('');
-  const [line2, setLine2] = useState('');
-  const [postal, setPostal] = useState('');
-  const [city, setCity] = useState('');
+  const [name, setName] = useState(prefill?.name ?? '');
+  const [phone, setPhone] = useState(() => (prefill?.phone ? formatPhone(prefill.phone, country).display : phonePrefix(country)));
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const [line1, setLine1] = useState(prefill?.line1 ?? '');
+  const [line2, setLine2] = useState(prefill?.line2 ?? '');
+  const [postal, setPostal] = useState(prefill?.postal_code ?? '');
+  const [city, setCity] = useState(prefill?.city ?? '');
   const [cities, setCities] = useState<string[]>([]);
-  const cityTouched = useRef(false);
+  const cityTouched = useRef(!!prefill?.city);
+  const phoneInput = useRef<HTMLInputElement>(null);
+  const lastCountry = useRef(country);
+  const countryName = countries.find((c) => c.code === country)?.name ?? country;
+  const problem = phoneProblem(phone, country, countryName);
+  const e164 = formatPhone(phone, country).e164;
+
+  // The prefix follows the delivery country unless the visitor typed their own +code.
+  useEffect(() => {
+    if (lastCountry.current !== country) setPhone((p) => phoneForCountry(p, lastCountry.current, country));
+    lastCountry.current = country;
+  }, [country]);
+  // The browser's own check: a bad number blocks the submit and says why (the message under the field shows on blur).
+  useEffect(() => phoneInput.current?.setCustomValidity(problem ?? ''), [problem, phone]);
 
   useEffect(() => {
     if (!fill) return;
     if (fill.name) setName(fill.name);
-    if (fill.phone) setPhone(fill.phone);
+    if (fill.phone) setPhone(formatPhone(fill.phone, fill.country || country).display);
     setLine1(fill.line1);
     setLine2(fill.line2);
     setPostal(fill.postal_code);
@@ -93,7 +109,19 @@ export function AddressFields({country, countries, suggest, onCountry, fill}: {
         {postcodeFirst(country) ? <>{postalField}{cityField}</> : <>{cityField}{postalField}</>}
       </div>
       <datalist id="co-cities">{cities.map((c) => <option key={c} value={c} />)}</datalist>
-      <Text label="Phone" name="phone" type="tel" autoComplete={AUTOCOMPLETE.phone} inputMode="tel" optional value={phone} onChange={(e) => setPhone(e.target.value)} />
+      <label className="co-field">
+        <span>Phone<em> (optional)</em></span>
+        <input ref={phoneInput} type="tel" autoComplete={AUTOCOMPLETE.phone} inputMode="tel" value={phone} placeholder={phoneExample(country)}
+          aria-invalid={phoneTouched && problem ? true : undefined} aria-describedby={phoneTouched && problem ? 'co-phone-err' : undefined}
+          onChange={(e) => {
+            const v = e.target.value;
+            // Backspace into the prefix keeps what is left: formatting only runs on what is typed after it.
+            setPhone(v.length < phone.length && v.replace(/\D/g, '') === '' ? '' : formatPhone(v, country).display);
+          }}
+          onBlur={() => { setPhoneTouched(true); setPhone((p) => (formatPhone(p, country).national ? p : phonePrefix(country))); }} />
+        {phoneTouched && problem ? <small id="co-phone-err" role="alert" className="co-error">{problem}</small> : null}
+        <input type="hidden" name="phone" value={e164} />
+      </label>
     </>
   );
 }
