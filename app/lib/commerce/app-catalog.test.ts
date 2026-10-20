@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {afterEach, describe, it} from 'node:test';
-import {byHandle, bySku, toCards} from '../catalog.ts';
+import {byHandle, bySku, toCards, toProduct, selectedOptionsFromRequest} from '../catalog.ts';
 import {clearCatalogMemo} from '../catalog-memo.ts';
 import {appCartSummary, handleAppCartAction, handleAppCartLoader, linesFromForm} from './app-cart.ts';
 import {appCatalogClient, mapAppCatalog, type AppCatalogWire} from './app-catalog.ts';
@@ -63,6 +63,74 @@ describe('app catalog mapping', () => {
 
   it('rejects a document that is not a catalog', () => {
     assert.throws(() => mapAppCatalog({} as AppCatalogWire));
+  });
+});
+
+// Option shapes as the app's storefront.catalog sends them on the test shop: one axis (Model) with inch marks in
+// the values, and two axes (Part, Size).
+const OPTION_WIRE: AppCatalogWire = {
+  currency: 'EUR',
+  products: [
+    {
+      id: 'p-frame',
+      handle: 'openframe',
+      title: 'OpenFrame',
+      variants: [
+        {id: 'f5', sku: 'OPENFRAME-5', title: '5" Freestyle', price_minor: 4410, available: true, options: {Model: '5" Freestyle'}},
+        {id: 'f3', sku: 'OPENFRAME-3', title: '3" Freestyle', price_minor: 3510, available: true, options: {Model: '3" Freestyle'}},
+      ],
+    },
+    {
+      id: 'p-spares',
+      handle: 'openframe-spares',
+      title: 'OpenFrame spares',
+      variants: [
+        {id: 's1', sku: 'ACC-FRM-ARM-3', price_minor: 400, available: true, options: {Part: 'Arm', Size: '3"'}},
+        {id: 's2', sku: 'ACC-FRM-ARM-5', price_minor: 600, available: true, options: {Part: 'Arm', Size: '5"'}},
+        {id: 's3', sku: 'ACC-FRM-TOP-3', price_minor: 450, available: true, options: {Part: 'Top plate', Size: '3"'}},
+        {id: 's4', sku: 'ACC-FRM-TOP-5', price_minor: 450, available: true, options: {Part: 'Top plate', Size: '5"'}},
+      ],
+    },
+  ],
+};
+
+describe('product page option params in app mode', () => {
+  const catalog = mapAppCatalog(OPTION_WIRE);
+  const pick = (handle: string, search: string) => {
+    const request = new Request(`https://shop.example/products/${handle}${search}`);
+    const product = toProduct(catalog, byHandle(catalog, handle)!, selectedOptionsFromRequest(request));
+    return product.selectedOrFirstAvailableVariant?.sku;
+  };
+
+  it('keeps the option names on every mapped variant', () => {
+    const frame = byHandle(catalog, 'openframe')!;
+    assert.deepEqual(frame.variants.map((v) => v.options), [{Model: '5" Freestyle'}, {Model: '3" Freestyle'}]);
+  });
+
+  it('selects the variant a one-option link names, percent encoded as a product card writes it', () => {
+    assert.equal(pick('openframe', '?Model=3%22%20Freestyle'), 'OPENFRAME-3');
+    assert.equal(pick('openframe', '?Model=5%22%20Freestyle'), 'OPENFRAME-5');
+    assert.equal(pick('openframe', '?model=3%22+freestyle'), 'OPENFRAME-3');
+  });
+
+  it('selects the variant a two-option link names', () => {
+    assert.equal(pick('openframe-spares', '?Part=Top%20plate&Size=5%22'), 'ACC-FRM-TOP-5');
+    assert.equal(pick('openframe-spares', '?Part=Arm&Size=3%22'), 'ACC-FRM-ARM-3');
+  });
+
+  it('falls back to the default variant, never a 404, for an unknown value or an unrelated param', () => {
+    assert.equal(pick('openframe', '?Model=9%22%20Nope'), 'OPENFRAME-5');
+    assert.equal(pick('openframe', '?image=2&country=BE'), 'OPENFRAME-5');
+    assert.equal(pick('openframe-spares', '?Part=Arm&Size=9%22'), 'ACC-FRM-ARM-3');
+  });
+
+  it('every variant resolves from the option query its own selector writes', () => {
+    for (const entry of catalog.products) {
+      for (const variant of entry.variants) {
+        const query = new URLSearchParams(variant.options).toString();
+        assert.equal(pick(entry.handle, `?${query}`), variant.sku);
+      }
+    }
   });
 });
 
