@@ -25,13 +25,13 @@
 .co-note { display: grid; gap: 0.375rem; margin-top: 1rem; }
 .co-note > span { font-size: 0.8125rem; color: var(--color-text-muted); }
 
-/* Suggestions sit under the summary: after the form on a phone, in the sticky column on a wide screen. */
+/* The add-ons and build suggestions (co-extras; co-suggest is the address dropdown) sit under the summary: after the form on a phone, in the sticky column on a wide screen. */
 .co-side { display: contents; }
-.co-suggest { order: 1; display: grid; gap: 1rem; }
-.co-suggest .cart-addons, .co-suggest .cart-suggest { margin: 0; }
+.co-extras { order: 1; display: grid; gap: 1rem; }
+.co-extras .cart-addons, .co-extras .cart-suggest { margin: 0; }
 @media (min-width: 62rem) {
   .co-side { display: grid; gap: 1rem; align-content: start; position: sticky; top: calc(var(--header-height, 5rem) + 1.5rem);
     max-height: calc(100dvh - var(--header-height, 5rem) - 2.5rem); overflow-y: auto; scrollbar-width: thin; }
   .co-side .co-summary { position: static; }
-  .co-suggest { order: 0; }
+  .co-extras { order: 0; }
 }

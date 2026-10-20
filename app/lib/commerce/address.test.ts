@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {describe, it} from 'node:test';
 import {formatLine1, pickCountry, postcodeFirst, postcodeKey, requestCountry, AUTOCOMPLETE} from './address-fields.ts';
 import {addressProvider, cleanQuery, geoapify, lastProviderStatus, none, photon} from './address-provider.ts';
@@ -120,5 +121,15 @@ describe('address provider status', () => {
     assert.equal(lastProviderStatus(), '403');
     assert.deepEqual(await photon.suggest('Wetstraat 16', 'BE', (async () => { throw new Error('down'); }) as typeof fetch), []);
     assert.equal(lastProviderStatus(), 'error');
+  });
+});
+
+describe('checkout class names', () => {
+  it('the address dropdown and the add-ons block do not share a class (a shared one drew the add-ons over the form on a phone)', () => {
+    const addr = readFileSync(new URL('../../components/commerce/AddressFields.tsx', import.meta.url), 'utf8');
+    const extras = readFileSync(new URL('../../components/commerce/SummarySuggestions.tsx', import.meta.url), 'utf8');
+    const own = (src: string) => new Set([...src.matchAll(/className="([a-z0-9-]+)"/g)].map((m) => m[1]).filter((c) => c.startsWith('co-')));
+    const shared = [...own(addr)].filter((c) => own(extras).has(c));
+    assert.deepEqual(shared, []);
   });
 });
