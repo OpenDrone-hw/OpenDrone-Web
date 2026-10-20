@@ -3,7 +3,8 @@ import type {Route} from './+types/account._index';
 import {accountHeaders, accountsEnabled, redirectTo, sameOrigin} from '~/lib/accounts/config';
 import {legacyAccountResponse} from '~/lib/accounts/legacy';
 import {appAccountsEnabled, clearSession, readAccount} from '~/lib/commerce/app-account';
-import {AccountOrders} from '~/components/commerce/account/AccountPages';
+import {MyAccount} from '~/components/commerce/account/MyAccount';
+import {shipCountries} from '~/lib/commerce/app-account-manage';
 import {HISTORY_NOTICES, type HistoryNotice} from '~/lib/accounts/rights';
 import {clearSessionCookie, hasSessionCookie, readSession} from '~/lib/accounts/sessions';
 import {readCustomerAccount, type AccountShopifyData} from '~/lib/accounts/customer-shopify';
@@ -122,7 +123,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
     const headers = new Headers({'Cache-Control': 'no-store'});
     if (clear) headers.append('Set-Cookie', await clearSession(env));
     if (!account && !down) throw redirect('/account/login?return_to=%2Faccount', {headers});
-    return data({appAccount: account}, {headers});
+    return data({appAccount: account, countries: account ? await shipCountries(env) : []}, {headers});
   }
   if (!accountsEnabled(env)) return legacyAccountResponse('', env);
   const session = await readSession(env.SUPPORT_DB, request);
@@ -195,9 +196,9 @@ export default function AccountRoute() {
   const loaded = useLoaderData<typeof loader>();
   if ('appAccount' in loaded) {
     return loaded.appAccount ? (
-      <AccountOrders account={loaded.appAccount} />
+      <MyAccount account={loaded.appAccount} countries={loaded.countries} />
     ) : (
-      <div className="page-shell app-shop"><h1 className="app-shop-title">Your account</h1><p className="app-shop-note">Your account cannot be reached right now. Try again in a minute.</p></div>
+      <div className="page-shell app-shop"><h1 className="app-shop-title">My account</h1><p className="app-shop-note">Your account cannot be reached right now. Try again in a minute.</p></div>
     );
   }
   const {ordersUrl, since, notice, newsletterNotice, shopify, pilot} = loaded;

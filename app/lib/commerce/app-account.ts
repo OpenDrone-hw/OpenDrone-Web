@@ -43,7 +43,22 @@ export type AccountOrder = {
   invoice: {number: string; issued_at: string} | null;
   reorder: {country: string; lines: Array<{variant: string; qty: number; title: string; variant_title: string; available: boolean; unit_minor: number | null}>};
 };
-export type Account = {email: string; since: string; orders: AccountOrder[]; addresses: AccountAddress[]};
+export type Marketing = {granted: boolean; at: string | null; source: string | null};
+export type Account = {
+  email: string;
+  since: string;
+  orders: AccountOrder[];
+  addresses: AccountAddress[];
+  /** The profile name, empty when not set. */
+  name: string;
+  /** Opaque and stable across an email change; what other systems (ChatFPV) key on. Empty until the account is next signed in. */
+  customer_id: string;
+  marketing: Marketing;
+  /** Addresses the account used before; their orders stay in the order list. */
+  aliases: string[];
+  /** Set once the customer asked to have their data deleted. */
+  erasure: {requested_at: string} | null;
+};
 
 export function sessionCookie(env: Pick<AppEnv, 'SESSION_SECRET'>) {
   return createCookie('od_app_acct', {

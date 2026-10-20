@@ -3,7 +3,7 @@ import {useEffect, useRef, type ReactNode} from 'react';
 
 /**
  * The header's account entry in app mode: signed out, a "Sign in" link with the account icon; signed in, the icon
- * opens a small menu (Orders, Addresses, Sign out). Shown on every width, next to the cart.
+ * opens a small menu (My account and its sections, Sign out). Shown on every width, next to the cart.
  */
 export function AccountMenu({signedIn, signInUrl, icon}: {signedIn: boolean; signInUrl: string; icon: ReactNode}) {
   const ref = useRef<HTMLDetailsElement>(null);
@@ -43,8 +43,10 @@ export function AccountMenu({signedIn, signInUrl, icon}: {signedIn: boolean; sig
         <span className="acct-dot" aria-hidden="true" />
       </summary>
       <div className="acct-menu-panel">
-        <Link to="/account">My orders</Link>
-        <Link to="/account/addresses">Addresses</Link>
+        <Link to="/account">My account</Link>
+        <Link to="/account#orders">Orders</Link>
+        <Link to="/account#addresses">Addresses</Link>
+        <Link to="/account#profile">Profile</Link>
         <Form method="post" action="/account/logout">
           <button type="submit">Sign out</button>
         </Form>

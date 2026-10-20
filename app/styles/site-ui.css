@@ -2156,6 +2156,11 @@ body:has(.test-banner) .site-header {
 .acct-tabs { display: flex; gap: 1.5rem; border-bottom: 1px solid var(--color-border); margin: 1.25rem 0 1.5rem; }
 .acct-tabs a { padding: 0.625rem 0; color: var(--color-text-muted); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .acct-tabs a[aria-current="page"] { color: var(--color-text); border-bottom-color: var(--color-gold); }
+.acct-sections { overflow-x: auto; scrollbar-width: none; white-space: nowrap; gap: 1.25rem; }
+.acct-sections::-webkit-scrollbar { display: none; }
+.acct-section { scroll-margin-top: calc(var(--header-height, 5rem) + 1rem); margin: 0 0 2.5rem; }
+.acct-section-title { margin: 0 0 1rem; font-size: 1.375rem; font-weight: 600; letter-spacing: -0.01em; }
+.acct-email { margin: 0; font-size: 1.0625rem; overflow-wrap: anywhere; }
 .acct-btn { min-height: 2.75rem; padding: 0 1rem; font: inherit; font-size: 0.9375rem; color: var(--color-text); background: none; border: 1px solid var(--color-border-strong); border-radius: var(--r-md); cursor: pointer; }
 .acct-btn:hover:not(:disabled) { background: var(--color-bg-elevated); }
 .acct-btn.is-primary { background: var(--color-gold); border-color: var(--color-gold); color: #111; font-weight: 600; }

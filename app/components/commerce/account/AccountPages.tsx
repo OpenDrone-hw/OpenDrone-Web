@@ -7,28 +7,6 @@ const REGION = typeof Intl !== 'undefined' && 'DisplayNames' in Intl ? new Intl.
 const countryName = (c: string) => REGION?.of(c) ?? c;
 const day = (iso: string) => (iso ? new Date(iso).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'}) : '');
 
-/** The frame of every account page: title, who is signed in, Orders and Addresses tabs, Sign out. */
-export function AccountFrame({email, tab, children}: {email: string; tab: 'orders' | 'addresses'; children: React.ReactNode}) {
-  return (
-    <div className="page-shell app-shop acct">
-      <header className="acct-head">
-        <div>
-          <h1 className="app-shop-title">My orders</h1>
-          <p className="co-quiet">{email}</p>
-        </div>
-        <Form method="post" action="/account/logout">
-          <button type="submit" className="acct-btn">Sign out</button>
-        </Form>
-      </header>
-      <nav className="acct-tabs" aria-label="Account">
-        <Link to="/account" aria-current={tab === 'orders' ? 'page' : undefined}>Orders</Link>
-        <Link to="/account/addresses" aria-current={tab === 'addresses' ? 'page' : undefined}>Addresses</Link>
-      </nav>
-      {children}
-    </div>
-  );
-}
-
 function Address({a}: {a: Omit<AccountAddress, 'id' | 'saved'>}) {
   return (
     <address className="acct-address">
@@ -103,15 +81,12 @@ function ReorderButton({o}: {o: AccountOrder}) {
   );
 }
 
-export function AccountOrders({account}: {account: Account}) {
-  return (
-    <AccountFrame email={account.email} tab="orders">
-      {account.orders.length ? (
-        <div className="acct-list">{account.orders.map((o) => <OrderCard key={o.number} o={o} />)}</div>
-      ) : (
-        <p className="app-shop-note">No orders yet with this email address. <Link to="/products">Browse the products</Link>.</p>
-      )}
-    </AccountFrame>
+/** The Orders section of My account: every order of the address and of the addresses it replaced. */
+export function OrdersSection({account}: {account: Account}) {
+  return account.orders.length ? (
+    <div className="acct-list">{account.orders.map((o) => <OrderCard key={o.number} o={o} />)}</div>
+  ) : (
+    <p className="app-shop-note">No orders yet with this email address. <Link to="/products">Browse the products</Link>.</p>
   );
 }
 
@@ -171,17 +146,18 @@ function AddressCard({a, countries}: {a: AccountAddress; countries: string[]}) {
   );
 }
 
-export function AccountAddresses({account, countries}: {account: Account; countries: string[]}) {
+/** The Addresses section of My account: saved addresses and the ones of past orders, add, edit, remove. */
+export function AddressesSection({account, countries}: {account: Account; countries: string[]}) {
   const [adding, setAdding] = useState(false);
   return (
-    <AccountFrame email={account.email} tab="addresses">
+    <>
       <div className="acct-list">
         {account.addresses.map((a) => <AddressCard key={a.id} a={a} countries={countries} />)}
         {!account.addresses.length && !adding ? <p className="app-shop-note">No addresses yet. They appear here after your first order, or add one now.</p> : null}
         {adding ? <div className="co-card"><h2>New address</h2><AddressForm countries={countries} onDone={() => setAdding(false)} /></div>
           : <div><button type="button" className="acct-btn is-primary" onClick={() => setAdding(true)}>Add an address</button></div>}
       </div>
-    </AccountFrame>
+    </>
   );
 }
 
