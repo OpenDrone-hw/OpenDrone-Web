@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {sessionCookie, type AccountEnv} from './app-account.ts';
-import {problemOf, profileRoute} from './app-account-manage.ts';
+import {erasureRoute, preferencesRoute, problemOf, profileRoute} from './app-account-manage.ts';
 
 const ENV: AccountEnv = {COMMERCE_SOURCE: 'app', APP_API_URL: 'https://app.example', APP_STOREFRONT_TOKEN: 'b', SESSION_SECRET: 'secret', ACCOUNTS_ENABLED: '1'};
 const TOKEN = 's'.repeat(43);
@@ -80,5 +80,28 @@ describe('My account profile', () => {
       globalThis.fetch = real;
     }
     assert.equal(problemOf({ok: true}, 'x'), null);
+  });
+});
+
+describe('My account preferences and the delete request', () => {
+  it('records the marketing answer through the app and refuses anything but yes or no', async () => {
+    const {out, calls} = await withApp({ok: true, data: {}}, async () => [
+      await preferencesRoute(await post({intent: 'marketing', marketing: 'yes'}), ENV),
+      await preferencesRoute(await post({intent: 'marketing', marketing: 'maybe'}), ENV),
+    ]);
+    assert.deepEqual(out.map((r) => r.ok), [true, false]);
+    assert.equal(calls.length, 1);
+    assert.deepEqual([calls[0].url, calls[0].body.marketing], ['https://app.example/api/ops/storefront.account_profile', true]);
+  });
+
+  it('sends the delete request only with the box ticked, and only when signed in from the same origin', async () => {
+    const {out, calls} = await withApp({ok: true, data: {requested_at: 'x'}}, async () => [
+      await erasureRoute(await post({intent: 'erasure'}), ENV),
+      await erasureRoute(await post({intent: 'erasure', confirm: 'yes'}, 'https://evil.example'), ENV),
+      await erasureRoute(await post({intent: 'erasure', confirm: 'yes'}, 'https://shop.example', false), ENV),
+      await erasureRoute(await post({intent: 'erasure', confirm: 'yes'}), ENV),
+    ]);
+    assert.deepEqual(out.map((r) => r.ok), [false, false, false, true]);
+    assert.deepEqual(calls.map((c) => c.url), ['https://app.example/api/ops/storefront.account_erasure']);
   });
 });

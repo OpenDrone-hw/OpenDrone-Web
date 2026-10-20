@@ -47,6 +47,8 @@ export function AccountMenu({signedIn, signInUrl, icon}: {signedIn: boolean; sig
         <Link to="/account#orders">Orders</Link>
         <Link to="/account#addresses">Addresses</Link>
         <Link to="/account#profile">Profile</Link>
+        <Link to="/account#preferences">Preferences</Link>
+        <Link to="/account#privacy">Privacy</Link>
         <Form method="post" action="/account/logout">
           <button type="submit">Sign out</button>
         </Form>

@@ -2,13 +2,17 @@ import {Form, useFetcher} from 'react-router';
 import {useEffect, useRef, useState} from 'react';
 import type {Account} from '~/lib/commerce/app-account';
 import type {ManageResult} from '~/lib/commerce/app-account-manage';
+import type {HistoryNotice} from '~/lib/accounts/rights';
 import {AddressesSection, OrdersSection} from './AccountPages';
+import {PreferencesSection, PrivacySection} from './AccountPrivacy';
 
 /** The sections of My account, in the order they are drawn; the nav links to each by its id. */
 export const SECTIONS = [
   {id: 'orders', title: 'Orders'},
   {id: 'addresses', title: 'Addresses'},
   {id: 'profile', title: 'Profile'},
+  {id: 'preferences', title: 'Preferences'},
+  {id: 'privacy', title: 'Privacy'},
 ] as const;
 
 function Section({id, title, children}: {id: string; title: string; children: React.ReactNode}) {
@@ -84,7 +88,7 @@ function EmailChange({email, aliases}: {email: string; aliases: string[]}) {
 }
 
 /** My account: one page, a section for each thing the customer can see or change, reached from the header icon. */
-export function MyAccount({account, countries}: {account: Account; countries: string[]}) {
+export function MyAccount({account, countries, chatfpv, pilotMap}: {account: Account; countries: string[]; chatfpv: {connected: boolean; notice: HistoryNotice | null}; pilotMap: boolean}) {
   return (
     <div className="page-shell app-shop acct">
       <header className="acct-head">
@@ -107,6 +111,8 @@ export function MyAccount({account, countries}: {account: Account; countries: st
           <EmailChange email={account.email} aliases={account.aliases} />
         </div>
       </Section>
+      <Section id="preferences" title="Preferences"><PreferencesSection account={account} /></Section>
+      <Section id="privacy" title="Privacy"><PrivacySection account={account} chatfpv={chatfpv} pilotMap={pilotMap} /></Section>
     </div>
   );
 }

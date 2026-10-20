@@ -74,3 +74,33 @@ export async function shipCountries(env: AccountEnv): Promise<string[]> {
     return ['BE'];
   }
 }
+
+/** One same-origin, signed-in POST of a single operation (preferences, the delete request): the token, or the result to answer. */
+async function simple(request: Request, env: AccountEnv, run: (token: string, form: FormData) => Promise<Out | null>, fallback: string): Promise<ManageResult> {
+  const form = await request.formData();
+  const intent = String(form.get('intent') ?? '');
+  const fail = (problem: string): ManageResult => ({intent, ok: false, step: 'idle', email: '', problem});
+  if (!postOk(request)) return fail(RELOAD);
+  const token = await readSessionToken(request, env);
+  if (!token) return fail(SIGNED_OUT);
+  try {
+    const out = await run(token, form);
+    if (!out) return fail(RELOAD);
+    return out.ok ? {intent, ok: true, step: 'idle', email: '', problem: null} : fail(problemOf(out, fallback) ?? fallback);
+  } catch (err) {
+    if (err instanceof AppUnavailable) return fail(DOWN);
+    throw err;
+  }
+}
+
+/** POST /account/preferences: agree to or withdraw from product news and offers (the app keeps the consent record). */
+export const preferencesRoute = (request: Request, env: AccountEnv) =>
+  simple(request, env, async (session, form) => {
+    const v = form.get('marketing');
+    return v === 'yes' || v === 'no' ? appOp(env, 'storefront.account_profile', {session, marketing: v === 'yes'}) : null;
+  }, 'We could not save your choice.');
+
+/** POST /account/privacy with intent=erasure: ask to have the data deleted. The app raises a request for the team; nothing is deleted here. */
+export const erasureRoute = (request: Request, env: AccountEnv) =>
+  simple(request, env, async (session, form) => (form.get('confirm') === 'yes' ? appOp(env, 'storefront.account_erasure', {session}) : null),
+    'We could not send your request.');
