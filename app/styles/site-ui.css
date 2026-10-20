@@ -2160,6 +2160,9 @@ body:has(.test-banner) .site-header {
 .acct-sections::-webkit-scrollbar { display: none; }
 .acct-section { scroll-margin-top: calc(var(--header-height, 5rem) + 1rem); margin: 0 0 2.5rem; }
 .acct-section-title { margin: 0 0 1rem; font-size: 1.375rem; font-weight: 600; letter-spacing: -0.01em; }
+.acct-card-title { margin: 0; font-size: 1.0625rem; font-weight: 600; }
+.acct-check { display: flex; align-items: flex-start; gap: 0.625rem; min-height: 2.75rem; align-items: center; cursor: pointer; }
+.acct-check input { accent-color: var(--color-gold); width: 1.125rem; height: 1.125rem; }
 .acct-email { margin: 0; font-size: 1.0625rem; overflow-wrap: anywhere; }
 .acct-btn { min-height: 2.75rem; padding: 0 1rem; font: inherit; font-size: 0.9375rem; color: var(--color-text); background: none; border: 1px solid var(--color-border-strong); border-radius: var(--r-md); cursor: pointer; }
 .acct-btn:hover:not(:disabled) { background: var(--color-bg-elevated); }

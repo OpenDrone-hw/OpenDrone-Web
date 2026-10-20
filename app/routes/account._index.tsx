@@ -5,6 +5,7 @@ import {legacyAccountResponse} from '~/lib/accounts/legacy';
 import {appAccountsEnabled, clearSession, readAccount} from '~/lib/commerce/app-account';
 import {MyAccount} from '~/components/commerce/account/MyAccount';
 import {shipCountries} from '~/lib/commerce/app-account-manage';
+import {chatFpvConnected} from '~/lib/commerce/app-chatfpv';
 import {HISTORY_NOTICES, type HistoryNotice} from '~/lib/accounts/rights';
 import {clearSessionCookie, hasSessionCookie, readSession} from '~/lib/accounts/sessions';
 import {readCustomerAccount, type AccountShopifyData} from '~/lib/accounts/customer-shopify';
@@ -123,7 +124,14 @@ export async function loader({request, context}: Route.LoaderArgs) {
     const headers = new Headers({'Cache-Control': 'no-store'});
     if (clear) headers.append('Set-Cookie', await clearSession(env));
     if (!account && !down) throw redirect('/account/login?return_to=%2Faccount', {headers});
-    return data({appAccount: account, countries: account ? await shipCountries(env) : []}, {headers});
+    const raw = new URL(request.url).searchParams.get('chatfpv') ?? '';
+    const extras = {
+      countries: account ? await shipCountries(env) : [],
+      chatfpv: {connected: chatFpvConnected(env), notice: (HISTORY_NOTICES as readonly string[]).includes(raw) ? (raw as HistoryNotice) : null},
+      // The owners map card shows only where the map itself is on.
+      pilotMap: env.PILOT_MAP_ENABLED?.trim() === '1',
+    };
+    return data({appAccount: account, ...extras}, {headers});
   }
   if (!accountsEnabled(env)) return legacyAccountResponse('', env);
   const session = await readSession(env.SUPPORT_DB, request);
@@ -196,7 +204,7 @@ export default function AccountRoute() {
   const loaded = useLoaderData<typeof loader>();
   if ('appAccount' in loaded) {
     return loaded.appAccount ? (
-      <MyAccount account={loaded.appAccount} countries={loaded.countries} />
+      <MyAccount account={loaded.appAccount} countries={loaded.countries} chatfpv={loaded.chatfpv} pilotMap={loaded.pilotMap} />
     ) : (
       <div className="page-shell app-shop"><h1 className="app-shop-title">My account</h1><p className="app-shop-note">Your account cannot be reached right now. Try again in a minute.</p></div>
     );
