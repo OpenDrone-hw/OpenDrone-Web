@@ -27,7 +27,7 @@ const UA = 'OpenDrone-Web checkout address suggestions (opendrone.be)';
 const CENTRE: Record<string, [number, number]> = {BE: [50.5, 4.5], NL: [52.2, 5.3], DE: [51.1, 10.4], FR: [46.6, 2.5], LU: [49.8, 6.1]};
 
 type PhotonFeature = {properties: {street?: string; name?: string; housenumber?: string; postcode?: string; city?: string; town?: string; village?: string; countrycode?: string; type?: string}};
-type GeoapifyResult = {street?: string; housenumber?: string; postcode?: string; city?: string; town?: string; village?: string; country_code?: string};
+type GeoapifyResult = {street?: string; housenumber?: string; postcode?: string; city?: string; town?: string; village?: string; municipality?: string; suburb?: string; county?: string; country_code?: string};
 
 function build(country: string, street?: string, housenumber?: string, postcode?: string, city?: string): Suggestion | null {
   if (!street || !city) return null;
@@ -90,11 +90,13 @@ export function geoapify(key: string): AddressProvider {
     id: 'geoapify',
     async suggest(query, country, fetcher = fetch) {
       const cc = country.toUpperCase();
-      const params = new URLSearchParams({text: query, format: 'json', limit: '10', type: 'street', filter: `countrycode:${cc.toLowerCase()}`, apiKey: key});
+      // No `type`: type=street matches bare streets only, so a typed house number ("Bondgenotenlaan 9") found nothing on the
+      // hosted shop; buildings (with a house number) and streets both come back, and build() keeps those with street and city.
+      const params = new URLSearchParams({text: query, format: 'json', limit: '10', lang: 'en', filter: `countrycode:${cc.toLowerCase()}`, apiKey: key});
       const body = (await getJson(`https://api.geoapify.com/v1/geocode/autocomplete?${params}`, fetcher)) as {results?: GeoapifyResult[]} | null;
       const out: Suggestion[] = [];
       for (const r of body?.results ?? []) {
-        const s = build(cc, r.street, r.housenumber, r.postcode, r.city ?? r.town ?? r.village);
+        const s = build(cc, r.street, r.housenumber, r.postcode, r.city ?? r.town ?? r.village ?? r.municipality ?? r.suburb ?? r.county);
         if (s) out.push(s);
       }
       return unique(out);
@@ -115,4 +117,20 @@ export function addressProvider(env: AddressEnv): AddressProvider {
 export function cleanQuery(raw: string | null): string | null {
   const q = (raw ?? '').replace(/\s/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
   return q.length >= MIN_CHARS ? q : null;
+}
+
+/** The answer of GET /shop/address?q=&country=: the suggestions and the headers, with the provider and how it answered in
+ *  X-Address-Provider ("geoapify 200 5", "none 0"). Pure apart from the provider call, so the route has a test. */
+export async function addressAnswer(env: AddressEnv, url: URL, fetcher: typeof fetch = fetch): Promise<{suggestions: Suggestion[]; headers: Record<string, string>}> {
+  const q = cleanQuery(url.searchParams.get('q'));
+  const country = (url.searchParams.get('country') ?? '').toUpperCase();
+  const provider = addressProvider(env);
+  const suggestions = q && /^[A-Z]{2}$/.test(country) ? await provider.suggest(q, country, fetcher) : [];
+  const status = provider.id === 'none' || !q ? '' : lastProviderStatus();
+  const headers: Record<string, string> = {
+    'Cache-Control': suggestions.length ? 'private, max-age=300' : 'no-store',
+    'X-Robots-Tag': 'noindex',
+    'X-Address-Provider': `${provider.id}${status ? ` ${status}` : ''} ${suggestions.length}`,
+  };
+  return {suggestions, headers};
 }

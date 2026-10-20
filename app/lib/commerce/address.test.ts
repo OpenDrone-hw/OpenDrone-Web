@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {describe, it} from 'node:test';
 import {formatLine1, pickCountry, postcodeFirst, postcodeKey, requestCountry, AUTOCOMPLETE} from './address-fields.ts';
-import {addressProvider, cleanQuery, geoapify, lastProviderStatus, none, photon} from './address-provider.ts';
+import {addressAnswer, addressProvider, cleanQuery, geoapify, lastProviderStatus, none, photon} from './address-provider.ts';
 import {expressConfig, fromPaymentResponse} from './payment-provider.ts';
 
 const json = (body: unknown) => (async () => new Response(JSON.stringify(body))) as unknown as typeof fetch;
@@ -131,5 +131,39 @@ describe('checkout class names', () => {
     const own = (src: string) => new Set([...src.matchAll(/className="([a-z0-9-]+)"/g)].map((m) => m[1]).filter((c) => c.startsWith('co-')));
     const shared = [...own(addr)].filter((c) => own(extras).has(c));
     assert.deepEqual(shared, []);
+  });
+});
+
+describe('geoapify request', () => {
+  it('asks for buildings and streets (no type filter), so a typed house number finds the building', async () => {
+    let url = '';
+    const f = (async (u: string) => {
+      url = u;
+      return new Response(JSON.stringify({results: [{street: 'Bondgenotenlaan', housenumber: '9', postcode: '3000', city: 'Leuven', country_code: 'be'}]}), {status: 200});
+    }) as unknown as typeof fetch;
+    const out = await geoapify('KEY').suggest('Bondgenotenlaan 9', 'BE', f);
+    assert.doesNotMatch(url, /[?&]type=/);
+    assert.match(url, /filter=countrycode%3Abe/);
+    assert.equal(out[0]?.label, 'Bondgenotenlaan 9, 3000 Leuven');
+  });
+});
+
+describe('/shop/address answer', () => {
+  const geo = (async () => new Response(JSON.stringify({results: [
+    {street: 'Kronkelstraat', postcode: '9000', municipality: 'Gent', country_code: 'be'},
+    {street: 'Bondgenotenlaan', housenumber: '9', postcode: '3000', city: 'Leuven', country_code: 'be'},
+  ]}), {status: 200})) as unknown as typeof fetch;
+  it('returns suggestions and names the provider with the shop test config (geoapify plus its key)', async () => {
+    const out = await addressAnswer({ADDRESS_PROVIDER: 'geoapify', GEOAPIFY_API_KEY: 'k'}, new URL('https://x/shop/address?q=Kronkelstraat&country=BE'), geo);
+    assert.deepEqual(out.suggestions.map((s) => s.label), ['Kronkelstraat, 9000 Gent', 'Bondgenotenlaan 9, 3000 Leuven']);
+    assert.equal(out.headers['X-Address-Provider'], 'geoapify 200 2');
+  });
+  it('says none when no provider is set or the key is missing', async () => {
+    const out = await addressAnswer({ADDRESS_PROVIDER: 'geoapify'}, new URL('https://x/shop/address?q=Kronkelstraat&country=BE'), geo);
+    assert.deepEqual(out.suggestions, []);
+    assert.equal(out.headers['X-Address-Provider'], 'none 0');
+  });
+  it('the test shop config names geoapify', () => {
+    assert.match(readFileSync(new URL('../../../wrangler.shoptest.toml', import.meta.url), 'utf8'), /^ADDRESS_PROVIDER = "geoapify"/m);
   });
 });
