@@ -236,7 +236,7 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
       ? appAccountsEnabled(context.env)
         ? hasAppSessionCookie(request)
           ? '/account'
-          : `/account/login?return_to=${encodeURIComponent(new URL(request.url).pathname)}`
+          : '/account/login' // the icon opens My orders after the code, wherever it was clicked
         : null
       : accountsEnabled(context.env)
       ? hasSessionCookie(request)

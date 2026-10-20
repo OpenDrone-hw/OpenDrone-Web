@@ -1,11 +1,11 @@
 /**
- * Customer accounts in app mode (COMMERCE_SOURCE=app and ACCOUNTS_ENABLED=1): a magic sign-in link, no password.
+ * Customer accounts in app mode (COMMERCE_SOURCE=app and ACCOUNTS_ENABLED=1): the email is the account: a mailed code and link, no password.
  * The incutec app owns the customer (`storefront.account*`); this file only keeps the opaque session token in a
  * signed HttpOnly cookie and passes it on. The Shopify and ChatFPV account code (app/lib/accounts) is not used here.
  */
 import {createCookie} from 'react-router';
 import {safeReturnTo} from '../accounts/config.ts';
-import {type AppEnv, appCommerceEnabled, appOp, AppUnavailable, returnOrigin} from './app-api.ts';
+import {type AppEnv, appCommerceEnabled, appOp, AppUnavailable, cleanLines, readCart, returnOrigin, writeCart} from './app-api.ts';
 
 export type AccountEnv = AppEnv & {ACCOUNTS_ENABLED?: string};
 
@@ -40,6 +40,8 @@ export type AccountOrder = {
   lines: Array<{title: string; variant_title: string; qty: number; total_minor: number}>;
   ship_address: Omit<AccountAddress, 'id' | 'saved'> | null;
   shipment?: {carrier?: string; tracking_number?: string; tracking_url?: string; eta?: string};
+  invoice: {number: string; issued_at: string} | null;
+  reorder: {country: string; lines: Array<{variant: string; qty: number; title: string; variant_title: string; available: boolean; unit_minor: number | null}>};
 };
 export type Account = {email: string; since: string; orders: AccountOrder[]; addresses: AccountAddress[]};
 
@@ -111,6 +113,12 @@ export async function verifyLink(env: AppEnv, token: string, fetcher: typeof fet
   return out.ok && out.data ? out.data.session : null;
 }
 
+/** Spend the six-digit code of a sign-in mail: the session token, or null for any wrong, expired or used-up code. */
+export async function verifyCode(env: AppEnv, email: string, code: string, fetcher: typeof fetch = fetch): Promise<string | null> {
+  const out = await appOp<{session: string}>(env, 'storefront.account_verify_code', {email, code}, fetcher);
+  return out.ok && out.data ? out.data.session : null;
+}
+
 export const PAYMENT_WORDS: Record<string, string> = {
   none: 'Not paid',
   pending_async: 'Payment pending',
@@ -137,14 +145,73 @@ export function postOk(request: Request): boolean {
   return request.method === 'POST' && request.headers.get('Origin') === new URL(request.url).origin;
 }
 
-/** POST /account/login: send a link to the address in the form. Never says whether the address has an account. */
-export async function sendLinkAction(request: Request, env: AccountEnv, dev = false): Promise<{sent: boolean; email: string; problem: string | null}> {
+export type LoginResult = {sent: boolean; email: string; problem: string | null};
+
+/** POST /account/login: mail a code and a link to the address in the form. Never says whether the address has orders. */
+export async function sendLinkAction(request: Request, env: AccountEnv, dev = false): Promise<LoginResult> {
   const form = await request.formData();
   const email = String(form.get('email') ?? '').trim();
   if (!postOk(request)) return {sent: false, email, problem: 'Something went wrong. Reload the page and try again.'};
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 254) return {sent: false, email, problem: 'Enter a valid email address.'};
   const ok = await requestLink(env, {email}, verifyUrl(request, String(form.get('return_to') ?? '/account'), dev));
   return ok ? {sent: true, email, problem: null} : {sent: false, email, problem: 'Sign-in is not available right now. Try again in a minute.'};
+}
+
+/** POST /account/login with intent=code: spend the six digits, set the session cookie, go on. A wrong code stays on the
+ *  code step with one sentence; the app answers the same for every reason, so this does too. */
+export async function codeAction(request: Request, env: AccountEnv): Promise<Response | LoginResult> {
+  const form = await request.formData();
+  const email = String(form.get('email') ?? '').trim();
+  const code = String(form.get('code') ?? '').replace(/\s/g, '');
+  if (!postOk(request)) return {sent: true, email, problem: 'Something went wrong. Reload the page and try again.'};
+  if (!/^[0-9]{6}$/.test(code)) return {sent: true, email, problem: 'Enter the 6 digits from the mail.'};
+  let session: string | null;
+  try {
+    session = await verifyCode(env, email, code);
+  } catch (err) {
+    if (err instanceof AppUnavailable) return {sent: true, email, problem: 'Sign-in is not available right now. Try again in a minute.'};
+    throw err;
+  }
+  if (!session) return {sent: true, email, problem: 'That code did not work. It may have expired or been used. Check the latest mail, or go back and ask for a new one.'};
+  const to = safeReturnTo(String(form.get('return_to') ?? '/account'));
+  return new Response(null, {status: 303, headers: {...NO_STORE, Location: to, 'Set-Cookie': await sessionCookie(env).serialize(session)}});
+}
+
+/** GET /account/invoices/<order>: the stored invoice of one of the signed-in customer's orders, as the page that was mailed. */
+export async function invoiceRoute(request: Request, env: AccountEnv, number: string): Promise<Response> {
+  const token = await readSessionToken(request, env);
+  if (!token || !/^[A-Za-z0-9._-]{1,20}$/.test(number)) return new Response('Not found', {status: 404, headers: NO_STORE});
+  try {
+    const out = await appOp<{html: string; filename: string}>(env, 'storefront.account_invoice', {session: token, number});
+    if (!out.ok || !out.data) return new Response('Not found', {status: 404, headers: NO_STORE});
+    const name = out.data.filename.replace(/[^A-Za-z0-9._-]/g, '_');
+    return new Response(out.data.html, {
+      headers: {
+        ...NO_STORE,
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Disposition': `inline; filename="${name}"`,
+        'Content-Security-Policy': "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; sandbox",
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'no-referrer',
+      },
+    });
+  } catch (err) {
+    if (err instanceof AppUnavailable) return new Response('The invoice cannot be reached right now.', {status: 503, headers: NO_STORE});
+    throw err;
+  }
+}
+
+/** POST /account/reorder: add the available lines of one past order to the cart, then show the cart. */
+export async function reorderRoute(request: Request, env: AccountEnv): Promise<Response> {
+  if (!postOk(request)) return new Response('Forbidden', {status: 403, headers: NO_STORE});
+  const form = await request.formData();
+  const number = String(form.get('number') ?? '');
+  const {account} = await readAccount(request, env);
+  const order = account?.orders.find((o) => o.number === number);
+  if (!order) return new Response(null, {status: 303, headers: {...NO_STORE, Location: '/account'}});
+  const add = order.reorder.lines.filter((l) => l.available).map((l) => ({variant: l.variant, qty: l.qty}));
+  const lines = cleanLines([...(await readCart(request, env)), ...add]);
+  return new Response(null, {status: 303, headers: {...NO_STORE, Location: '/shop/cart', 'Set-Cookie': await writeCart(lines, env)}});
 }
 
 /** GET /account/verify?token&return_to: spend the link, set the session cookie, go on. */

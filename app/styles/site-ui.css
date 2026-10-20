@@ -2160,6 +2160,11 @@ body:has(.test-banner) .site-header {
 .acct-btn:hover:not(:disabled) { background: var(--color-bg-elevated); }
 .acct-btn.is-primary { background: var(--color-gold); border-color: var(--color-gold); color: #111; font-weight: 600; }
 .acct-btn:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
+.acct-btn-link { display: inline-flex; align-items: center; text-decoration: none; }
+.acct-code { min-height: 3.5rem; width: 100%; font: inherit; font-size: 1.75rem; letter-spacing: 0.4em; font-variant-numeric: tabular-nums; text-align: center; }
+.acct-order-actions { align-items: center; padding-top: 0.25rem; }
+.acct-reorder { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.acct-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .acct-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 .acct-list { display: grid; gap: 1rem; max-width: 40rem; }
 .acct-form { display: grid; gap: 0.875rem; }

@@ -1,5 +1,5 @@
 import {useLoaderData, useRouteLoaderData} from 'react-router';
-import {CreateAccountCard} from '~/components/commerce/CreateAccountCard';
+import {OrdersLinkCard} from '~/components/commerce/OrdersLinkCard';
 import {appAccountsEnabled, requestLink, verifyUrl} from '~/lib/commerce/app-account';
 import type {Route} from './+types/shop.order';
 import {AppUnavailable, appOp, formatMoney, orderCookie, requireAppCommerce} from '~/lib/commerce/app-api';
@@ -112,7 +112,7 @@ export default function ShopOrder() {
               ) : null}
             </dl>
           </section>
-          {root?.appAccounts ? <CreateAccountCard signedIn={Boolean(root.appSignedIn)} /> : null}
+          {root?.appAccounts ? <OrdersLinkCard signedIn={Boolean(root.appSignedIn)} /> : null}
         </div>
       ) : null}
     </ShopFrame>
