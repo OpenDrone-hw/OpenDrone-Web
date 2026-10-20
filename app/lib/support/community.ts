@@ -76,6 +76,22 @@ export function decideRoute(opts: {
   return {route: 'community', reason: 'label'};
 }
 
+/**
+ * A suggestion for staff, never an action: where this ticket belongs by the hard rules alone. A ticket already in the
+ * forum is `posted`; a hard rule gives `team` with its reason; without consent `team:no_consent`; otherwise `community:candidate`.
+ * Ignores the flag and the AI label. `texts` are the customer-written fields known to the caller.
+ */
+export function routeHint(
+  ticket: Pick<Ticket, 'route' | 'topic' | 'orderNumber' | 'name' | 'email' | 'communityConsent'>,
+  texts: string[],
+): RouteDecision {
+  if (ticket.route === 'community') return {route: 'community', reason: 'posted'};
+  const hard = hardTeamReason(ticket, texts.filter(Boolean));
+  if (hard) return {route: 'team', reason: hard};
+  if (!ticket.communityConsent) return {route: 'team', reason: 'no_consent'};
+  return {route: 'community', reason: 'candidate'};
+}
+
 /** The forum post title: the scrubbed question in one line. */
 function titleOf(ticket: Ticket, text: string): string {
   const base = ticket.product ? `${redactTicketText(ticket.product, ticket)}: ` : '';

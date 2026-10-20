@@ -5,7 +5,7 @@
  * audited with the X-Staff-Login header (support_audit).
  */
 import {approvedText} from './ai-drafts.ts';
-import {takeOver, syncCommunity} from './community.ts';
+import {routeHint, takeOver, syncCommunity} from './community.ts';
 import {addInternalNote, applyChanges, customerCard, parseChanges, sendStaffReply, MAX_NOTE} from './crm.ts';
 import {fileResponse, isR2Attachment} from './files.ts';
 import {communityEnabled, crmEnabled, hasThread} from './flags.ts';
@@ -28,7 +28,7 @@ type StaffEnv = SupportWorkerEnv & StaffAuthEnv;
 
 // ---- serialisation: what the app sees ----
 
-export function staffTicket(t: Ticket) {
+export function staffTicket(t: Ticket, customerTexts: string[] = []) {
   return {
     ref: t.ref,
     subject: t.subject,
@@ -48,6 +48,10 @@ export function staffTicket(t: Ticket) {
     locked: t.locked,
     communityConsent: t.communityConsent,
     inCommunity: t.communityPostId !== null,
+    // The forum post (a Discord thread id, no personal data) so staff can open it; null until posted.
+    communityPostId: t.communityPostId,
+    // A suggestion from the hard rules alone, never an action: {route, reason}.
+    routeHint: routeHint(t, [t.subject, t.preview, t.product ?? '', ...customerTexts]),
     hasDiscordThread: hasThread(t),
     createdAt: t.createdAt,
     updatedAt: t.updatedAt,
@@ -187,7 +191,7 @@ export async function handleStaff(request: Request, env: StaffEnv, opts: StaffOp
     const before = Number(url.searchParams.get('before'));
     const rows = await deps.store.listTickets(filterOf(url.searchParams), limit + 1, Number.isFinite(before) && before > 0 ? before : undefined);
     const page = rows.slice(0, limit);
-    return json({ok: true, tickets: page.map(staffTicket), next: rows.length > limit ? page[page.length - 1]!.updatedAt : null});
+    return json({ok: true, tickets: page.map((t) => staffTicket(t)), next: rows.length > limit ? page[page.length - 1]!.updatedAt : null});
   }
 
   const ref = parseTicketRef(seg[1]);
@@ -201,10 +205,11 @@ export async function handleStaff(request: Request, env: StaffEnv, opts: StaffOp
     if (method === 'GET') {
       ticket = await syncCommunity(deps, ticket);
       const pending = deps.chatfpv ? await deps.chatfpv.drafts.pending(ref) : [];
+      const messages = await deps.store.messages(ref);
       return json({
         ok: true,
-        ticket: staffTicket(ticket),
-        messages: (await deps.store.messages(ref)).map(staffMessage),
+        ticket: staffTicket(ticket, messages.filter((m) => m.role === 'customer').map((m) => m.body)),
+        messages: messages.map(staffMessage),
         notes: await deps.store.notes(ref),
         drafts: pending.map((d) => ({draftId: d.draftId, body: d.body, text: approvedText(d), citations: d.citations, createdAt: d.createdAt})),
         audit: await deps.store.auditFor(ref, 50),
