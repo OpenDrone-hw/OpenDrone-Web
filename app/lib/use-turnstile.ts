@@ -16,6 +16,7 @@ type TurnstileRenderOpts = {
   sitekey: string;
   theme?: 'dark' | 'light' | 'auto';
   size?: 'normal' | 'compact' | 'flexible' | 'invisible';
+  appearance?: 'always' | 'execute' | 'interaction-only';
   callback?: (token: string) => void;
 };
 
@@ -46,6 +47,9 @@ export function useTurnstile(siteKey: string | null, active: boolean) {
         // page, or the other way round.
         theme: getActiveTheme(),
         size: 'flexible',
+        // Runs in the background; the box shows only when Cloudflare
+        // needs the visitor to do something.
+        appearance: 'interaction-only',
       });
       widgetId.current = id ?? null;
     }

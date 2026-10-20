@@ -341,6 +341,10 @@ function Ticket({ticket, messages: initial, link, notify}: Extract<Loaded, {foun
           <h2 id="sp-created-title" className="sp-card-title">
             {t('created_title')}
           </h2>
+          <p>
+            <strong className="sp-mono">{t('created_ref', {ref: ticket.ref})}</strong>
+            {notify ? ` ${t('created_mail_on')}` : ''}
+          </p>
           <p>{t('created_body')}</p>
           <CopyLink url={link} />
         </section>

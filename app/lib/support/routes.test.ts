@@ -55,3 +55,27 @@ describe('per-ticket limits run after authorisation (findings 4 and 6)', () => {
     assert.match(route('support_.find.tsx'), /\['findPerIp', ip\],\s*\['findPerIpEmail', ip, email\]/);
   });
 });
+
+describe('ticket confirmation and background Turnstile', () => {
+  const copy = JSON.parse(readFileSync(new URL('../../../content/copy/support.json', import.meta.url), 'utf8')) as Record<string, string>;
+  const ui = readFileSync(new URL('../../components/SupportUi.tsx', import.meta.url), 'utf8');
+  const hook = readFileSync(new URL('../use-turnstile.ts', import.meta.url), 'utf8');
+
+  it('the opened banner names the ticket reference and the emailed copy', () => {
+    assert.match(copy.created_ref, /\{ref\}/);
+    assert.ok(copy.created_mail_on);
+    const page = route('support_.t.$ref.tsx');
+    assert.match(page, /t\('created_ref', \{ref: ticket\.ref\}\)/);
+    assert.match(page, /notify \? ` \$\{t\('created_mail_on'\)\}` : ''/);
+  });
+
+  it('every Turnstile widget runs in the background', () => {
+    assert.match(ui, /appearance: 'interaction-only'/);
+    assert.match(hook, /appearance: 'interaction-only'/);
+  });
+
+  it('the failure message says what to do', () => {
+    assert.match(copy.err_turnstile, /press send again/);
+    assert.match(copy.err_send, /try again/);
+  });
+});
