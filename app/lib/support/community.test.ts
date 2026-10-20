@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {beforeEach, describe, it} from 'node:test';
-import {COMMUNITY_TAKEOVER_NOTE, decideRoute, hardTeamReason, routeTicket, syncCommunity, takeOver} from './community.ts';
+import {COMMUNITY_TAKEOVER_NOTE, decideRoute, hardTeamReason, routeHint, routeTicket, syncCommunity, takeOver} from './community.ts';
 import {createDraftStore} from './ai-drafts.ts';
 import {createStore} from './store.ts';
 import {createTicket, type Deps, type NewTicketInput, type SupportEnv} from './tickets.ts';
@@ -82,6 +82,22 @@ describe('hard rules force the team route', () => {
 
   it('lets a plain technical question through', () => {
     assert.equal(hardTeamReason(t, ['The gyro drifts after a power cycle. How do I recalibrate?']), null);
+  });
+});
+
+describe('routeHint', () => {
+  const ticket = {route: 'team' as const, topic: 'product' as const, orderNumber: null, name: 'Jan Peeters', email: 'jan@example.com', communityConsent: true};
+  it('suggests the forum for a plain question with consent, whatever the flag', () => {
+    assert.deepEqual(routeHint(ticket, ['The gyro drifts after a power cycle.']), {route: 'community', reason: 'candidate'});
+  });
+  it('names the hard rule first, then the missing consent', () => {
+    assert.deepEqual(routeHint(ticket, ['where is my order']), {route: 'team', reason: 'order'});
+    assert.deepEqual(routeHint({...ticket, communityConsent: false}, ['where is my order']), {route: 'team', reason: 'order'});
+    assert.deepEqual(routeHint({...ticket, communityConsent: false}, ['The gyro drifts.']), {route: 'team', reason: 'no_consent'});
+    assert.deepEqual(routeHint({...ticket, topic: 'warranty'}, ['The gyro drifts.']), {route: 'team', reason: 'topic'});
+  });
+  it('reports a posted ticket as posted', () => {
+    assert.deepEqual(routeHint({...ticket, route: 'community'}, ['where is my order']), {route: 'community', reason: 'posted'});
   });
 });
 

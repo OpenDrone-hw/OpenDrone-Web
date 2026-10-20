@@ -193,6 +193,7 @@ describe('staff API tickets', {skip}, () => {
     assert.deepEqual((await call('GET', '/tickets?topic=other&q=stock')).json.tickets.map((t: any) => t.ref), [b.ref]);
     assert.deepEqual((await call('GET', '/tickets?q=eva@example')).json.tickets.map((t: any) => t.ref), [b.ref]);
     assert.equal((await call('GET', '/tickets?route=community')).json.tickets.length, 0);
+    assert.deepEqual(all.json.tickets.map((t: any) => t.routeHint.route), ['team', 'team']);
     const page = await call('GET', '/tickets?limit=1');
     assert.equal(page.json.tickets.length, 1);
     assert.ok(page.json.next);
@@ -212,6 +213,8 @@ describe('staff API tickets', {skip}, () => {
     assert.equal(d.json.drafts[0].draftId, 'dr_1');
     assert.ok(d.json.drafts[0].text.includes('drafted with AI'));
     assert.equal(d.json.audit[0].action, 'note');
+    assert.deepEqual(d.json.ticket.routeHint, {route: 'team', reason: 'no_consent'});
+    assert.equal(d.json.ticket.communityPostId, null);
     assert.equal((await call('GET', `/tickets/${t.ref}/draft`)).json.draft.draftId, 'dr_1');
     assert.equal((await call('GET', '/tickets/OD-ZZZZZZ')).status, 404);
   });
