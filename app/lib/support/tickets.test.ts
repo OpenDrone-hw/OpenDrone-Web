@@ -120,8 +120,22 @@ describe('parseNewTicket', () => {
   it('asks for the fields each topic needs', () => {
     const r = parseNewTicket(form({topic: 'warranty', name: 'Jan', email: 'jan@example.com', message: 'The ESC smoked on first plug.'}));
     assert.ok(!r.ok);
-    assert.equal(r.errors.orderNumber, 'required');
+    assert.equal(r.errors.orderNumber, undefined);
     assert.equal(r.errors.product, 'required');
+  });
+
+  it('opens a ticket on every topic without an order number', () => {
+    for (const topic of ['order', 'product', 'warranty', 'other']) {
+      const r = parseNewTicket(form({topic, name: 'Jan', email: 'jan@example.com', product: 'Frame X', message: 'My question is long enough.'}));
+      assert.ok(r.ok, topic);
+      assert.equal(r.input.orderNumber, null);
+    }
+  });
+
+  it('still checks the format of an order number that is given', () => {
+    const r = parseNewTicket(form({topic: 'order', name: 'Jan', email: 'jan@example.com', order: 'abc', message: 'My question is long enough.'}));
+    assert.ok(!r.ok);
+    assert.equal(r.errors.orderNumber, 'invalid');
   });
 
   it('rejects an unknown topic, a bad email, a bad order number and a short message', () => {

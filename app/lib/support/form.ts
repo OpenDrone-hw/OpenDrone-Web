@@ -16,11 +16,12 @@ export const LIMITS = {
   minMessage: 10,
 };
 
-/** Which fields a topic asks for, and which of them are required. */
+/** Which fields a topic asks for, and which of them are required. The order
+ *  number is never required (founder 2026-10-15): staff ask when they need it. */
 export const TOPIC_FIELDS: Record<TicketTopic, {order: 'required' | 'optional' | null; product: 'required' | 'optional' | null; firmware: boolean}> = {
-  order: {order: 'required', product: null, firmware: false},
+  order: {order: 'optional', product: null, firmware: false},
   product: {order: 'optional', product: 'required', firmware: true},
-  warranty: {order: 'required', product: 'required', firmware: false},
+  warranty: {order: 'optional', product: 'required', firmware: false},
   other: {order: 'optional', product: null, firmware: false},
 };
 

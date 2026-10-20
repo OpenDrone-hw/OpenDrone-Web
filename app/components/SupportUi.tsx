@@ -163,7 +163,7 @@ export function FilePicker({
 }
 
 type TurnstileApi = {
-  render: (el: HTMLElement, opts: {sitekey: string; theme?: string; size?: string}) => string | undefined;
+  render: (el: HTMLElement, opts: {sitekey: string; theme?: string; size?: string; appearance?: string}) => string | undefined;
   reset: (id?: string) => void;
 };
 
@@ -182,7 +182,7 @@ export function TurnstileBox({siteKey, active, resetKey}: {siteKey: string | nul
     const render = () => {
       const cf = api();
       if (!cf || !box.current || widget.current) return;
-      widget.current = cf.render(box.current, {sitekey: siteKey, theme: getActiveTheme(), size: 'flexible'}) ?? null;
+      widget.current = cf.render(box.current, {sitekey: siteKey, theme: getActiveTheme(), size: 'flexible', appearance: 'interaction-only'}) ?? null;
     };
     if (api()) return render();
     const id = 'cf-turnstile-script';

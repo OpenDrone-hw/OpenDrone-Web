@@ -55,3 +55,13 @@ describe('per-ticket limits run after authorisation (findings 4 and 6)', () => {
     assert.match(route('support_.find.tsx'), /\['findPerIp', ip\],\s*\['findPerIpEmail', ip, email\]/);
   });
 });
+
+describe('background Turnstile', () => {
+  const ui = readFileSync(new URL('../../components/SupportUi.tsx', import.meta.url), 'utf8');
+  const hook = readFileSync(new URL('../use-turnstile.ts', import.meta.url), 'utf8');
+
+  it('every Turnstile widget runs in the background', () => {
+    assert.match(ui, /appearance: 'interaction-only'/);
+    assert.match(hook, /appearance: 'interaction-only'/);
+  });
+});
