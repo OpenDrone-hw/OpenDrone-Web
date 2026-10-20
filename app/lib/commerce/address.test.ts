@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {formatLine1, pickCountry, postcodeFirst, postcodeKey, requestCountry, AUTOCOMPLETE} from './address-fields.ts';
-import {addressProvider, cleanQuery, geoapify, none, photon} from './address-provider.ts';
+import {addressProvider, cleanQuery, geoapify, lastProviderStatus, none, photon} from './address-provider.ts';
 import {expressConfig, fromPaymentResponse} from './payment-provider.ts';
 
 const json = (body: unknown) => (async () => new Response(JSON.stringify(body))) as unknown as typeof fetch;
@@ -110,5 +110,15 @@ describe('postcode tables', () => {
       assert.ok(Object.values(table).every((c) => c.length > 0), cc);
     }
     assert.deepEqual((JSON.parse(readFileSync(new URL('../../data/postcodes/BE.json', import.meta.url), 'utf8')) as Record<string, string[]>)['3000'], ['Leuven']);
+  });
+});
+
+describe('address provider status', () => {
+  it('records a refused lookup so the route can say why the list is empty', async () => {
+    const refused = (async () => new Response('no', {status: 403})) as typeof fetch;
+    assert.deepEqual(await photon.suggest('Wetstraat 16', 'BE', refused), []);
+    assert.equal(lastProviderStatus(), '403');
+    assert.deepEqual(await photon.suggest('Wetstraat 16', 'BE', (async () => { throw new Error('down'); }) as typeof fetch), []);
+    assert.equal(lastProviderStatus(), 'error');
   });
 });

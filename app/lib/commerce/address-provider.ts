@@ -41,11 +41,22 @@ function unique(list: Suggestion[]): Suggestion[] {
   return list.filter((s) => (seen.has(s.label) ? false : (seen.add(s.label), true))).slice(0, MAX_SUGGESTIONS);
 }
 
+/** How the provider answered the last lookup of this isolate: an HTTP status, `timeout` or `error`. Diagnostics only (the
+ *  route sends it as a header so a silent empty list can be told apart from a refused one); never the query. */
+let lastStatus = '';
+export function lastProviderStatus(): string {
+  return lastStatus;
+}
+
 async function getJson(url: string, fetcher: typeof fetch, headers: Record<string, string> = {}): Promise<unknown> {
   try {
     const res = await fetcher(url, {headers: {accept: 'application/json', 'user-agent': UA, ...headers}, signal: AbortSignal.timeout(TIMEOUT_MS)});
+    lastStatus = String(res.status);
+    if (!res.ok) console.warn(`[address] provider answered HTTP ${res.status}`);
     return res.ok ? await res.json() : null;
-  } catch {
+  } catch (err) {
+    lastStatus = err instanceof Error && err.name === 'TimeoutError' ? 'timeout' : 'error';
+    console.warn(`[address] provider unreachable: ${lastStatus}`);
     return null;
   }
 }
