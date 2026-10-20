@@ -90,6 +90,17 @@ declare global {
     APP_ACCESS_CLIENT_SECRET?: string;
     APP_STOREFRONT_TOKEN?: string;
     APP_PROJECT?: string;
+    // Payment webhook relay (app/lib/commerce/pay-webhook.ts, POST /api/pay/webhook/:provider, app mode only).
+    // STRIPE_WEBHOOK_SECRET: the endpoint signing secret (whsec_...). PAYPAL_WEBHOOK_ID_LIVE / _SANDBOX: the id of the
+    // webhook on that REST app; PAYPAL_CLIENT_ID_* and PAYPAL_CLIENT_SECRET_* of the same app let the Worker call
+    // PayPal's verify-webhook-signature API. All Worker secrets. Mollie has no secret: only an id is relayed.
+    STRIPE_WEBHOOK_SECRET?: string;
+    PAYPAL_WEBHOOK_ID_LIVE?: string;
+    PAYPAL_CLIENT_ID_LIVE?: string;
+    PAYPAL_CLIENT_SECRET_LIVE?: string;
+    PAYPAL_WEBHOOK_ID_SANDBOX?: string;
+    PAYPAL_CLIENT_ID_SANDBOX?: string;
+    PAYPAL_CLIENT_SECRET_SANDBOX?: string;
     // Checkout address suggestions (app/lib/commerce/address-provider.ts): 'photon' (keyless, OpenStreetMap) or
     // 'geoapify' (needs GEOAPIFY_API_KEY, a Worker secret). Unset: no suggestions.
     ADDRESS_PROVIDER?: string;
