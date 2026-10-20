@@ -5,7 +5,7 @@ import {identityProvider} from '~/lib/accounts/idp';
 import {legacyAccountResponse} from '~/lib/accounts/legacy';
 import {startLogin} from '~/lib/accounts/signin';
 import {supportHeaders} from '~/lib/support/server';
-import {appAccountsEnabled, readAccount, sendLinkAction} from '~/lib/commerce/app-account';
+import {appAccountsEnabled, codeAction, readAccount, sendLinkAction} from '~/lib/commerce/app-account';
 import {SignInForm} from '~/components/commerce/account/AccountPages';
 
 /**
@@ -18,9 +18,10 @@ export const headers = supportHeaders;
 
 export const meta: Route.MetaFunction = () => [{title: 'Sign in | OpenDrone'}, {name: 'robots', content: 'noindex, nofollow'}];
 
-/** POST (app mode): email a sign-in link. The checkout posts here too, with `return_to=/shop/cart`. */
+/** POST (app mode): `intent=code` spends the six digits, anything else mails a code and a link. The checkout posts here too. */
 export async function action({request, context}: Route.ActionArgs) {
   if (!appAccountsEnabled(context.env)) throw new Response('Not found', {status: 404});
+  if ((await request.clone().formData()).get('intent') === 'code') return codeAction(request, context.env);
   return sendLinkAction(request, context.env, import.meta.env.DEV);
 }
 

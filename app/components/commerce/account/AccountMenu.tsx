@@ -43,7 +43,7 @@ export function AccountMenu({signedIn, signInUrl, icon}: {signedIn: boolean; sig
         <span className="acct-dot" aria-hidden="true" />
       </summary>
       <div className="acct-menu-panel">
-        <Link to="/account">Orders</Link>
+        <Link to="/account">My orders</Link>
         <Link to="/account/addresses">Addresses</Link>
         <Form method="post" action="/account/logout">
           <button type="submit">Sign out</button>

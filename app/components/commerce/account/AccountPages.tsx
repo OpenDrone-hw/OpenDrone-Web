@@ -1,5 +1,5 @@
 import {Form, Link, useFetcher, useNavigation} from 'react-router';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {formatMoney} from '~/lib/commerce/app-api';
 import {orderStatus, type Account, type AccountAddress, type AccountOrder} from '~/lib/commerce/app-account';
 
@@ -13,7 +13,7 @@ export function AccountFrame({email, tab, children}: {email: string; tab: 'order
     <div className="page-shell app-shop acct">
       <header className="acct-head">
         <div>
-          <h1 className="app-shop-title">Your account</h1>
+          <h1 className="app-shop-title">My orders</h1>
           <p className="co-quiet">{email}</p>
         </div>
         <Form method="post" action="/account/logout">
@@ -78,7 +78,28 @@ function OrderCard({o}: {o: AccountOrder}) {
           )}
         </div>
       </div>
+      <div className="acct-actions acct-order-actions">
+        {o.invoice ? (
+          <a className="acct-btn" href={`/account/invoices/${encodeURIComponent(o.number)}`} target="_blank" rel="noreferrer">
+            Invoice {o.invoice.number}
+          </a>
+        ) : null}
+        <ReorderButton o={o} />
+      </div>
     </article>
+  );
+}
+
+/** Reorder fills the cart with the lines of this order that can still be bought, then opens the cart. */
+function ReorderButton({o}: {o: AccountOrder}) {
+  const open = o.reorder.lines.filter((l) => l.available).length;
+  const gone = o.reorder.lines.length - open;
+  return (
+    <Form method="post" action="/account/reorder" className="acct-reorder">
+      <input type="hidden" name="number" value={o.number} />
+      <button type="submit" className="acct-btn is-primary" disabled={!open}>Reorder</button>
+      {gone ? <span className="co-dim">{open ? `${gone} of ${o.reorder.lines.length} items are no longer available and are left out.` : 'These items are no longer available.'}</span> : null}
+    </Form>
   );
 }
 
@@ -88,7 +109,7 @@ export function AccountOrders({account}: {account: Account}) {
       {account.orders.length ? (
         <div className="acct-list">{account.orders.map((o) => <OrderCard key={o.number} o={o} />)}</div>
       ) : (
-        <p className="app-shop-note">No orders yet with this address. <Link to="/products">Browse the products</Link>.</p>
+        <p className="app-shop-note">No orders yet with this email address. <Link to="/products">Browse the products</Link>.</p>
       )}
     </AccountFrame>
   );
@@ -164,24 +185,71 @@ export function AccountAddresses({account, countries}: {account: Account; countr
   );
 }
 
-/** Sign in: an email, a link by mail, no password. */
+/** Six digits: numeric keypad, the mail app's code suggestion, paste of "123 456", and the form goes as soon as the sixth digit is in. */
+function CodeInput() {
+  const ref = useRef<HTMLInputElement>(null);
+  const [value, setValue] = useState('');
+  const take = (raw: string) => setValue(raw.replace(/\D/g, '').slice(0, 6));
+  useEffect(() => ref.current?.focus(), []);
+  // Once the sixth digit is drawn the field carries all six, so the form can go.
+  useEffect(() => {
+    if (value.length === 6) ref.current?.form?.requestSubmit();
+  }, [value]);
+  return (
+    <input
+      ref={ref}
+      name="code"
+      value={value}
+      onChange={(e) => take(e.target.value)}
+      onPaste={(e) => {
+        e.preventDefault();
+        take(e.clipboardData.getData('text'));
+      }}
+      className="acct-code"
+      inputMode="numeric"
+      autoComplete="one-time-code"
+      pattern="[0-9]{6}"
+      maxLength={12}
+      aria-label="6-digit code"
+      placeholder="000000"
+      required
+    />
+  );
+}
+
+/** Sign in, no account to make: the email, then the six digits of the mail (or its link). Same flow behind the header icon. */
 export function SignInForm({returnTo, sent, email, problem, intro}: {returnTo: string; sent: boolean; email: string; problem: string | null; intro?: string}) {
   const busy = useNavigation().state !== 'idle';
   return (
     <div className="page-shell app-shop acct">
-      <h1 className="app-shop-title">Sign in</h1>
+      <h1 className="app-shop-title">{sent ? 'Check your mail' : 'See your orders'}</h1>
       {sent ? (
-        <section className="co-card" role="status">
-          <h2>Check your inbox</h2>
-          <p className="co-quiet">We sent a sign-in link to {email}. It works once and expires in 15 minutes. No password needed.</p>
+        <section className="co-card acct-form" role="status">
+          <p className="co-quiet">We sent a 6-digit code and a link to <strong>{email}</strong>. The code works for 10 minutes, the link for 15. Enter the code here, or open the link.</p>
+          <Form method="post" className="acct-form">
+            <input type="hidden" name="intent" value="code" />
+            <input type="hidden" name="return_to" value={returnTo} />
+            <input type="hidden" name="email" value={email} />
+            {problem ? <p role="alert" className="app-shop-problem">{problem}</p> : null}
+            <div className="co-field"><span>Code</span><CodeInput /></div>
+            <button type="submit" className="co-pay" disabled={busy}>{busy ? 'Checking...' : 'Continue'}</button>
+          </Form>
+          <div className="acct-actions">
+            <Form method="post">
+              <input type="hidden" name="return_to" value={returnTo} />
+              <input type="hidden" name="email" value={email} />
+              <button type="submit" className="acct-btn" disabled={busy}>Send a new code</button>
+            </Form>
+            <Link to={`/account/login?return_to=${encodeURIComponent(returnTo)}`} className="acct-btn acct-btn-link">Use another email</Link>
+          </div>
         </section>
       ) : (
         <Form method="post" className="co-card acct-form">
-          <p className="co-quiet">{intro ?? 'Enter your email and we send you a link to sign in. No password needed. If you have no account yet, the link creates one.'}</p>
+          <p className="co-quiet">{intro ?? 'Enter the email you ordered with. We mail you a code to see your orders, tracking and invoices. No password, nothing to set up.'}</p>
           {problem ? <p role="alert" className="app-shop-problem">{problem}</p> : null}
           <input type="hidden" name="return_to" value={returnTo} />
           <label className="co-field"><span>Email</span><input name="email" type="email" required autoComplete="email" inputMode="email" defaultValue={email} /></label>
-          <button type="submit" className="co-pay" disabled={busy}>{busy ? 'Sending...' : 'Email me a sign-in link'}</button>
+          <button type="submit" className="co-pay" disabled={busy}>{busy ? 'Sending...' : 'Email me a code'}</button>
         </Form>
       )}
       <p className="co-quiet"><Link to="/shop/cart">Back to checkout</Link></p>
