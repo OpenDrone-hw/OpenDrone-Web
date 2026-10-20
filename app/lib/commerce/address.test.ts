@@ -109,6 +109,6 @@ describe('postcode tables', () => {
       for (const k of keys.slice(0, 200)) assert.equal(postcodeKey(cc, k), k, `${cc} ${k}`);
       assert.ok(Object.values(table).every((c) => c.length > 0), cc);
     }
-    assert.deepEqual(JSON.parse(readFileSync(new URL('../../data/postcodes/BE.json', import.meta.url), 'utf8'))['3000'], ['Leuven']);
+    assert.deepEqual((JSON.parse(readFileSync(new URL('../../data/postcodes/BE.json', import.meta.url), 'utf8')) as Record<string, string[]>)['3000'], ['Leuven']);
   });
 });
