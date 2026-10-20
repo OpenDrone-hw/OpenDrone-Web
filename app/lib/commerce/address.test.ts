@@ -133,3 +133,17 @@ describe('checkout class names', () => {
     assert.deepEqual(shared, []);
   });
 });
+
+describe('geoapify request', () => {
+  it('asks for buildings and streets (no type filter), so a typed house number finds the building', async () => {
+    let url = '';
+    const f = (async (u: string) => {
+      url = u;
+      return new Response(JSON.stringify({results: [{street: 'Bondgenotenlaan', housenumber: '9', postcode: '3000', city: 'Leuven', country_code: 'be'}]}), {status: 200});
+    }) as unknown as typeof fetch;
+    const out = await geoapify('KEY').suggest('Bondgenotenlaan 9', 'BE', f);
+    assert.doesNotMatch(url, /[?&]type=/);
+    assert.match(url, /filter=countrycode%3Abe/);
+    assert.equal(out[0]?.label, 'Bondgenotenlaan 9, 3000 Leuven');
+  });
+});

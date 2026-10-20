@@ -90,7 +90,9 @@ export function geoapify(key: string): AddressProvider {
     id: 'geoapify',
     async suggest(query, country, fetcher = fetch) {
       const cc = country.toUpperCase();
-      const params = new URLSearchParams({text: query, format: 'json', limit: '10', type: 'street', filter: `countrycode:${cc.toLowerCase()}`, apiKey: key});
+      // No `type`: type=street matches bare streets only, so a typed house number ("Bondgenotenlaan 9") found nothing on the
+      // hosted shop; buildings (with a house number) and streets both come back, and build() keeps those with street and city.
+      const params = new URLSearchParams({text: query, format: 'json', limit: '10', lang: 'en', filter: `countrycode:${cc.toLowerCase()}`, apiKey: key});
       const body = (await getJson(`https://api.geoapify.com/v1/geocode/autocomplete?${params}`, fetcher)) as {results?: GeoapifyResult[]} | null;
       const out: Suggestion[] = [];
       for (const r of body?.results ?? []) {
