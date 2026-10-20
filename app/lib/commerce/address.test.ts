@@ -97,3 +97,18 @@ describe('express wallets', () => {
     assert.equal(r.name, 'Ann');
   });
 });
+
+describe('postcode tables', () => {
+  it('hold, per country, keys the form can look up and at least one city each', async () => {
+    const {readFileSync} = await import('node:fs');
+    const {POSTCODE_COUNTRIES} = await import('./address-fields.ts');
+    for (const cc of POSTCODE_COUNTRIES) {
+      const table = JSON.parse(readFileSync(new URL(`../../data/postcodes/${cc}.json`, import.meta.url), 'utf8')) as Record<string, string[]>;
+      const keys = Object.keys(table);
+      assert.ok(keys.length > 500, cc);
+      for (const k of keys.slice(0, 200)) assert.equal(postcodeKey(cc, k), k, `${cc} ${k}`);
+      assert.ok(Object.values(table).every((c) => c.length > 0), cc);
+    }
+    assert.deepEqual(JSON.parse(readFileSync(new URL('../../data/postcodes/BE.json', import.meta.url), 'utf8'))['3000'], ['Leuven']);
+  });
+});

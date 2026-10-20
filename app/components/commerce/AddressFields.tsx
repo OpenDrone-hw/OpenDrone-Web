@@ -6,11 +6,6 @@ import type {ExpressResult} from '~/lib/commerce/payment-provider';
 type Country = {code: string; name: string};
 export type AddressFill = ExpressResult['address'] & {name?: string; phone?: string};
 
-const postcodes: Record<string, Promise<Record<string, string[]>>> = {};
-function postcodeTable(cc: string) {
-  return (postcodes[cc] ??= fetch(`/postcodes/${cc}.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
-}
-
 function Text({label, optional, className = '', ...rest}: {label: string; optional?: boolean; className?: string} & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <label className={`co-field ${className}`}>
@@ -60,16 +55,16 @@ export function AddressFields({country, countries, suggest, onCountry, fill}: {
       setCities([]);
       return;
     }
-    let live = true;
-    void postcodeTable(country).then((table) => {
-      if (!live) return;
-      const found = table[key] ?? [];
-      setCities(found);
-      if (found.length && !cityTouched.current) setCity(found[0]);
-    });
-    return () => {
-      live = false;
-    };
+    const ctl = new AbortController();
+    fetch(`/shop/postcode?country=${country}&code=${encodeURIComponent(key)}`, {signal: ctl.signal})
+      .then((r) => (r.ok ? (r.json() as Promise<{cities?: string[]}>) : {cities: []}))
+      .then((b) => {
+        const found = b.cities ?? [];
+        setCities(found);
+        if (found.length && !cityTouched.current) setCity(found[0]);
+      })
+      .catch(() => undefined);
+    return () => ctl.abort();
   }, [country, postal]);
 
   const cityField = (
