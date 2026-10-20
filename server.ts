@@ -4,6 +4,7 @@ import {complianceWebhooksActive, runRightsQueue} from '~/lib/accounts/complianc
 import {accountsEnabled} from '~/lib/accounts/config';
 import {tokenEndpointReachable} from '~/lib/accounts/oauth';
 import {purgeExpired} from '~/lib/accounts/sessions';
+import {handleAppMedia} from '~/lib/commerce/app-media';
 import {createAppLoadContext} from '~/lib/context';
 import {NO_FRAMING_HEADERS, NO_FRAMING_PATH} from '~/lib/csp';
 import {refreshOwnerMap} from '~/lib/owner-map-data';
@@ -113,6 +114,16 @@ async function handleFetch(
         headers: {'Cache-Control': 'no-store'},
       });
     }
+
+    // App mode: the app's copies of the shop images, proxied at APP_MEDIA_PATH (app/lib/commerce/app-media.ts).
+    const media = await handleAppMedia(
+      request,
+      env,
+      typeof caches === 'undefined' ? null : (caches as unknown as {default: Cache}).default,
+      fetch,
+      (work) => executionContext.waitUntil(work.catch(() => undefined)),
+    );
+    if (media) return media;
 
     const context = await createAppLoadContext(
       request,

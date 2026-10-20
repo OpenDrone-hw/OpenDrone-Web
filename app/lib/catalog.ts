@@ -46,6 +46,8 @@ export type CatalogVariant = {
   cart_add_method?: 'POST';
   /** Server-only Shopify variant identity. Never accepted from a browser. */
   merchandise_id?: string;
+  /** The Shopify id a promoted app variant came from, so an old `?variant=` link still finds it. */
+  alias?: string;
   /** Preorder campaign state, set by `applyCampaign` for campaign SKUs. */
   campaign?: CampaignState | null;
 };
