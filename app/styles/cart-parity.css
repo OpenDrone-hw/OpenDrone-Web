@@ -1,0 +1,37 @@
+/* The order summary's cart features in app mode: discount code, free-shipping bar, pickup, note, add-ons, bundle.
+   Tokens only; layout of the checkout itself stays in site-ui.css. */
+.co-free { display: grid; gap: 0.5rem; margin-top: 1.25rem; }
+.co-free-text { margin: 0; font-size: 0.875rem; color: var(--color-text); }
+.co-free-track { height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
+.co-free-track > span { display: block; height: 100%; background: var(--color-gold-fill); transition: width 200ms ease; }
+.co-code { margin-top: 1.25rem; display: grid; gap: 0.5rem; }
+.co-code-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; align-items: end; }
+.co-code-label { grid-column: 1 / -1; font-size: 0.8125rem; color: var(--color-text-muted); }
+.co-code-form input, .co-note textarea {
+  width: 100%; box-sizing: border-box; min-height: 2.75rem; padding: 0 0.75rem; font: inherit; font-size: 1rem;
+  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--r-md); }
+.co-note textarea { padding: 0.625rem 0.75rem; resize: vertical; }
+.co-code-form input:focus-visible, .co-note textarea:focus-visible { outline: none; border-color: var(--color-gold); box-shadow: 0 0 0 3px var(--color-gold-soft); }
+.co-code-form button { min-height: 2.75rem; padding: 0 1rem; font: inherit; font-weight: 600; cursor: pointer; border-radius: var(--r-md);
+  background: transparent; color: var(--color-text); border: 1px solid var(--color-border-strong); }
+.co-code-form button:disabled { opacity: 0.5; cursor: default; }
+.co-code-applied { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.co-code-chip { font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.04em; padding: 0.25rem 0.625rem; border-radius: 999px; background: var(--color-gold-soft); color: var(--color-gold-text); }
+.co-code-problem { margin: 0; font-size: 0.8125rem; color: var(--color-error); }
+.co-pickup { margin-top: 1rem; font-size: 0.9375rem; }
+.co-pickup label { display: flex; gap: 0.625rem; align-items: flex-start; cursor: pointer; }
+.co-pickup input { accent-color: var(--color-gold); width: 1.125rem; height: 1.125rem; margin: 0.15rem 0 0; }
+.co-pickup em, .co-note em { font-style: normal; color: var(--color-text-dim); }
+.co-note { display: grid; gap: 0.375rem; margin-top: 1rem; }
+.co-note > span { font-size: 0.8125rem; color: var(--color-text-muted); }
+
+/* Suggestions sit under the summary: after the form on a phone, in the sticky column on a wide screen. */
+.co-side { display: contents; }
+.co-suggest { order: 1; display: grid; gap: 1rem; }
+.co-suggest .cart-addons, .co-suggest .cart-suggest { margin: 0; }
+@media (min-width: 62rem) {
+  .co-side { display: grid; gap: 1rem; align-content: start; position: sticky; top: calc(var(--header-height, 5rem) + 1.5rem);
+    max-height: calc(100dvh - var(--header-height, 5rem) - 2.5rem); overflow-y: auto; scrollbar-width: thin; }
+  .co-side .co-summary { position: static; }
+  .co-suggest { order: 0; }
+}

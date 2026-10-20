@@ -115,13 +115,23 @@ export type AppPost = {
 };
 export type CartLine = {variant: string; qty: number};
 export type Quote = {
-  lines: Array<{variant: string; title: string; variant_title: string; qty: number; unit_minor: number; total_minor: number}>;
+  lines: Array<{variant: string; sku?: string; title: string; variant_title: string; qty: number; unit_minor: number; total_minor: number}>;
   currency: string;
   subtotal_minor: number;
   shipping_minor: number;
   total_minor: number;
   vat_rate: number;
   vat_included_minor: number;
+  /** The applied discount code, its amount off the subtotal, or why a code given does not apply. */
+  discount?: {code: string; kind: 'percent' | 'fixed' | 'free_shipping'; value: number; minor: number} | null;
+  discount_minor?: number;
+  discount_problem?: string | null;
+  /** Free-shipping progress; null when the app offers none. */
+  free_shipping?: {threshold_minor: number; remaining_minor: number} | null;
+  pickup?: boolean;
+  pickup_available?: boolean;
+  /** The shipping charge before pickup, a free-shipping threshold or a code. */
+  shipping_standard_minor?: number;
   /** Countries the app ships to (the picker); empty means no list was given. */
   ship_countries?: string[];
 };

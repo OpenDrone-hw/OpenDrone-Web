@@ -17,6 +17,7 @@ import {
   snapshot,
   writeCart,
 } from '~/lib/commerce/app-api';
+import {readOptions, writeOptions} from '~/lib/commerce/app-cart-options';
 import {ShopFrame} from '~/components/commerce/ShopFrame';
 import {OrderSummary, type SummaryImages} from '~/components/commerce/OrderSummary';
 import {PaymentRails} from '~/components/commerce/PaymentRails';
@@ -50,25 +51,31 @@ export async function loader({context, request}: Route.LoaderArgs) {
   const lines = await readCart(request, context.env);
   let country = countryOf(request);
   const smart = {suggest: addressProvider(context.env).id !== 'none', express: expressConfig(context.env)};
-  if (!lines.length) return {lines, country, quote: null, problem: null, images: {} as SummaryImages, ...smart};
+  const options = await readOptions(request, context.env);
+  if (!lines.length) return {lines, country, quote: null, problem: null, images: {} as SummaryImages, code: '', ...smart};
   const images = await imagesFor(context.env, lines);
+  const code = options.code;
   try {
-    let out = await appOp<Quote>(context.env, 'storefront.quote', {lines, country});
+    let out = await appOp<Quote>(context.env, 'storefront.quote', {lines, country, discount_code: code, pickup: options.pickup});
+    // Pickup chosen for a country that does not offer it (the picker moved): price the shipped order.
+    if (!out.ok && options.pickup && /pickup/i.test(out.error?.detail ?? '')) {
+      out = await appOp<Quote>(context.env, 'storefront.quote', {lines, country, discount_code: code});
+    }
     // A country the app does not ship to (a visitor's own, say): quote Belgium, the picker shows what is offered.
     if (!out.ok && country !== 'BE' && /ship to this country/i.test(out.error?.detail ?? '')) {
       country = 'BE';
-      out = await appOp<Quote>(context.env, 'storefront.quote', {lines, country});
+      out = await appOp<Quote>(context.env, 'storefront.quote', {lines, country, discount_code: code});
     }
     // The visitor's country is preselected only when the app ships there, else the first country it ships to.
     const ship = out.ok ? out.data?.ship_countries : undefined;
     if (out.ok && ship?.length && pickCountry(country, ship) !== country) {
       country = pickCountry(country, ship);
-      out = await appOp<Quote>(context.env, 'storefront.quote', {lines, country});
+      out = await appOp<Quote>(context.env, 'storefront.quote', {lines, country, discount_code: code});
     }
-    return {lines, country, quote: out.ok ? out.data ?? null : null, problem: out.ok ? null : out.error?.detail ?? 'Cannot price this cart', images, ...smart};
+    return {lines, country, quote: out.ok ? out.data ?? null : null, problem: out.ok ? null : out.error?.detail ?? 'Cannot price this cart', images, code, ...smart};
   } catch (err) {
     if (err instanceof AppUnavailable) {
-      return {lines, country, quote: null, problem: 'Checkout cannot be reached right now. Try again in a minute.', images, ...smart};
+      return {lines, country, quote: null, problem: 'Checkout cannot be reached right now. Try again in a minute.', images, code, ...smart};
     }
     throw err;
   }
@@ -87,6 +94,11 @@ export async function action({context, request}: Route.ActionArgs) {
     const next: CartLine[] =
       intent === 'remove' ? lines.filter((l) => l.variant !== v) : lines.map((l) => (l.variant === v && Number.isInteger(qty) ? {...l, qty} : l));
     return Response.json({ok: true}, {headers: {'Set-Cookie': await writeCart(cleanLines(next), context.env)}});
+  }
+  if (intent === 'discount' || intent === 'pickup') {
+    const current = await readOptions(request, context.env);
+    const next = intent === 'discount' ? {...current, code: field(form, 'code')} : {...current, pickup: field(form, 'on') === '1'};
+    return Response.json({ok: true}, {headers: {'Set-Cookie': await writeOptions(next, context.env)}});
   }
   if (intent !== 'checkout') return redirect('/shop/cart');
   const origin = new URL(request.url).origin;
@@ -108,11 +120,15 @@ export async function action({context, request}: Route.ActionArgs) {
       phone: field(form, 'phone'),
     },
     billing_same: true,
+    discount_code: field(form, 'discount_code'),
+    pickup: field(form, 'pickup') === '1',
+    note: field(form, 'note'),
   });
   if (!out.ok || !out.data) return {problem: friendly(out.error?.code, out.error?.detail)};
   const headers = new Headers();
   if (out.data.token) headers.append('Set-Cookie', await orderCookie(context.env).serialize({number: out.data.number, token: out.data.token}));
   headers.append('Set-Cookie', await writeCart([], context.env));
+  headers.append('Set-Cookie', await writeOptions({code: '', pickup: false}, context.env));
   return redirect(out.data.redirect_url ?? `/shop/order?order=${encodeURIComponent(out.data.number)}`, {headers});
 }
 
@@ -142,7 +158,7 @@ function fillEmail(value: string) {
 }
 
 export default function ShopCart() {
-  const {lines, country, quote, problem, images, suggest, express} = useLoaderData<typeof loader>();
+  const {lines, country, quote, problem, images, code, suggest, express} = useLoaderData<typeof loader>();
   const [fill, setFill] = useState<AddressFill | null>(null);
   const actionData = useActionData<{problem?: string}>();
   const navigation = useNavigation();
@@ -193,7 +209,7 @@ export default function ShopCart() {
               {submitting ? 'Placing order...' : `Pay ${formatMoney(quote.total_minor, quote.currency)}`}
             </button>
           </Form>
-          <OrderSummary quote={quote} country={country} images={images} pending={busy && !submitting} />
+          <OrderSummary quote={quote} country={country} images={images} code={code} pending={busy && !submitting} />
         </div>
       ) : null}
     </ShopFrame>
