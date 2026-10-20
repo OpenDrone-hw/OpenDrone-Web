@@ -3,10 +3,12 @@ import {accountsEnabled, notFound} from '~/lib/accounts/config';
 import {identityProvider} from '~/lib/accounts/idp';
 import {legacyAccountResponse} from '~/lib/accounts/legacy';
 import {logout} from '~/lib/accounts/signin';
+import {appAccountsEnabled, logoutRoute} from '~/lib/commerce/app-account';
 
 /** POST /account/logout (same Origin): revoke, tell ChatFPV, end the Shopify session. */
 export function action({request, context}: Route.ActionArgs) {
   const {env} = context;
+  if (appAccountsEnabled(env)) return logoutRoute(request, env);
   if (!accountsEnabled(env)) return notFound();
   return logout(request, env, identityProvider(env, request));
 }

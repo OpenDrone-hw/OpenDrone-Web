@@ -2,6 +2,8 @@ import {data, redirect, useLoaderData, Link} from 'react-router';
 import type {Route} from './+types/account._index';
 import {accountHeaders, accountsEnabled, redirectTo, sameOrigin} from '~/lib/accounts/config';
 import {legacyAccountResponse} from '~/lib/accounts/legacy';
+import {appAccountsEnabled, clearSession, readAccount} from '~/lib/commerce/app-account';
+import {AccountOrders} from '~/components/commerce/account/AccountPages';
 import {HISTORY_NOTICES, type HistoryNotice} from '~/lib/accounts/rights';
 import {clearSessionCookie, hasSessionCookie, readSession} from '~/lib/accounts/sessions';
 import {readCustomerAccount, type AccountShopifyData} from '~/lib/accounts/customer-shopify';
@@ -114,6 +116,14 @@ function devMockAccount(shopifyGid: string): AccountShopifyData | null {
 
 export async function loader({request, context}: Route.LoaderArgs) {
   const {env} = context;
+  if (appAccountsEnabled(env)) {
+    // The test shop (app mode): the account is the incutec app's, signed in with a mailed link.
+    const {account, clear, down} = await readAccount(request, env);
+    const headers = new Headers({'Cache-Control': 'no-store'});
+    if (clear) headers.append('Set-Cookie', await clearSession(env));
+    if (!account && !down) throw redirect('/account/login?return_to=%2Faccount', {headers});
+    return data({appAccount: account}, {headers});
+  }
   if (!accountsEnabled(env)) return legacyAccountResponse('', env);
   const session = await readSession(env.SUPPORT_DB, request);
   if (!session) {
@@ -182,7 +192,15 @@ const NEWSLETTER_NOTICE_TEXT: Record<NewsletterNotice, string> = {
 };
 
 export default function AccountRoute() {
-  const {ordersUrl, since, notice, newsletterNotice, shopify, pilot} = useLoaderData<typeof loader>();
+  const loaded = useLoaderData<typeof loader>();
+  if ('appAccount' in loaded) {
+    return loaded.appAccount ? (
+      <AccountOrders account={loaded.appAccount} />
+    ) : (
+      <div className="page-shell app-shop"><h1 className="app-shop-title">Your account</h1><p className="app-shop-note">Your account cannot be reached right now. Try again in a minute.</p></div>
+    );
+  }
+  const {ordersUrl, since, notice, newsletterNotice, shopify, pilot} = loaded;
 
   return (
     <div className="page-shell sp-page">

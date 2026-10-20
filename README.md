@@ -48,7 +48,7 @@ button.
 With `COMMERCE_SOURCE=app` (and `APP_API_URL`, `APP_PROJECT`, `APP_STOREFRONT_TOKEN`, optionally the Access
 service token pair and `TEST_BANNER`) the whole site reads its catalog from the app (`storefront.catalog`),
 the buy buttons add to the app cart and `/cart` redirects to `/shop/cart`; no `SHOPIFY_*` value is needed and
-Shopify is never called. Accounts links are hidden. Production and staging never set these variables
+Shopify is never called. With `ACCOUNTS_ENABLED=1` (the test Worker sets it) the header shows the account entry: sign-in by a mailed link, orders with tracking, addresses (`app/lib/commerce/app-account.ts`, the app's `storefront.account*` ops); otherwise account links are hidden. Production and staging never set these variables
 (`app/lib/commerce/app-api.test.ts` reads every `wrangler*.toml`). `wrangler.shoptest.toml` is the test Worker
 (`opendrone-web-shoptest`, workers.dev only); pass the variables at deploy time with `--var`. Locally put them
 in `.dev.vars` and run `npm run dev`.

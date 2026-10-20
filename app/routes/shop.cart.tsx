@@ -23,6 +23,8 @@ import {OrderSummary, type SummaryImages} from '~/components/commerce/OrderSumma
 import {PaymentRails} from '~/components/commerce/PaymentRails';
 import {AddressFields, type AddressFill} from '~/components/commerce/AddressFields';
 import {ExpressCheckout} from '~/components/commerce/ExpressCheckout';
+import {ContactSection} from '~/components/commerce/ContactSection';
+import {appAccountsEnabled, readAccount} from '~/lib/commerce/app-account';
 import {pickCountry, requestCountry} from '~/lib/commerce/address-fields';
 import {addressProvider} from '~/lib/commerce/address-provider';
 import {expressConfig, type ExpressResult} from '~/lib/commerce/payment-provider';
@@ -46,7 +48,17 @@ async function imagesFor(env: Parameters<typeof snapshot>[0], lines: CartLine[])
   }
 }
 
-export async function loader({context, request}: Route.LoaderArgs) {
+/** The cart's loader plus the signed-in buyer (accounts on, a session cookie): their email fills the Contact step. */
+export async function loader(args: Route.LoaderArgs) {
+  const {context, request} = args;
+  const [base, account] = await Promise.all([
+    cartLoader(args),
+    appAccountsEnabled(context.env) ? readAccount(request, context.env) : Promise.resolve(null),
+  ]);
+  return {...base, accounts: appAccountsEnabled(context.env), accountEmail: account?.account?.email ?? null};
+}
+
+async function cartLoader({context, request}: Route.LoaderArgs) {
   requireAppCommerce(context.env);
   const lines = await readCart(request, context.env);
   let country = countryOf(request);
@@ -158,7 +170,7 @@ function fillEmail(value: string) {
 }
 
 export default function ShopCart() {
-  const {lines, country, quote, problem, images, code, suggest, express} = useLoaderData<typeof loader>();
+  const {lines, country, quote, problem, images, code, suggest, express, accounts, accountEmail} = useLoaderData<typeof loader>();
   const [fill, setFill] = useState<AddressFill | null>(null);
   const actionData = useActionData<{problem?: string}>();
   const navigation = useNavigation();
@@ -193,11 +205,7 @@ export default function ShopCart() {
             <input type="hidden" name="request_key" value={key} />
             <ExpressCheckout config={express} total={quote.total_minor} currency={quote.currency} countries={countries.map((c) => c.code)}
               onFill={(r: ExpressResult) => { setFill({...r.address, name: r.name, phone: r.phone}); fillEmail(r.email); }} />
-            <section className="co-section">
-              <h2 className="co-h">Contact</h2>
-              <Field label="Email" name="email" type="email" autoComplete="email" inputMode="email" />
-              <p className="co-quiet">Checking out as a guest. Accounts are optional.</p>
-            </section>
+            <ContactSection accounts={accounts} accountEmail={accountEmail} />
             <section className="co-section">
               <h2 className="co-h">Delivery</h2>
               <AddressFields country={country} countries={countries} suggest={suggest} fill={fill} onCountry={(c) => void navigate(`/shop/cart?country=${c}`, {replace: true, preventScrollReset: true})} />
