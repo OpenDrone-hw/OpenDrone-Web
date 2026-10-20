@@ -1,10 +1,12 @@
-import {data, useLoaderData} from 'react-router';
+import {data, redirect, useActionData, useLoaderData} from 'react-router';
 import type {Route} from './+types/account.login';
 import {accountsEnabled, safeReturnTo} from '~/lib/accounts/config';
 import {identityProvider} from '~/lib/accounts/idp';
 import {legacyAccountResponse} from '~/lib/accounts/legacy';
 import {startLogin} from '~/lib/accounts/signin';
 import {supportHeaders} from '~/lib/support/server';
+import {appAccountsEnabled, readAccount, sendLinkAction} from '~/lib/commerce/app-account';
+import {SignInForm} from '~/components/commerce/account/AccountPages';
 
 /**
  * GET /account/login?return_to=<path>: a notice first (signing in creates a
@@ -16,8 +18,19 @@ export const headers = supportHeaders;
 
 export const meta: Route.MetaFunction = () => [{title: 'Sign in | OpenDrone'}, {name: 'robots', content: 'noindex, nofollow'}];
 
-export function loader({request, context}: Route.LoaderArgs) {
+/** POST (app mode): email a sign-in link. The checkout posts here too, with `return_to=/shop/cart`. */
+export async function action({request, context}: Route.ActionArgs) {
+  if (!appAccountsEnabled(context.env)) throw new Response('Not found', {status: 404});
+  return sendLinkAction(request, context.env, import.meta.env.DEV);
+}
+
+export async function loader({request, context}: Route.LoaderArgs) {
   const {env} = context;
+  if (appAccountsEnabled(env)) {
+    const returnTo = safeReturnTo(new URL(request.url).searchParams.get('return_to') ?? '/account');
+    if ((await readAccount(request, env)).account) throw redirect(returnTo);
+    return data({appReturnTo: returnTo}, {headers: {'Cache-Control': 'no-store'}});
+  }
   if (!accountsEnabled(env)) return legacyAccountResponse('login', env);
   const url = new URL(request.url);
   if (url.searchParams.get('go') === '1') return startLogin(request, env, identityProvider(env, request));
@@ -29,7 +42,12 @@ export function loader({request, context}: Route.LoaderArgs) {
 }
 
 export default function AccountLoginRoute() {
-  const {continueUrl, chatfpv} = useLoaderData<typeof loader>();
+  const loaded = useLoaderData<typeof loader>();
+  const done = useActionData<typeof action>();
+  if ('appReturnTo' in loaded) {
+    return <SignInForm returnTo={loaded.appReturnTo} sent={Boolean(done && 'sent' in done && done.sent)} email={done?.email ?? ''} problem={done?.problem ?? null} />;
+  }
+  const {continueUrl, chatfpv} = loaded;
   return (
     <div className="page-shell sp-page">
       <header className="page-header">

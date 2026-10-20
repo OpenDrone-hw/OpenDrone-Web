@@ -1,6 +1,6 @@
 import {useEffect, useId, useRef, useState} from 'react';
 import type {KeyboardEvent} from 'react';
-import {Form, useLocation} from 'react-router';
+import {Form, useLocation, useRouteLoaderData} from 'react-router';
 import {Link, NavLink} from '~/components/nav';
 import {AnimatePresence} from 'motion/react';
 import {useAside} from '~/components/Aside';
@@ -18,6 +18,7 @@ import {
   type PodCompanionOption,
 } from '~/components/ProductPods';
 import {Txt} from '~/components/Txt';
+import {AccountMenu} from '~/components/commerce/account/AccountMenu';
 import {EarlyBirdNote, retailFor} from '~/components/EarlyPriceCue';
 import {DiscordLink, DiscordMark} from '~/components/Discord';
 import {copyText} from '~/lib/copy';
@@ -866,6 +867,9 @@ function HeaderCtas({
   cartUrl: string | null;
   hasCart: boolean;
 }) {
+  const root = useRouteLoaderData('root') as {appAccounts?: boolean; appSignedIn?: boolean} | undefined;
+  const appAccounts = Boolean(root?.appAccounts);
+  const appSignedIn = Boolean(root?.appSignedIn);
   return (
     <div className="site-header-actions">
       {/* Utility zone. Hidden in the top bar on phones (it would overflow a
@@ -887,7 +891,9 @@ function HeaderCtas({
         {/* Account, orders and addresses live in Shopify customer accounts:
             an external link, not an in-app route. The signed-in state is
             Shopify's to know, so the label is always "Account". */}
-        {accountUrl ? (
+        {appAccounts && accountUrl ? (
+          <AccountMenu signedIn={appSignedIn} signInUrl={accountUrl} icon={<AccountIcon />} />
+        ) : accountUrl ? (
           <a
             href={accountUrl}
             className="site-header-icon site-header-account"

@@ -1,4 +1,6 @@
-import {useLoaderData} from 'react-router';
+import {useLoaderData, useRouteLoaderData} from 'react-router';
+import {CreateAccountCard} from '~/components/commerce/CreateAccountCard';
+import {appAccountsEnabled, requestLink, verifyUrl} from '~/lib/commerce/app-account';
 import type {Route} from './+types/shop.order';
 import {AppUnavailable, appOp, formatMoney, orderCookie, requireAppCommerce} from '~/lib/commerce/app-api';
 import {ShopFrame} from '~/components/commerce/ShopFrame';
@@ -24,6 +26,14 @@ const PAYMENT_WORDS: Record<string, string> = {
   partially_refunded: 'Partly refunded.',
   refunded: 'Refunded.',
 };
+
+export async function action({context, request}: Route.ActionArgs) {
+  requireAppCommerce(context.env);
+  if (!appAccountsEnabled(context.env) || request.headers.get('Origin') !== new URL(request.url).origin) return {sent: false};
+  const saved = (await orderCookie(context.env).parse(request.headers.get('Cookie'))) as {number?: string; token?: string} | null;
+  if (!saved?.number || !saved.token) return {sent: false};
+  return {sent: await requestLink(context.env, {number: saved.number, token: saved.token}, verifyUrl(request, '/account', import.meta.env.DEV))};
+}
 
 export async function loader({context, request}: Route.LoaderArgs) {
   requireAppCommerce(context.env);
@@ -54,6 +64,7 @@ function nextSteps(status: Status): string[] {
 
 export default function ShopOrder() {
   const {status, problem} = useLoaderData<typeof loader>();
+  const root = useRouteLoaderData('root') as {appAccounts?: boolean; appSignedIn?: boolean} | undefined;
   const test = status?.payment_mode === 'none';
   return (
     <ShopFrame title={status ? 'Thank you for your order' : 'Order'}>
@@ -101,6 +112,7 @@ export default function ShopOrder() {
               ) : null}
             </dl>
           </section>
+          {root?.appAccounts ? <CreateAccountCard signedIn={Boolean(root.appSignedIn)} /> : null}
         </div>
       ) : null}
     </ShopFrame>

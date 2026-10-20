@@ -28,6 +28,7 @@ import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
 import {appCommerceEnabled, readCart} from '~/lib/commerce/app-api';
 import {accountsEnabled} from '~/lib/accounts/config';
 import {hasSessionCookie} from '~/lib/accounts/sessions';
+import {appAccountsEnabled, hasSessionCookie as hasAppSessionCookie} from '~/lib/commerce/app-account';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import siteUiStyles from '~/styles/site-ui.css?url';
@@ -230,14 +231,21 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
     // ACCOUNTS_ENABLED "1": the header links to the on-site account (or
     // "Sign in"); a session cookie is enough for the label, /account
     // checks it. Off: Shopify's customer account URL, unchanged.
+    // App mode with accounts on: the incutec app's own accounts (a mailed sign-in link): /account or /account/login.
     accountUrl: appMode
-      ? null
+      ? appAccountsEnabled(context.env)
+        ? hasAppSessionCookie(request)
+          ? '/account'
+          : `/account/login?return_to=${encodeURIComponent(new URL(request.url).pathname)}`
+        : null
       : accountsEnabled(context.env)
       ? hasSessionCookie(request)
         ? '/account'
         : `/account/login?return_to=${encodeURIComponent(new URL(request.url).pathname)}`
       : customerAccountUrl(context.env),
     accountSignedIn: !appMode && accountsEnabled(context.env) && hasSessionCookie(request),
+    appAccounts: appAccountsEnabled(context.env),
+    appSignedIn: appAccountsEnabled(context.env) && hasAppSessionCookie(request),
     familyProducts: toCards(catalog),
     catalogCurrency: catalog.currency,
     availability: Object.fromEntries(

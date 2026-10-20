@@ -1309,7 +1309,7 @@ html.anim-paused .board-sheet.is-active {
   }
 }
 @media (max-width: 768px) {
-  .site-header-account {
+  .site-header-account:not(.site-header-account-app) {
     display: none;
   }
 }
