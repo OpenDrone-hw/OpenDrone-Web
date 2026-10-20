@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {useFetcher} from 'react-router';
-import {type Quote, formatMoney} from '~/lib/commerce/app-api';
+import {type Quote, formatMoney, vatLabel} from '~/lib/commerce/app-api';
 import {DiscountCode, FreeShippingBar, OrderNote, PickupChoice} from './SummaryOptions';
 import {SummarySuggestions} from './SummarySuggestions';
 
@@ -119,7 +119,7 @@ export function OrderSummary({quote, country, images, pending, code = ''}: {quot
               </dd>
             </div>
             <div className="co-vat">
-              <dt>Includes VAT ({quote.vat_rate}%)</dt>
+              <dt>{vatLabel(quote)}</dt>
               <dd className="co-num">{money(quote.vat_included_minor)}</dd>
             </div>
           </dl>
