@@ -1,6 +1,8 @@
 import {useState} from 'react';
 import {useFetcher} from 'react-router';
 import {type Quote, formatMoney} from '~/lib/commerce/app-api';
+import {DiscountCode, FreeShippingBar, OrderNote, PickupChoice} from './SummaryOptions';
+import {SummarySuggestions} from './SummarySuggestions';
 
 export type SummaryImages = Record<string, {url: string; alt: string} | null>;
 
@@ -31,10 +33,11 @@ function Remove({variant, title}: {variant: string; title: string}) {
 
 /** The order summary column: lines with picture, quantity stepper and remove, then the money rows. On a phone it
  *  folds into a "Show order summary" bar with the total. */
-export function OrderSummary({quote, country, images, pending}: {quote: Quote; country: string; images: SummaryImages; pending: boolean}) {
+export function OrderSummary({quote, country, images, pending, code = ''}: {quote: Quote; country: string; images: SummaryImages; pending: boolean; code?: string}) {
   const [open, setOpen] = useState(false);
   const money = (n: number) => formatMoney(n, quote.currency);
   return (
+    <div className="co-side">
     <aside className="co-summary" aria-label="Order summary" data-open={open} aria-busy={pending}>
       <button type="button" className="co-summary-bar" aria-expanded={open} aria-controls="co-summary-body" onClick={() => setOpen(!open)}>
         <span>{open ? 'Hide order summary' : 'Show order summary'}</span>
@@ -65,14 +68,24 @@ export function OrderSummary({quote, country, images, pending}: {quote: Quote; c
             );
           })}
         </ul>
+        <FreeShippingBar quote={quote} />
+        <DiscountCode quote={quote} code={code} />
+        <PickupChoice quote={quote} />
+        <OrderNote />
         <dl className="co-totals">
           <div>
             <dt>Subtotal</dt>
             <dd className="co-num">{money(quote.subtotal_minor)}</dd>
           </div>
+          {quote.discount && quote.discount.minor > 0 ? (
+            <div>
+              <dt>Discount ({quote.discount.code})</dt>
+              <dd className="co-num">&minus;{money(quote.discount.minor)}</dd>
+            </div>
+          ) : null}
           <div>
-            <dt>Shipping to {country}</dt>
-            <dd className="co-num">{money(quote.shipping_minor)}</dd>
+            <dt>{quote.pickup ? 'Pickup at our Leuven office' : `Shipping to ${country}`}</dt>
+            <dd className="co-num">{quote.shipping_minor === 0 ? 'Free' : money(quote.shipping_minor)}</dd>
           </div>
           <div className="co-grand">
             <dt>Total</dt>
@@ -87,5 +100,7 @@ export function OrderSummary({quote, country, images, pending}: {quote: Quote; c
         </dl>
       </div>
     </aside>
+    <SummarySuggestions skus={quote.lines.map((l) => l.sku).filter(Boolean)} />
+    </div>
   );
 }
