@@ -12,6 +12,8 @@ type Status = {
   state: {payment: string; fulfilment: string};
   quote: {total_minor: number; currency: string};
   bank?: {iban: string; reference: string; amount: string; currency: string};
+  payment_mode?: string;
+  ship_to?: {city: string; country: string};
 };
 
 const PAYMENT_WORDS: Record<string, string> = {
@@ -37,27 +39,68 @@ export async function loader({context, request}: Route.LoaderArgs) {
   }
 }
 
+function nextSteps(status: Status): string[] {
+  if (status.payment_mode === 'none') return ['This is a test order: no payment is taken and nothing will ship.', 'We sent a confirmation mail so you can see what customers get.'];
+  if (status.state.payment === 'paid') return ['We confirmed your payment and sent you a confirmation mail.', 'We prepare your order and mail you the tracking details when it ships.'];
+  if (status.rail === 'bank_transfer') {
+    return [
+      'Transfer the amount below from your bank, with the reference exactly as shown.',
+      'We confirm by mail as soon as the money is in, usually within one or two working days.',
+      'We ship once the payment is confirmed.',
+    ];
+  }
+  return ['We are waiting for your payment provider to confirm the payment. This page updates when it does.', 'We mail you a confirmation, then the tracking details when it ships.'];
+}
+
 export default function ShopOrder() {
   const {status, problem} = useLoaderData<typeof loader>();
+  const test = status?.payment_mode === 'none';
   return (
-    <ShopFrame title={status ? `Order ${status.number}` : 'Order'}>
+    <ShopFrame title={status ? 'Thank you for your order' : 'Order'}>
       {problem ? <p className="app-shop-note">{problem}</p> : null}
       {status ? (
-        <div className="app-shop-order">
-          <p className="app-shop-state">{PAYMENT_WORDS[status.state.payment] ?? status.state.payment}</p>
-          <p className="app-shop-total-line">Total {formatMoney(status.quote.total_minor, status.quote.currency)}</p>
+        <div className="co-thanks">
+          <p className="co-thanks-lead">
+            Order <strong>{status.number}</strong>. {test ? 'Test order, not paid.' : PAYMENT_WORDS[status.state.payment] ?? status.state.payment}
+          </p>
+          <section className="co-card">
+            <h2>What happens next</h2>
+            <ol className="co-steps">
+              {nextSteps(status).map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ol>
+          </section>
           {status.bank && status.state.payment !== 'paid' ? (
-            <dl className="app-shop-bank">
-              <dt>Account</dt>
-              <dd>{status.bank.iban || 'not configured'}</dd>
-              <dt>Reference</dt>
-              <dd>{status.bank.reference}</dd>
-              <dt>Amount</dt>
-              <dd>
-                {status.bank.currency} {status.bank.amount}
-              </dd>
-            </dl>
+            <section className="co-card">
+              <h2>Bank transfer details</h2>
+              <dl className="co-kv">
+                <dt>Account</dt>
+                <dd>{status.bank.iban || 'not configured'}</dd>
+                <dt>Reference</dt>
+                <dd>{status.bank.reference}</dd>
+                <dt>Amount</dt>
+                <dd>
+                  {status.bank.currency} {status.bank.amount}
+                </dd>
+              </dl>
+            </section>
           ) : null}
+          <section className="co-card">
+            <h2>Your order</h2>
+            <dl className="co-kv">
+              <dt>Total</dt>
+              <dd>{formatMoney(status.quote.total_minor, status.quote.currency)}</dd>
+              {status.ship_to ? (
+                <>
+                  <dt>Shipping to</dt>
+                  <dd>
+                    {status.ship_to.city}, {status.ship_to.country}
+                  </dd>
+                </>
+              ) : null}
+            </dl>
+          </section>
         </div>
       ) : null}
     </ShopFrame>
