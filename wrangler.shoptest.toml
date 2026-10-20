@@ -25,4 +25,4 @@ CHATFPV_ASK_ENABLED = "0"
 CHATFPV_WIDGET_ENABLED = "0"
 HANDOFF_ENABLED = "0"
 # Checkout address suggestions: Photon (OpenStreetMap, no key). Express wallets stay off: no payment key.
-ADDRESS_PROVIDER = "photon"
+ADDRESS_PROVIDER = "geoapify"  # needs the GEOAPIFY_API_KEY Worker secret; without it the shop offers no suggestions (none)
