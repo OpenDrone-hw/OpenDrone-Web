@@ -16,8 +16,8 @@ for (const cc of countries) {
   for (const line of readFileSync(join(work, `${cc}.txt`), 'utf8').split('\n')) {
     const [, code, place] = line.split('\t');
     if (!code || !place) continue;
-    // NL is published by the 4 digits; a code in the file with letters is cut to its digits.
-    const key = cc === 'NL' ? code.slice(0, 4) : code;
+    // NL is published by the 4 digits; a code in the file with letters is cut to its digits; LU's "L-1111" is kept as 1111.
+    const key = cc === 'NL' ? code.slice(0, 4) : code.replace(/^L-/, '');
     const list = (map[key] ??= []);
     if (!list.includes(place)) list.push(place);
   }
