@@ -30,8 +30,10 @@
 .co-extras { order: 1; display: grid; gap: 1rem; }
 .co-extras .cart-addons, .co-extras .cart-suggest { margin: 0; }
 @media (min-width: 62rem) {
-  .co-side { display: grid; gap: 1rem; align-content: start; position: sticky; top: calc(var(--header-height, 5rem) + 1.5rem);
-    max-height: calc(100dvh - var(--header-height, 5rem) - 2.5rem); overflow-y: auto; scrollbar-width: thin; }
+  /* One column that scrolls with the page: no scroll area of its own (founder 2026-10-20). It sticks only while the whole
+     column fits under the header (OrderSummary sets data-fits), so nothing is ever cut off or slides under another card. */
+  .co-side { display: grid; gap: 1rem; align-content: start; }
+  .co-side[data-fits] { position: sticky; top: calc(var(--header-height, 5rem) + 1.5rem); }
   .co-side .co-summary { position: static; }
   .co-extras { order: 0; }
 }
