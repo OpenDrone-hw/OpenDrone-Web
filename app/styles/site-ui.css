@@ -2120,3 +2120,21 @@ body:has(.test-banner) .site-header {
 .co-kv { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1.5rem; margin: 0; }
 .co-kv dt { color: var(--color-text-muted); font-size: 0.8125rem; }
 .co-kv dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+
+/* Checkout address: street combobox, express wallets */
+.co-combo { position: relative; }
+.co-combo > label > span { font-size: 0.8125rem; color: var(--color-text-muted); }
+.co-combo input { width: 100%; box-sizing: border-box; min-height: 3rem; padding: 0 0.875rem; font: inherit; font-size: 1rem;
+  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--r-md); }
+.co-combo input:focus-visible { outline: none; border-color: var(--color-gold); box-shadow: 0 0 0 3px var(--color-gold-soft); }
+.co-suggest { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin: 0.25rem 0 0; padding: 0.25rem; list-style: none; max-height: 18rem; overflow-y: auto;
+  background: var(--color-bg-card); border: 1px solid var(--color-border-strong); border-radius: var(--r-md); box-shadow: 0 8px 24px rgb(0 0 0 / 0.25); }
+.co-suggest[hidden] { display: none; }
+.co-suggest-item { min-height: 2.75rem; display: flex; align-items: center; padding: 0 0.75rem; border-radius: var(--r-sm, 6px); cursor: pointer; font-size: 0.9375rem; color: var(--color-text); }
+.co-suggest-item:hover, .co-suggest-item[aria-selected="true"] { background: var(--color-gold-soft); }
+.co-row-city-first { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.co-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.co-express { display: grid; gap: 0.75rem; }
+.co-express-btn { min-height: 3rem; border: 0; border-radius: var(--r-md); cursor: pointer; font: inherit; font-weight: 600; background: #000; color: #fff; }
+.co-express-btn:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
+.co-or { margin: 0; text-align: center; font-size: 0.8125rem; color: var(--color-text-muted); }
