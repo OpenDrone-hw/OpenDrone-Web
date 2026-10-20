@@ -384,14 +384,16 @@ export function CartAddedDialog() {
         />
 
         <div className="cart-added-foot">
-          <ShipToSelect
-            country={visitor}
-            usRate={usRate}
-            className="ship-to cart-added-ship-to"
-            onChanged={(reply) => {
-              if (reply.summary) setSummary(reply.summary);
-            }}
-          />
+          {rootData?.appCommerce ? null : (
+            <ShipToSelect
+              country={visitor}
+              usRate={usRate}
+              className="ship-to cart-added-ship-to"
+              onChanged={(reply) => {
+                if (reply.summary) setSummary(reply.summary);
+              }}
+            />
+          )}
           {subtotal && notDirect ? (
             <p className="cart-added-subtotal">
               <span>

@@ -16,6 +16,8 @@
 import type {Catalog} from './catalog.ts';
 import {fetchShopifyCatalog} from './shopify-storefront.ts';
 import {memoCatalog} from './catalog-memo.ts';
+import {appCommerceEnabled} from './commerce/app-api.ts';
+import {appCatalogClient} from './commerce/app-catalog.ts';
 import {
   applyCampaign,
   campaignSkus,
@@ -77,6 +79,7 @@ async function withCampaign(env: Env, catalog: Catalog, region: Region): Promise
 
 
 export function createCatalogClient({env, request}: {env: Env; request?: Request}): CatalogClient {
+  if (appCommerceEnabled(env)) return appCatalogClient(env);
   const cached = catalogReader(env, request, (market = 'default') =>
     memoCatalog(market, () =>
       market === 'default' ? fetchShopifyCatalog(env) : fetchShopifyCatalog(env, fetch, market),

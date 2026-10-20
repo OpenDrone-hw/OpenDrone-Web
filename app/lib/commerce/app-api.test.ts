@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync, readdirSync} from 'node:fs';
 import {describe, it} from 'node:test';
 import {
   AppUnavailable,
@@ -30,10 +30,15 @@ describe('app commerce source', () => {
     assert.equal(appCommerceEnabled({COMMERCE_SOURCE: 'app'}), false);
     assert.equal(appCommerceEnabled(ENV), true);
     assert.throws(() => requireAppCommerce({}), (r: unknown) => r instanceof Response && r.status === 404);
-    for (const file of ['wrangler.toml', 'wrangler.production.toml']) {
+    // Every wrangler file, the test shop's included: the app source is passed at deploy time, never written.
+    const files = readdirSync(new URL('../../../', import.meta.url)).filter((f) => /^wrangler.*\.toml$/.test(f));
+    assert.ok(files.includes('wrangler.toml') && files.includes('wrangler.production.toml') && files.includes('wrangler.shoptest.toml'));
+    for (const file of files) {
       const toml = readFileSync(new URL(`../../../${file}`, import.meta.url), 'utf8');
-      assert.doesNotMatch(toml, /COMMERCE_SOURCE|APP_API_URL|APP_STOREFRONT_TOKEN/, file);
+      assert.doesNotMatch(toml, /COMMERCE_SOURCE|APP_API_URL|APP_STOREFRONT_TOKEN|APP_PROJECT|APP_ACCESS|TEST_BANNER/, file);
     }
+    const shoptest = readFileSync(new URL('../../../wrangler.shoptest.toml', import.meta.url), 'utf8');
+    assert.doesNotMatch(shoptest, /^\s*(routes?|\[\[d1_databases|\[\[services|\[triggers)/m);
   });
 
   it('calls one app operation with the Access service token, the bearer and the project', async () => {

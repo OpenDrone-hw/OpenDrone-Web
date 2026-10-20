@@ -5,11 +5,16 @@ import {
   handleShopifyCartLoader,
   setCartCountry,
 } from '~/lib/shopify-cart-action';
+import {appCommerceEnabled} from '~/lib/commerce/app-api';
+import {handleAppCartAction, handleAppCartLoader} from '~/lib/commerce/app-cart';
 import type {Route} from './+types/api.shopify.cart';
 
 export const CART_KEY = 'shopifyCartId';
 
 export async function action({request, context}: Route.ActionArgs) {
+  if (appCommerceEnabled(context.env)) {
+    return handleAppCartAction(request, context.env, await context.catalog.fresh.forBuyer());
+  }
   return handleShopifyCartAction(request, context.env, {
     // The campaign-aware catalog for this request's destination: the same
     // ship promise and price the page showed, and campaign SKUs closed when
@@ -38,6 +43,9 @@ export async function action({request, context}: Route.ActionArgs) {
 }
 
 export function loader({request, context}: Route.LoaderArgs) {
+  if (appCommerceEnabled(context.env)) {
+    return handleAppCartLoader(request, context.env, () => context.catalog.forBuyer());
+  }
   return handleShopifyCartLoader(request, context.env, {
     getCartId: () => context.session.get(CART_KEY) as string | undefined,
     unsetCartId: () => context.session.unset(CART_KEY),

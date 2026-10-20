@@ -90,6 +90,8 @@ declare global {
     APP_ACCESS_CLIENT_SECRET?: string;
     APP_STOREFRONT_TOKEN?: string;
     APP_PROJECT?: string;
+    // Text of a slim banner above every page (a test shop: "TEST SHOP: no real payments"). Unset: no banner.
+    TEST_BANNER?: string;
 
     // Checkout mutation gate. The catalog stays read-only unless this is
     // exactly '1'. Production and staging set it in their wrangler [vars].
