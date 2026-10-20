@@ -1,0 +1,569 @@
+{
+  "_note": "Fixture in the shape of the app's storefront.catalog snapshot. Handles and options are the public ones of opendrone.be/products.json; ids and collections are invented.",
+  "currency": "EUR",
+  "products": [
+    {
+      "id": "gid://shopify/Product/9000",
+      "handle": "battery-strap-15-x-200-mm-woven-logo",
+      "title": "Battery strap, 15 x 200 mm, woven logo",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1001",
+          "sku": "ACC-STRAP-15X200",
+          "title": "Default Title",
+          "options": {
+            "Title": "Default Title"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9001",
+      "handle": "battery-strap",
+      "title": "Battery strap, 20 x 220 mm, woven logo",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1002",
+          "sku": "ACC-STRAP-20X220",
+          "title": "Default Title",
+          "options": {
+            "Title": "Default Title"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9002",
+      "handle": "capacitor-470uf-35v-low-esr",
+      "title": "Capacitor, 470 \u00b5F 35V low-ESR",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1003",
+          "sku": "ACC-CAP-470UF-35V",
+          "title": "Default Title",
+          "options": {
+            "Title": "Default Title"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9003",
+      "handle": "capacitor-470uf-50v-low-esr",
+      "title": "Capacitor, 470 \u00b5F 50V low-ESR",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1004",
+          "sku": "ACC-CAP-470UF-50V",
+          "title": "Default Title",
+          "options": {
+            "Title": "Default Title"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9004",
+      "handle": "elrs-antenna-24",
+      "title": "ELRS 2.4 GHz Antenna",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1005",
+          "sku": "ACC-ANT-T",
+          "title": "T-style",
+          "options": {
+            "Type": "T-style"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9005",
+      "handle": "elrs-868-915-mhz-2-4-ghz-u-fl-t-style-antenna",
+      "title": "ELRS 868/915 MHz + 2.4 GHz U.FL T-style antenna",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1006",
+          "sku": "ACC-ANT-DUAL-T",
+          "title": "Default Title",
+          "options": {
+            "Title": "Default Title"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9006",
+      "handle": "gemfan-3020-3-propeller-set-3-inch-t-mount",
+      "title": "Gemfan 3020-3 propeller set, 3 inch T-mount",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1007",
+          "sku": "ACC-PROP-3-GF-3020",
+          "title": "Default Title",
+          "options": {
+            "Title": "Default Title"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9007",
+      "handle": "gemfan-hurricane-51466-v2-propeller-set-5-inch",
+      "title": "Gemfan Hurricane 51466 V2 propeller set, 5 inch",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1008",
+          "sku": "ACC-PROP-5-GF-51466",
+          "title": "Default Title",
+          "options": {
+            "Title": "Default Title"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9008",
+      "handle": "hqprop-5x4-3x3-v2s-propeller-set-5-inch",
+      "title": "HQProp 5x4.3x3 V2S propeller set, 5 inch",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1009",
+          "sku": "ACC-PROP-5-HQ-5X43X3-V2S",
+          "title": "Default Title",
+          "options": {
+            "Title": "Default Title"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9009",
+      "handle": "hqprop-durable-t3x2x3-propeller-set-3-inch-t-mount",
+      "title": "HQProp Durable T3x2x3 propeller set, 3 inch T-mount",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1010",
+          "sku": "ACC-PROP-3-HQ-T3X2X3-DUR",
+          "title": "Default Title",
+          "options": {
+            "Title": "Default Title"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9010",
+      "handle": "hqprop-juicy-j37-propeller-set-5-inch",
+      "title": "HQProp Juicy J37 propeller set, 5 inch",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1011",
+          "sku": "ACC-PROP-5-HQ-J37",
+          "title": "Default Title",
+          "options": {
+            "Title": "Default Title"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9011",
+      "handle": "hqprop-t3x3x3-propeller-set-3-inch-t-mount",
+      "title": "HQProp T3x3x3 propeller set, 3 inch T-mount",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1012",
+          "sku": "ACC-PROP-3-HQ-T3X3X3",
+          "title": "Default Title",
+          "options": {
+            "Title": "Default Title"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9012",
+      "handle": "openesc",
+      "title": "OpenESC",
+      "type": "4-in-1 ESC",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1013",
+          "sku": "OPENESC-2020",
+          "title": "20\u00d720",
+          "options": {
+            "Model": "20\u00d720"
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1014",
+          "sku": "OPENESC-3030",
+          "title": "30\u00d730",
+          "options": {
+            "Model": "30\u00d730"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9013",
+      "handle": "openfc-lite",
+      "title": "OpenFC Lite",
+      "type": "Flight Controller",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1015",
+          "sku": "OPENFC-LITE-2020",
+          "title": "20\u00d720",
+          "options": {
+            "Model": "20\u00d720"
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1016",
+          "sku": "OPENFC-LITE-3030",
+          "title": "30\u00d730",
+          "options": {
+            "Model": "30\u00d730"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9014",
+      "handle": "openframe",
+      "title": "OpenFrame",
+      "type": "Carbon Frame",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1017",
+          "sku": "OPENFRAME-5",
+          "title": "5\" Freestyle",
+          "options": {
+            "Model": "5\" Freestyle"
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1018",
+          "sku": "OPENFRAME-3",
+          "title": "3\" Freestyle",
+          "options": {
+            "Model": "3\" Freestyle"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9015",
+      "handle": "openframe-spares",
+      "title": "OpenFrame spare parts",
+      "type": "Accessory",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1019",
+          "sku": "ACC-FRM-ARM-3",
+          "title": "Arm / 3\"",
+          "options": {
+            "Part": "Arm",
+            "Size": "3\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1020",
+          "sku": "ACC-FRM-ARM-5",
+          "title": "Arm / 5\"",
+          "options": {
+            "Part": "Arm",
+            "Size": "5\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1021",
+          "sku": "ACC-FRM-TOP-3",
+          "title": "Top plate / 3\"",
+          "options": {
+            "Part": "Top plate",
+            "Size": "3\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1022",
+          "sku": "ACC-FRM-TOP-5",
+          "title": "Top plate / 5\"",
+          "options": {
+            "Part": "Top plate",
+            "Size": "5\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1023",
+          "sku": "ACC-FRM-MID-3",
+          "title": "Middle plate / 3\"",
+          "options": {
+            "Part": "Middle plate",
+            "Size": "3\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1024",
+          "sku": "ACC-FRM-MID-5",
+          "title": "Middle plate / 5\"",
+          "options": {
+            "Part": "Middle plate",
+            "Size": "5\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1025",
+          "sku": "ACC-FRM-BOT-3",
+          "title": "Bottom plate / 3\"",
+          "options": {
+            "Part": "Bottom plate",
+            "Size": "3\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1026",
+          "sku": "ACC-FRM-BOT-5",
+          "title": "Bottom plate / 5\"",
+          "options": {
+            "Part": "Bottom plate",
+            "Size": "5\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1027",
+          "sku": "ACC-FRM-CROSS-3",
+          "title": "Cross / 3\"",
+          "options": {
+            "Part": "Cross",
+            "Size": "3\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1028",
+          "sku": "ACC-FRM-CROSS-5",
+          "title": "Cross / 5\"",
+          "options": {
+            "Part": "Cross",
+            "Size": "5\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1029",
+          "sku": "ACC-FRM-CAM-3",
+          "title": "Camera mount pair / 3\"",
+          "options": {
+            "Part": "Camera mount pair",
+            "Size": "3\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1030",
+          "sku": "ACC-FRM-CAM-5",
+          "title": "Camera mount pair / 5\"",
+          "options": {
+            "Part": "Camera mount pair",
+            "Size": "5\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1031",
+          "sku": "ACC-FRM-HW-3",
+          "title": "Hardware kit / 3\"",
+          "options": {
+            "Part": "Hardware kit",
+            "Size": "3\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1032",
+          "sku": "ACC-FRM-HW-5",
+          "title": "Hardware kit / 5\"",
+          "options": {
+            "Part": "Hardware kit",
+            "Size": "5\""
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1033",
+          "sku": "ACC-FRM-PAD",
+          "title": "Battery pad / 3\" and 5\"",
+          "options": {
+            "Part": "Battery pad",
+            "Size": "3\" and 5\""
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9016",
+      "handle": "openmotor",
+      "title": "OpenMotor",
+      "type": "Motors",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1034",
+          "sku": "OPENMOTOR-1604",
+          "title": "1604 / 6S",
+          "options": {
+            "Model": "1604",
+            "Cells": "6S"
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1035",
+          "sku": "OPENMOTOR-2306",
+          "title": "2306 / 6S",
+          "options": {
+            "Model": "2306",
+            "Cells": "6S"
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1036",
+          "sku": "OPENMOTOR-1604-4S",
+          "title": "1604 / 4S",
+          "options": {
+            "Model": "1604",
+            "Cells": "4S"
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1037",
+          "sku": "OPENMOTOR-2306-4S",
+          "title": "2306 / 4S",
+          "options": {
+            "Model": "2306",
+            "Cells": "4S"
+          },
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/Product/9017",
+      "handle": "openrx",
+      "title": "OpenRX",
+      "type": "ELRS Receiver",
+      "variants": [
+        {
+          "id": "gid://shopify/ProductVariant/1038",
+          "sku": "OPENRX-LITE",
+          "title": "Lite",
+          "options": {
+            "Model": "Lite"
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1039",
+          "sku": "OPENRX-LITE-UFL",
+          "title": "Lite-UFL",
+          "options": {
+            "Model": "Lite-UFL"
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1040",
+          "sku": "OPENRX-MONO",
+          "title": "Mono",
+          "options": {
+            "Model": "Mono"
+          },
+          "available": true
+        },
+        {
+          "id": "gid://shopify/ProductVariant/1041",
+          "sku": "OPENRX-GEMINI",
+          "title": "Gemini",
+          "options": {
+            "Model": "Gemini"
+          },
+          "available": true
+        }
+      ]
+    }
+  ],
+  "collections": [
+    {
+      "handle": "all",
+      "title": "all"
+    },
+    {
+      "handle": "frames",
+      "title": "frames"
+    },
+    {
+      "handle": "receivers",
+      "title": "receivers"
+    },
+    {
+      "handle": "flight-controllers",
+      "title": "flight-controllers"
+    },
+    {
+      "handle": "escs",
+      "title": "escs"
+    },
+    {
+      "handle": "motors",
+      "title": "motors"
+    },
+    {
+      "handle": "accessories",
+      "title": "accessories"
+    }
+  ],
+  "version": "fixture"
+}

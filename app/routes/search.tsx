@@ -1,4 +1,5 @@
 import {redirect} from 'react-router';
+import {legacyRedirect} from '~/lib/legacy-urls';
 
 /**
  * Search was Shopify's predictive search over products, pages and
@@ -6,6 +7,6 @@ import {redirect} from 'react-router';
  * catalog instead, so /search 301s there with the term preserved.
  */
 export function loader({request}: {request: Request}) {
-  const term = new URL(request.url).searchParams.get('q');
-  throw redirect(term ? `/products?q=${encodeURIComponent(term)}` : '/products', 301);
+  const url = new URL(request.url);
+  throw redirect(legacyRedirect(url.pathname, url.search)?.to ?? '/products', 301);
 }
