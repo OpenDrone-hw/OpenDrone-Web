@@ -94,7 +94,7 @@ export function SummarySuggestions({skus}: {skus: string[]}) {
   };
 
   return (
-    <div className="co-suggest">
+    <div className="co-extras">
       {extras.length ? (
         <div className="cart-addons">
           <p className="cart-added-build-title">{t('extras_title', 'Add-ons')}</p>
