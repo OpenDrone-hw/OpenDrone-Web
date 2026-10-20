@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {useFetcher} from 'react-router';
 import {type Quote, formatMoney} from '~/lib/commerce/app-api';
 import {DiscountCode, FreeShippingBar, OrderNote, PickupChoice} from './SummaryOptions';
@@ -33,11 +33,36 @@ function Remove({variant, title}: {variant: string; title: string}) {
 
 /** The order summary column: lines with picture, quantity stepper and remove, then the money rows. On a phone it
  *  folds into a "Show order summary" bar with the total. */
+/** True while the element fits in the viewport below the sticky header, so the summary column may stick; a taller
+ *  column (many lines, add-ons, a build) flows with the page instead of becoming its own scroll area. */
+function useFitsViewport() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [value, setValue] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const check = () => {
+      const header = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 80;
+      setValue(el.scrollHeight + header + 48 <= window.innerHeight);
+    };
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    window.addEventListener('resize', check);
+    check();
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', check);
+    };
+  }, []);
+  return {ref, value};
+}
+
 export function OrderSummary({quote, country, images, pending, code = ''}: {quote: Quote; country: string; images: SummaryImages; pending: boolean; code?: string}) {
   const [open, setOpen] = useState(false);
+  const fits = useFitsViewport();
   const money = (n: number) => formatMoney(n, quote.currency);
   return (
-    <div className="co-side">
+    <div className="co-side" ref={fits.ref} data-fits={fits.value || undefined}>
       <aside className="co-summary" aria-label="Order summary" data-open={open} aria-busy={pending}>
         <button type="button" className="co-summary-bar" aria-expanded={open} aria-controls="co-summary-body" onClick={() => setOpen(!open)}>
           <span>{open ? 'Hide order summary' : 'Show order summary'}</span>

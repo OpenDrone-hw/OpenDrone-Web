@@ -2032,7 +2032,7 @@ body:has(.test-banner) .site-header {
 .co-summary { order: -1; }
 @media (min-width: 62rem) {
   .co { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 3rem; }
-  .co-summary { order: 0; position: sticky; top: calc(var(--header-height, 5rem) + 1.5rem); }
+  .co-summary { order: 0; }
 }
 .co-form { display: grid; gap: 2rem; }
 .co-section { display: grid; gap: 0.875rem; border: 0; margin: 0; padding: 0; min-width: 0; }

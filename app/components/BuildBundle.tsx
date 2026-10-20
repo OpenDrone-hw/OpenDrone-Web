@@ -11,6 +11,13 @@ function t(key: string, fallback: string, vars: Record<string, string> = {}): st
 }
 
 /** The cart form fields that add every part at once. */
+/** A part's name as the bundle lists it: product title, plus the variant unless it is the default one. */
+function partName(part: {product: {title: string; handle: string}; variant: {title: string}}): string {
+  return part.variant.title !== 'Default Title'
+    ? `${part.product.title} ${variantDisplayName(part.product.handle, part.variant.title)}`
+    : part.product.title;
+}
+
 export function bundleFields(parts: readonly BuildSuggestion[]): Array<[string, string]> {
   return [['lines', parts.map((p) => `${p.sku}:${p.quantity}`).join(',')]];
 }
@@ -57,10 +64,7 @@ export function BuildBundle({
       <ul className="build-bundle-parts">
         {parts.map((part) => {
           const image = part.variant.image ?? part.product.featuredImage;
-          const name =
-            part.variant.title !== 'Default Title'
-              ? `${part.product.title} ${variantDisplayName(part.product.handle, part.variant.title)}`
-              : part.product.title;
+          const name = partName(part);
           return (
             <li key={part.sku}>
               {image ? (
@@ -78,10 +82,12 @@ export function BuildBundle({
       </ul>
       <div className="build-bundle-foot">
         <span className="build-bundle-total">
-          {t('bundle_total', '{count} parts, {price}', {
-            count: String(parts.length),
-            price: formatPrice(total, currency),
-          })}
+          {parts.length === 1
+            ? t('bundle_total_one', '1 part, {price}', {price: formatPrice(total, currency)})
+            : t('bundle_total', '{count} parts, {price}', {
+                count: String(parts.length),
+                price: formatPrice(total, currency),
+              })}
         </span>
         <button type="button" className="build-bundle-add" disabled={busy} aria-busy={busy || undefined} onClick={onAdd}>
           {busy ? (
@@ -92,7 +98,10 @@ export function BuildBundle({
           ) : failed ? (
             t('build_retry', 'Try again')
           ) : (
-            t('bundle_add', 'Add all {count}', {count: String(parts.length)})
+            // One part: name it ("Add OpenRX Lite-UFL"); "Add all 1" read wrong (founder 2026-10-20).
+            parts.length === 1
+              ? t('bundle_add_one', 'Add {name}', {name: partName(parts[0]!)})
+              : t('bundle_add', 'Add all {count}', {count: String(parts.length)})
           )}
         </button>
       </div>
