@@ -58,3 +58,38 @@ describe('fetchPosts', () => {
     assert.deepEqual(posts.map((p) => p.handle), ['a']);
   });
 });
+
+describe('fetchPosts in app mode', () => {
+  const appEnv = {...env, COMMERCE_SOURCE: 'app', APP_API_URL: 'https://app.example'} as unknown as Parameters<typeof fetchPosts>[0];
+  const appPost = {
+    handle: 'a',
+    title: 'Title a',
+    published_at: '2026-10-02T10:00:00Z',
+    excerpt: ' A deck. ',
+    tags: ['no-archive'],
+    author: null,
+    image: {url: 'https://files.example/a.png', alt: ''},
+    content_html: '<p>Body</p>',
+  };
+
+  it('reads the app snapshot and never calls Shopify', async () => {
+    const calls: string[] = [];
+    const fetcher = (async (url: unknown) => {
+      calls.push(String(url));
+      return new Response(JSON.stringify({ok: true, data: {posts: [appPost]}}), {headers: {'content-type': 'application/json'}});
+    }) as typeof fetch;
+    const posts = await fetchPosts(appEnv, fetcher);
+    assert.deepEqual(calls, ['https://app.example/api/ops/storefront.posts']);
+    assert.equal(posts[0]?.handle, 'a');
+    assert.equal(posts[0]?.excerpt, 'A deck.');
+    assert.deepEqual(posts[0]?.image, {url: 'https://files.example/a.png', altText: null});
+    assert.deepEqual((await archivePosts(appEnv, fetcher)).map((p) => p.handle), []);
+  });
+
+  it('returns no posts when the app does not answer', async () => {
+    const down = (async () => {
+      throw new Error('down');
+    }) as typeof fetch;
+    assert.deepEqual(await fetchPosts(appEnv, down), []);
+  });
+});

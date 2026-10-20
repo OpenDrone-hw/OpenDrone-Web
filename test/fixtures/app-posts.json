@@ -1,0 +1,26 @@
+{
+  "_note": "Fixture in the shape of the app's storefront.posts snapshot. Handles are the public ones of opendrone.be/sitemap.xml.",
+  "posts": [
+    {
+      "handle": "why-every-drone-frame-is-carbon-fibre",
+      "title": "why-every-drone-frame-is-carbon-fibre",
+      "published_at": "2026-10-01T00:00:00Z"
+    },
+    {
+      "handle": "opendrone-launch",
+      "title": "opendrone-launch",
+      "published_at": "2026-10-01T00:00:00Z"
+    },
+    {
+      "handle": "openrx-range-test",
+      "title": "openrx-range-test",
+      "published_at": "2026-10-01T00:00:00Z"
+    },
+    {
+      "handle": "incutec-founding",
+      "title": "incutec-founding",
+      "published_at": "2026-10-01T00:00:00Z"
+    }
+  ],
+  "version": "fixture"
+}

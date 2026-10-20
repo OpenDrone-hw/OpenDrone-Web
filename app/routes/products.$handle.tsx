@@ -66,6 +66,7 @@ import {fetchContributors} from '~/lib/github';
 import {orderByCredits, snapshotContributors} from '~/lib/contributors-snapshot';
 import {CONTRIBUTING_URL} from '~/lib/company';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
+import {variantRedirect} from '~/lib/legacy-urls';
 import {copy, copyText, editAttrs} from '~/lib/copy';
 import {
   resolveChapters,
@@ -291,6 +292,11 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   if (!entry) {
     throw new Response(null, {status: 404});
   }
+
+  // An old Shopify link, /products/<handle>?variant=<id>: the id becomes this site's option parameters.
+  const url = new URL(request.url);
+  const chosen = variantRedirect(url.pathname, url.search, entry.variants);
+  if (chosen) throw redirect(`${chosen}${url.hash}`, 301);
 
   const product = toProduct(
     catalog,

@@ -12,6 +12,7 @@
  */
 
 import {storefrontRequest} from './shopify-storefront.ts';
+import {appCommerceEnabled, edgeCache, snapshot, type AppEnv, type AppPost} from './commerce/app-api.ts';
 
 export const BLOG_HANDLE = 'news';
 
@@ -41,7 +42,7 @@ type ArticleWire = {
   contentHtml: string;
 };
 
-type PostsEnv = Parameters<typeof storefrontRequest>[0];
+type PostsEnv = Parameters<typeof storefrontRequest>[0] & Partial<AppEnv>;
 
 export const POSTS_QUERY = `#graphql
   query OpenDronePosts($blog: String!, $first: Int!) {
@@ -70,8 +71,33 @@ export function mapArticle(a: ArticleWire): Post {
   };
 }
 
-/** Every published post, newest first. Empty when Shopify is unreachable. */
+/** A post of the app's `storefront.posts` snapshot in the shape of this page. */
+export function mapAppPost(p: AppPost): Post {
+  return {
+    handle: p.handle,
+    title: p.title,
+    publishedAt: p.published_at,
+    excerpt: p.excerpt?.trim() || null,
+    tags: p.tags ?? [],
+    author: p.author,
+    image: p.image ? {url: p.image.url, altText: p.image.alt || null} : null,
+    contentHtml: p.content_html,
+  };
+}
+
+/**
+ * Every published post, newest first. Empty when the source is unreachable. With COMMERCE_SOURCE=app the source is
+ * the app (a stale edge copy serves an outage), so /newsletter/<handle> keeps answering after Shopify closes.
+ */
 export async function fetchPosts(env: PostsEnv, fetcher: typeof fetch = fetch): Promise<Post[]> {
+  if (appCommerceEnabled(env)) {
+    try {
+      return (await snapshot<{posts: AppPost[]}>(env as AppEnv, 'storefront.posts', edgeCache(), fetcher)).posts.map(mapAppPost);
+    } catch (error) {
+      console.error('[posts] app posts unavailable', error instanceof Error ? error.message : error);
+      return [];
+    }
+  }
   try {
     const data = await storefrontRequest<{blog: {articles: {nodes: ArticleWire[]}} | null}>(
       env,
