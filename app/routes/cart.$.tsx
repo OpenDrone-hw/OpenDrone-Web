@@ -19,6 +19,8 @@ import {
   type CartLineInfo,
 } from '~/lib/shopify-cart-action';
 import {formatPrice} from '~/lib/catalog';
+import {appCommerceEnabled} from '~/lib/commerce/app-api';
+import {APP_CART_PATH} from '~/lib/commerce/app-catalog';
 import {EarlyBirdNote, useAnyEarlySku} from '~/components/EarlyPriceCue';
 import {
   buildSuggestionSpecs,
@@ -102,6 +104,8 @@ export const meta: Route.MetaFunction = () =>
 export const headers: Route.HeadersFunction = () => ({'Cache-Control': 'no-store'});
 
 export async function loader({context, params, request}: Route.LoaderArgs) {
+  // App mode: the cart is the app's (no Shopify cart exists).
+  if (appCommerceEnabled(context.env)) throw redirect(APP_CART_PATH, 303);
   if (!checkoutOpen(context.env) || params['*']) throw redirect('/products', 301);
   let cart = await loadSessionCart(context.env, {
     getCartId: () => context.session.get(CART_KEY) as string | undefined,

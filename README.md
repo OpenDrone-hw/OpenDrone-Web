@@ -43,6 +43,16 @@ missing catalog settings render an error page. Variants marked Sold out or
 closed stay selectable on every run: sold-out state only disables the buy
 button.
 
+### Test shop on the incutec app
+
+With `COMMERCE_SOURCE=app` (and `APP_API_URL`, `APP_PROJECT`, `APP_STOREFRONT_TOKEN`, optionally the Access
+service token pair and `TEST_BANNER`) the whole site reads its catalog from the app (`storefront.catalog`),
+the buy buttons add to the app cart and `/cart` redirects to `/shop/cart`; no `SHOPIFY_*` value is needed and
+Shopify is never called. Accounts links are hidden. Production and staging never set these variables
+(`app/lib/commerce/app-api.test.ts` reads every `wrangler*.toml`). `wrangler.shoptest.toml` is the test Worker
+(`opendrone-web-shoptest`, workers.dev only); pass the variables at deploy time with `--var`. Locally put them
+in `.dev.vars` and run `npm run dev`.
+
 ## Commands
 
 | Command | Does |

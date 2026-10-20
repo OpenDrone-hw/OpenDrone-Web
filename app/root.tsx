@@ -25,6 +25,7 @@ import {toCards} from '~/lib/catalog';
 import {buyerCountry} from '~/lib/shipping-rates';
 import {usSalesRate} from '~/lib/us-sales';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
+import {appCommerceEnabled, readCart} from '~/lib/commerce/app-api';
 import {accountsEnabled} from '~/lib/accounts/config';
 import {hasSessionCookie} from '~/lib/accounts/sessions';
 import resetStyles from '~/styles/reset.css?url';
@@ -215,21 +216,28 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
   // once a minute per isolate (app/lib/catalog-memo.ts); the cart reads fresh;
   // a failure degrades to an empty catalog rather than a 500.
   const catalog = await context.catalog.forBuyer();
+  // COMMERCE_SOURCE=app: the cart is the app's (signed cookie), accounts are Shopify's and so hidden.
+  const appMode = appCommerceEnabled(context.env);
+  const hasCart = appMode
+    ? (await readCart(request, context.env)).length > 0
+    : context.session.has('shopifyCartId');
 
   return {
-    commerceHandoff: commerceHandoff(
-      catalog,
-      context.session.has('shopifyCartId'),
-    ),
+    commerceHandoff: commerceHandoff(catalog, hasCart),
+    testBanner: context.env.TEST_BANNER?.trim() || null,
+    // The app prices the cart and takes the destination at its own cart page: no Ship to select in the drawer.
+    appCommerce: appMode,
     // ACCOUNTS_ENABLED "1": the header links to the on-site account (or
     // "Sign in"); a session cookie is enough for the label, /account
     // checks it. Off: Shopify's customer account URL, unchanged.
-    accountUrl: accountsEnabled(context.env)
+    accountUrl: appMode
+      ? null
+      : accountsEnabled(context.env)
       ? hasSessionCookie(request)
         ? '/account'
         : `/account/login?return_to=${encodeURIComponent(new URL(request.url).pathname)}`
       : customerAccountUrl(context.env),
-    accountSignedIn: accountsEnabled(context.env) && hasSessionCookie(request),
+    accountSignedIn: !appMode && accountsEnabled(context.env) && hasSessionCookie(request),
     familyProducts: toCards(catalog),
     catalogCurrency: catalog.currency,
     availability: Object.fromEntries(
@@ -389,6 +397,11 @@ export function Layout({children}: {children?: React.ReactNode}) {
         ) : null}
       </head>
       <body className="bg-[var(--color-bg)] text-[var(--color-text)] min-h-screen flex flex-col">
+        {data?.testBanner ? (
+          <p className="test-banner" role="status">
+            {data.testBanner}
+          </p>
+        ) : null}
         {children}
         {/* /support never restores an old position: Back after opening a
             ticket would otherwise land at the bottom, where Submit was. */}

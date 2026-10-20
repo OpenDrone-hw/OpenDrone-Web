@@ -1,4 +1,4 @@
-import {Form, redirect, useLoaderData} from 'react-router';
+import {Form, Link, redirect, useLoaderData} from 'react-router';
 import type {Route} from './+types/shop.cart';
 import {
   AppUnavailable,
@@ -9,6 +9,7 @@ import {
   orderCookie,
   readCart,
   requireAppCommerce,
+  returnOrigin,
   writeCart,
 } from '~/lib/commerce/app-api';
 import {ShopFrame} from '~/components/commerce/ShopFrame';
@@ -59,7 +60,7 @@ export async function action({context, request}: Route.ActionArgs) {
     email: String(form.get('email') ?? ''),
     rail: String(form.get('rail') ?? ''),
     request_key: String(form.get('request_key') ?? ''),
-    return_url: `${origin}/shop/order`,
+    return_url: `${returnOrigin(origin, import.meta.env.DEV)}/shop/order`,
   });
   if (!out.ok || !out.data) {
     return redirect(`/shop/cart?problem=${encodeURIComponent(out.error?.detail ?? 'Checkout failed')}`);
@@ -75,63 +76,76 @@ export default function ShopCart() {
   const key = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now());
   return (
     <ShopFrame title="Cart">
-      {!lines.length ? <p>Your cart is empty.</p> : null}
-      {problem ? <p role="alert">{problem}</p> : null}
+      {!lines.length ? (
+        <p className="app-shop-note">
+          Your cart is empty. <Link to="/products">Browse the products</Link>.
+        </p>
+      ) : null}
+      {problem ? (
+        <p role="alert" className="app-shop-problem">
+          {problem}
+        </p>
+      ) : null}
       {quote ? (
-        <>
-          <table className="w-full">
+        <div className="app-shop-cart">
+          <table className="app-shop-lines">
             <tbody>
               {quote.lines.map((l) => (
                 <tr key={l.variant}>
                   <td>
-                    {l.title} {l.variant_title} x {l.qty}
+                    {l.title} <span className="app-shop-dim">{l.variant_title}</span> <span className="app-shop-dim">x {l.qty}</span>
                   </td>
-                  <td className="text-right">{formatMoney(l.total_minor, quote.currency)}</td>
-                  <td className="text-right">
+                  <td className="app-shop-num">{formatMoney(l.total_minor, quote.currency)}</td>
+                  <td className="app-shop-num">
                     <Form method="post">
                       <input type="hidden" name="intent" value="remove" />
                       <input type="hidden" name="variant" value={l.variant} />
-                      <button type="submit">Remove</button>
+                      <button type="submit" className="app-shop-link">
+                        Remove
+                      </button>
                     </Form>
                   </td>
                 </tr>
               ))}
               <tr>
-                <td>Shipping to {country}</td>
-                <td className="text-right">{formatMoney(quote.shipping_minor, quote.currency)}</td>
+                <td className="app-shop-dim">Shipping to {country}</td>
+                <td className="app-shop-num">{formatMoney(quote.shipping_minor, quote.currency)}</td>
+                <td />
+              </tr>
+              <tr className="app-shop-total">
+                <td>Total</td>
+                <td className="app-shop-num">{formatMoney(quote.total_minor, quote.currency)}</td>
+                <td />
               </tr>
               <tr>
-                <td className="font-semibold">Total</td>
-                <td className="text-right font-semibold">{formatMoney(quote.total_minor, quote.currency)}</td>
-              </tr>
-              <tr>
-                <td>Includes VAT ({quote.vat_rate}%)</td>
-                <td className="text-right">{formatMoney(quote.vat_included_minor, quote.currency)}</td>
+                <td className="app-shop-dim">Includes VAT ({quote.vat_rate}%)</td>
+                <td className="app-shop-num app-shop-dim">{formatMoney(quote.vat_included_minor, quote.currency)}</td>
+                <td />
               </tr>
             </tbody>
           </table>
-          <Form method="post" className="mt-6 grid gap-3">
+          <Form method="post" className="app-shop-form">
             <input type="hidden" name="intent" value="checkout" />
             <input type="hidden" name="country" value={country} />
             <input type="hidden" name="request_key" value={key} />
-            <label className="grid gap-1">
+            <label className="app-shop-field">
               <span>Email</span>
-              <input name="email" type="email" required autoComplete="email" className="border p-2" />
+              <input name="email" type="email" required autoComplete="email" />
             </label>
-            <fieldset className="grid gap-1">
+            <fieldset className="app-shop-field">
               <legend>Payment</legend>
               {RAILS.map((r, i) => (
-                <label key={r.id} className="flex gap-2">
+                <label key={r.id} className="app-shop-rail">
                   <input type="radio" name="rail" value={r.id} defaultChecked={i === 0} required />
                   {r.label}
                 </label>
               ))}
             </fieldset>
-            <button type="submit" className="border px-4 py-2 font-semibold">
+            <button type="submit" className="hero-cta-primary app-shop-pay">
               Pay {formatMoney(quote.total_minor, quote.currency)}
             </button>
           </Form>
-        </>
+        </div>
       ) : null}
     </ShopFrame>
   );

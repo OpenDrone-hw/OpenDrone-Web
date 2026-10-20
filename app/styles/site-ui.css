@@ -1964,3 +1964,64 @@ html.light .footer-ref {
     background: var(--color-bg-card);
   }
 }
+
+/* Test shop banner (Worker var TEST_BANNER): a slim fixed strip above the page, nothing when unset. The floating
+   header and the page start below it through --test-banner-h. */
+.test-banner {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 1000;
+  height: var(--test-banner-h);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  background: var(--color-gold-fill);
+  color: var(--color-on-accent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body:has(.test-banner) {
+  --test-banner-h: 26px;
+  padding-top: var(--test-banner-h);
+}
+body:has(.test-banner) .site-header {
+  top: var(--test-banner-h);
+}
+
+/* App-backed shop pages (cart, order status, news): the site's rail, type and gold, no framework classes. */
+.app-shop { max-width: 48rem; padding-top: calc(var(--header-height, 5rem) + 2rem); }
+.app-shop-title { font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 600; letter-spacing: -0.02em; margin: 0 0 1.5rem; }
+.app-shop-note, .app-shop-state { color: var(--color-text-muted); margin: 0 0 1rem; }
+.app-shop-note a { color: var(--color-gold-text); }
+.app-shop-state { color: var(--color-text); font-size: 1.125rem; }
+.app-shop-problem { border: 1px solid var(--color-error); color: var(--color-error); border-radius: 8px; padding: 0.625rem 0.875rem; margin: 0 0 1rem; }
+.app-shop-cart, .app-shop-order { display: grid; gap: 1.5rem; }
+.app-shop-lines { width: 100%; border-collapse: collapse; }
+.app-shop-lines td { padding: 0.75rem 0; border-bottom: 1px solid var(--color-border); }
+.app-shop-lines td:first-child { padding-right: 1rem; }
+.app-shop-num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 1rem; }
+.app-shop-dim { color: var(--color-text-muted); }
+.app-shop-total td { font-weight: 600; font-size: 1.125rem; }
+.app-shop-link { background: none; border: 0; padding: 0; color: var(--color-text-muted); font: inherit; font-size: 0.875rem; text-decoration: underline; cursor: pointer; }
+.app-shop-link:hover { color: var(--color-text); }
+.app-shop-form { display: grid; gap: 1.25rem; padding: 1.25rem; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: 12px; }
+.app-shop-field { display: grid; gap: 0.5rem; border: 0; padding: 0; margin: 0; }
+.app-shop-field > span, .app-shop-field > legend { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-muted); padding: 0; }
+.app-shop-field input[type="email"] { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: 8px; padding: 0.75rem 0.875rem; font: inherit; }
+.app-shop-field input[type="email"]:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.app-shop-rail { display: flex; align-items: center; gap: 0.625rem; padding: 0.625rem 0.75rem; border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer; }
+.app-shop-rail:has(input:checked) { border-color: var(--color-gold); background: var(--color-gold-soft); }
+.app-shop-rail input { accent-color: var(--color-gold); }
+.app-shop-pay { justify-content: center; padding: 0.875rem 1.25rem; font-size: 13px; border: 0; cursor: pointer; border-radius: 8px; }
+.app-shop-total-line { font-family: var(--font-mono); margin: 0; }
+.app-shop-bank { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1.5rem; margin: 0; padding: 1.25rem; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: 12px; }
+.app-shop-bank dt { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-muted); }
+.app-shop-bank dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere; }

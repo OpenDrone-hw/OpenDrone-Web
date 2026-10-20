@@ -1,0 +1,26 @@
+# Test shop Worker: the whole site reading its catalog from the incutec app, no Shopify configuration at all.
+# A plain workers.dev URL: no routes, no D1, no service bindings, no crons, nothing shared with staging or
+# production. The commerce source, the app address and token, the banner text and the session secret are passed
+# at deploy time (`--var`, `wrangler secret put`), never written here (a test keeps every wrangler file free of
+# them).
+name = "opendrone-web-shoptest"
+main = "dist/server/index.js"
+compatibility_date = "2025-04-01"
+
+[assets]
+directory = "dist/client"
+
+[vars]
+# Checkout is open: the app's cart takes the order (no Shopify call is made in app mode).
+PUBLIC_COMING_SOON = "0"
+SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
+PUBLIC_US_SALES = "0"
+ACCOUNTS_ENABLED = "0"
+PILOT_MAP_ENABLED = "0"
+SUPPORT_MAIL_INTAKE_ENABLED = "0"
+SUPPORT_CRM_API = "0"
+SUPPORT_COMMUNITY_ROUTE = "0"
+CHATFPV_DRAFTS_ENABLED = "0"
+CHATFPV_ASK_ENABLED = "0"
+CHATFPV_WIDGET_ENABLED = "0"
+HANDOFF_ENABLED = "0"

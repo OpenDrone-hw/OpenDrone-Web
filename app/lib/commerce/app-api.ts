@@ -137,7 +137,8 @@ const MAX_QTY = 20;
 export function cartCookie(env: Pick<AppEnv, 'SESSION_SECRET'>) {
   return createCookie('od_app_cart', {
     httpOnly: true,
-    path: '/shop',
+    // The whole site: the buy buttons post to /api/shopify/cart and the cart link is /cart, both outside /shop.
+    path: '/',
     sameSite: 'lax',
     secure: true,
     secrets: [env.SESSION_SECRET],
@@ -179,4 +180,10 @@ export function orderCookie(env: Pick<AppEnv, 'SESSION_SECRET'>) {
     secrets: [env.SESSION_SECRET],
     maxAge: 60 * 60 * 24 * 30,
   });
+}
+
+/** The app accepts an https return URL only. A local dev server is plain http, so there (never in a build) the
+ *  origin is named as https: bank transfer has no payment step to come back from. */
+export function returnOrigin(origin: string, dev: boolean): string {
+  return dev && origin.startsWith('http://') ? `https://${origin.slice('http://'.length)}` : origin;
 }

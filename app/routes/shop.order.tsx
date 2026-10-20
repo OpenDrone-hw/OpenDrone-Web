@@ -41,13 +41,13 @@ export default function ShopOrder() {
   const {status, problem} = useLoaderData<typeof loader>();
   return (
     <ShopFrame title={status ? `Order ${status.number}` : 'Order'}>
-      {problem ? <p>{problem}</p> : null}
+      {problem ? <p className="app-shop-note">{problem}</p> : null}
       {status ? (
-        <div className="grid gap-3">
-          <p>{PAYMENT_WORDS[status.state.payment] ?? status.state.payment}</p>
-          <p>Total {formatMoney(status.quote.total_minor, status.quote.currency)}</p>
+        <div className="app-shop-order">
+          <p className="app-shop-state">{PAYMENT_WORDS[status.state.payment] ?? status.state.payment}</p>
+          <p className="app-shop-total-line">Total {formatMoney(status.quote.total_minor, status.quote.currency)}</p>
           {status.bank && status.state.payment !== 'paid' ? (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4">
+            <dl className="app-shop-bank">
               <dt>Account</dt>
               <dd>{status.bank.iban || 'not configured'}</dd>
               <dt>Reference</dt>
