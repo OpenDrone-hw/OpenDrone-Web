@@ -21,12 +21,17 @@ import {readOptions, writeOptions} from '~/lib/commerce/app-cart-options';
 import {ShopFrame} from '~/components/commerce/ShopFrame';
 import {OrderSummary, type SummaryImages} from '~/components/commerce/OrderSummary';
 import {PaymentRails} from '~/components/commerce/PaymentRails';
+import {AddressFields, type AddressFill} from '~/components/commerce/AddressFields';
+import {ExpressCheckout} from '~/components/commerce/ExpressCheckout';
+import {pickCountry, requestCountry} from '~/lib/commerce/address-fields';
+import {addressProvider} from '~/lib/commerce/address-provider';
+import {expressConfig, type ExpressResult} from '~/lib/commerce/payment-provider';
 
 export const meta: Route.MetaFunction = () => [{title: 'Checkout'}, {name: 'robots', content: 'noindex, nofollow'}];
 
 function countryOf(request: Request): string {
   const url = new URL(request.url);
-  const q = (url.searchParams.get('country') ?? request.headers.get('CF-IPCountry') ?? 'BE').toUpperCase();
+  const q = (url.searchParams.get('country') ?? requestCountry(request) ?? 'BE').toUpperCase();
   return /^[A-Z]{2}$/.test(q) ? q : 'BE';
 }
 
@@ -45,8 +50,9 @@ export async function loader({context, request}: Route.LoaderArgs) {
   requireAppCommerce(context.env);
   const lines = await readCart(request, context.env);
   let country = countryOf(request);
+  const smart = {suggest: addressProvider(context.env).id !== 'none', express: expressConfig(context.env)};
   const options = await readOptions(request, context.env);
-  if (!lines.length) return {lines, country, quote: null, problem: null, images: {} as SummaryImages, code: ''};
+  if (!lines.length) return {lines, country, quote: null, problem: null, images: {} as SummaryImages, code: '', ...smart};
   const images = await imagesFor(context.env, lines);
   const code = options.code;
   try {
@@ -60,10 +66,16 @@ export async function loader({context, request}: Route.LoaderArgs) {
       country = 'BE';
       out = await appOp<Quote>(context.env, 'storefront.quote', {lines, country, discount_code: code});
     }
-    return {lines, country, quote: out.ok ? out.data ?? null : null, problem: out.ok ? null : out.error?.detail ?? 'Cannot price this cart', images, code};
+    // The visitor's country is preselected only when the app ships there, else the first country it ships to.
+    const ship = out.ok ? out.data?.ship_countries : undefined;
+    if (out.ok && ship?.length && pickCountry(country, ship) !== country) {
+      country = pickCountry(country, ship);
+      out = await appOp<Quote>(context.env, 'storefront.quote', {lines, country, discount_code: code});
+    }
+    return {lines, country, quote: out.ok ? out.data ?? null : null, problem: out.ok ? null : out.error?.detail ?? 'Cannot price this cart', images, code, ...smart};
   } catch (err) {
     if (err instanceof AppUnavailable) {
-      return {lines, country, quote: null, problem: 'Checkout cannot be reached right now. Try again in a minute.', images, code};
+      return {lines, country, quote: null, problem: 'Checkout cannot be reached right now. Try again in a minute.', images, code, ...smart};
     }
     throw err;
   }
@@ -137,8 +149,17 @@ function Field({label, name, optional, className = '', ...rest}: {label: string;
   );
 }
 
+/** A wallet's email goes into the contact step's own field, set the way a browser autofill does so React sees it. */
+function fillEmail(value: string) {
+  const input = document.querySelector<HTMLInputElement>('#checkout input[name="email"]');
+  if (!input || !value || input.value) return;
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
+  input.dispatchEvent(new Event('input', {bubbles: true}));
+}
+
 export default function ShopCart() {
-  const {lines, country, quote, problem, images, code} = useLoaderData<typeof loader>();
+  const {lines, country, quote, problem, images, code, suggest, express} = useLoaderData<typeof loader>();
+  const [fill, setFill] = useState<AddressFill | null>(null);
   const actionData = useActionData<{problem?: string}>();
   const navigation = useNavigation();
   const navigate = useNavigate();
@@ -170,6 +191,8 @@ export default function ShopCart() {
           <Form method="post" className="co-form" id="checkout">
             <input type="hidden" name="intent" value="checkout" />
             <input type="hidden" name="request_key" value={key} />
+            <ExpressCheckout config={express} total={quote.total_minor} currency={quote.currency} countries={countries.map((c) => c.code)}
+              onFill={(r: ExpressResult) => { setFill({...r.address, name: r.name, phone: r.phone}); fillEmail(r.email); }} />
             <section className="co-section">
               <h2 className="co-h">Contact</h2>
               <Field label="Email" name="email" type="email" autoComplete="email" inputMode="email" />
@@ -177,29 +200,7 @@ export default function ShopCart() {
             </section>
             <section className="co-section">
               <h2 className="co-h">Delivery</h2>
-              <label className="co-field">
-                <span>Country</span>
-                <select
-                  name="country"
-                  autoComplete="country"
-                  value={country}
-                  onChange={(e) => void navigate(`/shop/cart?country=${e.target.value}`, {replace: true, preventScrollReset: true})}
-                >
-                  {countries.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Field label="Full name" name="name" autoComplete="name" />
-              <Field label="Address" name="line1" autoComplete="address-line1" />
-              <Field label="Apartment, suite, etc." name="line2" autoComplete="address-line2" optional />
-              <div className="co-row">
-                <Field label="Postal code" name="postal_code" autoComplete="postal-code" />
-                <Field label="City" name="city" autoComplete="address-level2" />
-              </div>
-              <Field label="Phone" name="phone" type="tel" autoComplete="tel" inputMode="tel" optional />
+              <AddressFields country={country} countries={countries} suggest={suggest} fill={fill} onCountry={(c) => void navigate(`/shop/cart?country=${c}`, {replace: true, preventScrollReset: true})} />
             </section>
             <section className="co-section">
               <PaymentRails />

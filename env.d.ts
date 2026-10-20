@@ -90,6 +90,13 @@ declare global {
     APP_ACCESS_CLIENT_SECRET?: string;
     APP_STOREFRONT_TOKEN?: string;
     APP_PROJECT?: string;
+    // Checkout address suggestions (app/lib/commerce/address-provider.ts): 'photon' (keyless, OpenStreetMap) or
+    // 'geoapify' (needs GEOAPIFY_API_KEY, a Worker secret). Unset: no suggestions.
+    ADDRESS_PROVIDER?: string;
+    GEOAPIFY_API_KEY?: string;
+    // Express wallet buttons (app/lib/commerce/payment-provider.ts): 'stripe' with STRIPE_PUBLISHABLE_KEY. Unset: none.
+    EXPRESS_PAY_PROVIDER?: string;
+    STRIPE_PUBLISHABLE_KEY?: string;
     // Text of a slim banner above every page (a test shop: "TEST SHOP: no real payments"). Unset: no banner.
     TEST_BANNER?: string;
 
