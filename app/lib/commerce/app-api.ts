@@ -115,13 +115,16 @@ export type AppPost = {
 };
 export type CartLine = {variant: string; qty: number};
 export type Quote = {
-  lines: Array<{variant: string; sku?: string; title: string; variant_title: string; qty: number; unit_minor: number; total_minor: number}>;
+  lines: Array<{variant: string; sku?: string; title: string; variant_title: string; qty: number; unit_minor: number; total_minor: number; vat_rate?: number; vat_minor?: number}>;
   currency: string;
   subtotal_minor: number;
   shipping_minor: number;
   total_minor: number;
   vat_rate: number;
   vat_included_minor: number;
+  /** The app's own wording of the VAT line, e.g. "Includes VAT (19%)". Absent from an older app. */
+  vat_label?: string;
+  shipping_vat_minor?: number;
   /** The applied discount code, its amount off the subtotal, or why a code given does not apply. */
   discount?: {code: string; kind: 'percent' | 'fixed' | 'free_shipping'; value: number; minor: number} | null;
   discount_minor?: number;
@@ -135,6 +138,12 @@ export type Quote = {
   /** Countries the app ships to (the picker); empty means no list was given. */
   ship_countries?: string[];
 };
+
+/** The VAT line's wording: the app's `vat_label`; from an older app (no label) the amount is shown without a rate, never a
+ *  guessed one. */
+export function vatLabel(quote: Pick<Quote, 'vat_label'>): string {
+  return quote.vat_label?.trim() || 'Includes VAT';
+}
 
 export function formatMoney(minor: number | null | undefined, currency = 'EUR'): string {
   if (minor == null) return '';
