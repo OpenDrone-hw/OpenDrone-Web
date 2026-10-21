@@ -13,6 +13,8 @@ import {
   useLegalLocale,
 } from '~/components/LangToggle';
 import {useEffect, useRef, useState} from 'react';
+import {useRouteLoaderData} from 'react-router';
+import type {SiteNav} from '~/lib/site/config';
 
 interface FooterProps {
   company: CompanyIdentity;
@@ -320,6 +322,8 @@ const BUILD_DATE = typeof __BUILD_DATE__ === 'string' ? __BUILD_DATE__ : '';
 
 export function Footer({company, turnstileSiteKey}: FooterProps) {
   const legalLocale = useLegalLocale();
+  // A site from the app brings its own footer menu (root loader `site`); it is shown first in the parts list.
+  const site = (useRouteLoaderData('root') as {site?: SiteNav} | undefined)?.site;
   // Reference designators run across the whole parts list, J1 to Jn.
   let refNo = 0;
   const nextRef = () => ++refNo;
@@ -379,6 +383,25 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                 className="footer-sheet-heading"
               />
               <div className="footer-parts-grid">
+                {site?.footerNav ? (
+                  <div>
+                    <h4 className="font-mono text-[12px] uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-3">{site.name}</h4>
+                    <nav className="flex flex-col gap-1.5">
+                      {site.footerNav.map((l) =>
+                        l.url.startsWith('/') ? (
+                          <FooterNavLink key={l.id} to={l.url} refNo={nextRef()}>
+                            {l.title}
+                          </FooterNavLink>
+                        ) : (
+                          <a key={l.id} href={l.url} className="footer-link text-xs text-[var(--color-text-muted)]" rel="noopener noreferrer" target="_blank">
+                            <RefTag n={nextRef()} />
+                            {l.title}
+                          </a>
+                        ),
+                      )}
+                    </nav>
+                  </div>
+                ) : null}
                 <FooterGroup id="chrome.heading_shop" open>
                   <nav className="flex flex-col gap-1.5">
                     {SHOP_LINKS.map((link) => (

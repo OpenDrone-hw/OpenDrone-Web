@@ -1,0 +1,145 @@
+/**
+ * The site a request is served as (docs/sites.md in incutec-app, "How the storefront reads a site"): one Worker serves
+ * many sites, chosen by hostname. `SiteConfig` is the part of the app's `storefront.site` answer this front uses, and
+ * `defaultSite()` is the bundled opendrone.be built from today's constants: the answer whenever SITE_SOURCE is off or
+ * the app cannot be asked and nothing is cached.
+ */
+import {PLAUSIBLE_SCRIPT_SRC} from '../growth/plausible.ts';
+
+export const DEFAULT_SITE_NAME = 'OpenDrone';
+export const DEFAULT_SITE_ORIGIN = 'https://opendrone.be';
+export const DEFAULT_SEO_DESCRIPTION = 'Open Source drone electronics designed in Belgium.';
+
+export type NavKind = 'page' | 'posts' | 'collection' | 'product' | 'link';
+export type NavItem = {label: string; kind: NavKind; target?: string};
+export type SitePageIndexEntry = {title: string; slug: string; kind: 'home' | 'page' | 'legal'; description?: string | null; seo_title?: string | null};
+
+export type SiteConfig = {
+  /** True when the app answered for this host; false for the bundled default. */
+  fromApp: boolean;
+  id: string | null;
+  version: number | null;
+  name: string;
+  origin: string;
+  locale: string;
+  titleTemplate: string;
+  description: string;
+  /** False: pages answer `noindex,nofollow`. */
+  indexable: boolean;
+  /** Colour tokens by role, validated by the app; empty keeps the bundled design. */
+  colours: Partial<Record<'canvas' | 'surface' | 'text' | 'muted' | 'accent' | 'line', string>>;
+  /** Plausible domain of the site; null: the bundled opendrone.be script rules (request host check). */
+  plausibleDomain: string | null;
+  navigation: {header: NavItem[]; footer: NavItem[]};
+  pages: SitePageIndexEntry[];
+};
+
+export function defaultSite(): SiteConfig {
+  return {
+    fromApp: false,
+    id: null,
+    version: null,
+    name: DEFAULT_SITE_NAME,
+    origin: DEFAULT_SITE_ORIGIN,
+    locale: 'en_US',
+    titleTemplate: `%s | ${DEFAULT_SITE_NAME}`,
+    description: DEFAULT_SEO_DESCRIPTION,
+    indexable: true,
+    colours: {},
+    plausibleDomain: null,
+    navigation: {header: [], footer: []},
+    pages: [],
+  };
+}
+
+/** The `storefront.site` answer, as far as this front reads it. Every field may be missing from an older app. */
+export type AppSiteAnswer = {
+  site: string;
+  version: number;
+  name?: string | null;
+  canonical?: string;
+  locales?: string[] | null;
+  theme?: {colours?: SiteConfig['colours'] | null} | null;
+  navigation?: {header?: NavItem[] | null; footer?: NavItem[] | null} | null;
+  seo?: {title_template?: string; description?: string; robots?: string} | null;
+  analytics?: {plausible_domain?: string | null} | null;
+  pages?: SitePageIndexEntry[] | null;
+};
+
+export function siteFromAnswer(a: AppSiteAnswer): SiteConfig {
+  const base = defaultSite();
+  const name = a.name?.trim() || base.name;
+  const lang = a.locales?.[0];
+  return {
+    fromApp: true,
+    id: a.site,
+    version: a.version,
+    name,
+    origin: (a.canonical || base.origin).replace(/\/+$/, ''),
+    locale: lang ? lang.replace('-', '_') : base.locale,
+    titleTemplate: a.seo?.title_template?.includes('%s') ? a.seo.title_template : `%s | ${name}`,
+    description: a.seo?.description?.trim() || base.description,
+    indexable: a.seo?.robots !== 'noindex',
+    colours: a.theme?.colours ?? {},
+    plausibleDomain: a.analytics?.plausible_domain || null,
+    navigation: {header: a.navigation?.header ?? [], footer: a.navigation?.footer ?? []},
+    pages: a.pages ?? [],
+  };
+}
+
+/** The route a navigation item opens: page /<slug>, posts the news archive, collection and product their routes. */
+export function navHref(item: NavItem): string {
+  const t = (item.target ?? '').trim();
+  switch (item.kind) {
+    case 'page':
+      return `/${t.replace(/^\/+/, '')}`;
+    case 'posts':
+      return '/newsletter';
+    case 'collection':
+      return `/collections/${encodeURIComponent(t)}`;
+    case 'product':
+      return `/products/${encodeURIComponent(t)}`;
+    default:
+      return t;
+  }
+}
+
+export type NavLinkData = {id: string; title: string; url: string};
+
+/** The menus the root loader hands the chrome (`site` in the root loader data); null keeps the bundled menu. */
+export type SiteNav = {headerNav?: NavLinkData[] | null; footerNav?: NavLinkData[] | null; name?: string};
+
+/** Items as links; null when the site has none for this menu, so the bundled menu stays. Unsafe link schemes are dropped. */
+export function navLinks(items: NavItem[], menu: string): NavLinkData[] | null {
+  const out = items
+    .map((it, i) => ({id: `site-${menu}-${i}`, title: it.label, url: navHref(it)}))
+    .filter((l) => l.url && (l.url.startsWith('/') || /^https:\/\//i.test(l.url)));
+  return out.length ? out : null;
+}
+
+const TOKENS: Record<keyof SiteConfig['colours'], string> = {
+  canvas: '--color-bg',
+  surface: '--color-surface',
+  text: '--color-text',
+  muted: '--color-text-muted',
+  accent: '--color-accent',
+  line: '--color-border',
+};
+
+/** The site's colours as overrides of the existing --color-* mapping (the app already checked each is a colour;
+ *  anything that could leave the declaration is dropped again here). Feed it to buildThemeCss. */
+export function themeOverrides(colours: SiteConfig['colours']): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [role, token] of Object.entries(TOKENS)) {
+    const v = colours[role as keyof SiteConfig['colours']];
+    if (typeof v === 'string' && /^[#a-zA-Z0-9(),.%\s/-]+$/.test(v)) out[token] = v.trim();
+  }
+  return out;
+}
+
+/** Plausible for a site with its own domain: the generic script; the bundled site keeps its own script id. */
+export function plausibleScript(site: Pick<SiteConfig, 'plausibleDomain'>): {src: string; domain: string | null} {
+  return site.plausibleDomain
+    ? {src: 'https://plausible.io/js/script.js', domain: site.plausibleDomain}
+    : {src: PLAUSIBLE_SCRIPT_SRC, domain: null};
+}

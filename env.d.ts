@@ -92,6 +92,10 @@ declare global {
     APP_PROJECT?: string;
     // The public path the app's copied shop images are served at (app mode); the app's [commerce] media_path is the
     // same value. Default /shop-media (app/lib/commerce/app-media.ts).
+    // Sites from the app (app/lib/site): with SITE_SOURCE exactly 'app' and APP_API_URL set, the request hostname picks the
+    // site (storefront.site, storefront.page: theme, menus, SEO, Plausible domain, pages) and an unknown host answers 404.
+    // Off by default; no wrangler file sets it. Uses the same APP_* credentials as COMMERCE_SOURCE.
+    SITE_SOURCE?: string;
     APP_MEDIA_PATH?: string;
     // Payment webhook relay (app/lib/commerce/pay-webhook.ts, POST /api/pay/webhook/:provider, app mode only).
     // STRIPE_WEBHOOK_SECRET: the endpoint signing secret (whsec_...). PAYPAL_WEBHOOK_ID_LIVE / _SANDBOX: the id of the
