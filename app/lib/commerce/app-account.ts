@@ -36,7 +36,17 @@ export type AccountOrder = {
   payment_mode?: string;
   state: {payment: string; fulfilment: string};
   canceled: boolean;
-  quote: {total_minor: number; currency: string};
+  /** The total always; the rest is what the app sent for this order (test orders carry the full quote). */
+  quote: {
+    total_minor: number;
+    currency: string;
+    subtotal_minor?: number | null;
+    shipping_minor?: number | null;
+    discount?: {code?: string; minor: number} | null;
+    vat_included_minor?: number | null;
+    vat_label?: string | null;
+    pickup?: boolean | null;
+  };
   lines: Array<{title: string; variant_title: string; qty: number; total_minor: number}>;
   ship_address: Omit<AccountAddress, 'id' | 'saved'> | null;
   shipment?: {carrier?: string; tracking_number?: string; tracking_url?: string; eta?: string};
@@ -142,6 +152,19 @@ export const PAYMENT_WORDS: Record<string, string> = {
   partially_refunded: 'Partly refunded',
   refunded: 'Refunded',
 };
+
+export type OrderRow = {key: string; label: string; value: number | 'Free'; minus?: boolean};
+
+/** The rows between the lines and the total of an order card, only from what the app sent: Subtotal, Discount, Shipping,
+ *  and the VAT line (the order's own label). Nothing is invented: an order with only a total has no rows. */
+export function orderBreakdown(q: AccountOrder['quote']): OrderRow[] {
+  const rows: OrderRow[] = [];
+  if (q.subtotal_minor == null) return rows;
+  rows.push({key: 'subtotal', label: 'Subtotal', value: q.subtotal_minor});
+  if (q.discount && q.discount.minor > 0) rows.push({key: 'discount', label: q.discount.code ? `Discount (${q.discount.code})` : 'Discount', value: q.discount.minor, minus: true});
+  if (q.shipping_minor != null) rows.push({key: 'shipping', label: q.pickup ? 'Pickup at our Leuven office' : 'Shipping', value: q.shipping_minor === 0 ? 'Free' : q.shipping_minor});
+  return rows;
+}
 
 /** The one status word of an order in the list. */
 export function orderStatus(o: Pick<AccountOrder, 'state' | 'canceled' | 'payment_mode' | 'shipment'>): string {

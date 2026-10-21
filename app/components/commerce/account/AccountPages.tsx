@@ -1,7 +1,7 @@
 import {Form, Link, useFetcher, useNavigation} from 'react-router';
 import {useEffect, useRef, useState} from 'react';
-import {formatMoney} from '~/lib/commerce/app-api';
-import {orderStatus, type Account, type AccountAddress, type AccountOrder} from '~/lib/commerce/app-account';
+import {formatMoney, vatLabel} from '~/lib/commerce/app-api';
+import {orderBreakdown, orderStatus, type Account, type AccountAddress, type AccountOrder} from '~/lib/commerce/app-account';
 
 const REGION = typeof Intl !== 'undefined' && 'DisplayNames' in Intl ? new Intl.DisplayNames(['en'], {type: 'region'}) : null;
 const countryName = (c: string) => REGION?.of(c) ?? c;
@@ -25,6 +25,7 @@ function Address({a}: {a: Omit<AccountAddress, 'id' | 'saved'>}) {
 function OrderCard({o}: {o: AccountOrder}) {
   const status = orderStatus(o);
   const t = o.shipment;
+  const breakdown = orderBreakdown(o.quote);
   return (
     <article className="co-card acct-order">
       <header className="acct-order-head">
@@ -39,7 +40,13 @@ function OrderCard({o}: {o: AccountOrder}) {
             <span className="co-num">{formatMoney(l.total_minor, o.quote.currency)}</span>
           </li>
         ))}
+        {breakdown.map((r) => (
+          <li key={r.key} className="acct-sub"><span>{r.label}</span><span className="co-num">{r.value === 'Free' ? 'Free' : `${r.minus ? '\u2212' : ''}${formatMoney(r.value, o.quote.currency)}`}</span></li>
+        ))}
         <li className="acct-total"><span>Total</span><span className="co-num">{formatMoney(o.quote.total_minor, o.quote.currency)}</span></li>
+        {o.quote.vat_included_minor != null ? (
+          <li className="acct-sub acct-vat"><span>{vatLabel({vat_label: o.quote.vat_label ?? undefined})}</span><span className="co-num">{formatMoney(o.quote.vat_included_minor, o.quote.currency)}</span></li>
+        ) : null}
       </ul>
       <div className="acct-order-foot">
         {o.ship_address ? <div><p className="co-quiet">Shipping to</p><Address a={o.ship_address} /></div> : null}

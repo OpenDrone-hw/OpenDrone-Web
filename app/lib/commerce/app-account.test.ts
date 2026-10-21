@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {appAccountsEnabled, codeAction, invoiceRoute, orderStatus, readAccount, reorderRoute, requestLink, sessionCookie, verifyCode, verifyLink, verifyUrl, type AccountEnv} from './app-account.ts';
+import {appAccountsEnabled, codeAction, invoiceRoute, orderBreakdown, orderStatus, readAccount, reorderRoute, requestLink, sessionCookie, verifyCode, verifyLink, verifyUrl, type AccountEnv} from './app-account.ts';
 
 const ENV: AccountEnv = {
   COMMERCE_SOURCE: 'app',
@@ -43,6 +43,15 @@ describe('app accounts', () => {
     const down = (async () => { throw new Error('x'); }) as unknown as typeof fetch;
     assert.equal(await requestLink(ENV, {email: 'a@b.co'}, 'https://shop.example/account/verify', down), false);
     assert.equal(await verifyLink(ENV, 't'.repeat(40), (async () => json({ok: false})) as unknown as typeof fetch), null);
+  });
+
+  it('show the breakdown an order carries and nothing more', () => {
+    const q = {total_minor: 1050, currency: 'EUR'};
+    assert.deepEqual(orderBreakdown(q), []);
+    const full = {...q, subtotal_minor: 200, shipping_minor: 850, discount: {code: 'HI', minor: 0}};
+    assert.deepEqual(orderBreakdown(full).map((r) => [r.label, r.value]), [['Subtotal', 200], ['Shipping', 850]]);
+    const more = {...full, shipping_minor: 0, discount: {code: 'HI', minor: 50}};
+    assert.deepEqual(orderBreakdown(more).map((r) => [r.label, r.value, !!r.minus]), [['Subtotal', 200, false], ['Discount (HI)', 50, true], ['Shipping', 'Free', false]]);
   });
 
   it('say one status word per order', () => {
