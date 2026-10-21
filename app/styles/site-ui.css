@@ -2182,6 +2182,8 @@ body:has(.test-banner) .site-header {
 .acct-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
 .acct-lines li { display: flex; justify-content: space-between; gap: 1rem; }
 .acct-total { padding-top: 0.5rem; border-top: 1px solid var(--color-border); font-weight: 600; }
+.acct-lines .acct-sub { color: var(--color-text-muted); font-size: 0.9375rem; }
+.acct-lines .acct-vat { font-size: 0.8125rem; }
 .acct-order-foot { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
 .acct-address { font-style: normal; line-height: 1.5; }
 .acct-track { margin: 0; overflow-wrap: anywhere; }
