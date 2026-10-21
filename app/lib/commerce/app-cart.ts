@@ -6,6 +6,7 @@
  */
 import type {Catalog} from '../catalog.ts';
 import type {CartSummary} from '../shopify-cart-action.ts';
+import {campaignDate, shipLabelFromPromise} from '../preorder-campaign.ts';
 import {type CartLine, cleanLines, readCart, writeCart, type AppEnv} from './app-api.ts';
 import {cartAttributesFromForm} from '../growth/attribution.ts';
 import {readOptions, writeOptions, cleanAttributes} from './app-cart-options.ts';
@@ -63,10 +64,10 @@ export function appCartSummary(lines: CartLine[], catalog: Catalog): CartSummary
       variantTitle: variant.title,
       quantity: qty,
       image: variant.image ? {url: variant.image, altText: variant.image_alt ?? null} : null,
-      shipPromise: null,
-      deliveryBy: null,
+      shipPromise: variant.ship_promise,
+      deliveryBy: variant.campaign?.deliveryByDay ? campaignDate(variant.campaign.deliveryByDay) : null,
       availability: null,
-      shipLabel: null,
+      shipLabel: shipLabelFromPromise(variant.ship_promise, 'short'),
       total: money(Math.round(variant.price * 100) * qty),
     })),
   };

@@ -170,6 +170,36 @@ describe('app cart on the buy buttons', () => {
       body: new URLSearchParams(fields),
     });
 
+  it('maps the app campaign fields: preorder state, step price, ship promise, campaign state, counts', () => {
+    const wire: AppCatalogWire = {
+      currency: 'EUR',
+      campaign_skus: ['P-1', 'P-2'],
+      campaign_counts: 'verified',
+      products: [{id: 'p', handle: 'pre', title: 'Pre', variants: [
+        {id: 'a', sku: 'P-1', title: 'A', price_minor: 4320, compare_at_minor: 5400, available: true, sale_mode: 'preorder', ship_promise: 'ships early November 2026',
+         campaign: {ordered: 10, batch: 1, price: 43.2, earlyPrice: true, shipPromise: 'ships early November 2026'} as never},
+        {id: 'b', sku: 'P-2', title: 'B', price_minor: 5400, compare_at_minor: 5400, available: false, sale_mode: 'sold_out', ship_promise: 'ships x', closed_reason: 'funding_closed'},
+        {id: 'c', sku: 'P-3', title: 'C', price_minor: 900, available: true, sale_mode: 'in_stock'},
+      ]}],
+    };
+    const catalog = mapAppCatalog(wire);
+    assert.deepEqual(catalog.campaign_skus, ['P-1', 'P-2']);
+    assert.equal(catalog.campaign_counts, 'verified');
+    const a = bySku(catalog, 'P-1')!.variant;
+    assert.equal(a.availability, 'preorder');
+    assert.equal(a.price, 43.2);
+    assert.equal(a.ship_promise, 'ships early November 2026');
+    assert.equal(a.campaign?.price, 43.2);
+    const b = bySku(catalog, 'P-2')!.variant;
+    assert.equal(b.availability, 'sold_out');
+    assert.equal(b.ship_promise, null);
+    assert.equal(b.campaign, null);
+    assert.equal(bySku(catalog, 'P-3')!.variant.availability, 'in_stock');
+    const summary = appCartSummary([{variant: 'a', qty: 2}], catalog);
+    assert.equal(summary.lines[0].shipPromise, 'ships early November 2026');
+    assert.deepEqual(summary.subtotal, {amount: '86.40', currencyCode: 'EUR'});
+  });
+
   it('resolves SKUs to app variants and refuses unknown or sold out ones', async () => {
     assert.deepEqual(linesFromForm(new URLSearchParams({sku: 'B-1', qty: '2'}) as unknown as FormData, catalog), [{variant: 'v1', qty: 2}]);
     assert.throws(() => linesFromForm(new URLSearchParams({sku: 'nope'}) as unknown as FormData, catalog), (r: unknown) => r instanceof Response && r.status === 404);

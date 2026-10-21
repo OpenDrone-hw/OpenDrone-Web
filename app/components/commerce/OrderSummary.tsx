@@ -83,6 +83,7 @@ export function OrderSummary({quote, country, images, pending, code = ''}: {quot
                   <span className="co-line-text">
                     <span className="co-line-title">{l.title}</span>
                     {l.variant_title && l.variant_title !== 'Default Title' ? <span className="co-dim">{l.variant_title}</span> : null}
+                    {l.sale_mode === 'preorder' && l.ship_promise ? <span className="co-dim">Preorder: {l.ship_promise}</span> : null}
                     <span className="co-line-tools">
                       <Stepper variant={l.variant} qty={l.qty} />
                       <Remove variant={l.variant} title={l.title} />

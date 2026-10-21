@@ -115,7 +115,7 @@ export type AppPost = {
 };
 export type CartLine = {variant: string; qty: number};
 export type Quote = {
-  lines: Array<{variant: string; sku?: string; title: string; variant_title: string; qty: number; unit_minor: number; total_minor: number; vat_rate?: number; vat_minor?: number}>;
+  lines: Array<{variant: string; sku?: string; title: string; variant_title: string; qty: number; unit_minor: number; total_minor: number; sale_mode?: 'in_stock' | 'preorder' | 'sold_out'; ship_promise?: string | null; vat_rate?: number; vat_minor?: number}>;
   currency: string;
   subtotal_minor: number;
   shipping_minor: number;

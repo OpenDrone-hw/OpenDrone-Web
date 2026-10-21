@@ -120,7 +120,7 @@ export async function action({context, request}: Route.ActionArgs) {
   const options = await readOptions(request, context.env);
   const country = field(form, 'country').toUpperCase();
   const out = await appOp<{number: string; token: string | null; redirect_url: string | null}>(context.env, 'storefront.checkout', {
-    lines: cleanLines(lines),
+    lines: cleanLines(lines).map((l) => seenOf(form, l)),
     country,
     email: field(form, 'email'),
     rail: field(form, 'rail'),
@@ -147,6 +147,14 @@ export async function action({context, request}: Route.ActionArgs) {
   headers.append('Set-Cookie', await writeCart([], context.env));
   headers.append('Set-Cookie', await writeOptions({...options, code: '', pickup: false}, context.env));
   return redirect(out.data.redirect_url ?? `/shop/order?order=${encodeURIComponent(out.data.number)}`, {headers});
+}
+
+/** A cart line with what the cart page showed for a preorder (price and ship date), so the app refuses a changed one. */
+function seenOf(form: FormData, line: CartLine): CartLine & {seen_unit_minor?: number; seen_ship_promise?: string} {
+  const price = Number(field(form, `seen_unit_minor:${line.variant}`));
+  const promise = form.get(`seen_ship_promise:${line.variant}`);
+  if (typeof promise !== 'string') return line;
+  return {...line, ...(Number.isInteger(price) && field(form, `seen_unit_minor:${line.variant}`) !== '' ? {seen_unit_minor: price} : {}), seen_ship_promise: promise.trim()};
 }
 
 function friendly(code?: string, detail?: string): string {
@@ -208,6 +216,13 @@ export default function ShopCart() {
           <Form method="post" className="co-form" id="checkout" onSubmit={() => trackCheckoutClick({amount: (quote.total_minor / 100).toFixed(2), currencyCode: quote.currency}, 'cart')}>
             <input type="hidden" name="intent" value="checkout" />
             <input type="hidden" name="request_key" value={key} />
+            {/* What the buyer is looking at: a preorder line is ordered only at this price and ship date. */}
+            {quote.lines.filter((l) => l.sale_mode === 'preorder').map((l) => (
+              <span key={l.variant}>
+                <input type="hidden" name={`seen_unit_minor:${l.variant}`} value={l.unit_minor} />
+                <input type="hidden" name={`seen_ship_promise:${l.variant}`} value={l.ship_promise ?? ''} />
+              </span>
+            ))}
             <ExpressCheckout config={express} total={quote.total_minor} currency={quote.currency} countries={countries.map((c) => c.code)}
               onFill={(r: ExpressResult) => { setFill({...r.address, name: r.name, phone: r.phone}); fillEmail(r.email); }} />
             <ContactSection accountEmail={accountEmail} />
