@@ -30,6 +30,10 @@ const ABOUT: Record<string, {what: string; url?: string}> = {
   'builds.json': {what: 'The 5" and 3" builds: parts, quantities and roles.', url: '/'},
   'accessories.json': {what: 'Accessories and spare parts shown with each product.', url: '/products/openframe'},
   'registrations.json': {what: 'Certifications and registrations (OSHWA and others).'},
+  'product-safety.json': {
+    what: 'Product-page safety warnings, copied unchanged from the approved safety leaflet. Replaces the older per-kind warning copy once approved is true and documentVersion is set.',
+    url: '/products/openesc',
+  },
   'us-sales.json': {what: 'The US flat shipping rate (USD). null keeps US preorders closed, whatever PUBLIC_US_SALES says.'},
   'team.json': {what: 'The team strip.', url: '/'},
   'contributors.json': {what: 'Contributor snapshot shown on product pages.'},
