@@ -101,7 +101,7 @@ export function mapAppCatalog(wire: AppCatalogWire, now: Date = new Date()): Cat
           cart_add_method: 'POST',
           merchandise_id: v.id,
           ...(v.alias ? {alias: v.alias} : {}),
-        } as CatalogVariant;
+        } as CatalogVariant & {alias?: string};  // alias: the Shopify id, for old ?variant= links (legacy-urls.ts)
       });
     return {
       handle: p.handle,
