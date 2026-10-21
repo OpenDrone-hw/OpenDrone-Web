@@ -4,6 +4,8 @@ import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/turnstile';
 import {subscribeWithShopify} from '~/lib/growth/shopify-newsletter';
+import {appCommerceEnabled} from '~/lib/commerce/app-api';
+import {subscribeWithApp} from '~/lib/commerce/app-newsletter';
 import {visitorCountry} from '~/lib/visitor-country';
 import {sendWelcomeEmail} from '~/lib/growth/welcome-email';
 import {archivePosts} from '~/lib/posts';
@@ -219,12 +221,15 @@ export async function action({request, context}: Route.ActionArgs) {
     });
   }
 
-  const shopifyResult = await subscribeWithShopify(
-    context.env,
-    email,
-    notifyProduct ?? undefined,
-    visitorCountry(request),
-  );
+  // App mode: the consent is an owned record in the app, Shopify is not called. Same four answers either way.
+  const shopifyResult = appCommerceEnabled(context.env)
+    ? await subscribeWithApp(context.env, email, notifyProduct ?? undefined, visitorCountry(request))
+    : await subscribeWithShopify(
+        context.env,
+        email,
+        notifyProduct ?? undefined,
+        visitorCountry(request),
+      );
   const subscribed =
     shopifyResult === 'subscribed' ||
     shopifyResult === 'already-subscribed' ||
