@@ -42,6 +42,11 @@ export type CustomerContext =
   | {match: 'matched'; customerId: string; ordersCount: number; orders: OrderSummary[]; tickets: SupportTicketEntry[]}
   | {match: 'unverified' | 'none' | 'multiple' | 'unchecked'};
 
+/** An order the app confirmed (app mode): only its number is known here, the app keeps the rest. */
+export function appOrderSummary(name: string): OrderSummary {
+  return {name, createdAt: '', financial: null, fulfillment: null, batchTags: [], items: []};
+}
+
 export type SupportTicketEntry = {ref: string; topic: string; status: string; opened: string; link: string};
 
 type Fetcher = typeof fetch;

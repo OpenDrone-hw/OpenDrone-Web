@@ -9,6 +9,7 @@
 import {chunkMessage, cleanText, escapeDiscord, type OutboundFile} from './discord.ts';
 import {approvedText, settleDraft} from './ai-drafts.ts';
 import {fileLine, storeFiles} from './files.ts';
+import {appCommerceEnabled} from '../commerce/app-api.ts';
 import {hasThread} from './flags.ts';
 import {customerAdminUrl, lookupCustomer, staffOrderDetails, type OrderSummary, type StaffOrderDetails} from './shopify.ts';
 import {scrubForDiscord} from './scrubber.ts';
@@ -213,7 +214,8 @@ export async function customerCard(deps: Deps, ticket: Ticket): Promise<Customer
   let shopifyUrl: string | null = null;
   let contact: CustomerCard['contact'] = null;
   try {
-    const ctx = await lookupCustomer(deps.env, ticket.email, deps.fetcher ?? fetch);
+    // App mode: no Shopify call. The contact, match flags and earlier tickets are all this card holds; the app's crm.customer has the orders.
+    const ctx = appCommerceEnabled(deps.env) ? ({match: 'unchecked'} as const) : await lookupCustomer(deps.env, ticket.email, deps.fetcher ?? fetch);
     if (ctx.match === 'matched') {
       const details = await staffOrderDetails(deps.env, ctx.customerId, ctx.orders.slice(0, 8).map((o) => o.name), deps.fetcher ?? fetch);
       orders = ctx.orders.slice(0, 8).map((o) => cardOrder(o, details.orders[o.name]));

@@ -208,3 +208,18 @@ export function orderCookie(env: Pick<AppEnv, 'SESSION_SECRET'>) {
 export function returnOrigin(origin: string, dev: boolean): string {
   return dev && origin.startsWith('http://') ? `https://${origin.slice('http://'.length)}` : origin;
 }
+
+/**
+ * Whether an order number belongs to an email, asked of the app (storefront.order_match: only `matched` and the number
+ * come back, and "no such order" looks like "wrong email"). Used by support tickets in app mode instead of Shopify.
+ * Never throws: an app that does not answer is "not matched".
+ */
+export async function appOrderMatch(env: AppEnv, number: string, email: string, fetcher: typeof fetch = fetch): Promise<boolean> {
+  try {
+    const out = await appOp<{matched: boolean}>(env, 'storefront.order_match', {number, email}, fetcher);
+    return out.ok && out.data?.matched === true;
+  } catch {
+    console.warn('[support] app order match failed');
+    return false;
+  }
+}
