@@ -5,6 +5,7 @@ import {accountsEnabled} from '~/lib/accounts/config';
 import {tokenEndpointReachable} from '~/lib/accounts/oauth';
 import {purgeExpired} from '~/lib/accounts/sessions';
 import {handleAppMedia} from '~/lib/commerce/app-media';
+import {handleVideoLink} from '~/lib/commerce/video-links';
 import {createAppLoadContext} from '~/lib/context';
 import {NO_FRAMING_HEADERS, NO_FRAMING_PATH} from '~/lib/csp';
 import {refreshOwnerMap} from '~/lib/owner-map-data';
@@ -124,6 +125,11 @@ async function handleFetch(
       (work) => executionContext.waitUntil(work.catch(() => undefined)),
     );
     if (media) return media;
+
+    // Short tracking links of the films, /v/<slug> (app/lib/commerce/video-links.ts): a known slug redirects, anything
+    // else goes on to the site's normal 404.
+    const videoLink = await handleVideoLink(request, env);
+    if (videoLink) return videoLink;
 
     const context = await createAppLoadContext(
       request,
