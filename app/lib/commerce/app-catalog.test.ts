@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {afterEach, describe, it} from 'node:test';
-import {byHandle, bySku, toCards, toProduct, selectedOptionsFromRequest} from '../catalog.ts';
+import {byHandle, bySku, thirdPartyBrand, toCards, toProduct, selectedOptionsFromRequest} from '../catalog.ts';
 import {clearCatalogMemo} from '../catalog-memo.ts';
 import {readOptions} from './app-cart-options.ts';
 import {appCartSummary, handleAppCartAction, handleAppCartLoader, linesFromForm} from './app-cart.ts';
@@ -282,5 +282,22 @@ describe('app catalog variant photos', () => {
     const catalog = mapAppCatalog(wire([v('A', {Model: 'Lite'}, {url: 'https://img.example/own.jpg'}), v('B', {Model: 'Other'})]));
     assert.equal(bySku(catalog, 'A')!.variant.image, 'https://img.example/own.jpg');
     assert.equal(bySku(catalog, 'B')!.variant.image, 'https://img.example/lite-front.jpg');
+  });
+});
+
+describe('app catalog vendor', () => {
+  const wire = (vendor?: string | null): AppCatalogWire => ({
+    products: [{id: 'p', handle: 'prop', title: 'Prop', vendor, variants: [{id: 'v', sku: 'S', price_minor: 100, available: true}]}],
+  });
+
+  it('carries the third-party brand to the product page and its JSON-LD', () => {
+    const catalog = mapAppCatalog(wire(' HQProp '));
+    assert.equal(byHandle(catalog, 'prop')!.vendor, 'HQProp');
+    assert.equal(thirdPartyBrand(toProduct(catalog, byHandle(catalog, 'prop')!, []).vendor), 'HQProp');
+  });
+
+  it('maps the empty vendor of the house brand to none', () => {
+    assert.equal(byHandle(mapAppCatalog(wire('')), 'prop')!.vendor, null);
+    assert.equal(byHandle(mapAppCatalog(wire(undefined)), 'prop')!.vendor, null);
   });
 });
