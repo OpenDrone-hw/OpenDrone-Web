@@ -4,6 +4,7 @@ import {describe, it} from 'node:test';
 import {defaultSite, navHref, navLinks, plausibleScript, themeOverrides, type NavItem} from './config.ts';
 import {renderPageMarkdown} from './markdown.ts';
 import {resolvePage, resolveSite, type SiteEnv} from './resolve.ts';
+import {installPreviewBridge, previewOrigin} from './preview-bridge.ts';
 
 const ENV: SiteEnv = {SITE_SOURCE: 'app', APP_API_URL: 'https://app.example/', APP_ACCESS_CLIENT_ID: 'cid', APP_ACCESS_CLIENT_SECRET: 'cs', APP_STOREFRONT_TOKEN: 'tok'};
 const req = (host: string) => new Request(`https://${host}/x`);
@@ -142,5 +143,71 @@ describe('off by default', () => {
     for (const f of ['wrangler.toml', 'wrangler.production.toml', 'wrangler.shoptest.toml', 'rangler.production.toml']) {
       assert.doesNotMatch(readFileSync(new URL(`../../../${f}`, import.meta.url), 'utf8'), /SITE_SOURCE/);
     }
+  });
+});
+
+describe('site texts', () => {
+  it('keeps string texts of the app answer, none for the default site', async () => {
+    const f = (async () => json({ok: true, data: {...ANSWER, texts: {'home.hero_line1': 'Hi', 'home.bad': {en: 'x'}}}})) as unknown as typeof fetch;
+    assert.deepEqual((await resolveSite(req('other.example'), ENV, {fetcher: f, cache: null}))?.texts, {'home.hero_line1': 'Hi'});
+    assert.deepEqual(defaultSite().texts, {});
+    assert.deepEqual((await resolveSite(req('opendrone.be'), {}, {cache: null}))?.texts, {});
+  });
+});
+
+describe('preview bridge', () => {
+  const ORIGIN = 'https://app.incutec.com';
+  it('is on only with SITE_PREVIEW=1 and a usable STUDIO_ORIGIN', () => {
+    assert.equal(previewOrigin({}), null);
+    assert.equal(previewOrigin({STUDIO_ORIGIN: ORIGIN}), null);
+    assert.equal(previewOrigin({SITE_PREVIEW: '1'}), null);
+    assert.equal(previewOrigin({SITE_PREVIEW: '1', STUDIO_ORIGIN: 'http://evil.example'}), null);
+    assert.equal(previewOrigin({SITE_PREVIEW: '1', STUDIO_ORIGIN: ORIGIN + '/x'}), ORIGIN);
+  });
+
+  function fake() {
+    const sent: Array<[unknown, string]> = [];
+    const doc: Record<string, (e: any) => void> = {};
+    const win: Record<string, any> = {};
+    const els = [{attrs: {'data-edit': 'home.a'}, textContent: 'old'}, {attrs: {'data-edit': 'home.b'}, textContent: 'keep'}].map((e) => ({...e, getAttribute: (n: string) => (e.attrs as Record<string, string>)[n] ?? null}));
+    win.parent = {postMessage: (m: unknown, o: string) => sent.push([m, o])};
+    win.document = {addEventListener: (t: string, f: any) => (doc[t] = f), removeEventListener: (t: string) => delete doc[t], querySelectorAll: () => els};
+    const handlers: Record<string, (e: any) => void> = {};
+    win.addEventListener = (t: string, f: any) => (handlers[t] = f);
+    win.removeEventListener = (t: string) => delete handlers[t];
+    return {win: win as any, sent, doc, handlers, els};
+  }
+
+  it('posts the clicked key to the studio origin only', () => {
+    const t = fake();
+    const off = installPreviewBridge(t.win, ORIGIN);
+    let prevented = false;
+    const target = {closest: () => t.els[0], getAttribute: () => null, textContent: ''};
+    t.doc.click({target, preventDefault: () => (prevented = true)});
+    assert.deepEqual(t.sent, [[{type: 'data-edit', key: 'home.a'}, ORIGIN]]);
+    assert.equal(prevented, true);
+    t.doc.click({target: {closest: () => null}, preventDefault: () => assert.fail('no')});
+    assert.equal(t.sent.length, 1);
+    off();
+    assert.equal(t.doc.click, undefined);
+  });
+
+  it('sets text live from the studio origin only', () => {
+    const t = fake();
+    installPreviewBridge(t.win, ORIGIN);
+    t.handlers.message({origin: 'https://evil.example', data: {type: 'data-edit-set', key: 'home.a', value: 'bad'}});
+    assert.equal(t.els[0].textContent, 'old');
+    t.handlers.message({origin: ORIGIN, data: {type: 'data-edit-set', key: 'home.a', value: 'new'}});
+    assert.equal(t.els[0].textContent, 'new');
+    assert.equal(t.els[1].textContent, 'keep');
+    t.handlers.message({origin: ORIGIN, data: {type: 'other', key: 'home.b', value: 'x'}});
+    assert.equal(t.els[1].textContent, 'keep');
+  });
+
+  it('does nothing outside a frame', () => {
+    const t = fake();
+    t.win.parent = t.win;
+    installPreviewBridge(t.win, ORIGIN);
+    assert.equal(t.doc.click, undefined);
   });
 });

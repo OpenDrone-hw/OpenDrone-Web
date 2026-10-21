@@ -43,6 +43,7 @@ import {THEME_COLORS, THEME_INIT_SCRIPT} from '~/lib/theme';
 import {buildThemeCss, themeOverrideCss} from '~/lib/theme-overrides';
 import {navLinks, plausibleScript, themeOverrides} from '~/lib/site/config';
 import {resolveSite} from '~/lib/site/resolve';
+import {installPreviewBridge, previewOrigin} from '~/lib/site/preview-bridge';
 import {installViewTransitionGuard} from '~/lib/view-transition';
 import {captureAttribution} from '~/lib/growth/attribution';
 import {PLAUSIBLE_SNIPPET, initPlausible, trackEvent} from '~/lib/growth/plausible';
@@ -228,7 +229,10 @@ export async function loader(args: Route.LoaderArgs) {
       plausibleDomain: site.plausibleDomain,
       headerNav: navLinks(site.navigation.header, 'header'),
       footerNav: navLinks(site.navigation.footer, 'footer'),
+      texts: site.texts,
     },
+    // The Studio's preview bridge (app/lib/site/preview-bridge.ts): only with SITE_PREVIEW=1 and a STUDIO_ORIGIN.
+    previewOrigin: previewOrigin(env),
   };
 }
 
@@ -453,6 +457,8 @@ export function Layout({children}: {children?: React.ReactNode}) {
 export default function App() {
   const data = useRouteLoaderData<RootLoader>('root');
   const {pathname} = useLocation();
+  const bridgeOrigin = data?.previewOrigin ?? null;
+  useEffect(() => (bridgeOrigin ? installPreviewBridge(window, bridgeOrigin) : undefined), [bridgeOrigin]);
 
   // The studio owns the whole viewport and must not be wrapped in the site's
   // header, footer or analytics: it is a tool, not a page. `import.meta.env.DEV`

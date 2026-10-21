@@ -32,6 +32,8 @@ export type SiteConfig = {
   plausibleDomain: string | null;
   navigation: {header: NavItem[]; footer: NavItem[]};
   pages: SitePageIndexEntry[];
+  /** The site's own text by copy id (`home.hero_line1`) over the bundled content/copy strings; {} for the default site. */
+  texts: Record<string, string>;
 };
 
 export function defaultSite(): SiteConfig {
@@ -49,6 +51,7 @@ export function defaultSite(): SiteConfig {
     plausibleDomain: null,
     navigation: {header: [], footer: []},
     pages: [],
+    texts: {},
   };
 }
 
@@ -64,7 +67,15 @@ export type AppSiteAnswer = {
   seo?: {title_template?: string; description?: string; robots?: string} | null;
   analytics?: {plausible_domain?: string | null} | null;
   pages?: SitePageIndexEntry[] | null;
+  texts?: Record<string, unknown> | null;
 };
+
+/** Only string values under string keys are kept; anything else would break a <Txt>. */
+export function cleanTexts(texts: Record<string, unknown> | null | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(texts ?? {})) if (typeof v === 'string') out[k] = v;
+  return out;
+}
 
 export function siteFromAnswer(a: AppSiteAnswer): SiteConfig {
   const base = defaultSite();
@@ -84,6 +95,7 @@ export function siteFromAnswer(a: AppSiteAnswer): SiteConfig {
     plausibleDomain: a.analytics?.plausible_domain || null,
     navigation: {header: a.navigation?.header ?? [], footer: a.navigation?.footer ?? []},
     pages: a.pages ?? [],
+    texts: cleanTexts(a.texts),
   };
 }
 
