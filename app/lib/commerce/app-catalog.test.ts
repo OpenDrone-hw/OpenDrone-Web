@@ -229,11 +229,15 @@ describe('app cart on the buy buttons', () => {
     const cookies = res.headers.getSetCookie().map((c) => c.split(';', 1)[0]);
     assert.equal(cookies.length, 2);
     const req = new Request('https://shop.example/', {headers: {Cookie: cookies.join('; ')}});
-    assert.deepEqual((await readOptions(req, cartEnv)).attributes, {_ref: 'creator-1', _utm_source: 'youtube'});
+    assert.deepEqual((await readOptions(req, cartEnv)).attributes, {_ref: 'creator-1', _utm_source: 'youtube', _landing: '/x'});
     const later = await handleAppCartAction(post({sku: 'B-1', attr_ref: 'other', attr_campaign: 'c1'}, cookies.join('; ')), cartEnv, catalog);
     const next = later.headers.getSetCookie().map((c) => c.split(';', 1)[0]);
     const r2 = new Request('https://shop.example/', {headers: {Cookie: next.join('; ')}});
-    assert.deepEqual((await readOptions(r2, cartEnv)).attributes, {_ref: 'creator-1', _utm_source: 'youtube', _utm_campaign: 'c1'});
+    assert.deepEqual((await readOptions(r2, cartEnv)).attributes, {_ref: 'creator-1', _utm_source: 'youtube', _landing: '/x', _utm_campaign: 'c1'});
+    // A direct visit is the landing marker alone (and a referrer host when there is one).
+    const direct = await handleAppCartAction(post({sku: 'B-1', qty: '1', response: 'summary', attr_landing: '/products/b-1', attr_referrer: 'www.google.com'}), cartEnv, catalog);
+    const dc = direct.headers.getSetCookie().map((c) => c.split(';', 1)[0]);
+    assert.deepEqual((await readOptions(new Request('https://shop.example/', {headers: {Cookie: dc.join('; ')}}), cartEnv)).attributes, {_referrer: 'www.google.com', _landing: '/products/b-1'});
   });
 
   it('sends the drawer checkout to the app cart and refuses a foreign origin', async () => {

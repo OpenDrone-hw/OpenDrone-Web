@@ -261,6 +261,31 @@ describe('Shopify cart action: add', () => {
     assert.match(logged.join(), /attribution not recorded/);
   });
 
+  it('writes a direct visit as the landing marker alone and keeps a cart that already has a first touch', async () => {
+    let written: unknown;
+    await handleShopifyCartAction(
+      request({sku: 'OPENRX-LITE', qty: '1', attr_landing: '/products/openrx-lite'}), ENABLED_ENV, {
+        fetchCatalog: async () => CATALOG,
+        createCart: async () => cart(),
+        setAttributes: async (id, attributes) => { written = {id, attributes}; },
+      },
+    );
+    assert.deepEqual(written, {id: 'gid://shopify/Cart/a?key=secret', attributes: [{key: '_landing', value: '/products/openrx-lite'}]});
+    // A later session of the same cart does not replace the first touch.
+    let calls = 0;
+    await handleShopifyCartAction(
+      request({sku: 'OPENRX-LITE', qty: '1', attr_landing: '/', attr_referrer: 'www.google.com'}), ENABLED_ENV, {
+        fetchCatalog: async () => CATALOG,
+        getCartId: () => 'cart-a',
+        getCart: async () => cart([], 'cart-a'),
+        addCartLines: async () => ({...cart([], 'cart-a'), attributes: [{key: '_utm_source', value: 'youtube'}, {key: '_landing', value: '/x'}]}),
+        setAttributes: async () => { calls += 1; },
+        ...MUST_NOT,
+      },
+    );
+    assert.equal(calls, 0);
+  });
+
   it('enforces the cumulative per-SKU quantity limit', async () => {
     const response = await thrownResponse(handleShopifyCartAction(
       request({sku: 'OPENRX-LITE', qty: '2'}), ENABLED_ENV, {
