@@ -44,6 +44,8 @@ type WireProduct = {
   handle: string;
   title: string;
   type?: string | null;
+  /** The brand of a third-party part; empty or absent for the house brand. */
+  vendor?: string | null;
   description_html?: string | null;
   image?: {url: string; alt?: string | null} | null;
   media?: Array<{url: string; alt?: string | null}> | null;
@@ -132,7 +134,7 @@ export function mapAppCatalog(wire: AppCatalogWire, now: Date = new Date()): Cat
       handle: p.handle,
       title: p.title,
       family: p.type || null,
-      vendor: null,
+      vendor: p.vendor?.trim() || null,  // the app sends '' for none; the PDP brand and JSON-LD read it
       description: plain(p.description_html),
       url: `/products/${p.handle}`,
       images: unique.map((m) => m.url),
