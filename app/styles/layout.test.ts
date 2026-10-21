@@ -59,3 +59,35 @@ describe('mobile homepage build card', () => {
     assert.match(mobile[1], /overscroll-behavior:\s*auto/, 'contain blocks scroll chaining on Chrome Android');
   });
 });
+
+describe('specs backdrop performance contract', () => {
+  const UI = readFileSync(new URL('./site-ui.css', import.meta.url), 'utf8');
+  const TSX = readFileSync(
+    new URL('../components/ProductSilhouette.tsx', import.meta.url),
+    'utf8',
+  );
+
+  it('renders the board backdrop as a single static <img>', () => {
+    assert.match(
+      TSX,
+      /className="product-silhouette-img"/,
+      'the board backdrop must be one <img>',
+    );
+    assert.doesNotMatch(
+      TSX,
+      /product-silhouette-light--/,
+      'the board backdrop must not carry animated light layers',
+    );
+  });
+
+  it('keeps that <img> flat and unmasked', () => {
+    const img = UI.match(/\.product-silhouette-img\s*\{([^}]*)\}/);
+    assert.ok(img, '.product-silhouette-img rule is missing');
+    assert.match(img[1], /opacity:/, 'the backdrop <img> needs a flat opacity');
+    assert.doesNotMatch(
+      img[1],
+      /mask-image:/,
+      'the backdrop <img> must not be masked (re-composite cost)',
+    );
+  });
+});
