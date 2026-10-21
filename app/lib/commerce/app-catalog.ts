@@ -25,6 +25,8 @@ type WireVariant = {
   price_minor?: number | null;
   compare_at_minor?: number | null;
   available?: boolean;
+  /** The Shopify variant id a promoted variant came from. */
+  alias?: string | null;
   options?: Record<string, string> | null;
   /** The variant's own photo, when the app has it. */
   image?: {url: string; alt?: string | null} | null;
@@ -98,7 +100,8 @@ export function mapAppCatalog(wire: AppCatalogWire, now: Date = new Date()): Cat
           cart_add_url: `${APP_ADD_PATH}?sku=${encodeURIComponent(sku)}&qty=1`,
           cart_add_method: 'POST',
           merchandise_id: v.id,
-        } as CatalogVariant;
+          ...(v.alias ? {alias: v.alias} : {}),
+        } as CatalogVariant & {alias?: string};  // alias: the Shopify id, for old ?variant= links (legacy-urls.ts)
       });
     return {
       handle: p.handle,

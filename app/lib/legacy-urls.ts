@@ -136,7 +136,8 @@ function variantKey(id: string | null | undefined): string {
   return (id ?? '').trim().split('/').pop() ?? '';
 }
 
-type VariantLike = {merchandise_id?: string; options?: Record<string, string>};
+/** `alias`: the Shopify id a promoted variant came from (the app's canonical `merchandise_id` replaces it). */
+type VariantLike = {merchandise_id?: string; alias?: string; options?: Record<string, string>};
 
 /**
  * `/products/<handle>?variant=<id>`: the old Shopify way to open a product with one variant chosen. This site picks a
@@ -148,7 +149,7 @@ export function variantRedirect(pathname: string, search: string, variants: read
   if (!params.has('variant')) return null;
   const wanted = variantKey(params.get('variant'));
   params.delete('variant');
-  const hit = wanted ? variants.find((v) => variantKey(v.merchandise_id) === wanted) : undefined;
+  const hit = wanted ? variants.find((v) => variantKey(v.merchandise_id) === wanted || variantKey(v.alias) === wanted) : undefined;
   // A single-variant product has the option `Title: Default Title`; it names nothing worth putting in a URL.
   const options = Object.entries(hit?.options ?? {}).filter(([name, value]) => !(name === 'Title' && value === 'Default Title'));
   for (const [name, value] of options) params.set(name, value);
