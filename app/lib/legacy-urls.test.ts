@@ -165,6 +165,15 @@ describe('variantRedirect', () => {
     assert.equal(variantRedirect('/products/strap', '?variant=13', variants), '/products/strap');
   });
 
+  it('also finds a variant by its Shopify alias when the catalog uses canonical ids', () => {
+    const owned = [
+      {merchandise_id: 'variant:aaa-1', alias: 'gid://shopify/ProductVariant/21', options: {Model: '20×20'}},
+      {merchandise_id: 'variant:bbb-2', alias: 'gid://shopify/ProductVariant/22', options: {Model: '30×30'}},
+    ];
+    assert.equal(variantRedirect('/products/openesc', '?variant=22', owned), `/products/openesc?Model=${encodeURIComponent('30×30')}`);
+    assert.equal(variantRedirect('/products/openesc', '?variant=gid://shopify/ProductVariant/21', owned), `/products/openesc?Model=${encodeURIComponent('20×20')}`);
+  });
+
   it('does nothing without a variant parameter', () => {
     assert.equal(variantRedirect('/products/openesc', '?Model=20', variants), null);
   });

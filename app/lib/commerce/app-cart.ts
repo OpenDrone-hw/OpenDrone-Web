@@ -8,6 +8,8 @@ import type {Catalog} from '../catalog.ts';
 import type {CartSummary} from '../shopify-cart-action.ts';
 import {campaignDate, shipLabelFromPromise} from '../preorder-campaign.ts';
 import {type CartLine, cleanLines, readCart, writeCart, type AppEnv} from './app-api.ts';
+import {cartAttributesFromForm} from '../growth/attribution.ts';
+import {readOptions, writeOptions, cleanAttributes} from './app-cart-options.ts';
 import {APP_CART_PATH} from './app-catalog.ts';
 
 const NO_STORE = {'Cache-Control': 'no-store'};
@@ -89,11 +91,21 @@ export async function handleAppCartAction(request: Request, env: AppEnv, catalog
   if (intent === 'checkout') return new Response(null, {status: 303, headers: {Location: APP_CART_PATH, ...NO_STORE}});
   if (intent !== 'add') throw fail('This cart change is not supported here.', 400);
   const lines = cleanLines([...(await readCart(request, env)), ...linesFromForm(form, catalog)]);
-  const cookie = await writeCart(lines, env);
-  if (form.get('response') === 'summary') {
-    return Response.json(appCartSummary(lines, catalog), {headers: {...NO_STORE, 'Set-Cookie': cookie}});
+  const headers = new Headers(NO_STORE);
+  headers.append('Set-Cookie', await writeCart(lines, env));
+  // First touch wins: the attribution the cart client sends is kept with the app cart (the options cookie) and goes
+  // to the app with the checkout. The reply is ok only after it is stored, so the client's "sent" latch is true.
+  const touch = cleanAttributes(Object.fromEntries(cartAttributesFromForm(form).map(({key, value}) => [key, value])));
+  if (Object.keys(touch).length) {
+    const options = await readOptions(request, env);
+    headers.append('Set-Cookie', await writeOptions({...options, attributes: {...touch, ...options.attributes}}, env));
   }
-  return new Response(null, {status: 303, headers: {Location: APP_CART_PATH, 'Set-Cookie': cookie, ...NO_STORE}});
+  if (form.get('response') === 'summary') {
+    headers.set('Content-Type', 'application/json');
+    return new Response(JSON.stringify(appCartSummary(lines, catalog)), {headers});
+  }
+  headers.set('Location', APP_CART_PATH);
+  return new Response(null, {status: 303, headers});
 }
 
 /** GET /api/shopify/cart in app mode: the summary for the header count, else the app cart page. */

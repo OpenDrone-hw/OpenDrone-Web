@@ -18,6 +18,7 @@ import {
   writeCart,
 } from '~/lib/commerce/app-api';
 import {readOptions, writeOptions} from '~/lib/commerce/app-cart-options';
+import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {ShopFrame} from '~/components/commerce/ShopFrame';
 import {OrderSummary, type SummaryImages} from '~/components/commerce/OrderSummary';
 import {PaymentRails} from '~/components/commerce/PaymentRails';
@@ -116,6 +117,7 @@ export async function action({context, request}: Route.ActionArgs) {
   }
   if (intent !== 'checkout') return redirect('/shop/cart');
   const origin = new URL(request.url).origin;
+  const options = await readOptions(request, context.env);
   const country = field(form, 'country').toUpperCase();
   const out = await appOp<{number: string; token: string | null; redirect_url: string | null}>(context.env, 'storefront.checkout', {
     lines: cleanLines(lines).map((l) => seenOf(form, l)),
@@ -137,12 +139,13 @@ export async function action({context, request}: Route.ActionArgs) {
     discount_code: field(form, 'discount_code'),
     pickup: field(form, 'pickup') === '1',
     note: field(form, 'note'),
+    attributes: options.attributes,
   });
   if (!out.ok || !out.data) return {problem: friendly(out.error?.code, out.error?.detail)};
   const headers = new Headers();
   if (out.data.token) headers.append('Set-Cookie', await orderCookie(context.env).serialize({number: out.data.number, token: out.data.token}));
   headers.append('Set-Cookie', await writeCart([], context.env));
-  headers.append('Set-Cookie', await writeOptions({code: '', pickup: false}, context.env));
+  headers.append('Set-Cookie', await writeOptions({...options, code: '', pickup: false}, context.env));
   return redirect(out.data.redirect_url ?? `/shop/order?order=${encodeURIComponent(out.data.number)}`, {headers});
 }
 
@@ -210,7 +213,7 @@ export default function ShopCart() {
       ) : null}
       {quote ? (
         <div className="co">
-          <Form method="post" className="co-form" id="checkout">
+          <Form method="post" className="co-form" id="checkout" onSubmit={() => trackCheckoutClick({amount: (quote.total_minor / 100).toFixed(2), currencyCode: quote.currency}, 'cart')}>
             <input type="hidden" name="intent" value="checkout" />
             <input type="hidden" name="request_key" value={key} />
             {/* What the buyer is looking at: a preorder line is ordered only at this price and ship date. */}

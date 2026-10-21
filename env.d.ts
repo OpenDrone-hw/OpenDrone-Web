@@ -90,6 +90,9 @@ declare global {
     APP_ACCESS_CLIENT_SECRET?: string;
     APP_STOREFRONT_TOKEN?: string;
     APP_PROJECT?: string;
+    // The public path the app's copied shop images are served at (app mode); the app's [commerce] media_path is the
+    // same value. Default /shop-media (app/lib/commerce/app-media.ts).
+    APP_MEDIA_PATH?: string;
     // Payment webhook relay (app/lib/commerce/pay-webhook.ts, POST /api/pay/webhook/:provider, app mode only).
     // STRIPE_WEBHOOK_SECRET: the endpoint signing secret (whsec_...). PAYPAL_WEBHOOK_ID_LIVE / _SANDBOX: the id of the
     // webhook on that REST app; PAYPAL_CLIENT_ID_* and PAYPAL_CLIENT_SECRET_* of the same app let the Worker call

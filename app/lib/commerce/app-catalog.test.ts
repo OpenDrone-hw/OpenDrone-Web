@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {afterEach, describe, it} from 'node:test';
 import {byHandle, bySku, toCards, toProduct, selectedOptionsFromRequest} from '../catalog.ts';
 import {clearCatalogMemo} from '../catalog-memo.ts';
+import {readOptions} from './app-cart-options.ts';
 import {appCartSummary, handleAppCartAction, handleAppCartLoader, linesFromForm} from './app-cart.ts';
 import {appCatalogClient, mapAppCatalog, type AppCatalogWire} from './app-catalog.ts';
 import {cleanLines, readCart, returnOrigin, writeCart, type AppEnv} from './app-api.ts';
@@ -221,6 +222,18 @@ describe('app cart on the buy buttons', () => {
     assert.equal(((await count.json()) as {totalQuantity: number}).totalQuantity, 2);
     const empty = await handleAppCartLoader(new Request('https://shop.example/api/shopify/cart?summary=1'), cartEnv, async () => catalog);
     assert.equal(((await empty.json()) as {totalQuantity: number}).totalQuantity, 0);
+  });
+
+  it('keeps the first-touch attributes with the app cart, validated, first touch wins', async () => {
+    const res = await handleAppCartAction(post({sku: 'B-1', qty: '1', response: 'summary', attr_ref: 'creator-1', attr_utmSource: 'youtube', attr_landing: '/x'}), cartEnv, catalog);
+    const cookies = res.headers.getSetCookie().map((c) => c.split(';', 1)[0]);
+    assert.equal(cookies.length, 2);
+    const req = new Request('https://shop.example/', {headers: {Cookie: cookies.join('; ')}});
+    assert.deepEqual((await readOptions(req, cartEnv)).attributes, {_ref: 'creator-1', _utm_source: 'youtube'});
+    const later = await handleAppCartAction(post({sku: 'B-1', attr_ref: 'other', attr_campaign: 'c1'}, cookies.join('; ')), cartEnv, catalog);
+    const next = later.headers.getSetCookie().map((c) => c.split(';', 1)[0]);
+    const r2 = new Request('https://shop.example/', {headers: {Cookie: next.join('; ')}});
+    assert.deepEqual((await readOptions(r2, cartEnv)).attributes, {_ref: 'creator-1', _utm_source: 'youtube', _utm_campaign: 'c1'});
   });
 
   it('sends the drawer checkout to the app cart and refuses a foreign origin', async () => {
