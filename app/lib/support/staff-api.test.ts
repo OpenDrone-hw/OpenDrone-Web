@@ -585,3 +585,23 @@ describe('customer card', {skip}, () => {
     assert.ok(bare.earlierTickets.some((t: any) => t.ref === matched.ref));
   });
 });
+
+describe('customer card in app mode', {skip}, () => {
+  it('returns contact, match flags and earlier tickets, and calls Shopify for nothing', async () => {
+    const { deps, call } = await setup({COMMERCE_SOURCE: 'app', APP_API_URL: 'https://app.example', APP_STOREFRONT_TOKEN: 't'} as never);
+    const urls: string[] = [];
+    deps.fetcher = (async (url: string) => {
+      urls.push(String(url));
+      return new Response(JSON.stringify({ok: true, data: {matched: true}}), {headers: {'content-type': 'application/json'}});
+    }) as unknown as typeof fetch;
+    const first = await createTicket(deps, input());
+    const second = await createTicket(deps, input());
+    urls.length = 0;
+    const card = (await call('GET', `/tickets/${second.ref}/customer`)).json.customer;
+    assert.deepEqual(urls, []);
+    assert.equal(card.orderMatched, true);
+    assert.deepEqual(card.orders, []);
+    assert.equal(card.contact, null);
+    assert.ok(card.earlierTickets.some((t: any) => t.ref === first.ref));
+  });
+});
