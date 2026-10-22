@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readdirSync, readFileSync} from 'node:fs';
 import {describe, it} from 'node:test';
 
-import {FACTS, applyFacts, expandMacros, shell} from './email-shell.ts';
+import {FACTS, SITE, WORDMARK, applyFacts, expandMacros, shell} from './email-shell.ts';
 import {launchCopy, renderBlast, renderShopifyEmailMd} from '../../scripts/launch-blast.mjs';
 import {pasteList} from '../../scripts/emails/hash.mjs';
 
@@ -86,5 +86,14 @@ describe('paste list', () => {
     const rows = await pasteList();
     assert.ok(rows.length >= 20);
     for (const r of rows) assert.match(r.sha256, /^[0-9a-f]{64}$/);
+  });
+});
+
+describe('email wordmark', () => {
+  it('is served by the site itself, absolute, and the file exists', () => {
+    assert.equal(WORDMARK, `${SITE}/email/opendrone-wordmark-email-blackgold.png`);
+    assert.ok(!WORDMARK.includes('shopify'));
+    const png = readFileSync(new URL('../../public/email/opendrone-wordmark-email-blackgold.png', import.meta.url));
+    assert.equal(png.subarray(1, 4).toString(), 'PNG');
   });
 });
