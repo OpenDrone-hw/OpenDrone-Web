@@ -18,8 +18,9 @@
  */
 
 export const SITE = 'https://opendrone.be';
-export const WORDMARK =
-  'https://cdn.shopify.com/s/files/1/1032/6641/9033/files/opendrone-wordmark-email-blackgold_39eb37d0-777f-4a31-b2f3-eb25965c97d7.png?v=1786703416';
+/** Served by the site itself (public/email/), so mails keep their logo when the Shopify store and its CDN go away.
+ *  Absolute, as mail clients need. */
+export const WORDMARK = `${SITE}/email/opendrone-wordmark-email-blackgold.png`;
 export const COMPANY_LINE =
   'Incutec BV · Stapelhuisstraat 15, 3000 Leuven, Belgium · KBO 1038.934.039 · BTW BE 1038.934.039';
 export const COMPANY_LINE_TEXT =
