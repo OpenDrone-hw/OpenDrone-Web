@@ -54,6 +54,8 @@ NEWSLETTER_FROM_EMAIL = "hello@opendrone.be"
 # on by the founder's go of 2026-09-27.
 SUPPORT_SHOPIFY_WRITE_ENABLED = "1"
 SUPPORT_EMAIL_NOTIFY_ENABLED = "1"
+# Preorder fulfillment holds and batch tags: on unless PREORDER_HOLDS_ENABLED is
+# "0" (not set here, so on). Set it to "0" when the Shopify store closes.
 # Customer mail (README "Mail"): Gmail poll that saves a ChatFPV reply as a
 # Gmail draft for each customer mail; a person sends it. "0" off, "dry" reports
 # counts only, "1" on. Needs the founder's go; the Gmail credentials are Worker secrets.

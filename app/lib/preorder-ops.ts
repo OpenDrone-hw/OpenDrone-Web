@@ -11,8 +11,9 @@
  * 2. Holds, whatever the price-step switch and whatever step 1 did: hold
  *    and tag every paid preorder order not yet done
  *    (`preorder-fulfilment.ts`). The hold pass reads the orders itself and
- *    needs no paid count. Off only on a Worker with `STAGING_PASSWORD`
- *    (`preorderHoldsEnabled`), since staging shares the production store.
+ *    needs no paid count. Off on a Worker with `STAGING_PASSWORD`
+ *    (staging shares the production store) or with `PREORDER_HOLDS_ENABLED`
+ *    "0" (`preorderHoldsEnabled`).
  *
  * A failure in either step is logged, recorded (`preorder-ops-status.ts`)
  * and returned; the pass itself never throws.
@@ -24,7 +25,7 @@ import {recordOps} from './preorder-ops-status.ts';
 import {fetchPaidUnits} from './shopify-orders.ts';
 import {priceTierWritesEnabled, syncPriceTiers, type TierChange} from './shopify-price-tier.ts';
 
-type OpsEnv = Parameters<typeof syncPriceTiers>[0] & Partial<Pick<Env, 'STAGING_PASSWORD'>>;
+type OpsEnv = Parameters<typeof syncPriceTiers>[0] & Partial<Pick<Env, 'STAGING_PASSWORD' | 'PREORDER_HOLDS_ENABLED'>>;
 
 export type ReconcileResult = {
   changed: TierChange[];
@@ -38,8 +39,11 @@ export type ReconcileResult = {
 };
 
 /** Holds run on every Worker but staging, which shares the production
- *  Shopify store and must not write to its orders. */
-export function preorderHoldsEnabled(env: Partial<Pick<Env, 'STAGING_PASSWORD'>>): boolean {
+ *  Shopify store and must not write to its orders, and on none while
+ *  `PREORDER_HOLDS_ENABLED` is "0" (unset means on; for the day the Shopify
+ *  store closes). */
+export function preorderHoldsEnabled(env: Partial<Pick<Env, 'STAGING_PASSWORD' | 'PREORDER_HOLDS_ENABLED'>>): boolean {
+  if (env.PREORDER_HOLDS_ENABLED?.trim() === '0') return false;
   return !env.STAGING_PASSWORD?.trim();
 }
 

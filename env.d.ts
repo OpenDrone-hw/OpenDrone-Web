@@ -148,6 +148,9 @@ declare global {
     // "opendrone" with this password before serving anything. Production
     // leaves it unset.
     STAGING_PASSWORD?: string;
+    // "0" turns off the preorder fulfillment holds and batch tags (webhook
+    // and cron). Unset or anything else leaves them on.
+    PREORDER_HOLDS_ENABLED?: string;
     // Per-SKU sale policy, {"SKU": {"saleMode": "in_stock" | "preorder" |
     // "sold_out", "shipPromise": string | null}}, one entry for every
     // storefront SKU or the catalog refuses to load. A Worker secret; the
