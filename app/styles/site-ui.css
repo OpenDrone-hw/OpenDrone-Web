@@ -2123,6 +2123,7 @@ body:has(.test-banner) .site-header {
 .co-steps { list-style: decimal; margin: 0; padding-left: 1.25rem; display: grid; gap: 0.5rem; color: var(--color-text-muted); }
 .co-steps li::marker { color: var(--color-gold-text); font-weight: 600; }
 /* A receipt: the label takes the room and wraps, the value keeps its own width on the right (an amount never breaks on a phone). */
+.co-parcel { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 0.75rem 0 0; font-size: 0.8125rem; }
 .co-kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem 1.5rem; margin: 0; }
 .co-kv dt { color: var(--color-text-muted); font-size: 0.8125rem; }
 .co-kv dd { margin: 0; text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }

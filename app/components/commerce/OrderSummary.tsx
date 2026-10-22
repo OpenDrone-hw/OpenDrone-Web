@@ -4,6 +4,8 @@ import {type Quote, formatMoney, vatLabel} from '~/lib/commerce/app-api';
 import {DiscountCode, FreeShippingBar, OrderNote, PickupChoice} from './SummaryOptions';
 import {discountRows, lineStrike, shippingStrike} from '~/lib/commerce/summary-discounts';
 import {SummarySuggestions} from './SummarySuggestions';
+import {ShipChip, parcelPromise} from '~/components/ShipChip';
+import {EarlyBirdNote, useAnyEarlySku} from '~/components/EarlyPriceCue';
 import {countryName} from '~/lib/shipping-rates';
 
 export type SummaryImages = Record<string, {url: string; alt: string} | null>;
@@ -60,6 +62,9 @@ function useFitsViewport() {
 }
 
 export function OrderSummary({quote, country, images, pending, code = ''}: {quote: Quote; country: string; images: SummaryImages; pending: boolean; code?: string}) {
+  // As the Shopify-mode cart: one parcel ships when its last item is ready, and early bird prices say so once.
+  const parcel = parcelPromise(quote.lines.map((l) => l.ship_promise));
+  const anyEarly = useAnyEarlySku(quote.lines.map((l) => l.sku));
   const [open, setOpen] = useState(false);
   const fits = useFitsViewport();
   const money = (n: number) => formatMoney(n, quote.currency);
@@ -146,6 +151,13 @@ export function OrderSummary({quote, country, images, pending, code = ''}: {quot
               <dd className="co-num">{money(quote.vat_included_minor)}</dd>
             </div>
           </dl>
+          {parcel ? (
+            <p className="co-parcel">
+              <span className="co-dim">Your parcel</span>
+              <ShipChip promise={parcel} ifFunded />
+            </p>
+          ) : null}
+          <EarlyBirdNote show={anyEarly} className="cart-summary-note" />
         </div>
       </aside>
       <SummarySuggestions skus={quote.lines.map((l) => l.sku ?? '').filter(Boolean)} />
