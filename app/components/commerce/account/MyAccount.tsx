@@ -96,7 +96,7 @@ export function MyAccount({account, countries, chatfpv, pilotMap}: {account: Acc
           <h1 className="app-shop-title">My account</h1>
           <p className="co-quiet">{account.name ? `${account.name} · ` : ''}{account.email}</p>
         </div>
-        <Form method="post" action="/account/logout">
+        <Form method="post" action="/account/logout" reloadDocument>
           <button type="submit" className="acct-btn">Sign out</button>
         </Form>
       </header>
