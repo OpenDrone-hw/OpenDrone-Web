@@ -1,5 +1,5 @@
 /**
- * The billing part of a checkout form: a separate billing address behind "Billing address is different", and the
+ * The billing part of a checkout form: a separate billing address behind "Use shipping address as billing address", and the
  * optional company name and VAT number. Pure, so the node tests cover it. The app checks the VAT number by format
  * only (no VIES lookup) and refuses `billing_same: false` without an address.
  */
