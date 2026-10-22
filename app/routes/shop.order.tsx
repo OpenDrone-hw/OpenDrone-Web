@@ -16,6 +16,7 @@ type Status = {
   rail_state: string;
   state: {payment: string; fulfilment: string};
   quote: {total_minor: number; currency: string; subtotal_minor?: number; shipping_minor?: number; shipping_standard_minor?: number;
+    vat_rate?: number; vat_included_minor?: number;
     discount?: {code: string; minor: number} | null; discounts?: AppliedDiscount[]; lines?: Array<{title: string; variant_title?: string; qty: number; total_minor: number}>};
   parcels?: Array<{carrier: string | null; tracking_number: string | null; tracking_url: string | null}>;
   canceled?: boolean;
@@ -144,6 +145,12 @@ export default function ShopOrder() {
               ) : null}
               <dt>Total</dt>
               <dd>{formatMoney(status.quote.total_minor, status.quote.currency)}</dd>
+              {status.quote.vat_included_minor ? (
+                <>
+                  <dt className="co-dim">Includes VAT{typeof status.quote.vat_rate === 'number' ? ` (${status.quote.vat_rate}%)` : ''}</dt>
+                  <dd className="co-dim">{formatMoney(status.quote.vat_included_minor, status.quote.currency)}</dd>
+                </>
+              ) : null}
               {status.ship_to ? (
                 <>
                   <dt>Shipping to</dt>
