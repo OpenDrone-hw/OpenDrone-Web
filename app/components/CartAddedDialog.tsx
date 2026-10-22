@@ -436,7 +436,9 @@ export function CartAddedDialog() {
           {usBuyer && subtotal?.currencyCode === 'USD' ? (
             <p className="cart-added-parcel">{t('us_price_note', 'Duties included')}</p>
           ) : null}
-          {quote?.kind === 'direct' && quote.zone === 'international' ? (
+          {rootData?.appCommerce === true ? (
+            <Txt id="product-chrome.buy_eu_only" as="p" className="cart-added-parcel" />
+          ) : quote?.kind === 'direct' && quote.zone === 'international' ? (
             <p className="cart-added-parcel">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p>
           ) : null}
           {mixed ? (

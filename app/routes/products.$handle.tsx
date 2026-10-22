@@ -1856,7 +1856,9 @@ function ProductPage() {
   // A US buyer while US sales are open: the USD list price, duties included, no sales tax.
   const usRate = rootData?.usShippingRate ?? null;
   const usBuyer = usRate != null && rootData?.visitorCountry === 'US';
-  const internationalBuyer = isInternationalQuote(shippingQuote(rootData?.visitorCountry ?? null, undefined, usRate));
+  // App mode sells to the EU only: no international promise, one honest line instead.
+  const euOnly = rootData?.appCommerce === true;
+  const internationalBuyer = !euOnly && isInternationalQuote(shippingQuote(rootData?.visitorCountry ?? null, undefined, usRate));
   const vatNote = paysEuVat(rootData?.visitorCountry ?? null)
     ? say('product-chrome.buy_vat_note', 'incl. VAT')
     : usBuyer && buyPrice?.currencyCode === 'USD'
@@ -2061,6 +2063,11 @@ function ProductPage() {
         </p>
       )}
       {notDirect ? null : usNotice}
+      {euOnly && buyAvailable && !notDirect && !isBundle ? (
+        <p className="product-buy-ship" role="note">
+          {say('product-chrome.buy_eu_only', 'We ship to addresses in the EU only.')}
+        </p>
+      ) : null}
       {preorder && !isBundle && !notDirect ? (
         <p className="product-buy-ship">
           {targetMissed ? <>{targetMissed}{' '}</> : null}
