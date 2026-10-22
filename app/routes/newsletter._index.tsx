@@ -223,7 +223,7 @@ export async function action({request, context}: Route.ActionArgs) {
 
   // App mode: the consent is an owned record in the app, Shopify is not called. Same four answers either way.
   const shopifyResult = appCommerceEnabled(context.env)
-    ? await subscribeWithApp(context.env, email, notifyProduct ?? undefined, visitorCountry(request))
+    ? await subscribeWithApp(context.env, email, notifyProduct ?? undefined, visitorCountry(request), fetch, `${new URL(request.url).origin}/newsletter/confirm`)
     : await subscribeWithShopify(
         context.env,
         email,
@@ -232,6 +232,7 @@ export async function action({request, context}: Route.ActionArgs) {
       );
   const subscribed =
     shopifyResult === 'subscribed' ||
+    shopifyResult === 'pending' ||
     shopifyResult === 'already-subscribed' ||
     shopifyResult === 'suppressed';
   if (!subscribed) {
@@ -258,6 +259,16 @@ export async function action({request, context}: Route.ActionArgs) {
     });
     if (context.waitUntil) context.waitUntil(welcome);
     else await welcome;
+  }
+
+  // Double opt-in (app mode, flag on): consent starts when the link of the confirm mail is used, so no welcome yet.
+  if (shopifyResult === 'pending') {
+    return data<NewsletterResult>({
+      ok: true,
+      message:
+        copyText('newsletter.action_confirm_sent') ??
+        'Almost there. Check your inbox and confirm your address to join the list.',
+    });
   }
 
   // The response never reveals whether the address already existed.
