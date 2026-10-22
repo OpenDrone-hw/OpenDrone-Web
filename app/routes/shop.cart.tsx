@@ -22,6 +22,7 @@ import {buyerOf} from '~/lib/commerce/buyer';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {ShopFrame} from '~/components/commerce/ShopFrame';
 import {OrderSummary, type SummaryImages} from '~/components/commerce/OrderSummary';
+import {PayTerms} from '~/components/commerce/PayTerms';
 import {PaymentRails} from '~/components/commerce/PaymentRails';
 import {BillingSection} from '~/components/commerce/BillingSection';
 import {AddressFields, type AddressFill} from '~/components/commerce/AddressFields';
@@ -241,6 +242,7 @@ export default function ShopCart() {
             <button type="submit" className="co-pay" disabled={busy}>
               {submitting ? 'Placing order...' : `Pay ${formatMoney(quote.total_minor, quote.currency)}`}
             </button>
+            <PayTerms hasPreorder={quote.lines.some((l) => l.sale_mode === 'preorder')} />
           </Form>
           <OrderSummary quote={quote} country={country} images={images} code={code} pending={busy && !submitting} />
         </div>
