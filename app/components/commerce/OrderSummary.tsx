@@ -2,6 +2,7 @@ import {useEffect, useRef, useState} from 'react';
 import {useFetcher} from 'react-router';
 import {type Quote, formatMoney, vatLabel} from '~/lib/commerce/app-api';
 import {DiscountCode, FreeShippingBar, OrderNote, PickupChoice} from './SummaryOptions';
+import {discountRows, lineStrike, shippingStrike} from '~/lib/commerce/summary-discounts';
 import {SummarySuggestions} from './SummarySuggestions';
 
 export type SummaryImages = Record<string, {url: string; alt: string} | null>;
@@ -61,6 +62,7 @@ export function OrderSummary({quote, country, images, pending, code = ''}: {quot
   const [open, setOpen] = useState(false);
   const fits = useFitsViewport();
   const money = (n: number) => formatMoney(n, quote.currency);
+  const shipStrike = shippingStrike(quote);
   return (
     <div className="co-side" ref={fits.ref} data-fits={fits.value || undefined}>
       <aside className="co-summary" aria-label="Order summary" data-open={open} aria-busy={pending}>
@@ -72,6 +74,7 @@ export function OrderSummary({quote, country, images, pending, code = ''}: {quot
           <ul className="co-lines">
             {quote.lines.map((l) => {
               const img = images[l.variant];
+              const strike = lineStrike(l);
               return (
                 <li key={l.variant} className="co-line">
                   <span className="co-thumb">
@@ -89,7 +92,15 @@ export function OrderSummary({quote, country, images, pending, code = ''}: {quot
                       <Remove variant={l.variant} title={l.title} />
                     </span>
                   </span>
-                  <span className="co-num">{money(l.total_minor)}</span>
+                  <span className="co-num">
+                    {strike ? (
+                      <>
+                        <s className="co-dim co-was">{money(strike.was)}</s> {money(strike.now)}
+                      </>
+                    ) : (
+                      money(l.total_minor)
+                    )}
+                  </span>
                 </li>
               );
             })}
@@ -103,15 +114,22 @@ export function OrderSummary({quote, country, images, pending, code = ''}: {quot
               <dt>Subtotal</dt>
               <dd className="co-num">{money(quote.subtotal_minor)}</dd>
             </div>
-            {quote.discount && quote.discount.minor > 0 ? (
-              <div>
-                <dt>Discount ({quote.discount.code})</dt>
-                <dd className="co-num">&minus;{money(quote.discount.minor)}</dd>
+            {discountRows(quote).map((r) => (
+              <div key={r.key}>
+                <dt>{r.label}</dt>
+                <dd className="co-num">&minus;{money(r.minor)}</dd>
               </div>
-            ) : null}
+            ))}
             <div>
               <dt>{quote.pickup ? 'Pickup at our Leuven office' : `Shipping to ${country}`}</dt>
-              <dd className="co-num">{quote.shipping_minor === 0 ? 'Free' : money(quote.shipping_minor)}</dd>
+              <dd className="co-num">
+                {shipStrike != null ? (
+                  <>
+                    <s className="co-dim co-was">{money(shipStrike)}</s>{' '}
+                  </>
+                ) : null}
+                {quote.shipping_minor === 0 ? 'Free' : money(quote.shipping_minor)}
+              </dd>
             </div>
             <div className="co-grand">
               <dt>Total</dt>

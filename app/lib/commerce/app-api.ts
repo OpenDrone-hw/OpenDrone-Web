@@ -114,8 +114,17 @@ export type AppPost = {
   content_html: string;
 };
 export type CartLine = {variant: string; qty: number};
+export type AppliedDiscount = {
+  code: string | null;
+  title: string;
+  method: 'code' | 'automatic';
+  class: 'product' | 'order' | 'shipping';
+  kind: 'percent' | 'fixed' | 'free_shipping' | 'bxgy';
+  value: number;
+  minor: number;
+};
 export type Quote = {
-  lines: Array<{variant: string; sku?: string; title: string; variant_title: string; qty: number; unit_minor: number; total_minor: number; sale_mode?: 'in_stock' | 'preorder' | 'sold_out'; ship_promise?: string | null; vat_rate?: number; vat_minor?: number}>;
+  lines: Array<{variant: string; sku?: string; title: string; variant_title: string; qty: number; unit_minor: number; total_minor: number; sale_mode?: 'in_stock' | 'preorder' | 'sold_out'; ship_promise?: string | null; vat_rate?: number; vat_minor?: number; /** This line's share of the discounts; absent from an older app. */ discount_minor?: number}>;
   currency: string;
   subtotal_minor: number;
   shipping_minor: number;
@@ -128,6 +137,8 @@ export type Quote = {
   /** The applied discount code, its amount off the subtotal, or why a code given does not apply. */
   discount?: {code: string; kind: 'percent' | 'fixed' | 'free_shipping'; value: number; minor: number} | null;
   discount_minor?: number;
+  /** Every discount applied, automatic ones included. Absent from an older app (then `discount` is all there is). */
+  discounts?: AppliedDiscount[];
   discount_problem?: string | null;
   /** Free-shipping progress; null when the app offers none. */
   free_shipping?: {threshold_minor: number; remaining_minor: number} | null;
