@@ -6,6 +6,7 @@
  */
 
 import type {Catalog, CatalogVariant} from './catalog.ts';
+import {appCommerceEnabled} from './commerce/app-api.ts';
 import {priceLadder, tiersFor, type CampaignConfig, type UsdLadderStep} from './preorder-campaign.ts';
 
 export type UsSalesFile = {
@@ -35,12 +36,14 @@ export const US_SALES: UsSalesFile = loadUsSales();
  * The flat US shipping rate in USD when US consumer sales are open, else
  * null: the gate `PUBLIC_US_SALES` is exactly "1" and the committed rate is
  * a finite, non-negative number. Every US decision (quote, cart, catalog,
- * copy) reads this one answer.
+ * copy) reads this one answer. In app mode (COMMERCE_SOURCE=app) the shop sells to the EU only, so this is always
+ * null there, whatever the gate says.
  */
 export function usSalesRate(
-  env: {PUBLIC_US_SALES?: string} | null | undefined,
+  env: {PUBLIC_US_SALES?: string; COMMERCE_SOURCE?: string; APP_API_URL?: string} | null | undefined,
   file: UsSalesFile = US_SALES,
 ): number | null {
+  if (env && appCommerceEnabled(env)) return null;
   if (env?.PUBLIC_US_SALES !== '1') return null;
   const rate = file.rate;
   return typeof rate === 'number' && Number.isFinite(rate) && rate >= 0 ? rate : null;

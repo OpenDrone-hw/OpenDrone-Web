@@ -22,6 +22,7 @@ import {buyerOf} from '~/lib/commerce/buyer';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {ShopFrame} from '~/components/commerce/ShopFrame';
 import {OrderSummary, type SummaryImages} from '~/components/commerce/OrderSummary';
+import {Txt} from '~/components/Txt';
 import {PayTerms} from '~/components/commerce/PayTerms';
 import {PaymentRails} from '~/components/commerce/PaymentRails';
 import {BillingSection} from '~/components/commerce/BillingSection';
@@ -233,6 +234,7 @@ export default function ShopCart() {
             <ContactSection accountEmail={accountEmail} />
             <section className="co-section">
               <h2 className="co-h">Delivery</h2>
+              <Txt id="product-chrome.buy_eu_only" as="p" className="app-shop-note" />
               <AddressFields country={country} countries={countries} suggest={suggest} fill={fill} prefill={prefill} onCountry={(c) => void navigate(`/shop/cart?country=${c}`, {replace: true, preventScrollReset: true})} />
             </section>
             <BillingSection country={country} countries={countries} suggest={suggest} />
