@@ -230,6 +230,11 @@ declare global {
     SUPPORT_STAFF_ACCESS_TEAM_DOMAIN?: string;
     SUPPORT_STAFF_ACCESS_AUD?: string;
     SUPPORT_STAFF_ACCESS_CLIENT_ID?: string;
+    // "1" turns on GET /api/editorial/manifest and /receipt (app/lib/editorial/api.ts): read-only evidence of the
+    // build for the company app, same credential as the staff API. [vars], off by default.
+    EDITORIAL_API?: string;
+    // Workers version metadata (wrangler `[version_metadata]`): this deployment's version id and time.
+    CF_VERSION_METADATA?: {id?: string; tag?: string; timestamp?: string};
     // Forum channel (public #help) that community questions are posted to.
     DISCORD_HELP_CHANNEL_ID?: string;
     // '1' emails "you have a new reply" (no content) through Resend.

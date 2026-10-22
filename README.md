@@ -736,6 +736,13 @@ hour per IP; to reset, stop both, `rm -rf .wrangler/state`, and start them again
 folds to `false`, and `dev-overrides.test.ts` checks a built Worker holds
 no trace of them.
 
+## Editorial manifest
+
+Read-only evidence of what is live, for the company app's storefront console. Off unless `EDITORIAL_API` is `"1"` (`wrangler.production.toml`, `"0"`; turning it on needs the founder's go); off answers 404. Same credential as the staff API (`SUPPORT_STAFF_API_TOKEN` bearer, plus the Access JWT when configured); never public. Nothing here publishes: a merge to `main` or the Worker deploy stays a person's click.
+
+- `GET /api/editorial/manifest`: the contract's page (`editorial.manifest` v1, `items` as `{ref, revision, audience}`) plus `manifest`: every file under `content/**/*.json` and `app/content/**/*.md` with path, kind, locale, title, `sha256` of the source, last commit and date (null when the build had a shallow checkout), `editable` or `generated`, the build commit and time, `manifest_hash` and declared `gaps`. Generated at build by `app/lib/editorial/manifest.ts` (Vite virtual module), not at runtime.
+- `GET /api/editorial/receipt`: `publication.receipt` evidence of the running deployment: `deployed_revision` (build sha), `manifest_hash` (also `verification_ref`), `build_time`, `deployed_at` and `worker_version_id` (from the `CF_VERSION_METADATA` binding).
+
 ## Early Bird
 
 A paid preorder placed before the run closes (`endsOn` in

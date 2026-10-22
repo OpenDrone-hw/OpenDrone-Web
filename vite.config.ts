@@ -9,6 +9,7 @@ import {
   studioPlugin,
 } from './studio/vite-plugin-studio';
 import {isContentJson, stripContent} from './app/lib/content-strip';
+import {buildManifest} from './app/lib/editorial/manifest.ts';
 
 // `$comment` notes and `hidden: true` entries in content/*.json are for
 // editors only: a build drops them before Vite's JSON plugin turns the file
@@ -21,6 +22,22 @@ function contentStripPlugin(): Plugin {
     transform(code, id) {
       if (!isContentJson(id)) return null;
       return {code: JSON.stringify(stripContent(JSON.parse(code))), map: null};
+    },
+  };
+}
+
+// The editorial manifest (app/lib/editorial/manifest.ts): the content sources of this build and their hashes,
+// computed once per build and served only by the flag-gated /api/editorial/* routes.
+function editorialManifestPlugin(): Plugin {
+  const id = 'virtual:editorial-manifest';
+  let json: string | null = null;
+  return {
+    name: 'opendrone:editorial-manifest',
+    resolveId: (source) => (source === id ? `\0${id}` : null),
+    load(source) {
+      if (source !== `\0${id}`) return null;
+      json ??= JSON.stringify(buildManifest({root: process.cwd()}));
+      return `export default ${json};`;
     },
   };
 }
@@ -58,6 +75,7 @@ export default defineConfig({
     // in publicDir, so Vite would otherwise serve it at a public URL.
     heroStudioExcludePlugin(),
     contentStripPlugin(),
+    editorialManifestPlugin(),
     tailwindcss(),
     // Runs server.ts in workerd in dev and builds it as the Worker entry
     // (dist/server/index.js). wrangler.toml supplies the compatibility date

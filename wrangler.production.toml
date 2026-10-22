@@ -68,6 +68,9 @@ SUPPORT_MAIL_INTAKE_ENABLED = "dry"
 # route also needs DISCORD_HELP_CHANNEL_ID and the wording marked TODO-LEGAL in
 # app/lib/support/community.ts approved.
 SUPPORT_CRM_API = "1"
+# Editorial evidence for the app (README "Editorial manifest"): GET /api/editorial/manifest and /receipt,
+# read only, same credential as the staff API. "0" off; needs the founder's go to turn on.
+EDITORIAL_API = "0"
 SUPPORT_COMMUNITY_ROUTE = "0"
 # ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
 # /support Ask box and the product/preorder widget. "1" turns each on.
@@ -106,6 +109,10 @@ migrations_dir = "migrations"
 [[services]]
 binding = "CHATFPV"
 service = "chatfpv"
+
+# This deployment's version id and time, shown by /api/editorial/receipt.
+[version_metadata]
+binding = "CF_VERSION_METADATA"
 
 # Ticket attachments of the CRM (README "Support tickets"), bucket created 2026-10-15.
 [[r2_buckets]]
