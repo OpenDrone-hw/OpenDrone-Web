@@ -44,28 +44,28 @@ type CookieEntry = {name: string; en: string; nl: string; fr: string};
 
 const KNOWN: CookieEntry[] = [
   {
-    name: 'cart',
-    en: 'Links your cart to your browser session. Strictly necessary.',
-    nl: 'Koppelt uw winkelwagen aan uw browsersessie. Strikt noodzakelijk.',
-    fr: 'Associe votre panier \u00e0 votre session de navigateur. Strictement n\u00e9cessaire.',
+    name: 'od_app_cart',
+    en: 'Keeps the products in your cart (variant and quantity, signed). Set when you add a product; 14 days. Strictly necessary.',
+    nl: 'Bewaart de producten in uw winkelmandje (variant en aantal, ondertekend). Geplaatst wanneer u een product toevoegt; 14 dagen. Strikt noodzakelijk.',
+    fr: 'Conserve les produits de votre panier (variante et quantit\u00e9, sign\u00e9es). Plac\u00e9 lorsque vous ajoutez un produit ; 14 jours. Strictement n\u00e9cessaire.',
   },
   {
-    name: 'cart_sig',
-    en: 'Security signature for the cart cookie.',
-    nl: 'Beveiligingshandtekening voor de winkelwagen-cookie.',
-    fr: 'Signature de s\u00e9curit\u00e9 pour le cookie du panier.',
+    name: 'od_app_cart_options',
+    en: 'Keeps your discount code, your pickup choice and the campaign source of your visit with the cart (signed). Set when you add a product from a campaign link, apply a code or choose pickup; 14 days. Strictly necessary.',
+    nl: 'Bewaart uw kortingscode, uw keuze voor afhalen en de campagnebron van uw bezoek bij het winkelmandje (ondertekend). Geplaatst wanneer u een product via een campagnelink toevoegt, een code toepast of afhalen kiest; 14 dagen. Strikt noodzakelijk.',
+    fr: 'Conserve votre code de r\u00e9duction, votre choix du retrait et la source de campagne de votre visite avec le panier (sign\u00e9s). Plac\u00e9 lorsque vous ajoutez un produit depuis un lien de campagne, appliquez un code ou choisissez le retrait ; 14 jours. Strictement n\u00e9cessaire.',
   },
   {
-    name: '_secure_session_id',
-    en: 'Session security for Shopify checkout. Strictly necessary.',
-    nl: 'Sessiebeveiliging bij Shopify checkout. Strikt noodzakelijk.',
-    fr: 'S\u00e9curit\u00e9 de session pour le checkout Shopify. Strictement n\u00e9cessaire.',
+    name: 'od_app_order',
+    en: 'Keeps the number and status token of your last order so the order status page opens on this device. Set when you place an order; 30 days. Strictly necessary.',
+    nl: 'Bewaart het nummer en het statustoken van uw laatste bestelling, zodat de statuspagina op dit toestel opent. Geplaatst wanneer u een bestelling plaatst; 30 dagen. Strikt noodzakelijk.',
+    fr: 'Conserve le num\u00e9ro et le jeton de suivi de votre derni\u00e8re commande afin que la page de suivi s\u2019ouvre sur cet appareil. Plac\u00e9 lorsque vous passez une commande ; 30 jours. Strictement n\u00e9cessaire.',
   },
   {
-    name: 'localization',
-    en: 'Remembers selected language/region for the storefront.',
-    nl: 'Onthoudt de gekozen taal/regio voor de storefront.',
-    fr: 'M\u00e9morise la langue/r\u00e9gion s\u00e9lectionn\u00e9e pour la boutique.',
+    name: 'od_app_acct',
+    en: 'Keeps you signed in to your OpenDrone account. Set only when you sign in with the code or link we email you; 30 days. Strictly necessary.',
+    nl: 'Houdt u aangemeld bij uw OpenDrone-account. Enkel geplaatst wanneer u zich aanmeldt met de code of link die wij u mailen; 30 dagen. Strikt noodzakelijk.',
+    fr: 'Vous garde connect\u00e9 \u00e0 votre compte OpenDrone. Plac\u00e9 uniquement lorsque vous vous connectez avec le code ou le lien que nous vous envoyons par e-mail ; 30 jours. Strictement n\u00e9cessaire.',
   },
   {
     name: 'opendrone_lang',
@@ -84,24 +84,6 @@ const KNOWN: CookieEntry[] = [
     en: 'Remembers which support tickets this browser may open. Set only when you open or find a ticket.',
     nl: 'Onthoudt welke supporttickets deze browser mag openen. Enkel geplaatst wanneer u een ticket opent of terugvindt.',
     fr: 'Retient les tickets de support que ce navigateur peut ouvrir. Plac\u00e9 uniquement lorsque vous ouvrez ou retrouvez un ticket.',
-  },
-  {
-    name: '__Host-od_sid',
-    en: 'Keeps you signed in to your OpenDrone account (also used for chatfpv.com sign-in). Set only when you sign in; 30 days. Strictly necessary.',
-    nl: 'Houdt u aangemeld bij uw OpenDrone-account (ook gebruikt voor aanmelding op chatfpv.com). Enkel geplaatst wanneer u zich aanmeldt; 30 dagen. Strikt noodzakelijk.',
-    fr: 'Vous garde connect\u00e9 \u00e0 votre compte OpenDrone (aussi utilis\u00e9 pour la connexion \u00e0 chatfpv.com). Plac\u00e9 uniquement lorsque vous vous connectez ; 30 jours. Strictement n\u00e9cessaire.',
-  },
-  {
-    name: '__Host-od_oauth',
-    en: 'Protects a sign-in in progress against forgery. Set when you click Sign in; 10 minutes. Strictly necessary.',
-    nl: 'Beschermt een lopende aanmelding tegen vervalsing. Geplaatst wanneer u op Aanmelden klikt; 10 minuten. Strikt noodzakelijk.',
-    fr: 'Prot\u00e8ge une connexion en cours contre la falsification. Plac\u00e9 lorsque vous cliquez sur Se connecter ; 10 minutes. Strictement n\u00e9cessaire.',
-  },
-  {
-    name: '__Host-od_logout',
-    en: 'Finishes a sign-out started on chatfpv.com. Set only during that sign-out; 5 minutes. Strictly necessary.',
-    nl: 'Rondt een afmelding af die op chatfpv.com begon. Enkel geplaatst tijdens die afmelding; 5 minuten. Strikt noodzakelijk.',
-    fr: 'Termine une d\u00e9connexion commenc\u00e9e sur chatfpv.com. Plac\u00e9 uniquement pendant cette d\u00e9connexion ; 5 minutes. Strictement n\u00e9cessaire.',
   },
 ];
 
