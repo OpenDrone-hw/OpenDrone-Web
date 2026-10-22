@@ -37,3 +37,7 @@
   .co-side .co-summary { position: static; }
   .co-extras { order: 0; }
 }
+
+.co-terms { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; justify-content: center; font-size: 0.8125rem; }
+.co-terms a { color: var(--color-text-muted); text-decoration: underline; text-underline-offset: 2px; }
+.co-terms a:hover { color: var(--color-gold-text); }
