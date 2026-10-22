@@ -55,7 +55,7 @@ function truncate(value: string, maxLength = 160) {
 }
 
 /** The site a page is served as (app/lib/site); absent: the bundled opendrone.be constants above. */
-export type SeoSite = Pick<SiteConfig, 'name' | 'origin' | 'titleTemplate' | 'description' | 'indexable' | 'locale'>;
+export type SeoSite = Pick<SiteConfig, 'name' | 'origin' | 'titleTemplate' | 'description' | 'indexable' | 'locale'> & {socialImage?: string | null};
 
 export function buildPageTitle(title?: string | null, site?: SeoSite) {
   if (site) return title ? site.titleTemplate.replace('%s', title) : site.name;
@@ -111,6 +111,8 @@ export function buildSeoMeta({
   site?: SeoSite;
 }) {
   const origin = site?.origin ?? SITE_ORIGIN;
+  // A page without its own image shares the site's social image when the Studio set one.
+  if (!image && site?.socialImage) image = site.socialImage;
   const resolvedTitle = buildPageTitle(title, site);
   const resolvedDescription = buildMetaDescription(description, site?.description ?? DEFAULT_SEO_DESCRIPTION);
   if (!robots && site && !site.indexable) robots = 'noindex,nofollow';

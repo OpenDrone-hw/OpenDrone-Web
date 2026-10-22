@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {describe, it} from 'node:test';
-import {defaultSite, navHref, navLinks, plausibleScript, themeOverrides, type NavItem} from './config.ts';
+import {defaultSite, httpsUrl, navHref, navLinks, plausibleScript, siteFromAnswer, themeOverrides, type NavItem} from './config.ts';
 import {renderPageMarkdown} from './markdown.ts';
 import {resolvePage, resolveSite, type SiteEnv} from './resolve.ts';
 import {framing, installPreviewBridge, previewOrigin} from './preview-bridge.ts';
@@ -152,6 +152,23 @@ describe('site texts', () => {
     assert.deepEqual((await resolveSite(req('other.example'), ENV, {fetcher: f, cache: null}))?.texts, {'home.hero_line1': 'Hi'});
     assert.deepEqual(defaultSite().texts, {});
     assert.deepEqual((await resolveSite(req('opendrone.be'), {}, {cache: null}))?.texts, {});
+  });
+});
+
+describe('theme images and radius', () => {
+  it('keeps only https theme images and a whole radius from 0 to 32', () => {
+    const s = siteFromAnswer({site: 's1', version: 2, theme: {radius: 4, favicon: 'https://cdn.example/f.png', social_image: 'javascript:alert(1)'}});
+    assert.equal(s.favicon, 'https://cdn.example/f.png');
+    assert.equal(s.socialImage, null);
+    assert.equal(s.radius, 4);
+    assert.equal(siteFromAnswer({site: 's1', version: 2, theme: {radius: 99}}).radius, null);
+    assert.equal(httpsUrl('http://cdn.example/x.png'), null);
+    assert.equal(httpsUrl('/x.png'), null);
+    assert.equal(defaultSite().favicon, null);
+  });
+  it('scales the three radius steps from one value and leaves them alone without one', () => {
+    assert.deepEqual(themeOverrides({}, 10), {'--r-md': '10px', '--r-sm': '6px', '--r-xs': '4px'});
+    assert.deepEqual(themeOverrides({}), {});
   });
 });
 

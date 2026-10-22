@@ -226,6 +226,9 @@ export async function loader(args: Route.LoaderArgs) {
       description: site.description,
       indexable: site.indexable,
       colours: site.colours,
+      radius: site.radius,
+      favicon: site.favicon,
+      socialImage: site.socialImage,
       plausibleDomain: site.plausibleDomain,
       headerNav: navLinks(site.navigation.header, 'header'),
       footerNav: navLinks(site.navigation.footer, 'footer'),
@@ -295,7 +298,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
   const data = useRouteLoaderData<RootLoader>('root');
   const htmlLang = (data?.locale || 'en_US').split('_')[0] || 'en';
   const orgJsonLd = data?.company ? buildOrgJsonLd(data.company) : null;
-  const themeCss = themeOverrideCss() + buildThemeCss(themeOverrides(data?.site?.colours ?? {}));
+  const themeCss = themeOverrideCss() + buildThemeCss(themeOverrides(data?.site?.colours ?? {}, data?.site?.radius ?? null));
   const plausible = plausibleScript({plausibleDomain: data?.site?.plausibleDomain ?? null});
 
   // Make every view transition resilient: route React Router's navigation
@@ -400,6 +403,8 @@ export function Layout({children}: {children?: React.ReactNode}) {
         ) : null}
         <Meta />
         <Links />
+        {/* The site's own favicon from the Studio, after the bundled one so browsers take it. */}
+        {data?.site?.favicon ? <link rel="icon" href={data.site.favicon} /> : null}
         {/* Plausible - cookieless analytics, no consent required. The
             inline stub (PLAUSIBLE_SNIPPET) queues events until the site
             script loads; initPlausible() runs after hydration, so the first

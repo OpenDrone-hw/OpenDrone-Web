@@ -28,6 +28,11 @@ export type SiteConfig = {
   indexable: boolean;
   /** Colour tokens by role, validated by the app; empty keeps the bundled design. */
   colours: Partial<Record<'canvas' | 'surface' | 'text' | 'muted' | 'accent' | 'line', string>>;
+  /** Corner radius in px of the site's cards and controls (0 to 32); null keeps the bundled radii. */
+  radius: number | null;
+  /** https URLs of the site's favicon and default social image; null keeps the bundled files. */
+  favicon: string | null;
+  socialImage: string | null;
   /** Plausible domain of the site; null: the bundled opendrone.be script rules (request host check). */
   plausibleDomain: string | null;
   navigation: {header: NavItem[]; footer: NavItem[]};
@@ -48,6 +53,9 @@ export function defaultSite(): SiteConfig {
     description: DEFAULT_SEO_DESCRIPTION,
     indexable: true,
     colours: {},
+    radius: null,
+    favicon: null,
+    socialImage: null,
     plausibleDomain: null,
     navigation: {header: [], footer: []},
     pages: [],
@@ -62,13 +70,24 @@ export type AppSiteAnswer = {
   name?: string | null;
   canonical?: string;
   locales?: string[] | null;
-  theme?: {colours?: SiteConfig['colours'] | null} | null;
+  theme?: {colours?: SiteConfig['colours'] | null; radius?: number | null; favicon?: string | null; social_image?: string | null} | null;
   navigation?: {header?: NavItem[] | null; footer?: NavItem[] | null} | null;
   seo?: {title_template?: string; description?: string; robots?: string} | null;
   analytics?: {plausible_domain?: string | null} | null;
   pages?: SitePageIndexEntry[] | null;
   texts?: Record<string, unknown> | null;
 };
+
+/** An absolute https URL, else null: a theme image never loads over http or from a relative or script address. */
+export function httpsUrl(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  try {
+    const u = new URL(v.trim());
+    return u.protocol === 'https:' ? u.href : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Only string values under string keys are kept; anything else would break a <Txt>. */
 export function cleanTexts(texts: Record<string, unknown> | null | undefined): Record<string, string> {
@@ -92,6 +111,9 @@ export function siteFromAnswer(a: AppSiteAnswer): SiteConfig {
     description: a.seo?.description?.trim() || base.description,
     indexable: a.seo?.robots !== 'noindex',
     colours: a.theme?.colours ?? {},
+    radius: typeof a.theme?.radius === 'number' && Number.isInteger(a.theme.radius) && a.theme.radius >= 0 && a.theme.radius <= 32 ? a.theme.radius : null,
+    favicon: httpsUrl(a.theme?.favicon),
+    socialImage: httpsUrl(a.theme?.social_image),
     plausibleDomain: a.analytics?.plausible_domain || null,
     navigation: {header: a.navigation?.header ?? [], footer: a.navigation?.footer ?? []},
     pages: a.pages ?? [],
@@ -140,8 +162,10 @@ const TOKENS: Record<keyof SiteConfig['colours'], string> = {
 
 /** The site's colours as overrides of the existing --color-* mapping (the app already checked each is a colour;
  *  anything that could leave the declaration is dropped again here). Feed it to buildThemeCss. */
-export function themeOverrides(colours: SiteConfig['colours']): Record<string, string> {
+export function themeOverrides(colours: SiteConfig['colours'], radius: number | null = null): Record<string, string> {
   const out: Record<string, string> = {};
+  // One radius from the Studio scales the three bundled steps (4, 6, 10 px at the default 10).
+  if (radius !== null) Object.assign(out, {'--r-md': `${radius}px`, '--r-sm': `${Math.round(radius * 0.6)}px`, '--r-xs': `${Math.round(radius * 0.4)}px`});
   for (const [role, token] of Object.entries(TOKENS)) {
     const v = colours[role as keyof SiteConfig['colours']];
     if (typeof v === 'string' && /^[#a-zA-Z0-9(),.%\s/-]+$/.test(v)) out[token] = v.trim();
