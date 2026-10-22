@@ -18,6 +18,7 @@ import {
   writeCart,
 } from '~/lib/commerce/app-api';
 import {readOptions, writeOptions} from '~/lib/commerce/app-cart-options';
+import {buyerOf} from '~/lib/commerce/buyer';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {ShopFrame} from '~/components/commerce/ShopFrame';
 import {OrderSummary, type SummaryImages} from '~/components/commerce/OrderSummary';
@@ -140,6 +141,7 @@ export async function action({context, request}: Route.ActionArgs) {
     pickup: field(form, 'pickup') === '1',
     note: field(form, 'note'),
     attributes: options.attributes,
+    ...buyerOf(request),
   });
   if (!out.ok || !out.data) return {problem: friendly(out.error?.code, out.error?.detail)};
   const headers = new Headers();
