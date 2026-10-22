@@ -2161,13 +2161,20 @@ body:has(.test-banner) .site-header {
 .acct-tabs a[aria-current="page"] { color: var(--color-text); border-bottom-color: var(--color-gold); }
 .acct-sections { overflow-x: auto; scrollbar-width: none; white-space: nowrap; gap: 1.25rem; }
 .acct-sections::-webkit-scrollbar { display: none; }
+/* A phone shows every section: tighter words first; on a narrower screen the row fades at its edge so it reads as scrollable. */
+@media (max-width: 480px) {
+  .acct-sections { gap: 0.875rem; font-size: 0.875rem; }
+}
+@media (max-width: 370px) {
+  .acct-sections { mask-image: linear-gradient(to right, #000 85%, transparent); -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); }
+}
 .acct-section { scroll-margin-top: calc(var(--header-height, 5rem) + 1rem); margin: 0 0 2.5rem; }
 .acct-section-title { margin: 0 0 1rem; font-size: 1.375rem; font-weight: 600; letter-spacing: -0.01em; }
 .acct-card-title { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .acct-check { display: flex; align-items: flex-start; gap: 0.625rem; min-height: 2.75rem; align-items: center; cursor: pointer; }
 .acct-check input { accent-color: var(--color-gold); width: 1.125rem; height: 1.125rem; }
 .acct-email { margin: 0; font-size: 1.0625rem; overflow-wrap: anywhere; }
-.acct-btn { min-height: 2.75rem; padding: 0 1rem; font: inherit; font-size: 0.9375rem; color: var(--color-text); background: none; border: 1px solid var(--color-border-strong); border-radius: var(--r-md); cursor: pointer; }
+.acct-btn { min-height: 2.75rem; padding: 0 1rem; font: inherit; font-size: 0.9375rem; color: var(--color-text); background: none; border: 1px solid var(--color-border-strong); border-radius: var(--r-md); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
 .acct-btn:hover:not(:disabled) { background: var(--color-bg-elevated); }
 .acct-btn.is-primary { background: var(--color-gold); border-color: var(--color-gold); color: #111; font-weight: 600; }
 .acct-btn:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
