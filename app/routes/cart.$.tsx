@@ -19,7 +19,9 @@ import {
   type CartLineInfo,
 } from '~/lib/shopify-cart-action';
 import {formatPrice} from '~/lib/catalog';
-import {appCommerceEnabled} from '~/lib/commerce/app-api';
+import {appCommerceEnabled, cleanLines, readCart, writeCart} from '~/lib/commerce/app-api';
+import {readOptions, writeOptions} from '~/lib/commerce/app-cart-options';
+import {permalinkLines} from '~/lib/commerce/cart-permalink';
 import {APP_CART_PATH} from '~/lib/commerce/app-catalog';
 import {EarlyBirdNote, useAnyEarlySku} from '~/components/EarlyPriceCue';
 import {
@@ -104,8 +106,16 @@ export const meta: Route.MetaFunction = () =>
 export const headers: Route.HeadersFunction = () => ({'Cache-Control': 'no-store'});
 
 export async function loader({context, params, request}: Route.LoaderArgs) {
-  // App mode: the cart is the app's (no Shopify cart exists).
-  if (appCommerceEnabled(context.env)) throw redirect(APP_CART_PATH, 303);
+  // App mode: the cart is the app's (no Shopify cart exists). An old permalink adds its lines (and its ?discount=) first.
+  if (appCommerceEnabled(context.env)) {
+    if (!params['*']) throw redirect(APP_CART_PATH, 303);
+    const headers = new Headers({'Cache-Control': 'no-store'});
+    const lines = permalinkLines(params['*'], await context.catalog.forBuyer());
+    if (lines.length) headers.append('Set-Cookie', await writeCart(cleanLines([...(await readCart(request, context.env)), ...lines]), context.env));
+    const code = new URL(request.url).searchParams.get('discount');
+    if (code) headers.append('Set-Cookie', await writeOptions({...(await readOptions(request, context.env)), code}, context.env));
+    throw redirect(APP_CART_PATH, {status: 303, headers});
+  }
   if (!checkoutOpen(context.env) || params['*']) throw redirect('/products', 301);
   let cart = await loadSessionCart(context.env, {
     getCartId: () => context.session.get(CART_KEY) as string | undefined,

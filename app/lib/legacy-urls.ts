@@ -132,7 +132,7 @@ export function legacyRedirect(pathname: string, search = ''): LegacyRedirect | 
 }
 
 /** The numeric tail of a Shopify variant id: `gid://shopify/ProductVariant/123` and `123` both give `123`. */
-function variantKey(id: string | null | undefined): string {
+export function variantKey(id: string | null | undefined): string {
   return (id ?? '').trim().split('/').pop() ?? '';
 }
 
