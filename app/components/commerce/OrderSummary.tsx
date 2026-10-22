@@ -4,6 +4,7 @@ import {type Quote, formatMoney, vatLabel} from '~/lib/commerce/app-api';
 import {DiscountCode, FreeShippingBar, OrderNote, PickupChoice} from './SummaryOptions';
 import {discountRows, lineStrike, shippingStrike} from '~/lib/commerce/summary-discounts';
 import {SummarySuggestions} from './SummarySuggestions';
+import {countryName} from '~/lib/shipping-rates';
 
 export type SummaryImages = Record<string, {url: string; alt: string} | null>;
 
@@ -124,7 +125,7 @@ export function OrderSummary({quote, country, images, pending, code = ''}: {quot
               </div>
             ))}
             <div>
-              <dt>{quote.pickup ? 'Pickup at our Leuven office' : `Shipping to ${country}`}</dt>
+              <dt>{quote.pickup ? 'Pickup at our Leuven office' : `Shipping to ${countryName(country)}`}</dt>
               <dd className="co-num">
                 {shipStrike != null ? (
                   <>

@@ -7,6 +7,7 @@ import {AppUnavailable, type AppliedDiscount, appOp, formatMoney, orderCookie, r
 import {ShopFrame} from '~/components/commerce/ShopFrame';
 import {safeTrackingUrl, statusProof} from '~/lib/commerce/app-order-status';
 import {discountRows, shippingStrike} from '~/lib/commerce/summary-discounts';
+import {countryName} from '~/lib/shipping-rates';
 
 export const meta: Route.MetaFunction = () => [{title: 'Order'}, {name: 'robots', content: 'noindex, nofollow'}];
 
@@ -143,8 +144,8 @@ export default function ShopOrder() {
                   </dd>
                 </>
               ) : null}
-              <dt>Total</dt>
-              <dd>{formatMoney(status.quote.total_minor, status.quote.currency)}</dd>
+              <dt><strong>Total</strong></dt>
+              <dd><strong>{formatMoney(status.quote.total_minor, status.quote.currency)}</strong></dd>
               {status.quote.vat_included_minor ? (
                 <>
                   <dt className="co-dim">Includes VAT{typeof status.quote.vat_rate === 'number' ? ` (${status.quote.vat_rate}%)` : ''}</dt>
@@ -155,7 +156,7 @@ export default function ShopOrder() {
                 <>
                   <dt>Shipping to</dt>
                   <dd>
-                    {status.ship_to.city}, {status.ship_to.country}
+                    {status.ship_to.city}, {countryName(status.ship_to.country)}
                   </dd>
                 </>
               ) : null}
