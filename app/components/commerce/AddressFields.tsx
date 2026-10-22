@@ -20,14 +20,21 @@ function Text({label, optional, className = '', ...rest}: {label: string; option
 }
 
 /** The Delivery section: country, name, a street combobox with suggestions, postcode and city (order by country), phone. */
-export function AddressFields({country, countries, suggest, onCountry, fill, prefill}: {
+export function AddressFields({country, countries, suggest, onCountry, fill, prefill, prefix = '', section = 'shipping', phone: withPhone = true}: {
   country: string;
   countries: Country[];
   suggest: boolean;
   onCountry: (code: string) => void;
   fill: AddressFill | null;
   prefill?: {name: string; line1: string; line2: string; postal_code: string; city: string; phone: string} | null;
+  /** Form field names start with this ('billing_' for the separate billing address) and the autofill section is `section`. */
+  prefix?: string;
+  section?: 'shipping' | 'billing';
+  /** The phone field belongs to delivery only. */
+  phone?: boolean;
 }) {
+  const listId = useId();
+  const ac = (token: string) => token.replace(/^shipping/, section);  // autofill keeps the two addresses apart
   const [name, setName] = useState(prefill?.name ?? '');
   const [phone, setPhone] = useState(() => (prefill?.phone ? formatPhone(prefill.phone, country).display : phonePrefix(country)));
   const [phoneTouched, setPhoneTouched] = useState(false);
@@ -84,34 +91,34 @@ export function AddressFields({country, countries, suggest, onCountry, fill, pre
   }, [country, postal]);
 
   const cityField = (
-    <Text label="City" name="city" autoComplete={AUTOCOMPLETE.city} value={city} list={cities.length > 1 ? 'co-cities' : undefined}
+    <Text label="City" name={`${prefix}city`} autoComplete={ac(AUTOCOMPLETE.city)} value={city} list={cities.length > 1 ? listId : undefined}
       onChange={(e) => { cityTouched.current = e.target.value !== ''; setCity(e.target.value); }} />
   );
   const postalField = (
-    <Text label="Postal code" name="postal_code" autoComplete={AUTOCOMPLETE.postal_code} value={postal}
+    <Text label="Postal code" name={`${prefix}postal_code`} autoComplete={ac(AUTOCOMPLETE.postal_code)} value={postal}
       onChange={(e) => { if (city === '') cityTouched.current = false; setPostal(e.target.value); }} />
   );
   return (
     <>
       <label className="co-field">
         <span>Country</span>
-        <select name="country" autoComplete={AUTOCOMPLETE.country} value={country} onChange={(e) => onCountry(e.target.value)}>
+        <select name={`${prefix}country`} autoComplete={ac(AUTOCOMPLETE.country)} value={country} onChange={(e) => onCountry(e.target.value)}>
           {countries.map((c) => (
             <option key={c.code} value={c.code}>{c.name}</option>
           ))}
         </select>
       </label>
-      <Text label="Full name" name="name" autoComplete={AUTOCOMPLETE.name} value={name} onChange={(e) => setName(e.target.value)} />
-      <StreetCombobox country={country} enabled={suggest} value={line1} onChange={setLine1}
+      <Text label="Full name" name={`${prefix}name`} autoComplete={ac(AUTOCOMPLETE.name)} value={name} onChange={(e) => setName(e.target.value)} />
+      <StreetCombobox country={country} enabled={suggest} value={line1} onChange={setLine1} name={`${prefix}line1`} autoComplete={ac(AUTOCOMPLETE.line1)}
         onPick={(s) => { setLine1(s.line1); if (s.postal_code) setPostal(s.postal_code); setCity(s.city); cityTouched.current = true; }} />
-      <Text label="Apartment, suite, etc." name="line2" autoComplete={AUTOCOMPLETE.line2} optional value={line2} onChange={(e) => setLine2(e.target.value)} />
+      <Text label="Apartment, suite, etc." name={`${prefix}line2`} autoComplete={ac(AUTOCOMPLETE.line2)} optional value={line2} onChange={(e) => setLine2(e.target.value)} />
       <div className={postcodeFirst(country) ? 'co-row' : 'co-row co-row-city-first'}>
         {postcodeFirst(country) ? <>{postalField}{cityField}</> : <>{cityField}{postalField}</>}
       </div>
-      <datalist id="co-cities">{cities.map((c) => <option key={c} value={c} />)}</datalist>
-      <label className="co-field">
+      <datalist id={listId}>{cities.map((c) => <option key={c} value={c} />)}</datalist>
+      {withPhone ? <label className="co-field">
         <span>Phone<em> (optional)</em></span>
-        <input ref={phoneInput} type="tel" autoComplete={AUTOCOMPLETE.phone} inputMode="tel" value={phone} placeholder={phoneExample(country)}
+        <input ref={phoneInput} type="tel" autoComplete={ac(AUTOCOMPLETE.phone)} inputMode="tel" value={phone} placeholder={phoneExample(country)}
           aria-invalid={phoneTouched && problem ? true : undefined} aria-describedby={phoneTouched && problem ? 'co-phone-err' : undefined}
           onChange={(e) => {
             const v = e.target.value;
@@ -120,15 +127,17 @@ export function AddressFields({country, countries, suggest, onCountry, fill, pre
           }}
           onBlur={() => { setPhoneTouched(true); setPhone((p) => (formatPhone(p, country).national ? p : phonePrefix(country))); }} />
         {phoneTouched && problem ? <small id="co-phone-err" role="alert" className="co-error">{problem}</small> : null}
-        <input type="hidden" name="phone" value={e164} />
-      </label>
+        <input type="hidden" name={`${prefix}phone`} value={e164} />
+      </label> : null}
     </>
   );
 }
 
 /** Street field as an ARIA 1.2 combobox: debounced lookups at /shop/address, arrows, Enter, Escape, live count. */
-function StreetCombobox({country, enabled, value, onChange, onPick}: {
+function StreetCombobox({country, enabled, value, onChange, onPick, name, autoComplete}: {
   country: string;
+  name: string;
+  autoComplete: string;
   enabled: boolean;
   value: string;
   onChange: (v: string) => void;
@@ -175,7 +184,7 @@ function StreetCombobox({country, enabled, value, onChange, onPick}: {
         <span>Address</span>
       </label>
       <input
-        id={`${id}-in`} name="line1" required autoComplete={AUTOCOMPLETE.line1} value={value}
+        id={`${id}-in`} name={name} required autoComplete={autoComplete} value={value}
         role={enabled ? 'combobox' : undefined} aria-autocomplete={enabled ? 'list' : undefined}
         aria-expanded={enabled ? shown : undefined} aria-controls={enabled ? `${id}-list` : undefined}
         aria-activedescendant={shown && active >= 0 ? `${id}-o${active}` : undefined}

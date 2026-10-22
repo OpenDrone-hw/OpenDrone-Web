@@ -23,10 +23,12 @@ import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {ShopFrame} from '~/components/commerce/ShopFrame';
 import {OrderSummary, type SummaryImages} from '~/components/commerce/OrderSummary';
 import {PaymentRails} from '~/components/commerce/PaymentRails';
+import {BillingSection} from '~/components/commerce/BillingSection';
 import {AddressFields, type AddressFill} from '~/components/commerce/AddressFields';
 import {ExpressCheckout} from '~/components/commerce/ExpressCheckout';
 import {ContactSection} from '~/components/commerce/ContactSection';
 import {appAccountsEnabled, readAccount} from '~/lib/commerce/app-account';
+import {billingArgs} from '~/lib/commerce/billing';
 import {addressForCountry, defaultAddress, pickCountry, requestCountry} from '~/lib/commerce/address-fields';
 import {addressProvider} from '~/lib/commerce/address-provider';
 import {expressConfig, type ExpressResult} from '~/lib/commerce/payment-provider';
@@ -136,7 +138,7 @@ export async function action({context, request}: Route.ActionArgs) {
       country,
       phone: field(form, 'phone'),
     },
-    billing_same: true,
+    ...billingArgs((n) => field(form, n)),
     discount_code: field(form, 'discount_code'),
     pickup: field(form, 'pickup') === '1',
     note: field(form, 'note'),
@@ -232,6 +234,7 @@ export default function ShopCart() {
               <h2 className="co-h">Delivery</h2>
               <AddressFields country={country} countries={countries} suggest={suggest} fill={fill} prefill={prefill} onCountry={(c) => void navigate(`/shop/cart?country=${c}`, {replace: true, preventScrollReset: true})} />
             </section>
+            <BillingSection country={country} countries={countries} suggest={suggest} />
             <section className="co-section">
               <PaymentRails />
             </section>
