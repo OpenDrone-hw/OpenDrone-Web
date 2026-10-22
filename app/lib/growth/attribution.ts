@@ -10,6 +10,14 @@
  * the order (`cartAttributesFromForm`, `ORDER_ATTRIBUTE`). Do NOT
  * "upgrade" this to persistent storage: the cookie policy says session.
  *
+ * Every visit gets a record, a direct one too: a visit with no UTM and no
+ * `ref` is stored with an empty `source` (event props still fold it to
+ * 'direct') and its landing path, and the cart writes `_landing` on the
+ * order. That marker is how the app tells a captured Direct visit from an
+ * order that never carried attribution (Not tagged). `referrer` is the
+ * external referrer host (never a path or query), absent when the visitor
+ * typed the address, came from this site or the browser hides it.
+ *
  * First touch wins: once a record exists for the session, later UTM hits
  * don't overwrite it. Values are trimmed, lowercased and capped at 64
  * chars to stay low-cardinality (canonical values in the README,
@@ -21,7 +29,8 @@
  */
 
 export type Attribution = {
-  /** utm_source, or `ref` fallback - e.g. 'youtube', 'discord'. */
+  /** utm_source, or `ref` fallback - e.g. 'youtube', 'discord'. Empty for a
+   *  visit that carried neither (direct, or referrer only). */
   source: string;
   medium?: string;
   campaign?: string;
@@ -29,6 +38,8 @@ export type Attribution = {
   utmSource?: string;
   /** The `ref` slug (creator links), when the link had a valid one. */
   ref?: string;
+  /** External referrer host of the first touch (`www.google.com`), when the browser sent one. */
+  referrer?: string;
   /** Landing pathname of the first touch. */
   landing: string;
   /** Capture time, ms epoch. */
@@ -54,6 +65,28 @@ export function refSlug(value: string | null | undefined): string | undefined {
   return v && REF_SLUG.test(v) ? v : undefined;
 }
 
+/** A referrer host: lowercase letters, digits, dots and hyphens, at most 64 characters. */
+const HOST = /^[a-z0-9.-]{1,64}$/;
+
+/** The external referrer host of a `document.referrer` URL, or undefined when
+ *  there is none, it is this site (a reload or an internal link) or it is not a plain host. */
+export function referrerHost(referrer: string | null | undefined, ownHost?: string): string | undefined {
+  if (!referrer) return undefined;
+  let host: string;
+  try {
+    host = new URL(referrer).hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
+  const bare = (h: string) => h.replace(/^www\./, '');
+  if (ownHost && bare(host) === bare(ownHost.toLowerCase())) return undefined;
+  return HOST.test(host) ? host : undefined;
+}
+
+/** The in-page copy of the record and of the sent latch, for a browser that blocks sessionStorage. */
+let memoryRecord: Attribution | null = null;
+let memorySent = false;
+
 /**
  * Capture first-touch UTM/ref params from the current URL into
  * sessionStorage. Runs once per page load, on the landing URL: from
@@ -76,33 +109,35 @@ export function captureAttribution(): void {
     const source = utmSource ?? ref;
     const medium = clean(params.get('utm_medium'));
     const campaign = clean(params.get('utm_campaign'));
-    if (!source && !medium && !campaign) return;
     const record: Attribution = {
-      source: source ?? 'unknown',
+      // utm_medium or utm_campaign without a source keeps its old 'unknown'; a visit with none of the three is direct.
+      source: source ?? (medium || campaign ? 'unknown' : ''),
       medium,
       campaign,
       utmSource,
       ref,
+      referrer: referrerHost(typeof document === 'undefined' ? '' : document.referrer, window.location.hostname),
       landing: window.location.pathname.slice(0, MAX_LEN),
       ts: Date.now(),
     };
+    memoryRecord = record;
     window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(record));
   } catch {
-    // Storage blocked - skip silently.
+    // Storage blocked - the record stays in memory for this page load.
   }
 }
 
-/** The session's first-touch record, or null (direct visit / SSR / blocked). */
+/** The session's first-touch record, or null (SSR, or capture has not run). */
 export function getAttribution(): Attribution | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) return memoryRecord;
     const parsed = JSON.parse(raw) as Attribution;
-    if (!parsed || typeof parsed.source !== 'string') return null;
+    if (!parsed || typeof parsed.source !== 'string') return memoryRecord;
     return parsed;
   } catch {
-    return null;
+    return memoryRecord;
   }
 }
 
@@ -161,6 +196,7 @@ export const ORDER_ATTRIBUTE = {
   utmSource: '_utm_source',
   medium: '_utm_medium',
   campaign: '_utm_campaign',
+  referrer: '_referrer',
   landing: '_landing',
 } as const;
 
@@ -178,6 +214,7 @@ export function attributionFields(record: Attribution | null = getAttribution())
     utmSource,
     medium: record.medium,
     campaign: record.campaign,
+    referrer: record.referrer,
     landing: record.landing,
   };
   return Object.entries(values)
@@ -202,7 +239,7 @@ export function cartAttributesFromForm(form: FormData): Array<{key: string; valu
     if (typeof raw !== 'string') continue;
     const value = key === 'landing' ? raw.trim() : key === 'ref' ? refSlug(raw) : clean(raw);
     if (!value) continue;
-    if (key === 'landing' ? !LANDING.test(value) : !VALUE.test(value)) continue;
+    if (key === 'landing' ? !LANDING.test(value) : key === 'referrer' ? !HOST.test(value) : !VALUE.test(value)) continue;
     attributes.push({key: ORDER_ATTRIBUTE[key], value});
   }
   return attributes;
@@ -216,13 +253,14 @@ export function cartAttributesFromForm(form: FormData): Array<{key: string; valu
 export function wasAttributionSent(): boolean {
   if (typeof window === 'undefined') return true; // never submit during SSR
   try {
-    return window.sessionStorage.getItem(SENT_KEY) === '1';
+    return memorySent || window.sessionStorage.getItem(SENT_KEY) === '1';
   } catch {
-    return true; // storage blocked → no attribution captured either
+    return memorySent; // storage blocked: the in-page latch alone
   }
 }
 
 export function markAttributionSent(): void {
+  memorySent = true;
   try {
     window.sessionStorage.setItem(SENT_KEY, '1');
   } catch {

@@ -10,7 +10,7 @@ describe('cart options', () => {
     assert.deepEqual(cleanOptions({code: 'a b<script>', pickup: 'yes'}), {code: 'abscript', pickup: false, attributes: {}});
     assert.deepEqual(cleanOptions({code: 'x'.repeat(100)}).code.length, 40);
     assert.deepEqual(cleanOptions(null), {code: '', pickup: false, attributes: {}});
-    assert.deepEqual(cleanOptions({attributes: {_ref: ' a ', _utm_term: 'x', _utm_source: 'y'.repeat(201), _utm_medium: 'a\nb', _utm_content: 5}}).attributes, {_ref: 'a'});
+    assert.deepEqual(cleanOptions({attributes: {_landing: '/x', _referrer: 'www.google.com', _ref: ' a ', _utm_term: 'x', _utm_source: 'y'.repeat(201), _utm_medium: 'a\nb', _utm_content: 5}}).attributes, {_landing: '/x', _referrer: 'www.google.com', _ref: 'a'});
   });
 
   it('round-trips through the signed cookie and refuses a forged one', async () => {

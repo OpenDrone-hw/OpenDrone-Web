@@ -8,7 +8,7 @@ import type {AppEnv} from './app-api.ts';
 
 /** The first-touch keys an app order may carry and the longest value: the app's own list and limit
  *  (incutec-app server/attribution.py ATTRIBUTE_KEYS, MAX_VALUE). */
-export const ATTRIBUTE_KEYS = ['_utm_source', '_utm_medium', '_utm_campaign', '_utm_content', '_ref', '_referrer'] as const;
+export const ATTRIBUTE_KEYS = ['_utm_source', '_utm_medium', '_utm_campaign', '_utm_content', '_ref', '_referrer', '_landing'] as const;
 export const ATTRIBUTE_MAX = 200;
 
 export type CartOptions = {code: string; pickup: boolean; attributes: Record<string, string>};
