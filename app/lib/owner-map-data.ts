@@ -5,11 +5,15 @@
  * Only the suppressed snapshot (`suppress` in owner-map.ts) is written.
  * Orders and addresses live in memory for the length of one refresh.
  *
+ * On the app (COMMERCE_SOURCE=app) the refresh asks the app for the same raw counts (`storefront.owner_counts`, counts
+ * only, from its own orders), since the shop it used to read is closed after the switch.
+ *
  * Local development never reads orders: with OWNER_MAP_FIXTURE=1, or on the
  * dev server without Admin credentials, the fixture stands in. A production
  * build without credentials shows nothing rather than invented numbers.
  */
 import {adminGraphql, type AdminEnv} from './preorder-fulfilment.ts';
+import {appCommerceEnabled, appOp, type AppEnv} from './commerce/app-api.ts';
 import {
   META_ATTEMPT,
   REFRESH_RETRY_MS,
@@ -20,11 +24,12 @@ import {
   suppress,
   tallyOwners,
   type OwnerOrder,
+  type RawCounts,
   type Snapshot,
   type SnapshotRow,
 } from './owner-map.ts';
 
-export type OwnerMapEnv = AdminEnv & {SUPPORT_DB?: D1Database; OWNER_MAP_FIXTURE?: string};
+export type OwnerMapEnv = AdminEnv & Partial<AppEnv> & {SUPPORT_DB?: D1Database; OWNER_MAP_FIXTURE?: string};
 
 const PAGE_SIZE = 25;
 const MAX_PAGES = 400;
@@ -53,7 +58,7 @@ const adminReady = (env: Pick<AdminEnv, 'SHOPIFY_STORE_DOMAIN' | 'SHOPIFY_ADMIN_
 /** True when the map shows the fixture instead of Shopify data. */
 export function ownerMapFixture(env: OwnerMapEnv): boolean {
   if (env.OWNER_MAP_FIXTURE === '1') return true;
-  return Boolean(import.meta.env?.DEV) && !adminReady(env);
+  return Boolean(import.meta.env?.DEV) && !adminReady(env) && !appCommerceEnabled(env);
 }
 
 /** The snapshot a visitor sees, or null when none has been computed. */
@@ -89,6 +94,13 @@ async function fetchOwnerOrders(env: AdminEnv, fetcher: typeof fetch): Promise<O
   throw new Error('owner map: more orders than the page limit');
 }
 
+/** The app's raw counts; an answer that is not ok fails the refresh, which keeps the old snapshot. */
+async function appOwnerCounts(env: OwnerMapEnv, fetcher: typeof fetch): Promise<RawCounts> {
+  const out = await appOp<RawCounts>(env as AppEnv, 'storefront.owner_counts', {}, fetcher);
+  if (!out.ok || !out.data) throw new Error(`owner map: app answered ${out.error?.code ?? 'no data'}`);
+  return {countries: out.data.countries ?? {}, usStates: out.data.usStates ?? {}};
+}
+
 export type RefreshResult = 'skipped' | 'fresh' | 'waiting' | 'written';
 
 /**
@@ -102,7 +114,8 @@ export async function refreshOwnerMap(
   fetcher: typeof fetch = fetch,
 ): Promise<RefreshResult> {
   const db = env.SUPPORT_DB;
-  if (!db || ownerMapFixture(env) || !adminReady(env)) return 'skipped';
+  const app = appCommerceEnabled(env);
+  if (!db || ownerMapFixture(env) || (!app && !adminReady(env))) return 'skipped';
 
   const {results} = await db.prepare('SELECT region, generated_at, bucket FROM owner_map_snapshot').all<SnapshotRow>();
   const rows = results ?? [];
@@ -114,7 +127,8 @@ export async function refreshOwnerMap(
     .prepare('INSERT INTO owner_map_snapshot (region, generated_at, bucket) VALUES (?, ?, 0) ON CONFLICT (region) DO UPDATE SET generated_at = excluded.generated_at')
     .bind(META_ATTEMPT, now)
     .run();
-  const snapshot = suppress(tallyOwners(await fetchOwnerOrders(env, fetcher)), now);
+  const raw = app ? await appOwnerCounts(env, fetcher) : tallyOwners(await fetchOwnerOrders(env, fetcher));
+  const snapshot = suppress(raw, now);
   await db.batch([
     db.prepare('DELETE FROM owner_map_snapshot WHERE region != ?').bind(META_ATTEMPT),
     ...snapshotRows(snapshot).map((row) =>
