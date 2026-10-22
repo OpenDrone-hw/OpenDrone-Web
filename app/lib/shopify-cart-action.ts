@@ -1,4 +1,5 @@
 import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
+import {appCommerceEnabled} from './commerce/app-api.ts';
 import {campaignDate, mixedShipPromise, regionOf, shipGroupKey, shipLabelFromPromise, shipOrderDay, type Region} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
@@ -271,8 +272,11 @@ function redirect(location: string): Response {
   return new Response(null, {status: 303, headers: {Location: location, ...NO_STORE}});
 }
 
-/** Whether both commerce gates are open. */
-export function checkoutOpen(env: CartEnv): boolean {
+/** Whether both commerce gates are open. On the app (COMMERCE_SOURCE=app) the Shopify write flag is not a gate: the app
+ *  checkout takes the orders, so the shop is open whenever the coming-soon flag is off, and the Shopify write flag can go off at
+ *  the switch without closing the shop. */
+export function checkoutOpen(env: CartEnv & Partial<Pick<Env, 'COMMERCE_SOURCE' | 'APP_API_URL'>>): boolean {
+  if (appCommerceEnabled(env)) return env.PUBLIC_COMING_SOON === '0';
   return env.SHOPIFY_CHECKOUT_WRITE_ENABLED === '1' && env.PUBLIC_COMING_SOON === '0';
 }
 
