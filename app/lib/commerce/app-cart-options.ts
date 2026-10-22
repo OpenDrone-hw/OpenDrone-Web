@@ -11,7 +11,9 @@ import type {AppEnv} from './app-api.ts';
 export const ATTRIBUTE_KEYS = ['_utm_source', '_utm_medium', '_utm_campaign', '_utm_content', '_ref', '_referrer', '_landing'] as const;
 export const ATTRIBUTE_MAX = 200;
 
-export type CartOptions = {code: string; pickup: boolean; attributes: Record<string, string>};
+/** What the buyer last saw per cart line (by variant): the unit price in minor units and the ship promise. */
+export type SeenLine = {unit: number; ship: string};
+export type CartOptions = {code: string; pickup: boolean; attributes: Record<string, string>; seen?: Record<string, SeenLine>};
 
 export const NO_OPTIONS: CartOptions = {code: '', pickup: false, attributes: {}};
 
@@ -32,6 +34,18 @@ export function cleanAttributes(raw: unknown): Record<string, string> {
   return out;
 }
 
+/** Seen lines from untrusted input: at most 20 variants, an integer price and a short ship promise each. */
+export function cleanSeen(raw: unknown): Record<string, SeenLine> {
+  const out: Record<string, SeenLine> = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [variant, v] of Object.entries(raw).slice(0, 20)) {
+    const line = v as {unit?: unknown; ship?: unknown};
+    if (!/^[\w:-]{1,80}$/.test(variant) || !Number.isInteger(line?.unit) || typeof line.ship !== 'string') continue;
+    out[variant] = {unit: line.unit as number, ship: line.ship.slice(0, 60)};
+  }
+  return out;
+}
+
 export function optionsCookie(env: Pick<AppEnv, 'SESSION_SECRET'>) {
   return createCookie('od_app_cart_options', {
     httpOnly: true,
@@ -45,9 +59,10 @@ export function optionsCookie(env: Pick<AppEnv, 'SESSION_SECRET'>) {
 
 /** Options from untrusted input: a code of letters, digits, - and _ (as the app accepts), a boolean, the attribution attributes. */
 export function cleanOptions(raw: unknown): CartOptions {
-  const o = (raw ?? {}) as {code?: unknown; pickup?: unknown; attributes?: unknown};
+  const o = (raw ?? {}) as {code?: unknown; pickup?: unknown; attributes?: unknown; seen?: unknown};
   const code = typeof o.code === 'string' ? o.code.trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) : '';
-  return {code, pickup: o.pickup === true, attributes: cleanAttributes(o.attributes)};
+  const seen = cleanSeen(o.seen);
+  return {code, pickup: o.pickup === true, attributes: cleanAttributes(o.attributes), ...(Object.keys(seen).length ? {seen} : {})};
 }
 
 export async function readOptions(request: Request, env: Pick<AppEnv, 'SESSION_SECRET'>): Promise<CartOptions> {

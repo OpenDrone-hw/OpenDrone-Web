@@ -146,6 +146,8 @@ export type Quote = {
   pickup_available?: boolean;
   /** The shipping charge before pickup, a free-shipping threshold or a code. */
   shipping_standard_minor?: number;
+  /** Parcels the order ships in, when the app splits it. Absent from an older app. */
+  parcels?: Array<{ship_promise?: string | null; titles?: string[]}>;
   /** Countries the app ships to (the picker); empty means no list was given. */
   ship_countries?: string[];
 };

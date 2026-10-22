@@ -2206,3 +2206,8 @@ body:has(.test-banner) .site-header {
 .acct-choice label:has(input:checked) { border-color: var(--color-gold); background: var(--color-gold-soft); }
 .acct-choice input { accent-color: var(--color-gold); }
 .acct-inline { display: grid; gap: 0.5rem; }
+.co-changed { margin: 0 0 0.75rem; padding: 0.625rem 0.75rem; border: 1px solid var(--color-border, rgba(255,255,255,.14)); border-radius: 0.5rem; font-size: 0.8125rem; color: var(--color-text-muted); }
+.co-changed p { margin: 0 0 0.25rem; color: var(--color-text); }
+.co-changed ul, .co-parcels { margin: 0; padding: 0; list-style: none; }
+.co-parcels { display: grid; gap: 0.375rem; margin-top: 0.75rem; font-size: 0.8125rem; }
+.co-parcels li { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
