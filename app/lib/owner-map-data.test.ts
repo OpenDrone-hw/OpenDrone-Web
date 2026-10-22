@@ -119,4 +119,21 @@ describe('refreshOwnerMap', () => {
     assert.equal(await refreshOwnerMap({...credentials, SUPPORT_DB: db, OWNER_MAP_FIXTURE: '1'}, NOW, api.fetcher), 'skipped');
     assert.equal(api.calls(), 0);
   });
+
+  it('on the app reads the app\'s counts, never Shopify, and keeps the old snapshot when the app refuses', async () => {
+    const {db, rows} = fakeDb();
+    const urls: string[] = [];
+    const counts = {countries: {BE: 7, NL: 2}, usStates: {}};
+    const fetcher = (async (url: string) => {
+      urls.push(String(url));
+      return new Response(JSON.stringify({ok: true, data: counts}), {status: 200, headers: {'content-type': 'application/json'}});
+    }) as unknown as typeof fetch;
+    const env: OwnerMapEnv = {SUPPORT_DB: db, COMMERCE_SOURCE: 'app', APP_API_URL: 'https://app.example'};
+    assert.equal(await refreshOwnerMap(env, NOW, fetcher), 'written');
+    assert.deepEqual(urls, ['https://app.example/api/ops/storefront.owner_counts']);
+    assert.deepEqual((await loadOwnerMap(env, NOW))?.regions, {BE: 1, NL: 0});
+    const refusing = (async () => new Response(JSON.stringify({ok: false, error: {code: 'not_enabled', detail: 'off'}}), {status: 200, headers: {'content-type': 'application/json'}})) as typeof fetch;
+    await assert.rejects(refreshOwnerMap(env, NOW + SNAPSHOT_MAX_AGE_MS, refusing));
+    assert.ok(rows().some((r) => r.region === 'BE'));
+  });
 });
