@@ -1,4 +1,4 @@
-import {Form, Link, redirect, useActionData, useLoaderData, useNavigate, useNavigation} from 'react-router';
+import {Form, Link, data, redirect, useActionData, useLoaderData, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useMemo, useState} from 'react';
 import type {Route} from './+types/shop.cart';
 import {
@@ -18,6 +18,7 @@ import {
   writeCart,
 } from '~/lib/commerce/app-api';
 import {readOptions, writeOptions} from '~/lib/commerce/app-cart-options';
+import {cartChanges, seenOf as seenLines} from '~/lib/commerce/app-cart-seen';
 import {buyerOf} from '~/lib/commerce/buyer';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {ShopFrame} from '~/components/commerce/ShopFrame';
@@ -63,7 +64,18 @@ export async function loader(args: Route.LoaderArgs) {
   const saved = defaultAddress(account?.addresses);
   const base = await cartLoader(args, saved?.country ?? null);
   const prefill = addressForCountry(saved, base.country);
-  return {...base, accountEmail: account?.email ?? null, prefill: prefill ? {name: prefill.name, line1: prefill.line1, line2: prefill.line2, postal_code: prefill.postal_code, city: prefill.city, phone: prefill.phone} : null};
+  // What changed since the buyer last saw the cart, then remember what they see now (the notice shows once).
+  const headers = new Headers({'Cache-Control': 'no-store'});
+  let changes: ReturnType<typeof cartChanges> = [];
+  if (base.quote) {
+    const options = await readOptions(request, context.env);
+    const money = (n: number) => formatMoney(n, base.quote?.currency);
+    changes = cartChanges(options.seen, base.quote.lines, money);
+    if (JSON.stringify(options.seen ?? {}) !== JSON.stringify(seenLines(base.quote.lines))) {
+      headers.append('Set-Cookie', await writeOptions({...options, seen: seenLines(base.quote.lines)}, context.env));
+    }
+  }
+  return data({...base, changes, accountEmail: account?.email ?? null, prefill: prefill ? {name: prefill.name, line1: prefill.line1, line2: prefill.line2, postal_code: prefill.postal_code, city: prefill.city, phone: prefill.phone} : null}, {headers});
 }
 
 async function cartLoader({context, request}: Route.LoaderArgs, savedCountry: string | null) {
@@ -150,7 +162,7 @@ export async function action({context, request}: Route.ActionArgs) {
   const headers = new Headers();
   if (out.data.token) headers.append('Set-Cookie', await orderCookie(context.env).serialize({number: out.data.number, token: out.data.token}));
   headers.append('Set-Cookie', await writeCart([], context.env));
-  headers.append('Set-Cookie', await writeOptions({...options, code: '', pickup: false}, context.env));
+  headers.append('Set-Cookie', await writeOptions({...options, code: '', pickup: false, seen: {}}, context.env));
   return redirect(out.data.redirect_url ?? `/shop/order?order=${encodeURIComponent(out.data.number)}`, {headers});
 }
 
@@ -188,7 +200,7 @@ function fillEmail(value: string) {
 }
 
 export default function ShopCart() {
-  const {lines, country, quote, problem, images, code, suggest, express, accountEmail, prefill} = useLoaderData<typeof loader>();
+  const {lines, country, quote, problem, images, code, suggest, express, accountEmail, prefill, changes} = useLoaderData<typeof loader>();
   const [fill, setFill] = useState<AddressFill | null>(null);
   const actionData = useActionData<{problem?: string}>();
   const navigation = useNavigation();
@@ -244,7 +256,7 @@ export default function ShopCart() {
             </button>
             <PayTerms hasPreorder={quote.lines.some((l) => l.sale_mode === 'preorder')} />
           </Form>
-          <OrderSummary quote={quote} country={country} images={images} code={code} pending={busy && !submitting} />
+          <OrderSummary quote={quote} country={country} images={images} code={code} pending={busy && !submitting} changes={changes} />
         </div>
       ) : null}
     </ShopFrame>

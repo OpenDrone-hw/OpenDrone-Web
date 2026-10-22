@@ -6,6 +6,7 @@ import {discountRows, lineStrike, shippingStrike} from '~/lib/commerce/summary-d
 import {SummarySuggestions} from './SummarySuggestions';
 import {ShipChip, parcelPromise} from '~/components/ShipChip';
 import {EarlyBirdNote, useAnyEarlySku} from '~/components/EarlyPriceCue';
+import {type CartChange, changeText} from '~/lib/commerce/app-cart-seen';
 import {countryName} from '~/lib/shipping-rates';
 
 export type SummaryImages = Record<string, {url: string; alt: string} | null>;
@@ -61,7 +62,12 @@ function useFitsViewport() {
   return {ref, value};
 }
 
-export function OrderSummary({quote, country, images, pending, code = ''}: {quote: Quote; country: string; images: SummaryImages; pending: boolean; code?: string}) {
+export function OrderSummary({quote, country, images, pending, code = '', changes = []}: {quote: Quote; country: string; images: SummaryImages; pending: boolean; code?: string; changes?: CartChange[]}) {
+  // A quote change the buyer has not seen stays on screen while they edit the cart (the page reloads its data).
+  const [noted, setNoted] = useState<CartChange[]>([]);
+  useEffect(() => {
+    if (changes.length) setNoted((old) => [...old.filter((o) => !changes.some((c) => c.variant === o.variant && c.kind === o.kind)), ...changes]);
+  }, [changes]);
   // As the Shopify-mode cart: one parcel ships when its last item is ready, and early bird prices say so once.
   const parcel = parcelPromise(quote.lines.map((l) => l.ship_promise));
   const anyEarly = useAnyEarlySku(quote.lines.map((l) => l.sku));
@@ -77,6 +83,16 @@ export function OrderSummary({quote, country, images, pending, code = ''}: {quot
           <span className="co-summary-bar-total">{money(quote.total_minor)}</span>
         </button>
         <div id="co-summary-body" className="co-summary-body">
+          {noted.length ? (
+            <div role="status" className="co-changed">
+              <p>Since you last looked:</p>
+              <ul>
+                {noted.map((c) => (
+                  <li key={`${c.variant}:${c.kind}`}>{changeText(c)}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <ul className="co-lines">
             {quote.lines.map((l) => {
               const img = images[l.variant];
@@ -156,6 +172,16 @@ export function OrderSummary({quote, country, images, pending, code = ''}: {quot
               <span className="co-dim">Your parcel</span>
               <ShipChip promise={parcel} ifFunded />
             </p>
+          ) : null}
+          {quote.parcels && quote.parcels.length > 1 ? (
+            <ul className="co-parcels" aria-label="Parcels">
+              {quote.parcels.map((p, i) => (
+                <li key={i}>
+                  <span className="co-dim">Parcel {i + 1}{p.titles?.length ? `: ${p.titles.join(', ')}` : ''}</span>
+                  {p.ship_promise ? <ShipChip promise={p.ship_promise} ifFunded /> : null}
+                </li>
+              ))}
+            </ul>
           ) : null}
           <EarlyBirdNote show={anyEarly} className="cart-summary-note" />
         </div>
