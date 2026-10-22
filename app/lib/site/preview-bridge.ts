@@ -15,6 +15,17 @@ export function previewOrigin(env: {SITE_PREVIEW?: string; STUDIO_ORIGIN?: strin
   }
 }
 
+/**
+ * The framing headers of an HTML page. Production: nothing may frame the site (`DENY`, `frame-ancestors 'none'`). Dev: same
+ * origin. A preview Worker (`studio`, from previewOrigin): only the Studio's one origin may frame it, so the Studio can show
+ * the draft; X-Frame-Options has no form for one foreign origin, so it is left out and frame-ancestors decides.
+ */
+export function framing(csp: string, isDev: boolean, studio: string | null): {csp: string; xfo: string | null} {
+  if (studio) return {csp: csp.replace("frame-ancestors 'none'", `frame-ancestors ${studio}`), xfo: null};
+  if (isDev) return {csp: csp.replace("frame-ancestors 'none'", "frame-ancestors 'self'"), xfo: 'SAMEORIGIN'};
+  return {csp, xfo: 'DENY'};
+}
+
 type El = {getAttribute(n: string): string | null; textContent: string | null; closest?(s: string): El | null};
 type Win = {
   parent: unknown;

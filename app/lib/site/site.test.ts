@@ -4,7 +4,7 @@ import {describe, it} from 'node:test';
 import {defaultSite, navHref, navLinks, plausibleScript, themeOverrides, type NavItem} from './config.ts';
 import {renderPageMarkdown} from './markdown.ts';
 import {resolvePage, resolveSite, type SiteEnv} from './resolve.ts';
-import {installPreviewBridge, previewOrigin} from './preview-bridge.ts';
+import {framing, installPreviewBridge, previewOrigin} from './preview-bridge.ts';
 
 const ENV: SiteEnv = {SITE_SOURCE: 'app', APP_API_URL: 'https://app.example/', APP_ACCESS_CLIENT_ID: 'cid', APP_ACCESS_CLIENT_SECRET: 'cs', APP_STOREFRONT_TOKEN: 'tok'};
 const req = (host: string) => new Request(`https://${host}/x`);
@@ -157,6 +157,14 @@ describe('site texts', () => {
 
 describe('preview bridge', () => {
   const ORIGIN = 'https://app.incutec.com';
+  it('frames: nothing in production, same origin in dev, only the Studio on a preview Worker', () => {
+    const csp = "default-src 'self'; frame-ancestors 'none'";
+    assert.deepEqual(framing(csp, false, null), {csp, xfo: 'DENY'});
+    assert.deepEqual(framing(csp, true, null), {csp: "default-src 'self'; frame-ancestors 'self'", xfo: 'SAMEORIGIN'});
+    assert.deepEqual(framing(csp, false, ORIGIN), {csp: `default-src 'self'; frame-ancestors ${ORIGIN}`, xfo: null});
+    // a STUDIO_ORIGIN without SITE_PREVIEW=1 never relaxes production
+    assert.deepEqual(framing(csp, false, previewOrigin({STUDIO_ORIGIN: ORIGIN})), {csp, xfo: 'DENY'});
+  });
   it('is on only with SITE_PREVIEW=1 and a usable STUDIO_ORIGIN', () => {
     assert.equal(previewOrigin({}), null);
     assert.equal(previewOrigin({STUDIO_ORIGIN: ORIGIN}), null);

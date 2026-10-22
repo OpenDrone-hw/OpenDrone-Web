@@ -4,6 +4,7 @@ import {renderToReadableStream} from 'react-dom/server';
 import {chatFpvFrameSrc, createContentSecurityPolicy} from '~/lib/csp';
 import type {EntryContext} from 'react-router';
 import type {AppLoadContext} from '~/lib/context';
+import {framing, previewOrigin} from '~/lib/site/preview-bridge';
 
 // Minimal ambient declaration for Cloudflare Workers' HTMLRewriter, which
 // Oxygen's edge runtime provides but isn't in the default TS lib and
@@ -130,11 +131,13 @@ export default async function handleRequest(
    * app/lib/turnstile.ts.
    */
   const isDev = process.env.NODE_ENV !== 'production';
-  responseHeaders.set(
-    'Content-Security-Policy',
-    isDev ? header.replace("frame-ancestors 'none'", "frame-ancestors 'self'") : header,
-  );
-  responseHeaders.set('X-Frame-Options', isDev ? 'SAMEORIGIN' : 'DENY');
+  // A preview Worker (SITE_PREVIEW=1 with a STUDIO_ORIGIN, never set by a
+  // wrangler file: site.test.ts) may be framed by that one origin only, so the
+  // app's Studio can show the draft (app/lib/site/preview-bridge.ts).
+  const frame = framing(header, isDev, previewOrigin(context.env));
+  responseHeaders.set('Content-Security-Policy', frame.csp);
+  if (frame.xfo) responseHeaders.set('X-Frame-Options', frame.xfo);
+  else responseHeaders.delete('X-Frame-Options');
   responseHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   responseHeaders.set(
     'Permissions-Policy',
