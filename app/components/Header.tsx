@@ -12,6 +12,7 @@ import {SiteWordmark} from '~/components/SiteWordmark';
 import {IncutecWordmark} from '~/components/IncutecWordmark';
 import {Pod} from '~/components/Pod';
 import {HEADER_MENU_LINKS} from '~/lib/header-menu';
+import type {SiteNav} from '~/lib/site/config';
 import {
   ProductPods,
   type ProductPodItem,
@@ -553,6 +554,9 @@ export function HeaderMenu({
 }) {
   const {close} = useAside();
   const isMobile = viewport === 'mobile';
+  // A site from the app brings its own header menu (root loader `site`); without one the bundled menu stays.
+  const siteNav = (useRouteLoaderData('root') as {site?: SiteNav} | undefined)?.site?.headerNav ?? null;
+  const menuItems = siteNav ?? HEADER_MENU.items;
 
   return (
     <nav
@@ -633,12 +637,13 @@ export function HeaderMenu({
           </NavLink>
         </>
       )}
-      {HEADER_MENU.items.map((item) => {
+      {menuItems.map((item) => {
         if (!item.url) return null;
         const url = item.url;
         // Desktop already exposes these destinations in its category bar,
         // action links or footer. The mobile drawer keeps the full menu.
         if (
+          !siteNav &&
           !isMobile &&
           (url === '/preorder' ||
             url === '/wholesale' ||
@@ -744,6 +749,24 @@ export function HeaderMenu({
 function SecondaryLinks({onNavigate}: {onNavigate?: () => void}) {
   const cls = ({isActive}: {isActive: boolean}) =>
     `site-header-link${isActive ? ' is-active' : ''}`;
+  const siteNav = (useRouteLoaderData('root') as {site?: SiteNav} | undefined)?.site?.headerNav ?? null;
+  if (siteNav) {
+    return (
+      <>
+        {siteNav.map((l) =>
+          l.url.startsWith('/') ? (
+            <NavLink key={l.id} prefetch="intent" to={l.url} className={cls} onClick={onNavigate}>
+              {l.title}
+            </NavLink>
+          ) : (
+            <a key={l.id} href={l.url} className="site-header-link" rel="noopener noreferrer" target="_blank" onClick={onNavigate}>
+              {l.title}
+            </a>
+          ),
+        )}
+      </>
+    );
+  }
   return (
     <>
       {HEADER_MENU_LINKS.map((l) => (

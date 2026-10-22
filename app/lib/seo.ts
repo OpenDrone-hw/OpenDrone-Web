@@ -1,4 +1,5 @@
 import {DISCORD_INVITE_URL, type CompanyIdentity} from '~/lib/company';
+import type {SiteConfig} from '~/lib/site/config';
 import preorders from '../../content/preorders.json';
 
 const STORE_NAME = 'OpenDrone';
@@ -28,9 +29,9 @@ function stripHtml(value?: string | null) {
 }
 
 /** Resolve an origin-relative path against the canonical origin. */
-function absolutize(value?: string | null) {
+function absolutize(value?: string | null, origin = SITE_ORIGIN) {
   if (!value) return value;
-  return value.startsWith('/') ? `${SITE_ORIGIN}${value}` : value;
+  return value.startsWith('/') ? `${origin}${value}` : value;
 }
 
 /**
@@ -53,7 +54,11 @@ function truncate(value: string, maxLength = 160) {
   return `${value.slice(0, word > 70 ? word : maxLength - 3).trimEnd()}...`;
 }
 
-export function buildPageTitle(title?: string | null) {
+/** The site a page is served as (app/lib/site); absent: the bundled opendrone.be constants above. */
+export type SeoSite = Pick<SiteConfig, 'name' | 'origin' | 'titleTemplate' | 'description' | 'indexable' | 'locale'> & {socialImage?: string | null};
+
+export function buildPageTitle(title?: string | null, site?: SeoSite) {
+  if (site) return title ? site.titleTemplate.replace('%s', title) : site.name;
   return title ? `${title} | ${STORE_NAME}` : STORE_NAME;
 }
 
@@ -76,11 +81,12 @@ export function buildSeoMeta({
   image,
   type = 'website',
   robots,
-  locale = DEFAULT_LOCALE,
+  locale,
   alternateLocales,
   canonical,
   url,
   hreflang,
+  site,
 }: {
   title?: string | null;
   description?: string | null;
@@ -101,25 +107,31 @@ export function buildSeoMeta({
    * include an `x-default` entry pointing at the canonical locale.
    */
   hreflang?: HreflangAlternate[];
+  /** The site from the app; its name, origin, title template, description and robots replace the bundled ones. */
+  site?: SeoSite;
 }) {
-  const resolvedTitle = buildPageTitle(title);
-  const resolvedDescription = buildMetaDescription(description);
+  const origin = site?.origin ?? SITE_ORIGIN;
+  // A page without its own image shares the site's social image when the Studio set one.
+  if (!image && site?.socialImage) image = site.socialImage;
+  const resolvedTitle = buildPageTitle(title, site);
+  const resolvedDescription = buildMetaDescription(description, site?.description ?? DEFAULT_SEO_DESCRIPTION);
+  if (!robots && site && !site.indexable) robots = 'noindex,nofollow';
 
   const meta: Array<Record<string, string>> = [
     {title: resolvedTitle},
     {name: 'description', content: resolvedDescription},
-    {property: 'og:site_name', content: STORE_NAME},
+    {property: 'og:site_name', content: site?.name ?? STORE_NAME},
     {property: 'og:title', content: resolvedTitle},
     {property: 'og:description', content: resolvedDescription},
     {property: 'og:type', content: type},
-    {property: 'og:locale', content: locale},
+    {property: 'og:locale', content: locale ?? site?.locale ?? DEFAULT_LOCALE},
     {name: 'twitter:card', content: 'summary_large_image'},
     // PNG, not SVG: Facebook, LinkedIn, iMessage, Slack, Discord and X all
     // reject SVG OG images and render a blank preview. og:image must be an
     // absolute URL: scrapers don't resolve relative paths.
     {
       property: 'og:image',
-      content: absolutize(image) || `${SITE_ORIGIN}/og-image.png`,
+      content: absolutize(image, origin) || `${origin}/og-image.png`,
     },
     // Dimensions help crawlers lay out the card before the fetch finishes.
     // Only emitted for the known-size default; a custom product image has
