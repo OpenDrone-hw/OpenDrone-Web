@@ -116,7 +116,10 @@ export function OrderSummary({quote, country, images, pending, code = ''}: {quot
             </div>
             {discountRows(quote).map((r) => (
               <div key={r.key}>
-                <dt>{r.label}</dt>
+                <dt className="co-disc">
+                  <TagIcon />
+                  {r.label}
+                </dt>
                 <dd className="co-num">&minus;{money(r.minor)}</dd>
               </div>
             ))}
@@ -149,3 +152,12 @@ export function OrderSummary({quote, country, images, pending, code = ''}: {quot
   );
 }
 
+/** The tag in front of a discount row, as checkouts mark a saving; drawn in the text colour. */
+function TagIcon() {
+  return (
+    <svg className="co-disc__tag" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+      <path d="M8.6 1.5H14a.5.5 0 0 1 .5.5v5.4a1 1 0 0 1-.3.7l-6.6 6.6a1 1 0 0 1-1.4 0L1.3 9.8a1 1 0 0 1 0-1.4l6.6-6.6a1 1 0 0 1 .7-.3Z" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <circle cx="11.2" cy="4.8" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}

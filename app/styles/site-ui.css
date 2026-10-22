@@ -2042,6 +2042,8 @@ body:has(.test-banner) .site-header {
 .co-field input[aria-invalid="true"] { border-color: var(--color-error); }
 .co-dim { color: var(--color-text-muted); }
 .co-was { font-size: 0.8125rem; }
+.co-disc { display: inline-flex; align-items: center; gap: 0.375rem; }
+.co-disc__tag { flex: none; color: var(--color-text-muted); }
 .co-num { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
 .co-field { display: grid; gap: 0.375rem; min-width: 0; }
 .co-field > span { font-size: 0.8125rem; color: var(--color-text-muted); }
