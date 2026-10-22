@@ -5,7 +5,7 @@ import {requestedLines} from './shopify-cart-input.ts';
 import {destinationForRequest, isInternationalQuote, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
-import {cartAttributesFromForm} from './growth/attribution.ts';
+import {cartAttributesFromForm, ORDER_ATTRIBUTE} from './growth/attribution.ts';
 import {internationalShippingFrom} from './international-shipping.ts';
 import {
   BATCH_ATTRIBUTE,
@@ -807,7 +807,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         }
         checkPaidBatches(catalog, lines, quantities);
         const updated = await dependencies.addCartLines(existingId, lines);
-        await recordAttribution(form, updated.id, dependencies);
+        await recordAttribution(form, updated, dependencies);
         return wantsSummary
           ? Response.json(await withShippingFrom(cartSummary(updated, catalog), updated, destination, env), {headers: NO_STORE})
           : redirect('/cart');
@@ -818,7 +818,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
     checkPaidBatches(catalog, lines, new Map());
     const cart = await dependencies.createCart(lines, cartCountryFor(destination?.country ?? null, dependencies.registrations, usRate));
     dependencies.setCartId?.(cart.id);
-    await recordAttribution(form, cart.id, dependencies);
+    await recordAttribution(form, cart, dependencies);
     return wantsSummary
       ? Response.json(await withShippingFrom(cartSummary(cart, catalog), cart, destination, env), {headers: NO_STORE})
       : redirect('/cart');
@@ -835,11 +835,15 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
  * its source. Best effort: a failure is logged and the add still
  * succeeds.
  */
-async function recordAttribution(form: FormData, cartId: string, dependencies: ShopifyCartDependencies): Promise<void> {
+async function recordAttribution(form: FormData, cart: ShopifyCart, dependencies: ShopifyCartDependencies): Promise<void> {
   const attributes = cartAttributesFromForm(form);
   if (!attributes.length || !dependencies.setAttributes) return;
+  // First touch wins across sessions too: the update replaces the cart's attributes, so a cart that already
+  // carries a touch (a returning buyer's later session, now always captured, direct included) keeps it.
+  const touched = new Set<string>(Object.values(ORDER_ATTRIBUTE));
+  if (cart.attributes?.some(({key}) => touched.has(key))) return;
   try {
-    await dependencies.setAttributes(cartId, attributes);
+    await dependencies.setAttributes(cart.id, attributes);
   } catch (error) {
     dependencies.logError?.(`attribution not recorded: ${error instanceof Error ? error.message : 'unknown error'}`);
   }

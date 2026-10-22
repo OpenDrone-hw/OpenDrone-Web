@@ -4,6 +4,8 @@ import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyUnsubscribeToken} from '~/lib/growth/unsubscribe-token';
 import {unsubscribeWithShopify} from '~/lib/growth/shopify-newsletter';
+import {appCommerceEnabled} from '~/lib/commerce/app-api';
+import {unsubscribeWithApp} from '~/lib/commerce/app-newsletter';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
@@ -13,7 +15,7 @@ import {copyText} from '~/lib/copy';
 //        confirm button bound to that email. Without/with an invalid token:
 //        a plain email form. GET never unsubscribes anything — inbox link
 //        scanners prefetch GETs.
-// POST → does the opt-out in Shopify (the consent owner) and Resend (the
+// POST → does the opt-out in Shopify (the consent owner; in app mode, the app) and Resend (the
 //        delivery suppression). Both writes are gated and must succeed before
 //        confirmation. Token-authenticated POSTs skip the rate limit;
 //        form POSTs get honeypot + per-IP limit. The response is the same
@@ -101,7 +103,10 @@ export async function action({request, context}: Route.ActionArgs) {
     }
   }
 
-  const result = await unsubscribeWithShopify(context.env, email);
+  // App mode: withdraw the consent in the app (the consent owner there); Shopify is not called.
+  const result = appCommerceEnabled(context.env)
+    ? await unsubscribeWithApp(context.env, email)
+    : await unsubscribeWithShopify(context.env, email);
   if (result !== 'unsubscribed') {
     return data<UnsubscribeResult>(
       {

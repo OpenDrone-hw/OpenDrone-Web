@@ -3,6 +3,8 @@ import type {Route} from './+types/early-bird';
 import {accountHeaders, accountsEnabled, redirectTo, sameOrigin} from '~/lib/accounts/config';
 import {readSession} from '~/lib/accounts/sessions';
 import {formatOrderDate} from '~/lib/accounts/order-display';
+import {AppUnavailable, appCommerceEnabled} from '~/lib/commerce/app-api';
+import {appKey, appOrderNumber, readAppOrder} from '~/lib/commerce/app-early-bird';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {
   claimUrl,
@@ -68,16 +70,20 @@ export async function loader({request, context}: Route.LoaderArgs) {
   let notice: Notice | null = null;
 
   if (url.searchParams.has('order')) {
-    const gid = orderGid(url.searchParams.get('order'));
+    const app = appCommerceEnabled(env);
+    const number = app ? appOrderNumber(url.searchParams.get('order')) : null;
+    const key = app ? appKey(url.searchParams.get('key')) : null;
+    const gid = app ? null : orderGid(url.searchParams.get('order'));
     let order: EarlyBirdOrder | null = null;
     try {
-      order = gid ? await readOrder(env, gid) : null;
+      // App mode: the app proves the order from the mail key. Shopify mode: the key is the status page key.
+      order = app ? (number && key ? await readAppOrder(env, number, key) : null) : gid ? await readOrder(env, gid) : null;
     } catch (error) {
-      console.error('early-bird: order read failed:', error instanceof Error ? error.message : 'unknown');
+      console.error('early-bird: order read failed:', error instanceof AppUnavailable ? 'app unavailable' : error instanceof Error ? error.message : 'unknown');
       notice = 'unavailable';
     }
     if (!notice) {
-      if (!order || !mailKeyMatches(order, url.searchParams.get('key'))) notice = 'mail-invalid';
+      if (!order || (!app && !mailKeyMatches(order, url.searchParams.get('key')))) notice = 'mail-invalid';
       else {
         const result = await toClaim(env, order);
         if (result instanceof Response) return result;

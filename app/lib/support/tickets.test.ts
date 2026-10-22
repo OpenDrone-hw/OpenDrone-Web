@@ -158,6 +158,45 @@ describe('parseNewTicket', () => {
   });
 });
 
+describe('createTicket in app mode', {skip}, () => {
+  const APP = {COMMERCE_SOURCE: 'app', APP_API_URL: 'https://app.example', APP_STOREFRONT_TOKEN: 't', APP_PROJECT: 'opendrone'};
+  const appFetcher = (calls: string[], matched: boolean) =>
+    (async (url: string, init: RequestInit) => {
+      calls.push(String(url));
+      if (String(url).startsWith('https://app.example/api/ops/storefront.order_match')) {
+        const args = JSON.parse(String(init.body)) as {number: string; email: string};
+        return new Response(JSON.stringify({ok: true, data: {matched: matched && args.email === 'jan@example.com', order: args.number}}), {headers: {'content-type': 'application/json'}});
+      }
+      return new Response('{}', {status: 500});
+    }) as unknown as typeof fetch;
+
+  it('verifies the order through the app and never calls Shopify', async () => {
+    const calls: string[] = [];
+    const {deps} = await setup({env: APP});
+    deps.fetcher = appFetcher(calls, true);
+    const t = await createTicket(deps, input());
+    assert.equal(t.orderVerified, true);
+    assert.equal(t.customerId, null);
+    assert.deepEqual(calls, ['https://app.example/api/ops/storefront.order_match']);
+  });
+
+  it('leaves the order unverified when the app says no match', async () => {
+    const calls: string[] = [];
+    const {deps} = await setup({env: APP});
+    deps.fetcher = appFetcher(calls, true);
+    const t = await createTicket(deps, input({email: 'someone@example.com'}));
+    assert.equal(t.orderVerified, false);
+  });
+
+  it('leaves the order unverified when the app does not answer', async () => {
+    const {deps} = await setup({env: APP});
+    deps.fetcher = (async () => {
+      throw new Error('down');
+    }) as unknown as typeof fetch;
+    assert.equal((await createTicket(deps, input())).orderVerified, false);
+  });
+});
+
 describe('createTicket', {skip}, () => {
   it('opens a thread with the staff card, relays the message and stores the ticket', async () => {
     const {deps, discord} = await setup();

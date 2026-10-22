@@ -47,6 +47,7 @@ import {
   sweepDrafts,
   type ChatFpvDeps,
 } from './ai-drafts.ts';
+import {appCommerceEnabled, appOrderMatch, type AppEnv} from '../commerce/app-api.ts';
 import {approveEmoji, decide, resolveMode, type ModerationEnv} from './moderation.ts';
 import {sendReplyNotice, sendTicketReceived} from './notify.ts';
 import {extractFirstName, scrubForDiscord, scrubForPublic} from './scrubber.ts';
@@ -56,6 +57,7 @@ import {
   lookupCustomer,
   normalizeOrderNumber,
   ownedOrder,
+  appOrderSummary,
   recordOnCustomer,
   shopifyWritesEnabled,
   type CustomerContext,
@@ -75,7 +77,8 @@ export {LIMITS, TOPIC_FIELDS, TOPICS, normalizeText};
 export type SupportEnv = DiscordEnv &
   CrmFlagEnv &
   ModerationEnv &
-  ShopifyEnv & {
+  ShopifyEnv &
+  Partial<AppEnv> & {
     SUPPORT_SESSION_SECRET?: string;
     SESSION_SECRET?: string;
     SUPPORT_EMAIL_NOTIFY_ENABLED?: string;
@@ -338,14 +341,26 @@ function preview(text: string): string {
   return flat.length > 80 ? `${flat.slice(0, 79).trimEnd()}…` : flat;
 }
 
+/**
+ * The order a ticket names when the email proves it. In app mode (COMMERCE_SOURCE=app) the app answers; otherwise Shopify.
+ * Null when there is no such order for this email, or the source cannot answer.
+ */
+async function verifiedOrder(deps: Deps, orderNumber: string, email: string, fetcher: typeof fetch): Promise<OrderSummary | null> {
+  if (!appCommerceEnabled(deps.env)) return ownedOrder(deps.env, orderNumber, email, null, fetcher);
+  const name = normalizeOrderNumber(orderNumber);
+  if (!name) return null;
+  return (await appOrderMatch(deps.env as AppEnv, name, email, fetcher)) ? appOrderSummary(name) : null;
+}
+
 export async function createTicket(deps: Deps, input: NewTicketInput, files: OutboundFile[] = []): Promise<Ticket> {
   const now = (deps.now ?? Date.now)();
   const fetcher = deps.fetcher ?? fetch;
   const ref = newTicketRef();
   // The email is only a claim. An order Shopify confirms for it is the proof
   // that links the Shopify customer and shows staff the order history.
-  const order = input.orderNumber ? await ownedOrder(deps.env, input.orderNumber, input.email, null, fetcher) : null;
-  const lookup = await lookupCustomer(deps.env, input.email, fetcher);
+  const order = input.orderNumber ? await verifiedOrder(deps, input.orderNumber, input.email, fetcher) : null;
+  // App mode has no Shopify customer to link: the app's crm.customer holds the customer and its orders.
+  const lookup: CustomerContext = appCommerceEnabled(deps.env) ? {match: 'unchecked'} : await lookupCustomer(deps.env, input.email, fetcher);
   const customer: CustomerContext = lookup.match === 'matched' && !order ? {match: 'unverified'} : lookup;
   const customerId = customer.match === 'matched' ? customer.customerId : null;
   const earlier = order ? await deps.store.ticketsByEmail(input.email, 4) : [];
@@ -780,7 +795,7 @@ export async function findTickets(deps: Deps, email: string, key: string): Promi
   const secret = deps.env.SUPPORT_SESSION_SECRET || deps.env.SESSION_SECRET || '';
   if (!(await orderGuessAllowed(deps.store, secret, mail, now))) return [];
   const [owned, all] = await Promise.all([
-    ownedOrder(deps.env, order, mail, null, deps.fetcher ?? fetch),
+    verifiedOrder(deps, order, mail, deps.fetcher ?? fetch),
     deps.store.ticketsByEmail(mail, 50),
   ]);
   if (!owned) {
