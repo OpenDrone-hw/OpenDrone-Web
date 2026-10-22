@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {ineligibility} from '../early-bird.ts';
 import type {AccountOrder} from './app-account.ts';
-import {accountClaimRows, appKey, appOrderNumber, readAppOrder, toEarlyBirdOrder, type EarlyBirdFacts} from './app-early-bird.ts';
+import {accountClaimRows, appKey, proveAccountRows, settleRow, appOrderNumber, readAppOrder, toEarlyBirdOrder, type EarlyBirdFacts} from './app-early-bird.ts';
 
 const FACTS: EarlyBirdFacts = {number: 'W1042', created: '2026-11-02T10:00:00Z', enabled: true, paid: true, canceled: false, qualifying: true};
 const ENV = {COMMERCE_SOURCE: 'app', APP_API_URL: 'https://app.example', APP_ACCESS_CLIENT_ID: 'i', APP_ACCESS_CLIENT_SECRET: 's', APP_STOREFRONT_TOKEN: 't', APP_PROJECT: 'p', SESSION_SECRET: 'x'};
@@ -52,5 +52,22 @@ describe('app early bird', () => {
       '2026-12-31',
     );
     assert.deepEqual(rows.map((r) => r.name), ['#W1', '#W5']);
+  });
+
+  it('proves account rows with the session and falls back to the reminder', async () => {
+    const row = (number: string) => ({id: `app:order/${number}`, number, name: `#${number}`, createdAt: '2026-11-02T10:00:00Z', state: 'unchecked' as const});
+    const bodies: Array<Record<string, unknown>> = [];
+    const fetcher = (async (_u: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      bodies.push(body);
+      const n = body.number;
+      const reply =
+        n === 'W1' ? {ok: true, data: FACTS} : n === 'W2' ? {ok: true, data: {...FACTS, qualifying: false}} : {ok: false, error: {code: 'not_found', detail: 'no such order'}};
+      return new Response(JSON.stringify(reply), {headers: {'content-type': 'application/json'}});
+    }) as typeof fetch;
+    const rows = await proveAccountRows(ENV, 'S'.repeat(20), [row('W1'), row('W2'), row('W3')], '2026-12-31', fetcher);
+    assert.deepEqual(rows.map((r) => [r.number, r.state]), [['W1', 'claim'], ['W3', 'unchecked']]);
+    assert.deepEqual(bodies[0], {project: 'p', number: 'W1', session: 'S'.repeat(20)});
+    assert.equal(settleRow(row('W9'), null, '2026-12-31')?.state, 'unchecked');
   });
 });

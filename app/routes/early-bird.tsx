@@ -4,8 +4,8 @@ import {accountHeaders, accountsEnabled, redirectTo, sameOrigin} from '~/lib/acc
 import {readSession} from '~/lib/accounts/sessions';
 import {formatOrderDate} from '~/lib/accounts/order-display';
 import {AppUnavailable, appCommerceEnabled} from '~/lib/commerce/app-api';
-import {appAccountsEnabled, clearSession, hasSessionCookie, readAccount} from '~/lib/commerce/app-account';
-import {accountClaimRows, appKey, appOrderNumber, readAppOrder, type AccountOrderRow} from '~/lib/commerce/app-early-bird';
+import {appAccountsEnabled, clearSession, hasSessionCookie, readAccount, readSessionToken} from '~/lib/commerce/app-account';
+import {accountClaimRows, appKey, appOrderNumber, proveAccountRows, readAppOrder, type AccountOrderRow} from '~/lib/commerce/app-early-bird';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {
   claimUrl,
@@ -95,7 +95,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
 
   if (appCommerceEnabled(env)) {
     // App mode: the app account (cookie od_app_acct), not the Shopify login. The account answer has no sale mode per line, so
-    // the list is a reminder of which orders to claim from their mail link (see accountClaimRows).
+    // each paid order is asked of the app with the session (`storefront.early_bird`), which proves a qualifying one; an order the app cannot say stays a reminder for its mail link.
     const accounts = appAccountsEnabled(env);
     let signedIn = false;
     let appOrders: AccountOrderRow[] | null = null;
@@ -103,7 +103,8 @@ export async function loader({request, context}: Route.LoaderArgs) {
       const read = await readAccount(request, env);
       if (read.clear) responseHeaders.append('Set-Cookie', await clearSession(env));
       signedIn = Boolean(read.account);
-      appOrders = read.account ? accountClaimRows(read.account.orders, CAMPAIGN.endsOn) : read.down && hasSessionCookie(request) ? null : [];
+      const token = read.account ? await readSessionToken(request, env) : null;
+      appOrders = read.account ? (token ? await proveAccountRows(env, token, accountClaimRows(read.account.orders, CAMPAIGN.endsOn), CAMPAIGN.endsOn) : accountClaimRows(read.account.orders, CAMPAIGN.endsOn)) : read.down && hasSessionCookie(request) ? null : [];
     }
     return data({signedIn, accounts, orders: null, appOrders, appMode: true, notice, endsOn: CAMPAIGN.endsOn}, {headers: responseHeaders});
   }
@@ -122,8 +123,30 @@ export async function loader({request, context}: Route.LoaderArgs) {
   return data({signedIn: Boolean(session), accounts: accountsEnabled(env), orders, appOrders: null as AccountOrderRow[] | null, appMode: false, notice, endsOn: CAMPAIGN.endsOn}, {headers: responseHeaders});
 }
 
+async function appAction(request: Request, env: Env) {
+  if (request.method !== 'POST' || !sameOrigin(request) || !appAccountsEnabled(env)) {
+    return new Response('Forbidden', {status: 403, headers: accountHeaders()});
+  }
+  const token = await readSessionToken(request, env);
+  if (!token) return redirectTo('/account/login?return_to=%2Fearly-bird', [], 303);
+  const number = appOrderNumber(String((await request.formData()).get('order') ?? ''));
+  if (!number) return new Response('Bad Request', {status: 400, headers: accountHeaders()});
+  let order: EarlyBirdOrder | null;
+  try {
+    order = await readAppOrder(env, number, {session: token});
+  } catch (error) {
+    console.error('early-bird: order read failed:', error instanceof AppUnavailable ? 'app unavailable' : error instanceof Error ? error.message : 'unknown');
+    return data({notice: 'unavailable' as Notice}, {headers: accountHeaders()});
+  }
+  if (!order) return data({notice: 'not-yours' as Notice}, {headers: accountHeaders()});
+  const result = await toClaim(env, order);
+  if (result instanceof Response) return result;
+  return data({notice: result}, {headers: accountHeaders()});
+}
+
 export async function action({request, context}: Route.ActionArgs) {
   const {env} = context;
+  if (appCommerceEnabled(env)) return appAction(request, env);
   if (request.method !== 'POST' || !sameOrigin(request) || !accountsEnabled(env)) {
     return new Response('Forbidden', {status: 403, headers: accountHeaders()});
   }
@@ -183,9 +206,11 @@ export default function EarlyBirdRoute({actionData}: Route.ComponentProps) {
             </p>
           ) : (
             <>
-              <p className="account-dashboard-card-lede">
-                These paid orders are on your account. Open the &ldquo;Claim on Discord&rdquo; link in the payment confirmation email of the preorder to claim it.
-              </p>
+              {appOrders.some((o) => o.state === 'unchecked') ? (
+                <p className="account-dashboard-card-lede">
+                  Orders without a Claim button: open the &ldquo;Claim on Discord&rdquo; link in the payment confirmation email of the preorder.
+                </p>
+              ) : null}
               <ul className="account-orders-list">
                 {appOrders.map((order) => (
                   <li key={order.id} className="account-order">
@@ -195,6 +220,14 @@ export default function EarlyBirdRoute({actionData}: Route.ComponentProps) {
                         <span className="account-order-date">{formatOrderDate(order.createdAt)}</span>
                       </p>
                     </div>
+                    {order.state === 'claim' ? (
+                      <form method="post">
+                        <input type="hidden" name="order" value={order.number} />
+                        <button type="submit" className="account-dashboard-cta">
+                          Claim on Discord
+                        </button>
+                      </form>
+                    ) : null}
                   </li>
                 ))}
               </ul>

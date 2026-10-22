@@ -41,13 +41,17 @@ export function toEarlyBirdOrder(facts: EarlyBirdFacts): EarlyBirdOrder | null {
   };
 }
 
-/** The order the key proves, or null when the app does not know it (or the key is not valid). Throws AppUnavailable. */
-export async function readAppOrder(env: AppEnv, number: string, key: string, fetcher: typeof fetch = fetch): Promise<EarlyBirdOrder | null> {
-  const out = await appOp<EarlyBirdFacts>(env, 'storefront.early_bird', {number, key}, fetcher);
+/** What proves the order: the mail link key, or the signed-in account's session token (the order is on that account). */
+export type Proof = string | {session: string};
+
+/** The order the proof covers, or null when the app does not know it (or the proof is not valid). Throws AppUnavailable. */
+export async function readAppOrder(env: AppEnv, number: string, proof: Proof, fetcher: typeof fetch = fetch): Promise<EarlyBirdOrder | null> {
+  const out = await appOp<EarlyBirdFacts>(env, 'storefront.early_bird', typeof proof === 'string' ? {number, key: proof} : {number, session: proof.session}, fetcher);
   return out.ok && out.data ? toEarlyBirdOrder(out.data) : null;
 }
 
-export type AccountOrderRow = {id: string; name: string; createdAt: string};
+/** `claim`: the app proved it qualifies from the session. `unchecked`: the app could not say (older app, or down): claim from the mail link. */
+export type AccountOrderRow = {id: string; number: string; name: string; createdAt: string; state: 'claim' | 'unchecked'};
 
 /**
  * The signed-in customer's orders that can still be claimed, from `storefront.account` (app mode). That answer carries
@@ -59,7 +63,27 @@ export function accountClaimRows(orders: AccountOrder[], endsOn: string): Accoun
   const rows: AccountOrderRow[] = [];
   for (const o of orders) {
     const order = toEarlyBirdOrder({number: o.number, created: o.created, enabled: true, paid: o.state.payment === 'paid' || o.state.payment === 'partially_refunded', canceled: o.canceled, qualifying: true});
-    if (order && ineligibility(order, endsOn) === null) rows.push({id: order.id, name: order.name, createdAt: order.createdAt});
+    if (order && ineligibility(order, endsOn) === null) rows.push({id: order.id, number: o.number, name: order.name, createdAt: order.createdAt, state: 'unchecked'});
   }
   return rows;
+}
+
+/** Settle a pre-listed row with the app's session proof: dropped when the app says it does not qualify, `claim` when it does, else unchanged. */
+export function settleRow(row: AccountOrderRow, proven: EarlyBirdOrder | null, endsOn: string): AccountOrderRow | null {
+  if (!proven) return row;
+  return ineligibility(proven, endsOn) === null ? {...row, state: 'claim'} : null;
+}
+
+/** The account's rows, each asked of the app with the session. A failed ask leaves the row unchecked. */
+export async function proveAccountRows(env: AppEnv, session: string, rows: AccountOrderRow[], endsOn: string, fetcher: typeof fetch = fetch): Promise<AccountOrderRow[]> {
+  const settled = await Promise.all(
+    rows.map(async (row) => {
+      try {
+        return settleRow(row, await readAppOrder(env, row.number, {session}, fetcher), endsOn);
+      } catch {
+        return row;
+      }
+    }),
+  );
+  return settled.filter((r): r is AccountOrderRow => r !== null);
 }
