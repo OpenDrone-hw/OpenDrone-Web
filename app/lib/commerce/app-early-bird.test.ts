@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {ineligibility} from '../early-bird.ts';
-import {appKey, appOrderNumber, readAppOrder, toEarlyBirdOrder, type EarlyBirdFacts} from './app-early-bird.ts';
+import type {AccountOrder} from './app-account.ts';
+import {accountClaimRows, appKey, appOrderNumber, readAppOrder, toEarlyBirdOrder, type EarlyBirdFacts} from './app-early-bird.ts';
 
 const FACTS: EarlyBirdFacts = {number: 'W1042', created: '2026-11-02T10:00:00Z', enabled: true, paid: true, canceled: false, qualifying: true};
 const ENV = {COMMERCE_SOURCE: 'app', APP_API_URL: 'https://app.example', APP_ACCESS_CLIENT_ID: 'i', APP_ACCESS_CLIENT_SECRET: 's', APP_STOREFRONT_TOKEN: 't', APP_PROJECT: 'p', SESSION_SECRET: 'x'};
@@ -41,5 +42,15 @@ describe('app early bird', () => {
     assert.equal(calls[0]!.url, 'https://app.example/api/ops/storefront.early_bird');
     assert.deepEqual(calls[0]!.body, {project: 'p', number: 'W1042', key});
     assert.equal(await readAppOrder(ENV, 'W1042', key, answer({ok: false, error: {code: 'not_found', detail: 'no such order'}}) as typeof fetch), null);
+  });
+
+  it('lists the signed-in customer orders that are paid, not cancelled and in time', () => {
+    const o = (number: string, payment: string, created: string, canceled = false) =>
+      ({number, created, canceled, state: {payment, fulfilment: 'none'}}) as unknown as AccountOrder;
+    const rows = accountClaimRows(
+      [o('W1', 'paid', '2026-11-02T10:00:00Z'), o('W2', 'none', '2026-11-02T10:00:00Z'), o('W3', 'paid', '2026-11-02T10:00:00Z', true), o('W4', 'paid', '2027-02-01T10:00:00Z'), o('W5', 'partially_refunded', '2026-11-03T10:00:00Z')],
+      '2026-12-31',
+    );
+    assert.deepEqual(rows.map((r) => r.name), ['#W1', '#W5']);
   });
 });
