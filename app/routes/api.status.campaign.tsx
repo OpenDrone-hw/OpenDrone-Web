@@ -4,6 +4,8 @@ import {fetchPreorderOrders, holdHealth, type OverfullBatch} from '~/lib/preorde
 import {preorderHoldsEnabled} from '~/lib/preorder-ops';
 import {opsStatus} from '~/lib/preorder-ops-status';
 import {paidUnits} from '~/lib/shopify-orders';
+import {appCommerceEnabled} from '~/lib/commerce/app-api';
+import {appCampaignStatus} from '~/lib/commerce/app-campaign-status';
 import {priceTierWritesEnabled, syncPriceTiers} from '~/lib/shopify-price-tier';
 
 /**
@@ -54,6 +56,34 @@ export async function loader({context}: Route.LoaderArgs) {
   const env = context.env;
   const checkedAt = new Date().toISOString();
   const skus = Object.keys(CAMPAIGN.skus);
+
+  // App mode (COMMERCE_SOURCE=app): report from the app's catalog snapshot and never call Shopify. The holds and the
+  // price dry run are Shopify-only and say so. 503 only when a SKU is not open, which includes the app not answering.
+  if (appCommerceEnabled(env)) {
+    let catalog = null;
+    let error: string | null = null;
+    try {
+      catalog = await context.catalog.get();
+    } catch (e) {
+      error = message(e);
+    }
+    const status = appCampaignStatus(catalog, error, skus);
+    return Response.json(
+      {
+        checkedAt,
+        mode: 'app',
+        allOpen: status.allOpen,
+        catalog: status.catalog,
+        skus: status.skus,
+        paidCounts: status.paidCounts,
+        priceSync: {notUsed: 'not used in app mode'},
+        holdsOk: true,
+        holds: {notUsed: 'not used in app mode'},
+        lastRuns: opsStatus(),
+      },
+      {status: status.allOpen ? 200 : 503, headers: NO_STORE},
+    );
+  }
 
   let catalogError: string | null = null;
   const availability = new Map<string, string>();
