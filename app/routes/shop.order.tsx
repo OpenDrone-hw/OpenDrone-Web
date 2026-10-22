@@ -3,9 +3,10 @@ import {useLoaderData, useRouteLoaderData} from 'react-router';
 import {OrdersLinkCard} from '~/components/commerce/OrdersLinkCard';
 import {appAccountsEnabled, requestLink, verifyUrl} from '~/lib/commerce/app-account';
 import type {Route} from './+types/shop.order';
-import {AppUnavailable, appOp, formatMoney, orderCookie, requireAppCommerce} from '~/lib/commerce/app-api';
+import {AppUnavailable, type AppliedDiscount, appOp, formatMoney, orderCookie, requireAppCommerce} from '~/lib/commerce/app-api';
 import {ShopFrame} from '~/components/commerce/ShopFrame';
 import {safeTrackingUrl, statusProof} from '~/lib/commerce/app-order-status';
+import {discountRows, shippingStrike} from '~/lib/commerce/summary-discounts';
 
 export const meta: Route.MetaFunction = () => [{title: 'Order'}, {name: 'robots', content: 'noindex, nofollow'}];
 
@@ -14,7 +15,8 @@ type Status = {
   rail: string;
   rail_state: string;
   state: {payment: string; fulfilment: string};
-  quote: {total_minor: number; currency: string; lines?: Array<{title: string; variant_title?: string; qty: number; total_minor: number}>};
+  quote: {total_minor: number; currency: string; subtotal_minor?: number; shipping_minor?: number; shipping_standard_minor?: number;
+    discount?: {code: string; minor: number} | null; discounts?: AppliedDiscount[]; lines?: Array<{title: string; variant_title?: string; qty: number; total_minor: number}>};
   parcels?: Array<{carrier: string | null; tracking_number: string | null; tracking_url: string | null}>;
   canceled?: boolean;
   bank?: {iban: string; reference: string; amount: string; currency: string};
@@ -119,6 +121,27 @@ export default function ShopOrder() {
                   <dd>{formatMoney(line.total_minor, status.quote.currency)}</dd>
                 </Fragment>
               ))}
+              {typeof status.quote.subtotal_minor === 'number' && typeof status.quote.shipping_minor === 'number' ? (
+                <>
+                  <dt>Subtotal</dt>
+                  <dd>{formatMoney(status.quote.subtotal_minor, status.quote.currency)}</dd>
+                  {discountRows(status.quote as Parameters<typeof discountRows>[0]).map((r) => (
+                    <Fragment key={r.key}>
+                      <dt>{r.label}</dt>
+                      <dd>&minus;{formatMoney(r.minor, status.quote.currency)}</dd>
+                    </Fragment>
+                  ))}
+                  <dt>Shipping</dt>
+                  <dd>
+                    {shippingStrike(status.quote as Parameters<typeof shippingStrike>[0]) != null ? (
+                      <>
+                        <s className="co-dim">{formatMoney(shippingStrike(status.quote as Parameters<typeof shippingStrike>[0]) ?? 0, status.quote.currency)}</s>{' '}
+                      </>
+                    ) : null}
+                    {status.quote.shipping_minor === 0 ? 'Free' : formatMoney(status.quote.shipping_minor, status.quote.currency)}
+                  </dd>
+                </>
+              ) : null}
               <dt>Total</dt>
               <dd>{formatMoney(status.quote.total_minor, status.quote.currency)}</dd>
               {status.ship_to ? (
