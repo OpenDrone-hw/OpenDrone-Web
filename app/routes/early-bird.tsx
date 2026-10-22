@@ -4,7 +4,8 @@ import {accountHeaders, accountsEnabled, redirectTo, sameOrigin} from '~/lib/acc
 import {readSession} from '~/lib/accounts/sessions';
 import {formatOrderDate} from '~/lib/accounts/order-display';
 import {AppUnavailable, appCommerceEnabled} from '~/lib/commerce/app-api';
-import {appKey, appOrderNumber, readAppOrder} from '~/lib/commerce/app-early-bird';
+import {appAccountsEnabled, clearSession, hasSessionCookie, readAccount, readSessionToken} from '~/lib/commerce/app-account';
+import {accountClaimRows, appKey, appOrderNumber, proveAccountRows, readAppOrder, type AccountOrderRow} from '~/lib/commerce/app-early-bird';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {
   claimUrl,
@@ -24,7 +25,7 @@ import {
  * | Request | Does |
  * |---|---|
  * | GET `?order=<id>&key=<status page key>` (order confirmation mail) | checks the key and the order, then 303 to the bot's claim route |
- * | GET, signed in | lists the customer's orders with a Claim button on each qualifying one |
+ * | GET, signed in (app mode: the app account) | lists the customer's orders with a Claim button on each qualifying one |
  * | GET, signed out | explains and links sign-in |
  * | POST `order=<gid>` (same Origin, signed in) | checks the order is the customer's and qualifies, then 303 to the bot |
  *
@@ -92,6 +93,22 @@ export async function loader({request, context}: Route.LoaderArgs) {
     }
   }
 
+  if (appCommerceEnabled(env)) {
+    // App mode: the app account (cookie od_app_acct), not the Shopify login. The account answer has no sale mode per line, so
+    // each paid order is asked of the app with the session (`storefront.early_bird`), which proves a qualifying one; an order the app cannot say stays a reminder for its mail link.
+    const accounts = appAccountsEnabled(env);
+    let signedIn = false;
+    let appOrders: AccountOrderRow[] | null = null;
+    if (accounts) {
+      const read = await readAccount(request, env);
+      if (read.clear) responseHeaders.append('Set-Cookie', await clearSession(env));
+      signedIn = Boolean(read.account);
+      const token = read.account ? await readSessionToken(request, env) : null;
+      appOrders = read.account ? (token ? await proveAccountRows(env, token, accountClaimRows(read.account.orders, CAMPAIGN.endsOn), CAMPAIGN.endsOn) : accountClaimRows(read.account.orders, CAMPAIGN.endsOn)) : read.down && hasSessionCookie(request) ? null : [];
+    }
+    return data({signedIn, accounts, orders: null, appOrders, appMode: true, notice, endsOn: CAMPAIGN.endsOn}, {headers: responseHeaders});
+  }
+
   const session = accountsEnabled(env) ? await readSession(env.SUPPORT_DB, request) : null;
   if (session?.refreshCookie) responseHeaders.append('Set-Cookie', session.refreshCookie);
   let orders: OrderRow[] | null = null;
@@ -103,11 +120,33 @@ export async function loader({request, context}: Route.LoaderArgs) {
       console.error('early-bird: customer orders read failed:', error instanceof Error ? error.message : 'unknown');
     }
   }
-  return data({signedIn: Boolean(session), accounts: accountsEnabled(env), orders, notice, endsOn: CAMPAIGN.endsOn}, {headers: responseHeaders});
+  return data({signedIn: Boolean(session), accounts: accountsEnabled(env), orders, appOrders: null as AccountOrderRow[] | null, appMode: false, notice, endsOn: CAMPAIGN.endsOn}, {headers: responseHeaders});
+}
+
+async function appAction(request: Request, env: Env) {
+  if (request.method !== 'POST' || !sameOrigin(request) || !appAccountsEnabled(env)) {
+    return new Response('Forbidden', {status: 403, headers: accountHeaders()});
+  }
+  const token = await readSessionToken(request, env);
+  if (!token) return redirectTo('/account/login?return_to=%2Fearly-bird', [], 303);
+  const number = appOrderNumber(String((await request.formData()).get('order') ?? ''));
+  if (!number) return new Response('Bad Request', {status: 400, headers: accountHeaders()});
+  let order: EarlyBirdOrder | null;
+  try {
+    order = await readAppOrder(env, number, {session: token});
+  } catch (error) {
+    console.error('early-bird: order read failed:', error instanceof AppUnavailable ? 'app unavailable' : error instanceof Error ? error.message : 'unknown');
+    return data({notice: 'unavailable' as Notice}, {headers: accountHeaders()});
+  }
+  if (!order) return data({notice: 'not-yours' as Notice}, {headers: accountHeaders()});
+  const result = await toClaim(env, order);
+  if (result instanceof Response) return result;
+  return data({notice: result}, {headers: accountHeaders()});
 }
 
 export async function action({request, context}: Route.ActionArgs) {
   const {env} = context;
+  if (appCommerceEnabled(env)) return appAction(request, env);
   if (request.method !== 'POST' || !sameOrigin(request) || !accountsEnabled(env)) {
     return new Response('Forbidden', {status: 403, headers: accountHeaders()});
   }
@@ -133,7 +172,7 @@ function closeDate(endsOn: string): string {
 }
 
 export default function EarlyBirdRoute({actionData}: Route.ComponentProps) {
-  const {signedIn, accounts, orders, notice: loaderNotice, endsOn} = useLoaderData<typeof loader>();
+  const {signedIn, accounts, orders, appOrders, appMode, notice: loaderNotice, endsOn} = useLoaderData<typeof loader>();
   const notice = (actionData as {notice?: Notice} | undefined)?.notice ?? loaderNotice;
   const eligible = orders?.filter((o) => o.eligible) ?? [];
 
@@ -157,7 +196,44 @@ export default function EarlyBirdRoute({actionData}: Route.ComponentProps) {
         <h2 id="early-bird-claim-title" className="account-dashboard-card-title">
           Claim with your order
         </h2>
-        {signedIn ? (
+        {signedIn && appMode ? (
+          appOrders === null ? (
+            <p className="account-dashboard-card-lede">We can&rsquo;t show your orders right now. Try again in a minute, or use the link in your order confirmation email.</p>
+          ) : appOrders.length === 0 ? (
+            <p className="account-dashboard-card-lede">
+              No paid order on this account placed before the preorder run closed. Ordered with another email? Sign out and sign in with that one, or
+              use the link in your order confirmation email.
+            </p>
+          ) : (
+            <>
+              {appOrders.some((o) => o.state === 'unchecked') ? (
+                <p className="account-dashboard-card-lede">
+                  Orders without a Claim button: open the &ldquo;Claim on Discord&rdquo; link in the payment confirmation email of the preorder.
+                </p>
+              ) : null}
+              <ul className="account-orders-list">
+                {appOrders.map((order) => (
+                  <li key={order.id} className="account-order">
+                    <div className="account-order-head">
+                      <p className="account-order-id">
+                        <span className="account-order-number">{order.name}</span>
+                        <span className="account-order-date">{formatOrderDate(order.createdAt)}</span>
+                      </p>
+                    </div>
+                    {order.state === 'claim' ? (
+                      <form method="post">
+                        <input type="hidden" name="order" value={order.number} />
+                        <button type="submit" className="account-dashboard-cta">
+                          Claim on Discord
+                        </button>
+                      </form>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )
+        ) : signedIn ? (
           orders === null ? (
             <p className="account-dashboard-card-lede">We can&rsquo;t show your orders right now. Try again in a minute, or use the link in your order confirmation email.</p>
           ) : eligible.length === 0 ? (
