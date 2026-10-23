@@ -12,6 +12,7 @@ import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {assetUrl} from '~/lib/asset-url';
 import {HeroBuildGuide} from '~/components/HeroBuildGuide';
+import {HeroStackOffer} from '~/components/HeroStackOffer';
 import type {HeroBuild} from '~/lib/hero-build';
 import {HERO_AIRFRAMES, DEFAULT_HERO_SIZE, airframeLabel} from '~/lib/hero-airframes';
 import {CommunitySection} from '~/components/Discord';
@@ -74,10 +75,12 @@ const HOME_LEDGER: Array<{key: string; value?: string; countUp?: boolean}> = [
 export function MobileHome({
   featured,
   heroBuilds,
+  stackOffer,
   discord,
 }: {
   featured: CollectionItemFragment[] | Promise<CollectionItemFragment[]>;
   heroBuilds: HeroBuild[] | Promise<HeroBuild[]>;
+  stackOffer: boolean;
   discord: Promise<DiscordCounts | null>;
 }) {
   const [buildSize, setBuildSize] = useState(DEFAULT_HERO_SIZE);
@@ -86,7 +89,10 @@ export function MobileHome({
   const buildCard = (builds: HeroBuild[]) => {
     const build = builds.find((item) => item.size === buildSize);
     return build ? (
-      <HeroBuildGuide key={build.id} build={build} />
+      <>
+        <HeroStackOffer key={`${build.id}-stack`} build={build} show={stackOffer} />
+        <HeroBuildGuide key={build.id} build={build} />
+      </>
     ) : (
       <Link to="/products">
         <Txt id="home.build_browse" fallback="Browse parts" />

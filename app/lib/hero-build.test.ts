@@ -5,6 +5,7 @@ import {parseBuilds, partHandle} from './build-recommendations.ts';
 import {bySku, type Catalog} from './catalog.ts';
 import {
   heroBuildSelection,
+  heroStack,
   resolveHeroBuilds,
   type HeroBuild,
 } from './hero-build.ts';
@@ -216,5 +217,22 @@ describe('hero build ship mix', () => {
     const build = withPromises((role) => (role === 'flight-controller' ? dated : target));
     const withoutFc = new Set(build.parts.filter((part) => part.role !== 'flight-controller').map((part) => part.sku));
     assert.equal(heroBuildSelection(build, withoutFc, sellable).shipMix, 'target');
+  });
+
+  it('offers the FC + ESC as a stack only while both ship on a dated promise', () => {
+    const dated = (promise: string | null) => {
+      const c = catalog();
+      for (const product of c.products)
+        for (const variant of product.variants) variant.ship_promise = promise;
+      return resolveHeroBuilds(config, c).find((build) => build.size === '5')!;
+    };
+    const stack = heroStack(dated('ships early November 2026'))!;
+    assert.deepEqual(stack.parts.map((part) => part.sku), ['OPENFC-LITE-3030', 'OPENESC-3030']);
+    assert.equal(heroBuildSelection(stack, all(stack), sellable).total, 20.2);
+    assert.equal(heroStack(dated('ships by 31 March 2027 if the target is reached by 30 November 2026')), null);
+    assert.equal(heroStack(dated(null)), null);
+    const soldOut = dated('ships early November 2026');
+    soldOut.parts[1].available = false;
+    assert.equal(heroStack(soldOut), null);
   });
 });

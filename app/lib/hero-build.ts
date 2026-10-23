@@ -76,6 +76,25 @@ export function resolveHeroBuilds(
 }
 
 /**
+ * The FC + ESC of a build as a stack offer for the hero, or null. Only while
+ * both boards are in stock on a dated ship promise (the EU's paid batch): a
+ * buyer region on a funding target gets no offer, and the card goes away on
+ * its own once that batch sells out. Bought with the build's later parts the
+ * same boards wait for those, which is why the stack has its own card.
+ */
+export function heroStack(build: HeroBuild): HeroBuild | null {
+  const parts = build.parts.filter(
+    (part) => part.role === 'flight-controller' || part.role === 'esc',
+  );
+  if (parts.length !== 2) return null;
+  const dated = parts.every(
+    (part) =>
+      part.available && shortShipPromise(part.shipPromise)?.kind === 'date',
+  );
+  return dated ? {...build, id: `${build.id}-stack`, parts} : null;
+}
+
+/**
  * Never silently omit an unavailable part from a requested build. While the
  * shop is coming soon (`comingSoon`, the PUBLIC_COMING_SOON gate) no price or
  * total is shown and the cart action becomes the launch-list link.
