@@ -18,6 +18,7 @@ import {HeroWordmark} from '~/components/HeroWordmark';
 import {HeroSizeSlider} from '~/components/HeroSizeSlider';
 import {DEFAULT_HERO_SIZE} from '~/lib/hero-airframes';
 import {HeroBuildGuide} from '~/components/HeroBuildGuide';
+import {HeroStackOffer} from '~/components/HeroStackOffer';
 import {resolveHeroBuilds, type HeroBuild} from '~/lib/hero-build';
 import {parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
@@ -122,7 +123,10 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // cached an hour, null (numbers hidden) when Discord does not answer.
   const discord = fetchDiscordCounts();
 
-  return {isMobileHint, featured, heroBuilds, discord};
+  // The stack card is for buyers of the EU's paid batch only.
+  const stackOffer = context.catalog.region === 'EU';
+
+  return {isMobileHint, featured, heroBuilds, stackOffer, discord};
 }
 
 // Hero scroll budget - the 3D scene + phased UI stays pinned for this many
@@ -156,7 +160,7 @@ let splashHasPlayedThisSession = false;
  * hooks never mount on a phone.
  */
 export default function Homepage() {
-  const {isMobileHint, featured, heroBuilds, discord} =
+  const {isMobileHint, featured, heroBuilds, stackOffer, discord} =
     useLoaderData<typeof loader>();
   const [isMobile, setIsMobile] = useState(isMobileHint);
   useEffect(() => {
@@ -169,16 +173,18 @@ export default function Homepage() {
 
   if (isMobile)
     return (
-      <MobileHome featured={featured} heroBuilds={heroBuilds} discord={discord} />
+      <MobileHome featured={featured} heroBuilds={heroBuilds} stackOffer={stackOffer} discord={discord} />
     );
-  return <DesktopHome heroBuilds={heroBuilds} discord={discord} />;
+  return <DesktopHome heroBuilds={heroBuilds} stackOffer={stackOffer} discord={discord} />;
 }
 
 function DesktopHome({
   heroBuilds,
+  stackOffer,
   discord,
 }: {
   heroBuilds: HeroBuild[] | Promise<HeroBuild[]>;
+  stackOffer: boolean;
   discord: Promise<DiscordCounts | null>;
 }) {
   const scrollRef = useRef(0);
@@ -717,7 +723,7 @@ function DesktopHome({
               <Await resolve={heroBuilds}>
                 {(builds) => {
                   const build = builds.find(item => item.size === heroSize);
-                  return build ? <HeroBuildGuide key={build.id} build={build} onInspect={canInspect ? id => inspectPart.current?.(id) : undefined} activePart={activePart} /> : <Link to="/products" className="hero-build-loading"><Txt id="home.build_browse" fallback="Browse parts" /></Link>;
+                  return build ? <><HeroStackOffer key={`${build.id}-stack`} build={build} show={stackOffer} /><HeroBuildGuide key={build.id} build={build} onInspect={canInspect ? id => inspectPart.current?.(id) : undefined} activePart={activePart} /></> : <Link to="/products" className="hero-build-loading"><Txt id="home.build_browse" fallback="Browse parts" /></Link>;
                 }}
               </Await>
             </Suspense>

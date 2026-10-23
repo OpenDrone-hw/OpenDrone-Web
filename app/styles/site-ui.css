@@ -1319,6 +1319,13 @@ html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.
 }
 
 .hero-buy--guide { width: 370px; max-width: calc(100vw - 40px); right: 24px; bottom: 36px; pointer-events: auto; }
+.hero-buy--guide, .home-mobile-build { display: flex; flex-direction: column; gap: 10px; }
+.hero-buy--guide:has(.hero-stack-offer) .hero-build-parts { max-height: min(390px, calc(100svh - 520px)); }
+.hero-stack-ships { margin-left: auto; padding: 3px 8px; border-radius: 999px; background: var(--color-gold-soft); color: var(--color-gold-text); font-size: 11px; font-weight: 500; white-space: nowrap; }
+.hero-stack-parts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 12px 10px; }
+.hero-stack-part { display: flex; align-items: center; gap: 8px; min-width: 0; color: inherit; text-decoration: none; }
+.hero-stack-part strong { font-size: 12px; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.hero-stack-part:hover { color: var(--color-gold-text); }
 .hero-buy .hero-build-guide, .home-mobile-build .hero-build-guide { padding: 0; }
 .hero-build-guide { display: flex; flex-direction: column; border: 1px solid var(--pod-border); border-radius: 16px; background: var(--pod-bg-strong); box-shadow: var(--pod-shadow); color: var(--color-text); animation: hero-build-in 180ms ease-out; }
 .hero-build-heading { display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 16px; }
