@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {subscribeWithApp, unsubscribeWithApp} from './app-newsletter.ts';
+import {confirmWithApp, subscribeWithApp, unsubscribeWithApp} from './app-newsletter.ts';
 import type {AppEnv} from './app-api.ts';
 
 const ENV: AppEnv = {COMMERCE_SOURCE: 'app', APP_API_URL: 'https://app.example', APP_STOREFRONT_TOKEN: 'b', SESSION_SECRET: 's'};
@@ -16,7 +16,7 @@ const ok = (result: string) => ({ok: true, data: {result, unsubscribe_token: nul
 
 describe('app newsletter', () => {
   it('maps the app answers to the Shopify path answers', async () => {
-    for (const [result, want] of [['subscribed', 'subscribed'], ['already_subscribed', 'already-subscribed'], ['suppressed', 'suppressed'], ['other', 'failed']]) {
+    for (const [result, want] of [['subscribed', 'subscribed'], ['already_subscribed', 'already-subscribed'], ['suppressed', 'suppressed'], ['pending', 'pending'], ['other', 'failed']]) {
       const a = app(ok(result));
       assert.equal(await subscribeWithApp(ENV, 'pilot@example.com', undefined, null, a.fetcher), want);
       assert.equal(a.calls[0].url, 'https://app.example/api/ops/storefront.newsletter_subscribe');
@@ -45,5 +45,29 @@ describe('app newsletter', () => {
     assert.equal(await unsubscribeWithApp(ENV, 'a@example.com', a.fetcher), 'unsubscribed');
     assert.deepEqual(a.calls[0].body.email, 'a@example.com');
     assert.equal(await unsubscribeWithApp(ENV, 'a@example.com', app({ok: false, error: {code: 'not_enabled', detail: ''}}).fetcher), 'failed');
+  });
+});
+
+describe('app newsletter double opt-in', () => {
+  it('sends the confirm link base only when asked', async () => {
+    const a = app(ok('pending'));
+    await subscribeWithApp(ENV, 'a@example.com', undefined, null, a.fetcher, 'https://shop.example/newsletter/confirm');
+    assert.equal(a.calls[0].body.link_base, 'https://shop.example/newsletter/confirm');
+    const b = app(ok('subscribed'));
+    await subscribeWithApp(ENV, 'a@example.com', undefined, null, b.fetcher);
+    assert.equal('link_base' in b.calls[0].body, false);
+  });
+
+  it('maps the confirm answers and never fakes a confirmation', async () => {
+    const a = app(ok('confirmed'));
+    assert.equal(await confirmWithApp(ENV, 'sub-1.x', a.fetcher), 'confirmed');
+    assert.equal(a.calls[0].url, 'https://app.example/api/ops/storefront.newsletter_confirm');
+    assert.equal(a.calls[0].body.token, 'sub-1.x');
+    assert.equal(await confirmWithApp(ENV, 't', app(ok('already_confirmed')).fetcher), 'already-confirmed');
+    assert.equal(await confirmWithApp(ENV, 't', app({ok: false, error: {code: 'invalid_token', detail: ''}}).fetcher), 'invalid');
+    assert.equal(await confirmWithApp(ENV, 't', app({ok: false, error: {code: 'expired', detail: ''}}).fetcher), 'expired');
+    assert.equal(await confirmWithApp(ENV, 't', app({ok: false, error: {code: 'not_enabled', detail: ''}}).fetcher), 'failed');
+    const down = (async () => { throw new Error('down'); }) as unknown as typeof fetch;
+    assert.equal(await confirmWithApp(ENV, 't', down), 'failed');
   });
 });

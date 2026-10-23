@@ -11,7 +11,7 @@
 import {notSoldDirect} from '../shipping-rates.ts';
 import {appOp, type AppEnv} from './app-api.ts';
 
-export type AppSubscribeResult = 'subscribed' | 'already-subscribed' | 'suppressed' | 'failed';
+export type AppSubscribeResult = 'subscribed' | 'pending' | 'already-subscribed' | 'suppressed' | 'failed';
 
 /** Record the signup in the app. An unreachable app, a refusal or the flag being off is `failed`: the signup is never faked. */
 export async function subscribeWithApp(
@@ -20,6 +20,7 @@ export async function subscribeWithApp(
   productHandle?: string,
   country?: string | null,
   fetcher: typeof fetch = fetch,
+  confirmUrl?: string,
 ): Promise<AppSubscribeResult> {
   const remembered = country && ['shops', 'closed'].includes(notSoldDirect(country) ?? '') ? country.trim().toUpperCase() : undefined;
   try {
@@ -28,10 +29,25 @@ export async function subscribeWithApp(
       ...(productHandle ? {product: productHandle} : {}),
       ...(remembered ? {country: remembered} : {}),
       source: 'site',
+      ...(confirmUrl ? {link_base: confirmUrl} : {}),
     }, fetcher);
     if (!out.ok) return 'failed';
     const result = out.data?.result;
-    return result === 'subscribed' ? 'subscribed' : result === 'already_subscribed' ? 'already-subscribed' : result === 'suppressed' ? 'suppressed' : 'failed';
+    return result === 'subscribed' ? 'subscribed' : result === 'pending' ? 'pending' : result === 'already_subscribed' ? 'already-subscribed' : result === 'suppressed' ? 'suppressed' : 'failed';
+  } catch {
+    return 'failed';
+  }
+}
+
+export type AppConfirmResult = 'confirmed' | 'already-confirmed' | 'suppressed' | 'invalid' | 'expired' | 'failed';
+
+/** Confirm a double opt-in signup with the token of the mailed link. A refused token is `invalid` or `expired`, never a success. */
+export async function confirmWithApp(env: AppEnv, token: string, fetcher: typeof fetch = fetch): Promise<AppConfirmResult> {
+  try {
+    const out = await appOp<{result: string}>(env, 'storefront.newsletter_confirm', {token, source: 'site'}, fetcher);
+    if (!out.ok) return out.error?.code === 'invalid_token' ? 'invalid' : out.error?.code === 'expired' ? 'expired' : 'failed';
+    const r = out.data?.result;
+    return r === 'confirmed' ? 'confirmed' : r === 'already_confirmed' ? 'already-confirmed' : r === 'suppressed' ? 'suppressed' : 'failed';
   } catch {
     return 'failed';
   }
