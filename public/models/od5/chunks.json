@@ -5,7 +5,7 @@
       "id": "frame",
       "label": "airframe and hardware",
       "file": "frame.glb",
-      "bytes": 326532,
+      "bytes": 326528,
       "verts": 41833
     },
     {
@@ -40,7 +40,7 @@
       "id": "video",
       "label": "camera and video system",
       "file": "video.glb",
-      "bytes": 320488,
+      "bytes": 320372,
       "verts": 43791
     }
   ]

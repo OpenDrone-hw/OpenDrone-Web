@@ -1,24 +1,24 @@
 {
   "name": "OpenDrone 5\"",
   "lighting": {
-    "exposure": 1,
-    "environment": 0.3,
-    "ambient": 0,
+    "exposure": 1.15,
+    "environment": 0.7,
+    "ambient": 0.3,
     "background": "#0a0c0f",
     "key": {
-      "power": 2.6,
+      "power": 3.2,
       "azimuth": 89,
       "elevation": 46,
       "colour": "#e69728"
     },
     "fill": {
-      "power": 0.55,
+      "power": 1.0,
       "azimuth": 135,
       "elevation": 36,
       "colour": "#e5f7de"
     },
     "rim": {
-      "power": 2.2,
+      "power": 2.6,
       "azimuth": 283,
       "elevation": 31,
       "colour": "#cfe2ff"
@@ -81,11 +81,11 @@
       "id": "carbon",
       "label": "carbon fibre",
       "match": "^(Arm|Cross|Base-Top|Base-Bot|Top)$",
-      "tint": "#000000",
-      "metalness": 0,
-      "roughness": 0.19,
-      "env": 0.37,
-      "sat": 2.04
+      "tint": null,
+      "metalness": 0.1,
+      "roughness": 0.3,
+      "env": 0.95,
+      "sat": 1
     },
     {
       "id": "alu",
@@ -124,7 +124,7 @@
       "tint": null,
       "metalness": 0.0,
       "roughness": 0.62,
-      "env": 0.4,
+      "env": 0.55,
       "sat": 1
     },
     {
@@ -134,7 +134,7 @@
       "tint": null,
       "metalness": 0.0,
       "roughness": 0.8,
-      "env": 0.2,
+      "env": 0.5,
       "sat": 1
     },
     {
@@ -153,8 +153,8 @@
       "match": "^5in-prop (cw|ccw)$",
       "tint": null,
       "metalness": 0.21,
-      "roughness": 0.44,
-      "env": 0.35,
+      "roughness": 0.4,
+      "env": 0.8,
       "sat": 1
     },
     {
@@ -329,7 +329,7 @@
   },
   "scroll": {
     "_note": "Weight comes from springHz: it is a critically damped spring, so a lower frequency reads as more mass.  commitAt how much of a stop-to-stop move a gesture must cover before it counts as intent to advance.",
-    "springHz": 0.55,
+    "springHz": 0.45,
     "magnet": 0.11,
     "commitAt": 0.24,
     "minDwellS": 0.5,
@@ -342,10 +342,8 @@
     "microversion": "87dee3a021abd49e11b659d6"
   },
   "explode": {
-    "holdSeconds": 0.9,
-    "seconds": 2.5,
-    "collapseSeconds": 2.0,
     "selectFade": 0.7
   },
-  "_howto": "Exploded-view hero. Assets are built from the final STEP assemblies by scripts/hero-assets/explode (see docs/hero-studio.md): <chunk>.glb files streamed in the order of chunks.json, explode.json (parts, labels, timed moves, beat groups). This file holds look and motion tuning only. Materials are chosen by the class each GLB material is named with ('<class>|<r,g,b>'); the match regexes are a fallback for older exports."
+  "_howto": "Exploded-view hero. Assets are built from the final STEP assemblies by scripts/hero-assets/explode (see docs/hero-studio.md): <chunk>.glb files streamed in the order of chunks.json, explode.json (parts, labels, timed moves, beat groups). This file holds look and motion tuning only. Materials are chosen by the class each GLB material is named with ('<class>|<r,g,b>'); the match regexes are a fallback for older exports.",
+  "_lightingNote": "Dark rig only (the site has no light theme). Near-black CAD colours are lifted to a dark grey at build time (build_explode.py) and the environment map is strong enough that carbon, TPU, props and grommets keep their shape and reflections on the dark background."
 }

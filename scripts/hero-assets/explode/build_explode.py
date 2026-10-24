@@ -19,7 +19,11 @@ BOARD_TITLES = {
     'OpenESC-30x30-4in1': 'OpenESC 30x30 4-in-1',
     'OpenRX-Mono': 'OpenRX Mono (ExpressLRS receiver)',
 }
-TPU_BLACK = (0.01, 0.01, 0.013)
+TPU_BLACK = (0.14, 0.14, 0.15)
+NEAR_BLACK = (0.13, 0.13, 0.14)   # CAD blacks are lifted so they keep shape and reflections
+ALU = (0.8, 0.8, 0.82)
+MOTOR_GOLD = (0.984, 0.714, 0.0)
+MOTOR_GREEN = (0.078, 0.478, 0.192)
 SIDE_GOLD = (0.984, 0.714, 0.0)   # anodised Pantone 7549 C, #FBB600
 MM = 0.001
 
@@ -39,6 +43,18 @@ def part_name(u, bases):
 def recolour(cls, rgb):
     if cls == 'sideplate':
         return SIDE_GOLD
+    if max(rgb) < 0.05 and cls not in ('smd', 'silk', 'padgold', 'fr4', 'mask', 'tag'):
+        return NEAR_BLACK
+    if cls == 'alu':
+        return ALU          # plain aluminium until a colour is chosen
+    if cls == 'motor':
+        # The look of the previous hero: gold anodised bell, green stator, the rest as in the CAD.
+        r, g, bl = rgb
+        if r > 0.8 and 0.3 < g < 0.6 and bl < 0.1:
+            return MOTOR_GOLD
+        if r < 0.1 and g > 0.1 and g > 3 * bl and bl < 0.1:
+            return MOTOR_GREEN
+        return tuple(rgb)
     if cls == 'tpu':
         # TPU ships black and green: keep the CAD green, turn every other print colour black
         r, g, bl = rgb
@@ -126,7 +142,7 @@ def main():
                 prims = []
                 for rgb, (v, t) in b['groups'].items():
                     w = (v.astype(np.float64) @ M[:3, :3].T + M[:3, 3] - c) @ R.T
-                    col = tuple(rgb)
+                    col = recolour(cls or u.cls, rgb)
                     prims.append(((cls or u.cls) + '|' + ','.join(f'{x:.3f}' for x in col), col, w * MM, t))
                 mi = g.mesh(('body', u.id, i), prims, f'{u.id}-body-{i}')
                 bodies.append(g.node(f'{u.id}-body-{i}', mi, None, None))

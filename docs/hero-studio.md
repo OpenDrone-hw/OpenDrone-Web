@@ -22,22 +22,40 @@ app/components/HeroDroneScene.tsx  ->  the site
 
 ## What plays
 
-1. The assembled drone holds for `explode.holdSeconds` (0.9 s), then explodes over
-   `explode.seconds` (2.5 s) while the camera pulls back from the assembled to the
-   exploded framing. Every part eases through its own moves, top of the stack first
-   (it is a disassembly: screws leave with the part they thread into).
-2. Once exploded: drag to orbit (no idle spin), hover a part for its name and a dim
-   of the rest, click to select it (the camera eases to it, the name stays), click
-   empty space or press Escape to release. The Collapse / Explode button under the
-   viewer plays the build back together and apart again.
-3. The scroll walkthrough is the existing one (stops, rest stops, spring, rail
-   ticks, keyboard, deep links `/#fc`, `#esc`, `#rx`, `#frame`, `#motors`). Each beat now
-   focuses a group of the exploded model instead of pulling a part to a stage: the
-   camera eases to the group, everything else dims, a spotlight lights it, the copy
-   panel follows. A selection is dropped when the walkthrough moves.
-4. `prefers-reduced-motion`: the 3D still loads on desktop, but starts in the exploded
-   pose with no intro, no travelling camera (cuts), instant scroll steps and no drift.
-   Under 768 px the 3D is still skipped (the fallback list is the content).
+1. The drone sits assembled until the visitor scrolls. The first scroll step is the
+   explode: the spring-smoothed scroll position drives the explode progress from the
+   assembled stop to the whole-drone stop, so it is scroll-linked and scrolling back up
+   reassembles it. Every part eases (smootherstep) through its own timed moves, top of
+   the stack first (it is a disassembly: screws leave with the part they thread into),
+   and the stagger is continuous in the scroll position. The camera pulls back from the
+   assembled to the exploded framing with it. No idle spin.
+2. Once exploded: hover a part for its name (the rest dims), click to select it (the
+   camera eases to it, the name stays; click empty space or press Escape to release).
+   The Collapse / Explode button under the viewer overrides the scroll until the reader
+   scrolls again.
+3. Orbit: drag turns the view around the current focus, damped, with the elevation
+   clamped (no flipping under the model). The drag is an offset on the scripted view: the
+   scripted camera is frozen while the pointer is down, the offset stays after release and
+   eases back to the beat's framing when the timeline next moves. The press has to travel
+   4 px before it is a drag (otherwise it is a click), the pointer is captured so the drag
+   survives leaving the canvas, hover picking and wheel steps are off while pressed, and
+   `touch-action: pan-y` keeps vertical swipes scrolling the page while a horizontal
+   one-finger drag orbits.
+4. The scroll walkthrough is the existing one (stops, spring, rail ticks, keyboard, deep
+   links `/#fc`, `#esc`, `#rx`, `#frame`, `#motors`, which land exploded). Each beat focuses
+   a group of the exploded model: the camera moves straight from one beat's group to the
+   next (no pull-back to the overview between, no rest stops), eased and smoothed, the rest
+   dims and a spotlight lights the group. The dim crossfades (the lit set fades out, the
+   new one fades in) instead of switching. A selection is dropped when the walkthrough
+   moves.
+5. `prefers-reduced-motion`: the 3D still loads on desktop, but starts on the exploded
+   whole-drone stop (static exploded pose), the camera cuts instead of travelling, scroll
+   steps are instant and the orbit is undamped. Under 768 px the 3D is still skipped (the
+   fallback list is the content).
+
+Frame cost: about 1.4 ms of CPU per frame mid-explode (matrix updates, instanced hardware
+draws, no layout reads: the canvas rect and the label width are cached), rendering is
+capped at 60 fps and pauses after 5 s idle.
 
 Load and cost are comparable to the previous hero: the same meshopt compression, the
 same chunked streaming (airframe first, boards last), and the same material look from
@@ -112,8 +130,8 @@ sizes match `chunks.json`.
 
 ## studio.json
 
-Look and motion tuning only: lighting, the spotlight, camera (`distance`, `height`,
-`heightOnPart`, `lift`, `stageShift`, `azimuth`), explode timing, scroll feel, material
+Look and motion tuning only: lighting (dark rig only, the site has no light theme), the spotlight, camera (`distance`, `height`,
+`heightOnPart`, `lift`, `stageShift`, `azimuth`), the dim of a selected part, scroll feel, material
 profiles, and the beat copy. A beat is `select: {none: true}` or `select: {group}` with
 a group from `explode.json` (`fc`, `esc`, `rx`, `motor` (one motor with prop, boot and
 screws), `frame`, `video`); `partSize` is the fraction of the viewport height the group
@@ -135,6 +153,20 @@ brightness.
 4. `check_explode.py` and `check_motion.py` must be clean, then look at it on `/hero-preview`
    (`?herotest` exposes `window.__hero` with `setExplode(p)`, `goTo(i)`, `step(n)`).
 
+## Colours and lighting
+
+CAD colours are kept except: TPU is black or green (any other print colour is drawn black),
+side plates are anodised gold #FBB600, standoffs are plain aluminium (no colour chosen yet),
+motors keep the previous hero's look (gold anodised bell #FBB600, green stator #147A31,
+CAD whites and greys), and near-black CAD colours are lifted to a dark grey at build time
+(`build_explode.py`) so carbon, props, grommets and TPU keep their shape. Orange is not a
+shipped colour: the only remaining orange-ish surfaces are small electronics on the boards
+and the air unit (JST connector, capacitors, ENIG pads).
+
+Lighting: ACES tone mapping at exposure 1.15, a RoomEnvironment map at 0.7 (this is what
+gives carbon, gold anodise and screws their reflections), a warm key, a cool rim, a fill and
+a faint hemisphere light; all in `studio.json` `lighting`.
+
 ## Limits
 
 - The studio panel (`_studio.html`) is retired: it drove the old Onshape GLB structure.
@@ -142,6 +174,5 @@ brightness.
 - The TPU parts (boots, air unit mount, camera soft mounts, AirTag and antenna mount,
   bumper, XT30 mount) are preliminary in the CAD and fit the DJI O4 Pro only.
 - Part names are English strings in `explode.json`, not site copy.
-- The 3D is hardcoded dark and does not follow the light theme.
 - `build-hero.mjs` and the board scripts remain for Onshape GLB exports of older
   assemblies; the current od3 and od5 do not use them.

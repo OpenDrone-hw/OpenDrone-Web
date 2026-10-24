@@ -122,8 +122,8 @@ type StudioConfig = {
   spotlight: any;
   sequence: any;
   camera?: any;
-  /** Explode timing, seconds: assembled hold, explode, collapse; dim of the rest on a selected part. */
-  explode?: {holdSeconds?: number; seconds?: number; collapseSeconds?: number; selectFade?: number};
+  /** Dim of the rest on a selected part. */
+  explode?: {selectFade?: number};
   scroll?: {
     springHz?: number;
     gain?: number;
@@ -554,8 +554,8 @@ export function HeroDroneScene({
         return null;
       };
       const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
-      // In-out cubic per move: each part accelerates off, then settles.
-      const moveEase = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2);
+      // Smootherstep per move: each part eases off and settles with no kink at either end.
+      const moveEase = (x: number) => x * x * x * (x * (6 * x - 15) + 10);
       function applyExplode(p: number) {
         for (const u of UNITS.values()) {
           let x = 0;
@@ -741,25 +741,44 @@ export function HeroDroneScene({
       let beatIdx = 0;
       let t = 0;
       let camH = cfg.camera?.height ?? 0.5;
-      let orbitAngle = cfg.camera?.azimuth ?? 0.7;
+      // Scripted camera state, smoothed: the point it orbits, distance, height.
+      const camFocus = droneCentre.clone();
+      let camBack = droneRadius * (cfg.camera?.distance ?? 2.15);
+      let camReady = false;
+      let wasTravelling = false;
+      // Canvas rect, cached: read on pointer events, never per frame.
+      let rect = el.getBoundingClientRect();
+      let labelW = 0;
+      const resizeRect = new ResizeObserver(() => {
+        rect = el.getBoundingClientRect();
+      });
+      resizeRect.observe(el);
+      cleanup.push(() => resizeRect.disconnect());
 
       /* ---------------------------------------------------- explode state
-       * The drone sits whole for a beat, then comes apart on its own; p runs 0..1
-       * at a fixed rate and every part eases its own moves inside it. The reader
-       * can collapse and re-explode it. Reduced motion starts (and stays) at the
-       * exploded pose with no travelling camera. */
-      const EXPLODE_S = cfg.explode?.seconds ?? 2.9;
-      const COLLAPSE_S = cfg.explode?.collapseSeconds ?? 2.0;
-      let introHold = reduced ? 0 : (cfg.explode?.holdSeconds ?? 0.9);
+       * Scroll-linked: the first stop is the assembled drone, the next one (the
+       * whole-drone beat) is fully exploded, and the spring-smoothed scroll
+       * position drives p between them, so scrolling back up reassembles it. Every
+       * part eases its own moves inside p, so the stagger is continuous. The
+       * Collapse / Explode button overrides it until the reader scrolls again.
+       * Reduced motion shows the exploded pose and cuts instead of travelling. */
+      const MANUAL_S = 2.2;
       let explodeP = reduced ? 1 : 0;
-      let explodeTarget = 1;
+      let manualP: number | null = null;
+      let catchUp = false;
+      let isExploded = reduced;
       applyExplode(explodeP);
+      const stepToward = (v: number, goal: number, s: number) =>
+        v < goal ? Math.min(goal, v + s) : Math.max(goal, v - s);
+      const releaseManual = () => {
+        if (manualP === null) return;
+        manualP = null;
+        catchUp = true;
+      };
       const setExploded = (on: boolean) => {
-        explodeTarget = on ? 1 : 0;
-        introHold = 0;
-        if (reduced) explodeP = explodeTarget;
+        manualP = on ? 1 : 0;
+        if (reduced) explodeP = manualP;
         wake();
-        onExploded?.(explodeTarget === 1);
       };
 
       /* ------------------------------------------- hover, select, label */
@@ -783,7 +802,7 @@ export function HeroDroneScene({
       };
       const pickUnit = (): Unit | null => {
         if (!ptr.inside) return null;
-        const r = el.getBoundingClientRect();
+        const r = rect;
         raycaster.setFromCamera(
           new THREE.Vector2(((ptr.x - r.left) / r.width) * 2 - 1, -((ptr.y - r.top) / r.height) * 2 + 1),
           camera,
@@ -796,8 +815,6 @@ export function HeroDroneScene({
       let focusFade = S.darkenRest;
       let focusNodes: THREE.Object3D[] = [];
       let focusKey = '';
-      const focusSphere = new THREE.Sphere();
-      let focusSize = Q.partSize;
 
       /* ----------------------------------------------------------- scroll
        * One confident wheel gesture commits a one-stop TARGET move; a
@@ -813,15 +830,14 @@ export function HeroDroneScene({
        * spotlight into spotlight and the return-home never gets seen. */
       const stopForBeat = (i: number) => i * dur() + TRAVEL + HOLD * 0.5;
       type Stop = {pos: number; beat: number; part: boolean};
-      const STOPS: Stop[] = [];
-      for (let i = 0; i < BEATS.length; i++) {
-        STOPS.push({pos: stopForBeat(i), beat: i, part: true});
-        // A rest only earns its place between two beats that both pull a part
-        // out; next to a whole-drone beat it would be the same shot twice.
-        if (i < BEATS.length - 1 && BEATS[i].nodes.length && BEATS[i + 1].nodes.length)
-          STOPS.push({pos: (i + 1) * dur(), beat: i + 1, part: false});
-      }
+      // The first stop is the assembled drone; the first scroll step explodes it.
+      // There are no rest stops any more: the camera goes straight from one beat's
+      // group to the next instead of pulling back to the whole drone in between.
+      const STOPS: Stop[] = [{pos: 0, beat: 0, part: false}];
+      for (let i = 0; i < BEATS.length; i++) STOPS.push({pos: stopForBeat(i), beat: i, part: true});
       const stopPos = (si: number) => STOPS[si].pos;
+      const explodedAt = () => Math.max(1e-6, stopPos(Math.min(1, STOPS.length - 1)));
+      const desiredExplode = () => manualP ?? (reduced ? 1 : clamp01(pos / explodedAt()));
       const partStopIdx = (beat: number) => STOPS.findIndex((s) => s.part && s.beat === beat);
       // The next PART stop in a direction. One confident scroll is one item
       // of the walkthrough: the rest between two parts never costs its own
@@ -854,8 +870,9 @@ export function HeroDroneScene({
       // Start AT the first stop, not at zero. Zero is not a stop, so the
       // "absorb input until the current beat has been seen" guard could never
       // be satisfied and the hero ignored scrolling entirely.
-      let target = stopPos(0);
-      let pos = stopPos(0);
+      // Reduced motion starts on the exploded whole-drone stop.
+      let target = stopPos(reduced ? 1 : 0);
+      let pos = target;
       let vel = 0;
       let lastWheel = 0;
       let everScrolled = false;
@@ -915,6 +932,11 @@ export function HeroDroneScene({
       const onWheel = (e: WheelEvent) => {
         // ctrl+wheel is pinch-zoom and browser zoom. Never swallow it.
         if (e.ctrlKey) return;
+        // Mid-drag the page must not scroll under the hand nor step a beat.
+        if (pressed) {
+          e.preventDefault();
+          return;
+        }
 
         const now = performance.now();
         // Firefox reports lines, not pixels; Chrome reports pixels; some mice
@@ -990,6 +1012,7 @@ export function HeroDroneScene({
         gestureStepped = true;
         steppedAt = now;
         selected = null;
+        releaseManual();
         const dir = (Math.sign(gestureAccum) || 1) as 1 | -1;
 
         // Pacing: the beat on screen must be seen before the move happens (a
@@ -1024,82 +1047,99 @@ export function HeroDroneScene({
       cleanup.push(() => el.removeEventListener('wheel', onWheel));
 
       /* ---------------------------------------------------- drag to rotate
-       * Matches the old hero: 0.004 rad per pixel, horizontal drag turns the
-       * drone and KEEPS the new heading (the auto-orbit simply resumes from
-       * there). Vertical drag tilts, holds the tilt while the timeline rests,
-       * and eases home once the sequence travels to the next stop.
-       *
-       * The old scene rotated the model; this one orbits the camera, so a
-       * horizontal drag goes straight into orbitAngle -- which is what makes the
-       * heading persist for free. The tilt needs its own offset because camH is
-       * lerped toward a per-beat target every frame and would fight a direct
-       * write. Vertical page scrolling is untouched: this is pointer input, the
-       * wheel handler above is separate.
+       * Orbit around the current focus, damped, with the elevation clamped so the
+       * view can never flip under the model. The drag is a user OFFSET on top of the
+       * scripted view: while it is held the scripted camera (focus, distance) is
+       * frozen, so nothing fights the hand; the offset persists after release (the
+       * reader keeps their view) and eases back to the beat's framing when the
+       * timeline next moves. Pointer capture keeps the drag alive outside the
+       * canvas, touch-action lets vertical swipes scroll the page (a horizontal
+       * one-finger drag orbits), and hover picking is off while pressed.
        */
+      let pressed = false;
       let dragging = false;
-      let dragTilt = 0;
+      let userYaw = 0;
+      let userYawT = 0;
+      let userPitch = 0;
+      let userPitchT = 0;
       let lastPtr = {x: 0, y: 0};
+      const TAU = Math.PI * 2;
+      el.style.touchAction = 'pan-y';
+      el.style.userSelect = 'none';
       const onPtrDown = (e: PointerEvent) => {
-        // Left button / touch / pen only, and never on the rail's buttons.
+        // Left button / touch / pen only.
         if (e.button !== 0) return;
-        dragging = true;
+        pressed = true;
+        dragging = false;
         lastPtr = {x: e.clientX, y: e.clientY};
         ptr.downX = e.clientX;
         ptr.downY = e.clientY;
         ptr.x = e.clientX;
         ptr.y = e.clientY;
         ptr.inside = true;
+        rect = el.getBoundingClientRect();
         el.setPointerCapture?.(e.pointerId);
       };
       const onPtrMove = (e: PointerEvent) => {
         // Hover only counts over the canvas, not over the copy or the buy bubble.
         ptr.x = e.clientX;
         ptr.y = e.clientY;
-        ptr.inside = dragging || el.contains(e.target as Node);
-        ptr.dirty = true;
-        if (!ptr.inside) hovered = null;
-        if (!dragging) return;
+        ptr.inside = pressed || el.contains(e.target as Node);
+        if (!pressed) {
+          rect = el.getBoundingClientRect();
+          ptr.dirty = true;
+          if (!ptr.inside) hovered = null;
+          return;
+        }
+        if (!dragging) {
+          // A press has to travel a few pixels before it is a drag, not a click.
+          if (Math.hypot(e.clientX - ptr.downX, e.clientY - ptr.downY) < 4) return;
+          dragging = true;
+          hovered = null;
+          lastPtr = {x: e.clientX, y: e.clientY};
+          return;
+        }
         const dx = e.clientX - lastPtr.x;
         const dy = e.clientY - lastPtr.y;
         lastPtr = {x: e.clientX, y: e.clientY};
-        // Sign chosen so the drone reads as GRABBED: drag right pulls the face
-        // under the cursor to the right (the camera orbits the other way).
-        orbitAngle += dx * 0.004;
-        // The tilt is the y-component of the orbit offset before normalising,
-        // and the horizontal component is always unit length, so the view can
-        // never cross the pole. +-2.5 lets a drag reach ~60 degrees below the
-        // drone (enough to read the underside of a spotlit part) while keeping
-        // the asymptote comfortably away.
-        dragTilt = THREE.MathUtils.clamp(dragTilt + dy * 0.007, -2.5, 2.5);
+        // Drag right pulls the face under the cursor right (the camera goes the
+        // other way); drag down tips the view up.
+        userYawT += dx * 0.0055;
+        userPitchT = THREE.MathUtils.clamp(userPitchT + dy * 0.0045, -0.9, 0.8);
       };
-      const onPtrUp = (e: PointerEvent) => {
+      const endPress = (e: PointerEvent) => {
+        const wasPressed = pressed;
         const wasDragging = dragging;
+        pressed = false;
         dragging = false;
+        if (el.hasPointerCapture?.(e.pointerId)) el.releasePointerCapture(e.pointerId);
         // A press that did not travel is a click: select the part under it (again
         // to release it). Empty space releases too.
-        if (wasDragging && e.type === 'pointerup' && Math.hypot(e.clientX - ptr.downX, e.clientY - ptr.downY) < 5) {
+        if (wasPressed && !wasDragging && e.type === 'pointerup') {
           const u = pickUnit();
           selected = u && u !== selected ? u : null;
           hovered = u;
           wake();
         }
+        ptr.dirty = true;
       };
       const onPtrLeave = () => {
+        if (pressed) return;
         ptr.inside = false;
         hovered = null;
       };
-      el.addEventListener('pointerleave', onPtrLeave);
       el.addEventListener('pointerdown', onPtrDown);
+      el.addEventListener('pointerleave', onPtrLeave);
       window.addEventListener('pointermove', onPtrMove);
-      window.addEventListener('pointerup', onPtrUp);
-      window.addEventListener('pointercancel', onPtrUp);
+      window.addEventListener('pointerup', endPress);
+      window.addEventListener('pointercancel', endPress);
       el.style.cursor = 'grab';
       cleanup.push(() => {
         el.removeEventListener('pointerdown', onPtrDown);
-        window.removeEventListener('pointermove', onPtrMove);
-        window.removeEventListener('pointerup', onPtrUp);
-        window.removeEventListener('pointercancel', onPtrUp);
         el.removeEventListener('pointerleave', onPtrLeave);
+        window.removeEventListener('pointermove', onPtrMove);
+        window.removeEventListener('pointerup', endPress);
+        window.removeEventListener('pointercancel', endPress);
       });
 
       // Keyboard: arrows, PageUp/Down, Home/End step between stops. Without
@@ -1107,6 +1147,7 @@ export function HeroDroneScene({
       // beats. The rail dots call goTo with a BEAT index; the keyboard walks
       // the stop list itself so it gets the rests too.
       const goToStop = (si: number) => {
+        releaseManual();
         wake();
         selected = null;
         const idx = Math.max(0, Math.min(STOPS.length - 1, si));
@@ -1223,9 +1264,9 @@ export function HeroDroneScene({
        try {
         if (!TEST && (!onScreen || document.hidden)) return;
         const now = performance.now();
-        if (!TEST && !dragging && now - lastInteraction > 5000 &&
+        if (!TEST && !pressed && now - lastInteraction > 5000 &&
             Math.abs(target - pos) < dur() * 0.001 && Math.abs(vel) < dur() * 0.001 &&
-            explodeP === explodeTarget && introHold <= 0) {
+            !pressed && !catchUp && Math.abs(explodeP - desiredExplode()) < 0.002) {
           idlePaused = true;
           syncPlayback();
           return;
@@ -1272,7 +1313,7 @@ export function HeroDroneScene({
         // Report progress across the STOPS, not the raw timeline: the first
         // stop sits at 8% and the last at 92% of the span, so pos/span never
         // reaches either end and the rail never lines up with its own dots.
-        const p0 = stopPos(0);
+        const p0 = stopPos(Math.min(1, STOPS.length - 1));
         const p1 = stopPos(STOPS.length - 1);
         const progress = THREE.MathUtils.clamp((pos - p0) / Math.max(p1 - p0, 1e-6), 0, 1);
         const progressPixel = Math.round(progress * 10000);
@@ -1371,11 +1412,17 @@ export function HeroDroneScene({
           }
         }
 
-        // Explode: fixed rate in time, parts ease their own moves inside it.
-        if (introHold > 0) introHold -= dt;
-        else if (explodeP !== explodeTarget) {
-          const step = dt / (explodeTarget > explodeP ? EXPLODE_S : COLLAPSE_S);
-          explodeP = explodeTarget > explodeP ? Math.min(explodeTarget, explodeP + step) : Math.max(explodeTarget, explodeP - step);
+        // Explode: the scroll position, spring-smoothed, is the progress.
+        const desiredP = desiredExplode();
+        if (manualP !== null) explodeP = reduced ? manualP : stepToward(explodeP, manualP, dt / MANUAL_S);
+        else if (catchUp) {
+          explodeP = reduced ? desiredP : stepToward(explodeP, desiredP, dt * 2.5);
+          if (Math.abs(explodeP - desiredP) < 0.002) catchUp = false;
+        } else explodeP = desiredP;
+        const nowExploded = (manualP ?? desiredP) > 0.5;
+        if (nowExploded !== isExploded) {
+          isExploded = nowExploded;
+          onExploded?.(isExploded);
         }
         applyExplode(explodeP);
         const ep = ease(clamp01(explodeP));
@@ -1386,9 +1433,9 @@ export function HeroDroneScene({
         updateHeroMatrices(moving);
         scene.updateMatrixWorld();
 
-        // Hover (pointer ray, throttled), then what to focus: the part under the
-        // pointer, else the selected part, else the walkthrough's parts.
-        if (ptr.dirty && !dragging && now - lastRay > 45) {
+        // Hover (pointer ray, throttled, never while pressed), then what to focus:
+        // the part under the pointer, else the selected part, else the walkthrough's.
+        if (ptr.dirty && !pressed && now - lastRay > 45) {
           ptr.dirty = false;
           lastRay = now;
           hovered = pickUnit();
@@ -1398,48 +1445,36 @@ export function HeroDroneScene({
         let amtTarget: number;
         let fade: number;
         let key: string;
-        let size: number;
         if (wantUnit) {
           nodes = [wantUnit.node];
           amtTarget = 1;
           fade = hovered ? 0.55 : (cfg.explode?.selectFade ?? 0.7);
           key = wantUnit.id;
-          size = 0.34;
         } else if (b.nodes.length) {
           nodes = b.nodes.map((n) => n.node);
           amtTarget = k;
           fade = b.fade ?? S.darkenRest;
           key = `beat:${b.id}`;
-          size = b.partSize ?? Q.partSize;
         } else {
           nodes = [];
           amtTarget = 0;
           fade = 0;
           key = '';
-          size = Q.partSize;
         }
+        // Crossfade, not a switch: the lit set fades out, the new set is swapped in
+        // while it is dark, and fades in.
+        let amtGoal = amtTarget;
         if (key !== focusKey) {
-          // Hand over softly: whatever was lit fades, the new set comes up.
-          focusKey = key;
-          focusAmt *= 0.35;
-          if (nodes.length) {
+          amtGoal = 0;
+          if (focusAmt < 0.1) {
+            focusKey = key;
             focusNodes = nodes;
             setDimFor(nodes, key);
             focusFade = fade;
-            focusSize = size;
           }
         }
-        focusAmt += (amtTarget - focusAmt) * (reduced ? 1 : 1 - 0.003 ** dt);
-        if (!nodes.length && focusAmt < 0.002) {
-          focusAmt = 0;
-          setDimFor([], '');
-          focusNodes = [];
-        }
-        // Camera focus follows the selected part or the walkthrough, not the hover.
-        const camNodes = selected ? [selected.node] : b.nodes.length && !hovered ? b.nodes.map((n) => n.node) : b.nodes.length ? b.nodes.map((n) => n.node) : [];
-        const kCam = selected ? 1 : b.nodes.length ? k : 0;
-        if (camNodes.length && kCam > 0.001) focusSphere.copy(sphereOf(camNodes));
-        const camSize = selected ? 0.34 : (b.partSize ?? Q.partSize);
+        focusAmt += (amtGoal - focusAmt) * (reduced ? 1 : 1 - 0.002 ** dt);
+        if (!focusNodes.length) focusAmt = 0;
 
         const bright = THREE.MathUtils.lerp(1, 1 - focusFade, focusAmt);
         for (const m of dimMaterials) {
@@ -1463,46 +1498,81 @@ export function HeroDroneScene({
         rimL.intensity = BASE.rim * d;
         bncL.intensity = BASE.bounce * d;
 
-        // Orbit: drag turns it, the view is kept; no idle spin. The tilt persists
-        // while the timeline rests and eases home once the sequence travels.
-        const travelling = Math.abs(target - pos) > dur() * 0.01 || Math.abs(vel) > dur() * 0.01;
-        if (!dragging) {
-          orbitAngle += dt * (reduced ? 0 : Q.autoOrbit);
-          if (travelling) {
-            dragTilt *= (1 - Math.min(1, 3 * dt));
-            if (Math.abs(dragTilt) < 0.0005) dragTilt = 0;
+        /* ---- camera. The scripted view moves straight from one beat's framing to
+         * the next (no pull-back to the overview between), eased and smoothed; the
+         * reader's drag is an offset on top. */
+        const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+        const baseBack = droneRadius * (cfg.camera?.distance ?? 2.15);
+        const overviewFocus = centreNow.clone();
+        overviewFocus.y -= droneRadius * (cfg.camera?.lift ?? 0.1);
+        const heightOv = cfg.camera?.height ?? 0.5;
+        const heightPart = cfg.camera?.heightOnPart ?? 0.62;
+        const camStateOf = (bi: number, size0: number) => {
+          const bb = BEATS[bi];
+          if (!bb.nodes.length) return {c: overviewFocus, back: baseBack, h: heightOv};
+          const sp = sphereOf(bb.nodes.map((n) => n.node));
+          return {
+            c: sp.center.clone(),
+            back: THREE.MathUtils.clamp(sp.radius / ((bb.partSize ?? size0) * halfTan), droneRadius * 0.45, baseBack),
+            h: heightPart,
+          };
+        };
+        let want: {c: THREE.Vector3; back: number; h: number};
+        if (selected) {
+          const sp = sphereOf([selected.node]);
+          want = {
+            c: sp.center.clone(),
+            back: THREE.MathUtils.clamp(sp.radius / (0.34 * halfTan), droneRadius * 0.3, baseBack),
+            h: heightPart,
+          };
+        } else {
+          const f = (pos - stopForBeat(0)) / dur();
+          const i0 = THREE.MathUtils.clamp(Math.floor(f), 0, Math.max(0, BEATS.length - 2));
+          const u = f <= 0 || BEATS.length < 2 ? 0 : ease(clamp01(f - i0));
+          const A = camStateOf(i0, Q.partSize);
+          if (u === 0) want = A;
+          else {
+            const Bs = camStateOf(i0 + 1, Q.partSize);
+            want = {c: A.c.clone().lerp(Bs.c, u), back: THREE.MathUtils.lerp(A.back, Bs.back, u), h: THREE.MathUtils.lerp(A.h, Bs.h, u)};
           }
         }
+        // The copy panel owns the right of the stage: slide the subject left of it.
+        const yawNow = (cfg.camera?.azimuth ?? 0.7) + userYaw;
+        want.c.x += Math.sin(yawNow) * want.back * halfTan * camera.aspect * (cfg.camera?.stageShift ?? 0.2) * Math.min(1, camera.aspect / 1.4);
+        want.c.z -= Math.cos(yawNow) * want.back * halfTan * camera.aspect * (cfg.camera?.stageShift ?? 0.2) * Math.min(1, camera.aspect / 1.4);
+        const smoothK = reduced || !camReady ? 1 : 1 - 0.06 ** dt;
+        if (!dragging) {
+          camFocus.lerp(want.c, smoothK);
+          camBack += (want.back - camBack) * smoothK;
+          camH += (want.h - camH) * smoothK;
+        }
+        camReady = true;
+        // The offset eases back to the beat's framing when the timeline moves.
+        const travelling = Math.abs(target - pos) > dur() * 0.01 || Math.abs(vel) > dur() * 0.01;
+        if (travelling && !wasTravelling && !dragging) {
+          userYawT = Math.round(userYawT / TAU) * TAU;
+          userPitchT = 0;
+        }
+        wasTravelling = travelling;
+        const orbitK = reduced ? 1 : 1 - 1e-4 ** dt;
+        userYaw += (userYawT - userYaw) * orbitK;
+        userPitch += (userPitchT - userPitch) * orbitK;
+        const pitch = THREE.MathUtils.clamp(Math.atan(camH) + userPitch, 0.12, 1.3);
+        const yaw = (cfg.camera?.azimuth ?? 0.7) + userYaw;
+        camera.position.set(
+          camFocus.x + Math.cos(pitch) * Math.cos(yaw) * camBack,
+          camFocus.y + Math.sin(pitch) * camBack,
+          camFocus.z + Math.cos(pitch) * Math.sin(yaw) * camBack,
+        );
+        camera.lookAt(camFocus);
+        camera.updateMatrixWorld();
         const cursor = dragging ? 'grabbing' : hovered ? 'pointer' : 'grab';
         if (el.style.cursor !== cursor) el.style.cursor = cursor;
-        camH += (THREE.MathUtils.lerp(cfg.camera?.height ?? 0.5, cfg.camera?.heightOnPart ?? 0.62, kCam) - camH) * (reduced ? 1 : 1 - 0.35 ** dt);
-        const baseBack = droneRadius * (cfg.camera?.distance ?? 2.15);
-        // Fit the focused parts to `size` of the viewport height, never farther out
-        // than the whole-drone view.
-        const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-        const partBack = THREE.MathUtils.clamp(focusSphere.radius / (camSize * halfTan), droneRadius * 0.45, baseBack);
-        const back = THREE.MathUtils.lerp(baseBack, partBack, kCam);
-        const off = new THREE.Vector3(Math.cos(orbitAngle), camH + dragTilt, Math.sin(orbitAngle)).normalize().multiplyScalar(back);
-        // The framing point sits a little below the drone's centre (camera and
-        // lookAt shift together), which lifts the drone up the viewport: the
-        // bottom strip (wordmark, rail, Shop) eats into the lower frame, so
-        // dead centre reads as sitting too low.
-        const focus = centreNow.clone();
-        focus.y -= droneRadius * (cfg.camera?.lift ?? 0.1);
-        if (camNodes.length && kCam > 0.001) focus.lerp(focusSphere.center, kCam);
-        // The copy panel owns the right of the stage: slide the subject left of it.
         const rightV = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
-        focus.addScaledVector(rightV, back * halfTan * camera.aspect * (cfg.camera?.stageShift ?? 0.2) * Math.min(1, camera.aspect / 1.4));
-        // A drag has to track the hand 1:1, so it writes the position directly.
-        // The eased lerp is for the dolly and focus moves, where smoothing is the point.
-        if (dragging || reduced) camera.position.copy(focus.clone().add(off));
-        else camera.position.lerp(focus.clone().add(off), 1 - 0.004 ** dt);
-        camera.lookAt(focus);
-        camera.updateMatrixWorld();
 
         // Spotlight on whatever is focused.
         if (focusNodes.length && focusAmt > 0.002) {
-          const fc = (camNodes.length ? focusSphere.center : sphereOf(focusNodes).center).clone();
+          const fc = sphereOf(focusNodes).center.clone();
           const dist = camera.position.distanceTo(fc);
           const fwd = camera.getWorldDirection(new THREE.Vector3());
           const up = camera.up;
@@ -1520,18 +1590,21 @@ export function HeroDroneScene({
         } else spotL.intensity = 0;
         spotL.updateMatrixWorld();
 
-        // Label: follows the pointer for a hover, sits on the selected part.
-        if (wantUnit && explodeP > 0.02) {
-          if (label.textContent !== wantUnit.label) label.textContent = wantUnit.label;
-          const r = el.getBoundingClientRect();
-          let lx = ptr.x - r.left + 16;
-          let ly = ptr.y - r.top + 18;
+        // Label: follows the pointer for a hover, sits on the selected part. Uses the
+        // cached canvas rect and label width so no layout is read per frame.
+        if (wantUnit && explodeP > 0.02 && !dragging) {
+          if (label.textContent !== wantUnit.label) {
+            label.textContent = wantUnit.label;
+            labelW = label.offsetWidth;
+          }
+          let lx = ptr.x - rect.left + 16;
+          let ly = ptr.y - rect.top + 18;
           if (!hovered) {
             const sp = sphereOf([wantUnit.node]).center.clone().project(camera);
-            lx = ((sp.x + 1) / 2) * r.width + 14;
-            ly = ((1 - sp.y) / 2) * r.height - 8;
+            lx = ((sp.x + 1) / 2) * rect.width + 14;
+            ly = ((1 - sp.y) / 2) * rect.height - 8;
           }
-          label.style.transform = `translate(${Math.round(Math.min(lx, r.width - label.offsetWidth - 12))}px, ${Math.round(Math.min(ly, r.height - 40))}px)`;
+          label.style.transform = `translate(${Math.round(Math.min(lx, rect.width - labelW - 12))}px, ${Math.round(Math.min(ly, rect.height - 40))}px)`;
           label.style.opacity = '1';
         } else label.style.opacity = '0';
         batches?.update();
@@ -1571,9 +1644,9 @@ export function HeroDroneScene({
       }
 
       onSeeker?.(goTo);
-      onExplode?.({toggle: () => setExploded(explodeTarget === 0), set: setExploded});
+      onExplode?.({toggle: () => setExploded(!isExploded), set: setExploded});
       cleanup.push(() => onExplode?.(null));
-      onExploded?.(true);
+      onExploded?.(isExploded);
       if (TEST) {
         (window as Window & {__hero?: unknown}).__hero = {
           goTo,
@@ -1596,8 +1669,7 @@ export function HeroDroneScene({
           }),
           // Freeze the build at an explode progress 0..1 (screenshots).
           setExplode: (p: number) => {
-            introHold = 0;
-            explodeP = explodeTarget = p;
+            manualP = explodeP = p;
           },
           wheel: (deltaY: number, deltaMode = 0) =>
             renderer.domElement.dispatchEvent(
