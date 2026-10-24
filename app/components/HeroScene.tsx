@@ -582,23 +582,6 @@ function DroneAssembly({
     window.addEventListener('scroll', onScroll, {passive: true});
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-  // Light vs dark site theme (the `light` class on <html>). The frame is
-  // transparent in both, but on the light page it needs to be a touch darker +
-  // more solid so it reads instead of the pale page bleeding through.
-  const lightRef = useRef(false);
-  useEffect(() => {
-    const read = () => {
-      lightRef.current = document.documentElement.classList.contains('light');
-      invalidate();
-    };
-    read();
-    const obs = new MutationObserver(read);
-    obs.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-    return () => obs.disconnect();
-  }, []);
 
   // Detach the outgoing model's groups from the slide-out wrapper (they return
   // to the cache for reuse - never disposed here).
@@ -1410,9 +1393,9 @@ function DroneAssembly({
       if (slot.finish !== 'carbon') continue;
       const frameFocus = hoverState.current[slot.id];
       const frameBright = brightOf(frameFocus);
-      const fb = ((lightRef.current ? 0x6e : 0x14) / 255) * frameBright;
-      const frameBase = lightRef.current ? 0.58 : 0.6;
-      const frameHiOp = lightRef.current ? 0.82 : 0.92;
+      const fb = (0x14 / 255) * frameBright;
+      const frameBase = 0.6;
+      const frameHiOp = 0.92;
       for (const m of (displayed?.get(slot.id)?.mats ?? []) as any[]) {
         if (!m) continue;
         m.opacity = THREE.MathUtils.lerp(frameBase, frameHiOp, frameFocus);

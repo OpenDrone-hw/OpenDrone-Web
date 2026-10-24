@@ -986,11 +986,12 @@ KiCad and the hero model from Onshape.
 
 ## Theming and i18n
 
-Light and dark through CSS custom properties. Every colour is a semantic token
-(`--color-bg`, `--color-text`, `--color-gold`, ...); dark is the default in the
-Tailwind `@theme` block, light overrides the same names under `html.light`, and
-an inline head script resolves the theme before first paint. Never hardcode a
-hex that changes between themes. Brand assets and the one gold literal:
+The site is dark only (founder 2026-10-24): no light palette, no theme toggle,
+no theme cookie or localStorage key. Colour goes through CSS custom properties:
+every colour is a semantic token (`--color-bg`, `--color-text`, `--color-gold`,
+...) in the Tailwind `@theme` block of `app/styles/app.css`. `<html>` carries the
+`dark` class and `color-scheme: dark`; `app/lib/dark-only.test.ts` fails if a
+light selector comes back. Brand assets and the one gold literal:
 `brand/README.md`. `resolveLegalLoader` in `app/lib/i18n.ts` picks the legal
 Markdown by URL prefix and each legal route emits hreflang for en, nl, fr.
 

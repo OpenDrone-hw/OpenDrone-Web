@@ -8,7 +8,6 @@ import {LineSegments2} from 'three/addons/lines/LineSegments2.js';
 import {LineSegmentsGeometry} from 'three/addons/lines/LineSegmentsGeometry.js';
 import {LineMaterial} from 'three/addons/lines/LineMaterial.js';
 import {usePrefersReducedMotion} from '~/lib/use-media-query';
-import {getActiveTheme} from '~/lib/theme';
 import {SLICE_BUDGET_MS, yieldToMain} from '~/lib/scheduling';
 
 // Wireframe stroke per theme. Gold-on-near-black reads fine in dark; on light's
@@ -16,11 +15,7 @@ import {SLICE_BUDGET_MS, yieldToMain} from '~/lib/scheduling';
 // higher opacity. Applied at build and refreshed live on a theme toggle.
 // `fill` tints the faces of the carbon plates and motor bodies, the drawing's
 // counterpart of the filled pads in a board's art.
-const FRAME_LINE = {
-  dark: {color: 0xc8b27a, opacity: 0.8, fill: 0.07},
-  // Light: half the tint, which otherwise reads milky over the cream page.
-  light: {color: 0x5c4611, opacity: 0.92, fill: 0.04},
-} as const;
+const FRAME_LINE = {color: 0xc8b27a, opacity: 0.8, fill: 0.07} as const;
 // Outline stroke in CSS pixels (WebGL lines are otherwise always 1 px).
 const LINE_WIDTH = 1.7;
 // Canvas width below which the drawing is a phone drawing, and how much the
@@ -304,7 +299,7 @@ async function prepareModel(
   // (profiled at 4x CPU). Merging is pixel-identical: each mesh's edges are
   // baked into its owning part's local space, so the explode still moves
   // whole parts, and the source meshes are dropped from the graph entirely.
-  const style = FRAME_LINE[getActiveTheme()];
+  const style = FRAME_LINE;
   const lineMat = new LineMaterial({
     color: style.color,
     linewidth: LINE_WIDTH,
@@ -631,40 +626,6 @@ function FrameModel({
     invalidate();
   }, [src]);
 
-  // Recolour the wireframes live when the visitor toggles light/dark - the
-  // baked-at-build gold is invisible on the light cream page. Watches the
-  // <html> class (the single source of theme truth) and repaints every loaded
-  // model's edge materials.
-  useEffect(() => {
-    if (typeof MutationObserver === 'undefined') return;
-    const apply = () => {
-      const style = FRAME_LINE[getActiveTheme()];
-      for (const m of models.current.values()) {
-        m.root.traverse((o) => {
-          const mesh = o as THREE.Mesh;
-          if (!mesh.isMesh) return;
-          const mats = Array.isArray(mesh.material)
-            ? mesh.material
-            : [mesh.material];
-          for (const mat of mats) {
-            const lm = mat as THREE.MeshBasicMaterial;
-            if (!lm.color) continue;
-            lm.color.setHex(style.color);
-            lm.opacity = lm.userData.fill ? style.fill : style.opacity;
-            lm.needsUpdate = true;
-          }
-        });
-      }
-      invalidate();
-    };
-    const obs = new MutationObserver(apply);
-    obs.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-    return () => obs.disconnect();
-  }, []);
-
   // Dispose everything on unmount (the IntersectionObserver unmounts the whole
   // canvas when the backdrop scrolls out of view).
   useEffect(() => {
@@ -743,7 +704,7 @@ function FrameModel({
     }
     const fm = active.root.userData.fillMat as
       THREE.MeshBasicMaterial | undefined;
-    if (fm) fm.opacity = FRAME_LINE[getActiveTheme()].fill * (thin ? 0.5 : 1);
+    if (fm) fm.opacity = FRAME_LINE.fill * (thin ? 0.5 : 1);
     // The bell spins continuously while the canvas is mounted (on screen);
     // reduced motion keeps it still. Clamp delta so a backgrounded tab does
     // not jump on return.

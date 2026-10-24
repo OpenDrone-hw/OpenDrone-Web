@@ -1,7 +1,6 @@
 import {useEffect, useId, useRef, useState, type FormEvent, type RefObject} from 'react';
 import {Check, Copy, Paperclip, X} from 'lucide-react';
 import {copyText} from '~/lib/copy';
-import {getActiveTheme} from '~/lib/theme';
 import {ACCEPT, checkFileContent, checkFiles, formatBytes, MAX_FILES} from '~/lib/support/uploads';
 import {LIMITS, normalizeText} from '~/lib/support/form';
 import {Link} from 'react-router';
@@ -182,7 +181,7 @@ export function TurnstileBox({siteKey, active, resetKey}: {siteKey: string | nul
     const render = () => {
       const cf = api();
       if (!cf || !box.current || widget.current) return;
-      widget.current = cf.render(box.current, {sitekey: siteKey, theme: getActiveTheme(), size: 'flexible', appearance: 'interaction-only'}) ?? null;
+      widget.current = cf.render(box.current, {sitekey: siteKey, theme: 'dark', size: 'flexible', appearance: 'interaction-only'}) ?? null;
     };
     if (api()) return render();
     const id = 'cf-turnstile-script';
