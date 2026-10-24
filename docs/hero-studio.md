@@ -57,8 +57,26 @@ draws, no layout reads: the canvas rect and the label width are cached), renderi
 capped at 60 fps and pauses after 5 s idle.
 
 Load and cost are comparable to the previous hero: the same meshopt compression, the
-same chunked streaming (airframe first, boards last), and the same material look from
-`studio.json`.
+same chunked streaming, and the same material look from `studio.json`.
+
+Loading: studio.json, explode.json, chunks.json and the carbon maps go out together. The
+GLBs are fetched in build order (frame, ESC, FC, RX, video, drive): the first alone at
+high priority, then three at a time. Each chunk shows the moment it is parsed and plays
+the CAD explode backwards. The pace is set by how fast the first chunk came back: from
+cache (under 120 ms) the whole drone builds in about 0.7 s; from the network each chunk
+builds over 1.2 s, 0.35 s after the one before, so the animation covers the download,
+and once the last chunk is in, whatever has not played yet is squeezed into 0.9 s. The
+scene sets User Timing marks `hero:start`, `hero:first-part` and `hero:ready`.
+Measured on the dev server at 1440x900 with a proxy giving `/models/*` Fast 4G-like
+conditions (165 ms added latency, 9 Mbit/s shared) and the production cache headers,
+od5, three runs each, times from `hero:start`:
+
+| | first part on screen | walkthrough ready |
+|---|---|---|
+| cold, before | 2.4 s | 6.7 s |
+| cold, after | 0.8 s | 4.4 s (last GLB in at 3.4 s) |
+| warm reload, before | 0.42 s | 4.3 s |
+| warm reload, after | 0.25 s | 1.05 s |
 
 | design | before (6 chunks) | after (6 chunks) |
 |---|---|---|

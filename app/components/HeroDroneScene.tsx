@@ -190,6 +190,16 @@ export function HeroDroneScene({
     cleanup.push(() => controller.abort());
 
     const TEST = typeof location !== 'undefined' && new URLSearchParams(location.search).has('herotest');
+    // User Timing marks for load measurements (DevTools Performance panel or
+    // performance.getEntriesByType('mark')): start, first part on screen, ready.
+    const mark = (name: string) => {
+      try {
+        performance.mark(`hero:${name}`);
+      } catch {
+        /* no User Timing: nothing to record */
+      }
+    };
+    mark('start');
     // /public is served with a one-year max-age and these files are not
     // content-hashed, so a returning visitor kept an old studio.json (no
     // handles, no captions) for a year after every deploy: the site said
@@ -203,12 +213,31 @@ export function HeroDroneScene({
     (async () => {
       // Only some sizes have an assembly built. Fall back rather than 404ing,
       // so the size selector keeps working before the other models exist.
+      // studio.json, explode.json and chunks.json go out together: they are
+      // no-cache in production, so even a warm reload revalidates each one, and
+      // chained they cost a round trip apiece before the first part can show.
+      const metaFor = (f: string) => {
+        const get = (file: string) => fetch(modelUrl(f, file), {signal: controller.signal});
+        const meta = {studio: get('studio.json'), explode: get('explode.json'), chunks: get('chunks.json')};
+        for (const pending of Object.values(meta)) void pending.catch(() => {});
+        return meta;
+      };
       let folder = model;
-      let res = await fetch(modelUrl(folder, 'studio.json'), {signal: controller.signal});
+      let meta = metaFor(folder);
+      // The carbon maps are shared by both sizes and tiny: out with the JSON,
+      // not after it, so waiting for them never adds a round trip.
+      const carbonImages = Promise.all(
+        ['twill-albedo.png', 'twill-mr.png', 'twill-normal.png'].map((file) =>
+          new THREE.TextureLoader().loadAsync(`/models/carbon/${file}?v=${V}`),
+        ),
+      );
+      void carbonImages.catch(() => {});
+      let res = await meta.studio;
       if (!res.ok && folder !== FALLBACK_MODEL) {
         console.warn(`[hero] no assembly for "${folder}", showing ${FALLBACK_MODEL}`);
         folder = FALLBACK_MODEL;
-        res = await fetch(modelUrl(folder, 'studio.json'), {signal: controller.signal});
+        meta = metaFor(folder);
+        res = await meta.studio;
       }
       if (!res.ok) throw new Error(`studio.json ${res.status}`);
       const cfg = (await res.json()) as StudioConfig;
@@ -354,7 +383,6 @@ export function HeroDroneScene({
        */
       const manager = new THREE.LoadingManager();
       const loader = new GLTFLoader(manager).setMeshoptDecoder(MeshoptDecoder as any);
-      const fileLoader = new THREE.FileLoader(manager).setResponseType('arraybuffer');
       cleanup.push(() => manager.abort());
       const cache = new Map<string, THREE.MeshStandardMaterial>();
       const equivalentMaterials = new Map<string, THREE.MeshStandardMaterial>();
@@ -366,28 +394,20 @@ export function HeroDroneScene({
       // load left the carbon flat white until the maps landed, then it popped
       // to twill mid-assembly. If they fail, every carbon part stays plain.
       let carbonTex: {albedo: THREE.Texture; mr: THREE.Texture; normal: THREE.Texture} | null = null;
-      const carbonReady = (async () => {
-        const tl = new THREE.TextureLoader();
-        const aniso = renderer.capabilities.getMaxAnisotropy();
-        const load = async (file: string, srgb: boolean) => {
-          const t = await tl.loadAsync(`/models/carbon/${file}?v=${V}`);
+      const carbonReady = carbonImages.then(([albedo, mr, normal]) => {
+        const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        for (const t of [albedo, mr, normal]) {
           t.wrapS = t.wrapT = THREE.RepeatWrapping;
-          t.anisotropy = Math.min(8, aniso);
-          if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-          return t;
-        };
-        const [albedo, mr, normal] = await Promise.all([
-          load('twill-albedo.png', true),
-          load('twill-mr.png', false),
-          load('twill-normal.png', false),
-        ]);
+          t.anisotropy = aniso;
+        }
+        albedo.colorSpace = THREE.SRGBColorSpace;
         carbonTex = {albedo, mr, normal};
         cleanup.push(() => {
           albedo.dispose();
           mr.dispose();
           normal.dispose();
         });
-      })().catch((err: unknown) => {
+      }).catch((err: unknown) => {
         console.warn('[hero] carbon maps did not load, carbon renders plain', err);
       });
       const paint = (sub: THREE.Object3D, root: THREE.Object3D) => {
@@ -458,7 +478,7 @@ export function HeroDroneScene({
        */
       type ExplodeMove = {v: [number, number, number]; t: number; dur: number};
       type ExplodeUnit = {id: string; label: string; kind: string; moves: ExplodeMove[]};
-      const exPromise = fetch(modelUrl(folder, 'explode.json'), {signal: controller.signal}).then((r) => {
+      const exPromise = meta.explode.then((r) => {
         if (!r.ok) throw new Error(`explode.json ${r.status}`);
         return r.json() as Promise<{units: ExplodeUnit[]; groups: Record<string, string[]>}>;
       });
@@ -476,27 +496,63 @@ export function HeroDroneScene({
         }
         return out;
       };
-      // One assembly per chunk: the chunk's parts run explode p from 1 to 0.
-      // ASSEMBLE_S is one chunk's build; the next may start ASSEMBLE_GAP_S
-      // after it, so a cached load still reads as a sequence, not one jump.
-      const ASSEMBLE_S = reduced ? 0 : 1.5;
-      const ASSEMBLE_GAP_S = reduced ? 0 : 0.45;
-      type Build = {parts: Array<{node: THREE.Object3D; base: THREE.Vector3; moves: ExplodeMove[]}>; start: number};
+      // One assembly per chunk: the chunk's parts run explode p from 1 to 0,
+      // in build order, each starting as its own GLB lands. The pace depends on
+      // how the bytes arrive (decided on the first chunk):
+      //  - cold (network): a slow build with a gap between chunks, so the
+      //    animation covers the download instead of the reader watching a
+      //    half-built drone stand still; once the last chunk is in, whatever is
+      //    still to play is squeezed into TAIL_S, so it never runs long past it.
+      //  - warm (cache: the first chunk came back within WARM_MS): a short
+      //    build-in, about 0.7 s for the whole drone. A cached reload never waits
+      //    on a timeline.
+      type Pace = {dur: number; gap: number};
+      const COLD: Pace = {dur: 1.2, gap: 0.35};
+      const WARM: Pace = {dur: 0.42, gap: 0.06};
+      const WARM_MS = 120;
+      const TAIL_S = 0.9;
+      let pace: Pace = COLD;
+      type Build = {
+        parts: Array<{node: THREE.Object3D; base: THREE.Vector3; moves: ExplodeMove[]}>;
+        start: number;
+        dur: number;
+        /** 0..1 along this chunk's build, advanced by frame time from `start`. */
+        k: number;
+      };
       const builds: Build[] = [];
       let nextBuildAt = 0;
       const tmpOff = new THREE.Vector3();
-      const stepBuilds = (now: number) => {
+      const stepBuilds = (now: number, dt: number) => {
         let busy = false;
         for (const b of builds) {
-          const k = ASSEMBLE_S ? clamp01((now - b.start) / ASSEMBLE_S) : 1;
+          if (b.k < 1 && now >= b.start) b.k = reduced || !b.dur ? 1 : Math.min(1, b.k + Math.min(dt, now - b.start) / b.dur);
           // Ease the timeline itself too, so the build lands softly.
-          const p = 1 - moveEase(k);
+          const p = 1 - moveEase(b.k);
           for (const part of b.parts) part.node.position.copy(part.base).add(offsetAt(part.moves, p, tmpOff));
-          if (k < 1) busy = true;
+          if (b.k < 1) busy = true;
         }
         return busy;
       };
+      const finishBuilds = () => {
+        for (const b of builds) b.k = 1;
+        stepBuilds(previewNow, 0);
+      };
+      // Everything is in: what has not played yet plays out within TAIL_S.
+      const squeezeBuilds = () => {
+        const deadline = previewNow + TAIL_S;
+        let j = 0;
+        for (const b of builds) {
+          if (b.k >= 1) continue;
+          if (b.start > previewNow) {
+            b.start = Math.min(b.start, previewNow + j++ * 0.08);
+            b.dur = Math.min(b.dur, Math.max(0.3, deadline - b.start));
+          } else if (previewNow + (1 - b.k) * b.dur > deadline) {
+            b.dur = (deadline - previewNow) / Math.max(1e-3, 1 - b.k);
+          }
+        }
+      };
       let previewOn = true;
+      let firstPartMarked = false;
       const previewClock = new THREE.Clock();
       let previewNow = 0;
       let previewAngle = 0.9;
@@ -504,16 +560,24 @@ export function HeroDroneScene({
       let previewGoal: number | null = null;
       const previewVel = {v: 0};
       const previewPitch = Math.atan(cfg.camera?.height ?? 0.5);
-      // Framed on the finished drone from the first frame, not on the airframe
-      // alone, so the camera does not lurch outward as the heavy chunks land.
-      // 0.075 m is a 3 inch airframe's bounding radius; refined once measured.
-      let previewRadius = 0.075;
+      // Framed on the seated parts, measured as each chunk lands (the airframe
+      // comes first and already sets most of the size). The camera eases to
+      // each new measure instead of jumping, so the view does not lurch as the
+      // heavier chunks land.
+      let previewRadius = 0;
       const previewCentre = new THREE.Vector3();
+      let shownRadius = 0;
+      const shownCentre = new THREE.Vector3();
+      const shownVel = [0, 1, 2, 3].map(() => ({v: 0}));
       const previewFit = () => {
         const b = new THREE.Box3().setFromObject(rig);
         if (b.isEmpty()) return;
         b.getCenter(previewCentre);
         previewRadius = Math.max(previewRadius, b.getBoundingSphere(new THREE.Sphere()).radius);
+        if (!shownRadius) {
+          shownRadius = previewRadius;
+          shownCentre.copy(previewCentre);
+        }
         camera.near = previewRadius / 300;
         camera.far = previewRadius * 60;
         camera.updateProjectionMatrix();
@@ -524,22 +588,32 @@ export function HeroDroneScene({
         resizeIfNeeded();
         const dt = Math.min(previewClock.getDelta(), 0.05);
         previewNow += dt;
-        stepBuilds(previewNow);
+        stepBuilds(previewNow, dt);
+        if (builds.length && !firstPartMarked) {
+          firstPartMarked = true;
+          mark('first-part');
+        }
         if (previewGoal === null) previewAngle += dt * 0.24;
         else previewAngle = smoothDamp(previewAngle, previewGoal, previewVel, 0.6, dt);
-        const back = previewRadius * (cfg.camera?.distance ?? 2.15);
+        if (shownRadius) {
+          shownRadius = smoothDamp(shownRadius, previewRadius, shownVel[0], 0.5, dt);
+          shownCentre.x = smoothDamp(shownCentre.x, previewCentre.x, shownVel[1], 0.5, dt);
+          shownCentre.y = smoothDamp(shownCentre.y, previewCentre.y, shownVel[2], 0.5, dt);
+          shownCentre.z = smoothDamp(shownCentre.z, previewCentre.z, shownVel[3], 0.5, dt);
+        }
+        const back = (shownRadius || 0.075) * (cfg.camera?.distance ?? 2.15);
         const off = new THREE.Vector3(
           Math.cos(previewPitch) * Math.cos(previewAngle) * back,
           Math.sin(previewPitch) * back,
           Math.cos(previewPitch) * Math.sin(previewAngle) * back,
         );
-        camera.position.copy(previewCentre.clone().add(off));
-        camera.lookAt(previewCentre);
+        camera.position.copy(shownCentre.clone().add(off));
+        camera.lookAt(shownCentre);
         renderer.render(scene, camera);
       };
       renderer.setAnimationLoop(previewFrame);
 
-      const manifest = await fetch(modelUrl(folder, 'chunks.json'), {signal: controller.signal})
+      const manifest = await meta.chunks
         .then((r) => (r.ok ? (r.json() as Promise<ChunkManifest>) : null))
         .catch(() => null);
       if (disposed) return;
@@ -563,24 +637,61 @@ export function HeroDroneScene({
       let bytesDone = 0;
       let asm: THREE.Group | null = null;
       let activeChunk = '';
-      const downloads = new Map<string, Promise<ArrayBuffer>>();
-      const download = (c: Chunk) => {
-        let pending = downloads.get(c.id);
-        if (!pending) {
-          pending = fileLoader.loadAsync(modelUrl(folder, c.file), (e) => {
-            if (disposed || activeChunk !== c.id || !e.total) return;
-            const frac = (bytesDone + (c.bytes || 1) * (e.loaded / e.total)) / totalBytes;
+      // Every GLB is fetched with fetch() so the first one in build order can
+      // go out alone at high priority: on a shared link, six parallel
+      // downloads all finish late, and the first part would only show once
+      // nearly every byte had arrived. The rest follow, a few at a time, in
+      // build order, so they keep the link busy while the first one seats.
+      const LOOKAHEAD = 3;
+      const fetchGlb = async (c: Chunk, priority: 'high' | 'low') => {
+        const r = await fetch(modelUrl(folder, c.file), {signal: controller.signal, priority} as RequestInit);
+        if (!r.ok) throw new Error(`${c.file} ${r.status}`);
+        const total = Number(r.headers.get('content-length')) || 0;
+        const reader = r.body?.getReader();
+        if (!reader) return r.arrayBuffer();
+        const parts: Uint8Array[] = [];
+        let loaded = 0;
+        for (;;) {
+          const {done, value} = await reader.read();
+          if (done) break;
+          parts.push(value);
+          loaded += value.length;
+          if (total && !disposed && activeChunk === c.id) {
+            const frac = (bytesDone + (c.bytes || 1) * Math.min(1, loaded / total)) / totalBytes;
             onLoad?.({label: c.label, frac, chunk: c.id, done: false, pieces});
-          }) as Promise<ArrayBuffer>;
-          downloads.set(c.id, pending);
-          // A look-ahead request can fail before its turn to be awaited.
-          void pending.catch(() => {});
+          }
         }
-        return pending;
+        const out = new Uint8Array(loaded);
+        let at = 0;
+        for (const part of parts) {
+          out.set(part, at);
+          at += part.length;
+        }
+        return out.buffer;
       };
-      // Let HTTP/2 share the connection across all pieces. Parsing remains
-      // serial and yields between pieces so downloads cannot stack CPU work.
-      for (const chunk of chunks) void download(chunk);
+      const downloads = new Map<string, Promise<ArrayBuffer>>();
+      const arrived = new Map<string, number>();
+      let launched = 0;
+      let inFlight = 0;
+      const launch = () => {
+        const c = chunks[launched];
+        const pending = fetchGlb(c, launched === 0 ? 'high' : 'low');
+        launched++;
+        inFlight++;
+        downloads.set(c.id, pending);
+        void pending.then(() => arrived.set(c.id, performance.now()), () => {});
+        // A look-ahead request can fail before its turn to be awaited.
+        void pending.catch(() => {});
+        // The first one alone; after it, keep LOOKAHEAD in flight.
+        void pending
+          .finally(() => {
+            inFlight--;
+            while (!disposed && launched < chunks.length && inFlight < LOOKAHEAD) launch();
+          })
+          .catch(() => {});
+      };
+      const fetchStarted = performance.now();
+      launch();
       // Every chunk gets its final materials the moment it lands, carbon included.
       await carbonReady;
       if (disposed) return;
@@ -588,9 +699,13 @@ export function HeroDroneScene({
         const c = chunks[i];
         activeChunk = c.id;
         onLoad?.({label: c.label, frac: bytesDone / totalBytes, chunk: c.id, done: false, pieces});
-        const pending = download(c);
-        const data = await pending;
-        downloads.delete(c.id);
+        while (!downloads.has(c.id)) {
+          // Not launched yet: the look-ahead window launches it as earlier ones land.
+          await new Promise((r) => setTimeout(r, 16));
+          if (disposed) return;
+        }
+        const data = await downloads.get(c.id)!;
+        if (i === 0 && !reduced) pace = (arrived.get(c.id) ?? performance.now()) - fetchStarted < WARM_MS ? WARM : COLD;
         if (disposed) return;
         const g = await loader.parseAsync(data, `/models/${folder}/`);
         if (disposed) {
@@ -629,8 +744,8 @@ export function HeroDroneScene({
           parts.push({node, base, moves: def.moves});
         }
         const start = Math.max(previewNow, nextBuildAt);
-        nextBuildAt = start + ASSEMBLE_GAP_S;
-        builds.push({parts, start});
+        nextBuildAt = start + pace.gap;
+        builds.push({parts, start, dur: pace.dur, k: 0});
         bytesDone += c.bytes || 1;
         onLoad?.({label: c.label, frac: bytesDone / totalBytes, chunk: c.id, done: true, pieces});
         // Hand the main thread back so the preview loop paints the part that
@@ -653,10 +768,11 @@ export function HeroDroneScene({
       // Let every chunk finish seating before the rig reads base positions, then
       // swing the orbit onto the walkthrough's opening yaw (nearest turn).
       // A hidden tab runs no frames, so it skips the show and seats everything.
-      while (!reduced && !disposed && !document.hidden && builds.some((b) => previewNow < b.start + ASSEMBLE_S)) {
-        await new Promise((r) => setTimeout(r, 50));
+      squeezeBuilds();
+      while (!reduced && !disposed && !document.hidden && builds.some((b) => b.k < 1)) {
+        await new Promise((r) => setTimeout(r, 16));
       }
-      stepBuilds(Infinity);
+      finishBuilds();
       if (disposed) return;
       {
         const az = cfg.camera?.azimuth ?? 0.7;
@@ -913,8 +1029,8 @@ export function HeroDroneScene({
       // Scripted camera state, smoothed: the point it orbits, distance, height.
       // Starts where the assembling view left the camera; the damping below
       // carries it onto the first beat's framing.
-      const camFocus = previewCentre.clone();
-      let camBack = previewRadius * (cfg.camera?.distance ?? 2.15);
+      const camFocus = shownCentre.clone();
+      let camBack = (shownRadius || previewRadius) * (cfg.camera?.distance ?? 2.15);
       let camReady = !reduced;
       let wasTravelling = false;
       // Canvas rect, cached: read on pointer events, never per frame.
@@ -1867,6 +1983,7 @@ export function HeroDroneScene({
         }).catch(() => {});
       }
       onBuilding?.(false);
+      mark('ready');
       onReady?.();
     })().catch((e: unknown) => {
       if (disposed) return;
