@@ -560,6 +560,10 @@ export function HeroDroneScene({
       let previewGoal: number | null = null;
       const previewVel = {v: 0};
       const previewPitch = Math.atan(cfg.camera?.height ?? 0.5);
+      // Camera distance in drone radii: `distance` frames the exploded drone,
+      // `distanceAssembled` the assembled one (the opening view and the build-in).
+      const DIST_EXPLODED: number = cfg.camera?.distance ?? 2.15;
+      const DIST_ASSEMBLED: number = cfg.camera?.distanceAssembled ?? DIST_EXPLODED;
       // Framed on the seated parts, measured as each chunk lands (the airframe
       // comes first and already sets most of the size). The camera eases to
       // each new measure instead of jumping, so the view does not lurch as the
@@ -601,7 +605,7 @@ export function HeroDroneScene({
           shownCentre.y = smoothDamp(shownCentre.y, previewCentre.y, shownVel[2], 0.5, dt);
           shownCentre.z = smoothDamp(shownCentre.z, previewCentre.z, shownVel[3], 0.5, dt);
         }
-        const back = (shownRadius || 0.075) * (cfg.camera?.distance ?? 2.15);
+        const back = (shownRadius || 0.075) * DIST_ASSEMBLED;
         const off = new THREE.Vector3(
           Math.cos(previewPitch) * Math.cos(previewAngle) * back,
           Math.sin(previewPitch) * back,
@@ -1030,7 +1034,7 @@ export function HeroDroneScene({
       // Starts where the assembling view left the camera; the damping below
       // carries it onto the first beat's framing.
       const camFocus = shownCentre.clone();
-      let camBack = (shownRadius || previewRadius) * (cfg.camera?.distance ?? 2.15);
+      let camBack = (shownRadius || previewRadius) * DIST_ASSEMBLED;
       let camReady = !reduced;
       let wasTravelling = false;
       // Canvas rect, cached: read on pointer events, never per frame.
@@ -1786,7 +1790,9 @@ export function HeroDroneScene({
          * the next (no pull-back to the overview between), eased and smoothed; the
          * reader's drag is an offset on top. */
         const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-        const baseBack = droneRadius * (cfg.camera?.distance ?? 2.15);
+        // Closer on the assembled drone than on the exploded one: the whole
+        // drone is the hero's opening picture, the exploded beats keep theirs.
+        const baseBack = droneRadius * THREE.MathUtils.lerp(DIST_ASSEMBLED, DIST_EXPLODED, ep);
         const overviewFocus = centreNow.clone();
         overviewFocus.y -= droneRadius * (cfg.camera?.lift ?? 0.1);
         const heightOv = cfg.camera?.height ?? 0.5;

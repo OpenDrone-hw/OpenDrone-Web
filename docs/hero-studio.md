@@ -151,7 +151,8 @@ Look and motion tuning only: lighting (dark rig only, the site has no light them
 rig in world space, set once, so exposure, environment and every light are the same from the
 first assembling frame to the end of the walkthrough), the dim of the rest on a focused part
 (`spotlight.darkenRest`, per beat `fade`; the hero no longer lights a focused part with a
-spotlight or dips the rig, so the other `spotlight` keys are unused there), camera (`distance`, `height`,
+spotlight or dips the rig, so the other `spotlight` keys are unused there), camera (`distance` frames the exploded
+drone, `distanceAssembled` the assembled one and the build-in, both in drone radii; `height`,
 `heightOnPart`, `lift`, `stageShift`, `azimuth`), the dim of a selected part, scroll feel, material
 profiles, and the beat copy. A beat is `select: {none: true}` or `select: {group}` with
 a group from `explode.json` (`fc`, `esc`, `rx`, `motor` (one motor with prop, boot and

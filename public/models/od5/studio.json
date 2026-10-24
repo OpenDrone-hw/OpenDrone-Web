@@ -339,9 +339,10 @@
   ],
   "camera": {
     "distance": 2.85,
+    "distanceAssembled": 2.2,
     "height": 0.42,
     "heightOnPart": 0.55,
-    "lift": 0.02,
+    "lift": 0.06,
     "stageShift": 0.2,
     "azimuth": 0.7
   },
