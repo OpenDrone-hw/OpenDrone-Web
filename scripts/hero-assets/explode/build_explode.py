@@ -24,6 +24,18 @@ SIDE_GOLD = (0.984, 0.714, 0.0)   # anodised Pantone 7549 C, #FBB600
 MM = 0.001
 
 
+LEGACY_FRAME = ('bottom', 'middle', 'top', 'arm', 'cross', 'side', 'standoff')
+
+
+def part_name(u, bases):
+    """CAD-style part name, as the loader would sanitise it: the product page viewers match on it."""
+    if len(u.leaves) == 1 and u.kind not in ('motor',):
+        n = bases[u.leaves[0][0]['base']]['name']
+    else:
+        n = {'motor': 'Motor', 'camera': 'Camera', 'air': 'Air unit', 'xtconn': 'XT30 connector'}.get(u.kind, u.meta.get('board') or u.label)
+    return ''.join(ch for ch in n if ch not in '[]./:')
+
+
 def recolour(cls, rgb):
     if cls == 'sideplate':
         return SIDE_GOLD
@@ -91,13 +103,36 @@ def main():
     for l in log:
         print(' ', l)
     g = G.Glb()
+    lg = G.Glb()
+    legacy_kids = []
     kids = []
     out_units = []
     units = [u for u in units if u.id not in drop]
     for u in units:
         single = len(u.leaves) == 1 and np.linalg.det(u.leaves[0][0]['M'][:3, :3]) > 0
-        extras = dict(unit=u.id)
-        if single:
+        extras = dict(unit=u.id, kind=u.kind, part=part_name(u, bases))
+        if u.kind == 'motor':
+            # One node per motor, shaft along local Y with no rotation on the bodies:
+            # the product page's motor viewer explodes the bodies along the shaft and
+            # spins the bell about local Y.
+            leaves = [(bases[l['base']], l['M'], c) for l, c in u.leaves]
+            allp = np.concatenate([(np.concatenate([v for v, _ in b['groups'].values()]) @ M[:3, :3].T + M[:3, 3]) for b, M, _ in leaves])
+            big = max(leaves, key=lambda x: np.ptp(np.concatenate([v for v, _ in x[0]['groups'].values()]) @ x[1][:3, :3].T, axis=0).prod())
+            bp = np.concatenate([v for v, _ in big[0]['groups'].values()]) @ big[1][:3, :3].T + big[1][:3, 3]
+            c = np.array([(bp[:, 0].min() + bp[:, 0].max()) / 2, (bp[:, 1].min() + bp[:, 1].max()) / 2, allp[:, 2].min()])
+            R = np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]], float)   # assembly z (shaft) -> local y
+            bodies = []
+            for i, (b, M, cls) in enumerate(leaves):
+                prims = []
+                for rgb, (v, t) in b['groups'].items():
+                    w = (v.astype(np.float64) @ M[:3, :3].T + M[:3, 3] - c) @ R.T
+                    col = tuple(rgb)
+                    prims.append(((cls or u.cls) + '|' + ','.join(f'{x:.3f}' for x in col), col, w * MM, t))
+                mi = g.mesh(('body', u.id, i), prims, f'{u.id}-body-{i}')
+                bodies.append(g.node(f'{u.id}-body-{i}', mi, None, None))
+            T = np.eye(4); T[:3, :3] = R.T; T[:3, 3] = c * MM
+            node = g.node(u.id, None, T, extras, bodies)
+        elif single:
             leaf, cls = u.leaves[0]
             b = bases[leaf['base']]
             prims = []
@@ -121,6 +156,13 @@ def main():
             mi = g.mesh(('unit', u.id), prims, u.label)
             node = g.node(u.id, mi, None, extras)
         kids.append(node)
+        if u.kind in LEGACY_FRAME and single:
+            leaf, cls = u.leaves[0]
+            b = bases[leaf['base']]
+            prims = [((cls or u.cls) + '|' + ','.join(f'{x:.3f}' for x in recolour(cls or u.cls, rgb)), recolour(cls or u.cls, rgb), v * MM, t) for rgb, (v, t) in b['groups'].items()]
+            mi = lg.mesh(('base', leaf['base']), prims, b['name'])
+            M = leaf['M'].copy(); M[:3, 3] *= MM
+            legacy_kids.append(lg.node('occurrence of ' + part_name(u, bases), mi, M, None))
         lo, hi = P_bb = (pts[u.id].min(0), pts[u.id].max(0))
         out_units.append(dict(id=u.id, label=u.label, kind=u.kind, chunk=u.chunk,
                               d=[round(float(x) * MM, 6) for x in disp[u.id]],
@@ -130,6 +172,8 @@ def main():
                               anchor=u.meta.get('anchor'), axis=u.meta.get('axis')))
     root = g.node('OpenDrone', None, None, None, kids)
     g.write(os.path.join(a.out, 'raw.glb'), root)
+    # builder airframe (public/models/frame<N>.glb): the structural parts, Onshape style
+    lg.write(os.path.join(a.out, 'frame-legacy.glb'), lg.node('Frame', None, None, None, legacy_kids))
     json.dump(out_units, open(os.path.join(a.out, 'units.json'), 'w'), indent=1)
     json.dump(dict(units=out_units, groups=make_groups(units, drop)), open(os.path.join(a.out, 'explode.json'), 'w'), separators=(',', ':'))
     print(len(out_units), 'units,', os.path.getsize(os.path.join(a.out, 'raw.glb')) // 1024, 'KB raw')

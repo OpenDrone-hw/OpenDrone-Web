@@ -142,7 +142,11 @@ type Model = {root: THREE.Object3D; parts: Part[]};
  *  "occurrence_of_Top", "Airtag/Antenna mount" as "AirtagAntenna_mount");
  *  undo the separators and drop the Onshape occurrence prefix. */
 function partName(o: THREE.Object3D): string {
-  return o.name
+  // Assets from scripts/hero-assets/explode carry the CAD part name in `part`
+  // (their node names are unit ids for the homepage hero); older exports only
+  // have the node name.
+  const cad = typeof o.userData?.part === 'string' ? (o.userData.part as string) : o.name;
+  return cad
     .toLowerCase()
     .replace(/_/g, ' ')
     .replace(/^occurrence of /, '')
@@ -192,10 +196,12 @@ async function prepareModel(
     // share one occurrence position.
     const key = (o: THREE.Object3D) =>
       `${Math.round(o.position.x * 1000)},${Math.round(o.position.y * 1000)}`;
-    const first = assemblyRoot.children[0];
+    // Explode-pipeline assets: one node per motor whose children are its bodies.
+    const unitMotors = assemblyRoot.children.filter((c) => c.userData?.kind === 'motor');
+    const first = unitMotors[0] ?? assemblyRoot.children[0];
     const keep = first ? key(first) : '';
     for (const c of [...assemblyRoot.children]) {
-      if (key(c) !== keep) assemblyRoot.remove(c);
+      if (unitMotors.length ? c !== first : key(c) !== keep) assemblyRoot.remove(c);
     }
     scene.updateMatrixWorld(true);
     const unit =
@@ -208,7 +214,7 @@ async function prepareModel(
     // The body node under each occurrence carries no rotation of its own, so
     // its local Y is the shaft axis and spinning it turns the part in place.
     const bodies = assemblyRoot.children
-      .map((c) => (c.children.length === 1 ? c.children[0] : c))
+      .flatMap((c) => (c.userData?.kind === 'motor' ? c.children : [c.children.length === 1 ? c.children[0] : c]))
       .map((obj) => ({obj, h: centreOf(obj).dot(up)}))
       .sort((a, b) => a.h - b.h);
     const n = bodies.length;

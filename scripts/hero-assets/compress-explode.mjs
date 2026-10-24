@@ -3,6 +3,7 @@
 //
 //   node --max-old-space-size=8192 compress-explode.mjs <dir with raw.glb + units.json> <outdir>
 //
+// --legacy mode compresses the builder airframe (frame<N>.glb) the same way, undecimated.
 // Same compression as build-hero.mjs (weld, dedup, meshopt simplify with a tighter
 // bound and untouched silkscreen on boards, reorder, quantize, meshopt).
 import {makeIO} from './io.mjs';
@@ -14,6 +15,17 @@ import {join} from 'node:path';
 
 await MeshoptEncoder.ready;
 await MeshoptSimplifier.ready;
+// Builder airframe: node compress-explode.mjs --legacy <frame-legacy.glb> <public/models/frame3.glb>
+if (process.argv[2] === '--legacy') {
+  const [, , , src, dst] = process.argv;
+  const io0 = await makeIO();
+  const d = await io0.read(src);
+  await d.transform(weld(), dedup(), reorder({encoder: MeshoptEncoder}), quantize({quantizePosition: 16, quantizeNormal: 10}));
+  await d.transform(meshopt({encoder: MeshoptEncoder, level: 'high', quantizePosition: 16}));
+  await io0.write(dst, d);
+  console.log(`${dst} ${(statSync(dst).size / 1024).toFixed(0)} KB`);
+  process.exit(0);
+}
 const [IN, OUT] = process.argv.slice(2);
 if (!IN || !OUT) { console.error('usage: compress-explode.mjs <in dir> <outdir>'); process.exit(1); }
 mkdirSync(OUT, {recursive: true});

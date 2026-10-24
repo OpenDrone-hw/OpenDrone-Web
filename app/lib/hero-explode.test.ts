@@ -16,8 +16,8 @@ function glbNodeNames(file: string): Set<string> {
   const b = readFileSync(file);
   assert.equal(b.toString('latin1', 0, 4), 'glTF', `${file} is not a GLB`);
   const len = b.readUInt32LE(12);
-  const json = JSON.parse(b.toString('utf8', 20, 20 + len));
-  return new Set((json.nodes ?? []).map((n: {name?: string}) => n.name ?? ''));
+  const json = JSON.parse(b.toString('utf8', 20, 20 + len)) as {nodes?: Array<{name?: string}>};
+  return new Set((json.nodes ?? []).map((n) => n.name ?? ''));
 }
 
 test('there is at least one exploded design', () => {
@@ -79,6 +79,33 @@ for (const design of designs) {
     for (const u of ex.units.filter((x) => x.kind === 'screw')) {
       const total = u.moves.reduce((s, m) => s + Math.hypot(...m.v), 0);
       assert.ok(total > 0.002, `${u.id} stays in its hole`);
+    }
+  });
+}
+
+// The builder airframe (registry.ts) is an Onshape-style GLB: root "Frame", one
+// "occurrence of <part>" node per structural part.
+test('builder airframes keep the Onshape-style layout', () => {
+  for (const size of ['3', '5']) {
+    const names = glbNodeNames(join(root, `frame${size}.glb`));
+    assert.ok(names.has('Frame'), `frame${size}.glb root`);
+    for (const part of ['Top', 'Base-Top', 'Base-Bot', 'Arm', 'Cross', 'Standoff-L', 'Standoff-R']) {
+      assert.ok(names.has(`occurrence of ${part}`), `frame${size}.glb lacks ${part}`);
+    }
+  }
+});
+
+// FrameViewer matches parts by CAD name (extras.part) and finds one node per motor.
+for (const design of designs) {
+  test(`${design}: product-page viewer can read frame.glb and drive.glb`, () => {
+    for (const [file, kind] of [['frame.glb', 'arm'], ['drive.glb', 'motor']] as const) {
+      const b = readFileSync(join(root, design, file));
+      const json = JSON.parse(b.toString('utf8', 20, 20 + b.readUInt32LE(12))) as {
+        nodes?: Array<{extras?: {part?: string; kind?: string}}>;
+      };
+      const kinds = (json.nodes ?? []).map((n) => n.extras?.kind).filter(Boolean);
+      assert.ok(kinds.includes(kind), `${design}/${file} has no ${kind} node with extras`);
+      assert.ok((json.nodes ?? []).every((n) => !n.extras || typeof n.extras.part === 'string'), `${design}/${file}: a unit lacks extras.part`);
     }
   });
 }

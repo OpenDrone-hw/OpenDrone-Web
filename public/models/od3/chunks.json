@@ -5,42 +5,42 @@
       "id": "frame",
       "label": "airframe and hardware",
       "file": "frame.glb",
-      "bytes": 263676,
+      "bytes": 269092,
       "verts": 27379
     },
     {
       "id": "drive",
       "label": "motors and props",
       "file": "drive.glb",
-      "bytes": 209728,
-      "verts": 24563
+      "bytes": 344536,
+      "verts": 20481
     },
     {
       "id": "board-OpenESC-20x20-4in1-mini",
       "label": "OpenESC-20x20-4in1-mini",
       "file": "board-OpenESC-20x20-4in1-mini.glb",
-      "bytes": 892216,
+      "bytes": 892264,
       "verts": 167245
     },
     {
       "id": "board-OpenFC-Lite-Mini",
       "label": "OpenFC-Lite-Mini",
       "file": "board-OpenFC-Lite-Mini.glb",
-      "bytes": 581584,
+      "bytes": 581620,
       "verts": 105601
     },
     {
       "id": "board-OpenRX-Lite-UFL",
       "label": "OpenRX-Lite-UFL",
       "file": "board-OpenRX-Lite-UFL.glb",
-      "bytes": 313884,
+      "bytes": 313920,
       "verts": 51938
     },
     {
       "id": "video",
       "label": "camera and video system",
       "file": "video.glb",
-      "bytes": 387236,
+      "bytes": 387508,
       "verts": 53004
     }
   ]

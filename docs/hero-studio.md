@@ -105,6 +105,11 @@ cp /tmp/out3/explode.json ../../public/models/od3/
 finite timed moves, exists as a node in its chunk, every beat selects a real group, chunk
 sizes match `chunks.json`.
 
+## Other readers of these assets
+
+- **Product page Specs drawing** (`FrameViewer`, OpenFrame and OpenMotor): reads `od3|od5/frame.glb` and `drive.glb`. It matches parts by CAD name, so every node carries `extras.part` (the CAD part name) and `FrameViewer.partName` prefers it over the node name. Each motor is one node whose children are its bodies, shaft along local Y, so the shaft-axis explode and the spinning bell keep working. Verified for both sizes on `/products/openframe` and `/products/openmotor`.
+- **Builder airframe** (`public/models/frame3.glb`, `frame5.glb`, listed in `app/lib/builder/registry.ts`): `build_explode.py` also writes `frame-legacy.glb` (root `Frame`, one `occurrence of <part>` node per carbon plate, arm, cross, aluminium side plate and standoff, CAD colours with gold side plates), and `compress-explode.mjs --legacy <in> <out>` compresses it undecimated. 165 KB (3") and 171 KB (5"), was 187 KB and 172 KB. Same coordinates as before (and as the boards), z up. No route mounts the legacy `HeroScene` that reads them today.
+
 ## studio.json
 
 Look and motion tuning only: lighting, the spotlight, camera (`distance`, `height`,
