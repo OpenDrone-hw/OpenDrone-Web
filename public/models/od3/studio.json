@@ -292,7 +292,10 @@
         "group": "rx"
       },
       "handle": "openrx",
-      "partSize": 0.7
+      "partSize": 0.72,
+      "frameKinds": [
+        "rx"
+      ]
     },
     {
       "id": "motor",
@@ -305,7 +308,10 @@
       "hint": "Three wires each to the ESC.",
       "href": "/products/openmotor",
       "handle": "openmotor",
-      "partSize": 0.8
+      "partSize": 0.62,
+      "frameKinds": [
+        "motor"
+      ]
     },
     {
       "id": "frame",

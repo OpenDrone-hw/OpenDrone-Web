@@ -134,8 +134,11 @@ Look and motion tuning only: lighting (dark rig only, the site has no light them
 `heightOnPart`, `lift`, `stageShift`, `azimuth`), the dim of a selected part, scroll feel, material
 profiles, and the beat copy. A beat is `select: {none: true}` or `select: {group}` with
 a group from `explode.json` (`fc`, `esc`, `rx`, `motor` (one motor with prop, boot and
-screws), `frame`, `video`); `partSize` is the fraction of the viewport height the group
-fills. The beat copy is unchanged from before (`handle` pulls the caption and the link
+screws), `frame`, `video`); `partSize` is the fraction of the viewport height the framed
+parts fill. `frameKinds` (optional, a list of explode.json part kinds) frames only the
+group's core body while the whole group stays lit: the motor beat frames `["motor"]`, not
+the prop, boot and screws flying round it, and the RX beat frames `["rx"]`, not its
+antenna. The beat copy is unchanged from before (`handle` pulls the caption and the link
 from the product's What-does-this-do content).
 
 Materials: each GLB material is named `<class>|<r,g,b>` and the class picks the profile

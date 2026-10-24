@@ -761,11 +761,20 @@ export function HeroDroneScene({
         }>;
         /** The parts this beat focuses, from explode.json `groups`. */
         nodes: Array<{node: THREE.Object3D}>;
+        /** The parts the camera frames: the group's core body when the beat
+         *  names `frameKinds`, else the whole group. A motor group carries its
+         *  prop, boot and screws, an RX group its antenna; framed on all of
+         *  them, the part itself ends up small in a loose shot. */
+        frameNodes: THREE.Object3D[];
       };
       const BEATS: Beat[] = cfg.beats.map((b: any) => {
         const ids: string[] = b.select?.group ? EX.groups[b.select.group] ?? [] : [];
-        const nodes = ids.map((id) => UNITS.get(id)).filter(Boolean).map((u) => ({node: (u as Unit).node}));
+        const units = ids.map((id) => UNITS.get(id)).filter((u): u is Unit => Boolean(u));
+        const nodes = units.map((u) => ({node: u.node}));
         if (!nodes.length && !b.select?.none) console.warn(`[hero] beat "${b.id}" resolved to 0 nodes`);
+        const kinds: string[] | undefined = Array.isArray(b.frameKinds) ? b.frameKinds : undefined;
+        const core = kinds ? units.filter((u) => kinds.includes(u.kind)).map((u) => u.node) : [];
+        if (kinds && !core.length) console.warn(`[hero] beat "${b.id}" frameKinds matched no part, framing the whole group`);
         return {
           id: b.id,
           title: b.title,
@@ -784,6 +793,7 @@ export function HeroDroneScene({
           partSize: b.partSize,
           stops: b.stops,
           nodes,
+          frameNodes: core.length ? core : nodes.map((n) => n.node),
         };
       });
       // The reported copy payload. With a stop index, the stop's copy replaces
@@ -1668,7 +1678,7 @@ export function HeroDroneScene({
         const camStateOf = (bi: number, size0: number) => {
           const bb = BEATS[bi];
           if (!bb.nodes.length) return {c: overviewFocus, back: baseBack, h: heightOv};
-          const sp = sphereOf(bb.nodes.map((n) => n.node));
+          const sp = sphereOf(bb.frameNodes);
           return {
             c: sp.center.clone(),
             back: THREE.MathUtils.clamp(sp.radius / ((bb.partSize ?? size0) * halfTan), droneRadius * 0.28, baseBack),
