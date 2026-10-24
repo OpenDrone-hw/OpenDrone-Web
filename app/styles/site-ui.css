@@ -445,9 +445,6 @@
   height: 100%;
   object-fit: contain;
 }
-html.light .po-card-media img {
-  mix-blend-mode: multiply;
-}
 /* CAD renders on the same paper tone as the board photos. */
 .po-card-media.is-render {
   position: relative;
@@ -509,9 +506,6 @@ html.light .po-card-media img {
 }
 .po-card-cta:hover {
   background: var(--color-gold-soft);
-}
-html.light .po-card-cta {
-  color: var(--color-text);
 }
 .po-card-cta:disabled {
   border-color: var(--color-border);
@@ -1303,7 +1297,6 @@ html.light .po-card-cta {
 /* A board export is the part itself: it reads clearly around the table, and
    a scrim over the table's columns quiets it under the spec text. */
 .product-silhouette[data-board] .product-silhouette-art { opacity: 0.1; }
-html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.12; }
 .product-silhouette[data-board] .product-silhouette-art {
   -webkit-mask-image: linear-gradient(90deg, #000 12%, rgb(0 0 0 / 0.4) 26%, rgb(0 0 0 / 0.4) 74%, #000 88%);
   mask-image: linear-gradient(90deg, #000 12%, rgb(0 0 0 / 0.4) 26%, rgb(0 0 0 / 0.4) 74%, #000 88%);
@@ -1311,7 +1304,6 @@ html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.
 @media (max-width: 767px) {
   /* The table spans the phone's width: no clear sides, so a lower flat value. */
   .product-silhouette[data-board] .product-silhouette-art { opacity: 0.06; }
-  html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.08; }
   .product-silhouette[data-board] .product-silhouette-art { -webkit-mask-image: none; mask-image: none; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1564,13 +1556,6 @@ a.hero-build-add { text-decoration: none; }
   }
 }
 
-/* Light theme: footer dim text reaches 4.5:1. */
-html.light .footer-sheet-heading {
-  opacity: 1;
-}
-html.light .footer-ref {
-  opacity: 0.92;
-}
 
 /* Landscape phones and other short windows: the fixed header and the pinned
    buy bar together cover 40 percent of a 390px screen. Compact header, and
