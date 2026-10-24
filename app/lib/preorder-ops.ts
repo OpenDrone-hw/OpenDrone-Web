@@ -19,10 +19,10 @@
  * and returned; the pass itself never throws.
  */
 
-import type {CampaignConfig} from './preorder-campaign.ts';
+import type {CampaignConfig, UnitRuns} from './preorder-campaign.ts';
 import {syncPreorderHolds} from './preorder-fulfilment.ts';
 import {recordOps} from './preorder-ops-status.ts';
-import {fetchPaidUnits} from './shopify-orders.ts';
+import {fetchPaidUnitRuns} from './shopify-orders.ts';
 import {priceTierWritesEnabled, syncPriceTiers, type TierChange} from './shopify-price-tier.ts';
 
 type OpsEnv = Parameters<typeof syncPriceTiers>[0] & Partial<Pick<Env, 'STAGING_PASSWORD' | 'PREORDER_HOLDS_ENABLED'>>;
@@ -60,9 +60,9 @@ export async function reconcilePreorders(
   let skipped: Record<string, string> = {};
   let priceError: string | null = null;
   if (priceTierWritesEnabled(env)) {
-    let units: Record<string, number> | null = null;
+    let units: Record<string, UnitRuns> | null = null;
     try {
-      units = await fetchPaidUnits(env, config.countFrom, new Set(Object.keys(config.skus)), fetcher);
+      units = await fetchPaidUnitRuns(env, config.countFrom, new Set(Object.keys(config.skus)), fetcher);
       recordOps('paidCounts');
     } catch (error) {
       recordOps('paidCounts', {error});

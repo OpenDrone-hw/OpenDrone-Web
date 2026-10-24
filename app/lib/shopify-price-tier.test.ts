@@ -89,6 +89,20 @@ describe('syncPriceTiers', () => {
     assert.equal(calls.filter((c) => c.query.includes('productVariantsBulkUpdate')).length, 1);
   });
 
+  it('counts the EU buyer\'s batch, not every region\'s units', async () => {
+    const config = parseCampaignConfig({
+      ...CONFIG,
+      skus: {'OPENFC-LITE-3030': {batches: [
+        {units: 250, reserved: 25, paid: true, ships: 'ships early November 2026', regions: ['EU']},
+        {units: 250},
+      ]}},
+    });
+    const {fetcher} = shopify([{sku: 'OPENFC-LITE-3030', price: '39.00', compareAtPrice: null}]);
+    const runs = {'OPENFC-LITE-3030': [{region: 'EU' as const, units: 172}, {region: 'US' as const, units: 117}]};
+    const result = await syncPriceTiers(ENV, config, runs, {apply: true, fetcher});
+    assert.deepEqual(result.changed, [{sku: 'OPENFC-LITE-3030', from: 39, to: 35.1, compareAt: 39}]);
+  });
+
   it('clears the compare-at price past the last step', async () => {
     const {fetcher} = shopify([
       {sku: 'OPENESC-2020', price: '44.10', compareAtPrice: '49.00'},

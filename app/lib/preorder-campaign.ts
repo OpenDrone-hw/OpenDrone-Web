@@ -12,7 +12,8 @@
  * Prices stay in Shopify: the compare-at price is the retail price and the
  * price is what the next unit costs. `priceTiers` says how the price steps
  * as paid units come in, for example the first 100 at 20% off and units 101
- * to 250 at 10% off, then retail. `app/lib/shopify-price-tier.ts` writes each
+ * to 250 at 10% off, then retail, counted the way the product page step bar
+ * reads for an EU buyer ({@link tierUnits}). `app/lib/shopify-price-tier.ts` writes each
  * step to Shopify; until it has, a SKU whose Shopify price is below its tier
  * closes rather than sell under it.
  *
@@ -249,6 +250,9 @@ export type CampaignState = {
   tierUpTo: number | null;
   /** Units left in the current step, 0 once every step is used up. */
   tierLeft: number;
+  /** The units the price step counts ({@link tierUnits}); absent on a state
+   *  without steps. */
+  tierOrdered?: number;
   /** Share off retail for the next unit, 0 past the last step. */
   tierOff: number;
   /** What the next unit costs, from retail and the step. Null without a
@@ -652,11 +656,28 @@ export function batchOfUnit(batches: CampaignBatch[], unit: number): {batch: num
 }
 
 /**
+ * The units the price step counts: where the product page step bar
+ * (`stepBarView`) of an EU buyer stands, so the price follows the bar. That
+ * is the sellable units of the batches before the EU buyer's batch that
+ * serve the EU (sold out to them) plus the units already in that batch. An
+ * EU-only batch of paid stock counts only its own units, and a batch of
+ * another region never moves the step. Shopify holds one price per variant
+ * for every region, so the EU buyer's batch sets it (founder 2026-10-24).
+ */
+export function tierUnits(batches: CampaignBatch[], ordered: PaidUnitsOf): number {
+  const list = openBatches(batches);
+  const fill = batchFill(batches, ordered);
+  const index = nextIndex(list, fill, 'EU');
+  const before = list.slice(0, index).filter((b) => servesRegion(b, 'EU')).reduce((sum, b) => sum + sellableUnits(b), 0);
+  return before + fill[index];
+}
+
+/**
  * The campaign state for one SKU after `ordered` paid units, for the next
  * unit of a buyer in `region`. Once a funding target is reached, later
  * units ship with it (see {@link openBatches}). A US unit never falls into
- * a batch that serves only the EU. The price steps and the funding target
- * count every region.
+ * a batch that serves only the EU. The funding target counts every region;
+ * the price step counts {@link tierUnits}.
  */
 export function campaignState(
   batches: CampaignBatch[],
@@ -672,7 +693,8 @@ export function campaignState(
   const index = nextIndex(list, fill, region);
   const current = list[index];
 
-  const tierIndex = priceTiers.findIndex((t) => units < t.upTo);
+  const stepUnits = tierUnits(batches, ordered);
+  const tierIndex = priceTiers.findIndex((t) => stepUnits < t.upTo);
   const tier = tierIndex < 0 ? null : priceTiers[tierIndex];
 
   const targetIndex = batches.findIndex((b) => !b.paid);
@@ -696,7 +718,8 @@ export function campaignState(
     paidLeft: current.paid ? sellableUnits(current) - fill[index] : null,
     earlyPrice: tier !== null,
     tierUpTo: tier?.upTo ?? null,
-    tierLeft: tier ? tier.upTo - units : 0,
+    tierLeft: tier ? tier.upTo - stepUnits : 0,
+    tierOrdered: stepUnits,
     tierOff: tier?.off ?? 0,
     price: tierPrice(retail, tier?.off ?? 0),
     nextPrice: tier ? tierPrice(retail, priceTiers[tierIndex + 1]?.off ?? 0) : null,

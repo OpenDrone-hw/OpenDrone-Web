@@ -1800,7 +1800,8 @@ function ProductPage() {
   // Batch progress with its price schedule available on demand. A US buyer's
   // steps are the EUR steps as Shopify's US market prices them
   // (`withMarketPrices`); a step the live rounding cannot prove reads "about".
-  const nextUnit = campaign ? campaign.ordered + 1 : 0;
+  // The step the next unit is on reads the step bar's count, not every unit sold.
+  const nextUnit = campaign ? (campaign.tierOrdered ?? campaign.ordered) + 1 : 0;
   const shownLadder: Array<{from: number; to: number | null; price: number; approx?: boolean}> | null =
     campaign?.usLadder?.length ? campaign.usLadder : ladder;
   // A paid batch's cap ends the steps this buyer can reach.
