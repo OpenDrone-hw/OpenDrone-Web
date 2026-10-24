@@ -14,11 +14,7 @@ describe('buildThemeCss', () => {
     // Not one rule with many declarations: a value that still derails its own
     // rule then takes only itself down, not the whole theme.
     const css = buildThemeCss({'--color-bg': '#000', '--color-gold': 'gold'});
-    assert.equal(css.match(/:root,html\.light,html\.dark\{/g)?.length, 2);
-  });
-
-  it('covers html.light, which would otherwise out-specify :root', () => {
-    assert.ok(buildThemeCss({'--color-bg': '#000'}).includes('html.light'));
+    assert.equal(css.match(/:root\{/g)?.length, 2);
   });
 
   it('drops an unbalanced url( without losing its neighbours', () => {

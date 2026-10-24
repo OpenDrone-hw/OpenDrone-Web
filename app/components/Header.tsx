@@ -7,7 +7,6 @@ import {useAside} from '~/components/Aside';
 import {LangToggle} from '~/components/LangToggle';
 import {useHeaderPopover} from '~/components/header-popover';
 import {RegionSwitch} from '~/components/RegionSwitch';
-import {ThemeToggle} from '~/components/ThemeToggle';
 import {SiteWordmark} from '~/components/SiteWordmark';
 import {IncutecWordmark} from '~/components/IncutecWordmark';
 import {Pod} from '~/components/Pod';
@@ -878,7 +877,6 @@ function HeaderCtas({
       <div className="site-header-utils">
         <LangToggle className="header-lang-toggle" />
         <RegionSwitch variant="menu" className="header-region-switch" />
-        <ThemeToggle className="site-header-icon" />
         {/* The community: desktop only here, the phone drawer lists it. */}
         <DiscordLink
           placement="header"

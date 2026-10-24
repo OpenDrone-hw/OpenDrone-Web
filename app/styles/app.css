@@ -97,8 +97,7 @@
      there is nothing to keep in sync. Hover LIFTS toward white because the
      base is already at the chroma ceiling and cannot go brighter. */
   --color-gold-hover: color-mix(in oklab, var(--color-gold) 82%, white);
-  /* Gold used as TEXT. Same as --color-gold on dark; html.light swaps in a
-     deep gold (6.1:1 on the light background) so labels stay legible. */
+  /* Gold used as TEXT. Same as --color-gold. */
   --color-gold-text: var(--color-gold);
   --color-gold-text-hover: var(--color-gold-hover);
   --color-gold-soft: color-mix(in srgb, var(--color-gold) 12%, transparent);
@@ -109,17 +108,14 @@
      dark ink on top. Same gold as text now, so these are plain aliases. */
   --color-gold-fill: var(--color-gold);
   --color-gold-fill-hover: var(--color-gold-hover);
-  /* The "Drone" half of the OpenDrone wordmark and its ambient sheen.
-     html.light swaps in a deeper gold: the brand gold is 1.6:1 on the
-     cream background and the logo half vanished. */
+  /* The "Drone" half of the OpenDrone wordmark and its ambient sheen. */
   --color-wordmark-gold: var(--color-gold-fill);
   --color-wordmark-sheen: color-mix(in srgb, var(--color-gold-fill) 55%, white);
 
   /* Brand / PCB green. --color-green is the emerald brand green: a
      physical product color (#147A31, used on the motors). Rendered
-     lighter on dark for legibility (#4ea866); the true #147A31 takes over
-     on light (AA 5.4:1 on white, see html.light). --color-green-deep is
-     the dark solder-mask PCB green for fills/borders (same in both modes).
+     lighter for legibility on dark (#4ea866). --color-green-deep is
+     the dark solder-mask PCB green for fills/borders (same everywhere).
      --color-stock aliases the brand green, so stock/success re-theme with
      it automatically. */
   --color-green: #4ea866;
@@ -131,13 +127,11 @@
   --color-border-strong: #34343c;
 
   /* Text/icon color that sits ON the gold accent (filled buttons, badges,
-     active toggles). Dark in both themes: gold reads best with dark ink.
-     Decoupled from --color-bg so light mode can flip the page background
-     without dragging on-accent text light with it. */
+     active toggles). Dark ink: gold reads best with it. */
   --color-on-accent: var(--od-color-neutral-surface-dark);
   /* Focus ring. WCAG 1.4.11 wants 3:1 for focus indicators and, unlike a
      logo, a focus ring gets no exemption. Gold is 11.11:1 here on dark so
-     it stays; html.light swaps it for ink, where gold would be 1.62:1. */
+     it stays. */
   --color-focus: var(--color-gold);
 
   /* Legacy alias map: collapses the old dual gold/green CTA system
@@ -235,87 +229,6 @@
   }
 }
 
-/* ============================================================
-   LIGHT MODE
-   The @theme block above is the dark default. `html.light`
-   overrides the semantic color tokens; every var(--color-*)
-   consumer re-themes for free. Below the token swap are the
-   handful of spots that hardcoded a dark value (load overlay,
-   header backdrop, floating controls) and need a light twin.
-   The init script in root.tsx puts .light/.dark on <html>
-   before first paint.
-   ============================================================ */
-html.light {
-  --color-bg: var(--od-color-neutral-surface-light); /* warm off-white, not clinical #fff */
-  --color-bg-card: #ffffff;
-  --color-bg-elevated: #efece6; /* recessed/raised neutral surface */
-  --color-text: var(--od-color-neutral-ink);
-  --color-text-muted: #57575c;
-  --color-text-dim: #6b6b70;
-  /* Pencil on paper: dark ink at low opacity already reads on the warm
-     off-white, so light keeps the softer muted grey. */
-  --art-ink: color-mix(in srgb, var(--color-text-muted) 45%, transparent);
-  --art-logo-ink: color-mix(in srgb, var(--color-text-muted) 14%, transparent);
-  /* Light-mode gold (maintainer 2026-08-14): there is no light-mode gold any
-     more. The 2026-07-12 pass unified the two themes on #c89d2e and accepted
-     ~2.6:1 for gold text on white; this pass keeps that decision and fixes the
-     colour it was made with. Every gold token now inherits from @theme
-     unchanged, so nothing is overridden here: deleting these overrides IS the
-     change. Gold as text goes through --color-gold-text, which swaps to a
-     deep gold here (6.1:1); fills, borders and rules keep the brand gold.
-     Focus rings use --color-focus. */
-  --color-gold-soft: color-mix(in srgb, var(--color-gold) 14%, transparent);
-  --color-focus: var(--color-text);
-  --color-gold-text: #7a5700;
-  --color-gold-text-hover: #5c4200;
-  /* Emerald PCB/brand green, AA 5.4:1 on white. --color-green-deep and
-     --color-stock (= var(--color-green)) inherit from @theme and re-theme
-     through this value automatically. */
-  --color-green: #147A31;
-  /* Error red deep enough for light: 6.08:1 on #f7f6f3, 6.57:1 on #fff (AA).
-     The dark-mode #f87171 only hits 2.56:1 here. */
-  --color-error: #b42318;
-  --color-border: #e4e0d8;
-  --color-border-strong: #cfc9bd;
-  /* --color-on-accent stays the dark default from @theme: bright gold fill
-     + dark ink is exactly the dark-mode combination, now shared by both
-     themes. (The old white-on-deep-gold pairing is what forced the fill
-     brown in the first place.) */
-
-  /* Pod surface, light twin. */
-  --pod-bg: rgba(247, 246, 243, 0.82);
-  --pod-bg-strong: rgba(255, 255, 255, 0.96);
-  --pod-shadow: 0 10px 30px -16px rgba(60, 50, 30, 0.3);
-}
-
-/* Mode-specific surfaces that bypassed the token system. */
-html.light .scene-dim {
-  background-color: rgba(247, 246, 243, 0.9);
-}
-/* header pill + frame slider now use --pod-bg, which has its own light twin -
-   no per-surface light override needed. */
-html.light .product-gallery-controls {
-  background: rgba(255, 255, 255, 0.7);
-}
-/* Schematic sheets are black-on-white KiCad exports. Dark mode inverts them
-   to white blueprint lines; light mode drops the invert so they read as dark
-   ink on a white sheet of paper. */
-html.light .schematic-sheet {
-  filter: contrast(1.15);
-}
-
-/* ── Gold tags: REMOVED (maintainer 2026-07-12) ──────────────────────────────
-   The old "gold text is always on a near-black chip" rule lived here: in
-   light mode every gold label/eyebrow/badge got a --color-tag-bg chip so
-   gold never touched white. It scattered black boxes across light pages
-   and read as broken, so the whole block is gone. Gold text now sits
-   directly on the light background as a ~2.6:1 brand accent (see the
-   light-mode --color-gold note above). The `.gold-tag` JSX class is now
-   inert: safe to leave in markup, no styling attached. If you need gold
-   on a genuinely dark surface within a light page, set the text to
-   var(--color-gold-bright) and give the element its own dark background;
-   don't reintroduce a blanket chip rule. */
-
 /* Default price treatment. Display sans, tabular figures. Specialised
    per-context by .product-buy-price overrides. */
 .product-price {
@@ -351,6 +264,7 @@ html.light .schematic-sheet {
    defines its own --font-sans default which would otherwise win
    against our @theme override at the html selector. */
 html {
+  color-scheme: dark;
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: "Inter", "Inter Fallback", -apple-system, BlinkMacSystemFont, ui-sans-serif,
@@ -537,9 +451,7 @@ html {
 /* Thin-line scroll hint under the hero - fades out over the first ~13% of
    scroll. Driven by --hero-p so it needs no per-frame React render. */
 /* Hero scene glow: a soft warm radial behind the drone so the stage isn't a
-   flat slab of background. Dark mode lifts the centre with a gold-tinted glow;
-   light mode (twin below) tints the centre warm and feathers a faint vignette
-   to the edges so it reads as a gradient instead of one flat colour. */
+   flat slab of background. The centre lifts with a gold-tinted glow. */
 
 body {
   min-height: 100vh;
@@ -905,23 +817,6 @@ html.anim-paused .board-sheet.is-active {
   }
 }
 
-/* Theme toggle: same muted-icon treatment as the search/cart actions. */
-.theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.15s ease;
-}
-
-.theme-toggle:hover {
-  color: var(--color-text);
-}
-
 /* Region switch (EUR | USD): the lang-toggle pill, one side pressed. Sits in
    the header on desktop; on phones the drawer carries the full-size copy. */
 .region-switch {
@@ -1005,27 +900,7 @@ html.anim-paused .board-sheet.is-active {
   padding: 0.5rem 1.1rem;
 }
 
-/* Circular theme reveal: the new theme wipes in as a circle expanding from
-   the toggle click point (set on --vt-x/--vt-y in ThemeToggle). Old stays put,
-   new clips open over it. Only active while .theme-vt is on <html>, so it
-   never affects any other view transition. JS skips this under reduced-motion
-   and where unsupported. */
 @supports (view-transition-name: root) {
-  html.theme-vt::view-transition-old(root) {
-    animation: none;
-  }
-  html.theme-vt::view-transition-new(root) {
-    animation: theme-circle-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-  @keyframes theme-circle-in {
-    from {
-      clip-path: circle(0% at var(--vt-x, 100%) var(--vt-y, 0%));
-    }
-    to {
-      clip-path: circle(150% at var(--vt-x, 100%) var(--vt-y, 0%));
-    }
-  }
-
   /* Navigation View Transitions: viewTransition-enabled links cross-fade the
      page instead of swapping flat, so moving between products / sections feels
      continuous (no "refresh"). The floating header/island gets its own
@@ -1592,8 +1467,7 @@ html.anim-paused .board-sheet.is-active {
 }
 /* The chip rules (.site-header-categories a / .site-header-cat-group a) also
    match the pod's product links: they bled gold colour, UPPERCASE tracking and
-   a 0.7 opacity onto the whole dropdown row, which washed the text out (worst in
-   light mode). Reset the row to full contrast, pin a concentric radius, then
+   a 0.7 opacity onto the whole dropdown row, which washed the text out Reset the row to full contrast, pin a concentric radius, then
    style each line explicitly: the SKU title gold, family + price neutral. */
 .site-header-categories .header-cat-pod .product-pod {
   border-radius: var(--r-lg);
@@ -1601,9 +1475,6 @@ html.anim-paused .board-sheet.is-active {
   padding: var(--sp-2);
   text-transform: none;
   letter-spacing: normal;
-}
-html.light .header-cat-pod {
-  background: var(--pod-bg-strong);
 }
 /* Bigger, clearer product imagery in the header dropdowns (50% up from the
    3rem shared default; the hero showcase keeps its own sizing). */
@@ -1649,12 +1520,11 @@ html.light .header-cat-pod {
   transition: opacity 0.15s ease, color 0.15s ease, font-weight 0.15s ease;
 }
 
-/* Dark keeps the quiet 0.7 resting state; on the light header the deep
-   gold at reduced opacity drops below readable contrast. */
-html:not(.light) .site-header-categories a:not(:hover):not(.active):not([aria-current='page']) {
+/* Quiet 0.7 resting state for the category links. */
+html:root .site-header-categories a:not(:hover):not(.active):not([aria-current='page']) {
   opacity: 0.7;
 }
-html:not(.light) .site-header-categories .site-header-cat-group a:not(:hover):not(.active):not([aria-current='page']) {
+html:root .site-header-categories .site-header-cat-group a:not(:hover):not(.active):not([aria-current='page']) {
   opacity: 0.72;
 }
 
@@ -4795,15 +4665,6 @@ button.reset {
   }
 }
 
-/* Light mode: a near-black slab reads far too heavy (maintainer, 2026-08-12), so
-   drop the tile and invert the white-on-transparent mark to near-black on
-   the page, mirroring how a multi-colour mark sits transparent. filter
-   would invert a background/border too, hence transparent and none. */
-html.light .firmware-logo--tile {
-  background: transparent;
-  border: none;
-  filter: invert(1);
-}
 /* First-reveal entrance: each layer flies in from the left to its resting fan
    position, staggered by --depth. The layers keep their FULL resting look
    (filters/glow) throughout: only `translate` animates, ending at 0: so the
@@ -5345,7 +5206,7 @@ section.chapter[data-centered] .chapter-body-col {
 
 /* Related cards - spec-forward tiles (board render, catalog-file eyebrow,
    one-line spec, mono price) with a pointer-following gold spotlight on
-   hover. All tokens, so light mode comes for free. */
+   hover. All tokens. */
 .related-grid {
   /* Same rhythm as .products-grid so the strip reads as one catalog. */
   display: grid;
@@ -10442,9 +10303,6 @@ a.what-chain-chip:hover {
     rgb(0 0 0 / 1) 82%
   );
 }
-html.light .editorial-watermark {
-  opacity: 0.026;
-}
 
 /* Margin art: one stroke-only drawing per section, floated into the free
    canvas right of the prose column and aligned with its section's top.
@@ -11184,13 +11042,6 @@ html.light .editorial-watermark {
   --map-line: #26262c;
   --map-line-strong: #32323a;
 }
-html.light {
-  --map-land: #e6e3dc;
-  --map-water: #d6e4ec;
-  --map-water-line: #bcd3df;
-  --map-line: #dcd8cf;
-  --map-line-strong: #cdc8bd;
-}
 
 /* Map of the Vaartkom behind /visit (scripts/gen-visit-map.py). The canvas
    is the SVG at one pixel per metre, offset so the lab sits on --pin-x /
@@ -11231,9 +11082,6 @@ html.light {
   background: var(--map-land) url('/makerspace/map-dark.svg') 0 0 / 100% 100% no-repeat;
 }
 
-html.light .visit-map-canvas {
-  background-image: url('/makerspace/map-light.svg');
-}
 
 .visit-map-pin {
   position: absolute;
@@ -11525,8 +11373,7 @@ html.light .visit-map-canvas {
   color: var(--color-gold-text-hover);
 }
 
-/* Roadmap (/roadmap): hairline rows, mono status chips. Tokens only,
-   so light mode themes itself. */
+/* Roadmap (/roadmap): hairline rows, mono status chips. Tokens only. */
 /* ── Status kanban (roadmap page) ──────────────────────────────────────
    The working board, drawn with hairlines and the three-state dot
    vocabulary: buyable states filled (beta additionally ringed), alpha a
@@ -12685,7 +12532,7 @@ html.light .visit-map-canvas {
 .rn-archive-head .rn-eyebrow .rn-rss {
   display: inline-flex;
   gap: 6px;
-  /* Gold as text: the token that deepens in light theme (1.4:1 before). */
+  /* Gold as text. */
   color: var(--color-gold-text);
   text-decoration: none;
 }
@@ -14522,12 +14369,6 @@ html.light .visit-map-canvas {
 .step-bar[data-funded] .step-bar-label {
   color: var(--color-stock);
 }
-/* Light theme: gold text is a brand accent only there (see html.light), so
-   the preorder words go to ink and the gold stays on dots and bars. */
-html.light .cart-sheet-item .cart-line-preorder {
-  color: var(--color-text);
-}
-
 /* The desktop thumbnail strip sits below the square media frame, which
    clips it to a sliver; the arrow pill and counter already navigate. */
 @media (min-width: 1024px) {
@@ -14676,9 +14517,6 @@ html.light .cart-sheet-item .cart-line-preorder {
   object-fit: contain;
   border-radius: var(--r-sm);
   background: var(--color-bg-elevated);
-}
-html.light .cart-added-line img {
-  mix-blend-mode: multiply;
 }
 .cart-added-line-name {
   display: block;
@@ -14931,9 +14769,6 @@ a.cart-added-suggestion-name:hover {
   object-fit: contain;
   border-radius: var(--r-sm);
   background: var(--color-bg-elevated);
-}
-html.light .cart-added-suggestion img {
-  mix-blend-mode: multiply;
 }
 .cart-added-suggestion-name {
   display: block;
@@ -15434,8 +15269,7 @@ button[data-waiting] {
    a green dot for a dated batch. Same look as the PDP .ship-line. */
 .ship-chip,
 .cart-sheet-item .ship-chip,
-.cart-added .ship-chip,
-html.light .cart-sheet-item .ship-chip {
+.cart-added .ship-chip {
   display: flex;
   align-items: flex-start;
   gap: 0.4rem;
@@ -15451,10 +15285,6 @@ html.light .cart-sheet-item .ship-chip {
 .ship-chip-label {
   color: var(--color-gold-text);
   font-weight: 500;
-}
-html.light .ship-chip-label {
-  color: var(--color-text);
-  font-weight: 600;
 }
 
 /* Cart: the site gutter on phones, a stepper that stays visible when
@@ -15493,7 +15323,7 @@ body:has(main.cart) footer .footer-note--newsletter {
 
 /* OSHWA chip: the mark is an <img>, so its currentColor paths render
    black; a small light plate keeps it readable in the dark theme. */
-html:not(.light) .trust-chip-oshwa-mark {
+html:root .trust-chip-oshwa-mark {
   box-sizing: content-box;
   padding: 0.12em 0.2em;
   border-radius: 3px;
@@ -16573,11 +16403,8 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   /* On the dark reveal card, use full-brightness brand gold so the badge
-     pops; light mode swaps back to --color-gold (the card goes near-white). */
+     pops. */
   color: var(--color-gold-bright);
-}
-html.light .hero-reveal-soon {
-  color: var(--color-gold);
 }
 .hero-drag-hint {
   position: absolute;
@@ -16662,20 +16489,6 @@ html.light .hero-reveal-soon {
     rgba(80, 65, 20, 0.3) 0%,
     transparent 60%
   );
-}
-html.light .hero-scene-glow {
-  background:
-    radial-gradient(
-      ellipse at 50% 45%,
-      rgba(199, 154, 50, 0.18) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse at 50% 42%,
-      transparent 15%,
-      rgba(38, 36, 40, 0.28) 70%,
-      rgba(28, 26, 32, 0.45) 100%
-    );
 }
 @media (max-width: 640px) {
   .hero-wordmark {
@@ -17502,10 +17315,6 @@ html.hero-header-in .homepage-layout .site-header {
   --pin-motor: var(--color-green);
   --pin-nc: var(--color-text-dim);
   margin-top: var(--sp-6);
-}
-html.light .plugs {
-  --ink-line: color-mix(in srgb, var(--color-gold-text) 35%, transparent);
-  --pin-signal: #1f5fbf;
 }
 .plugs-top {
   display: flex;
@@ -18827,9 +18636,6 @@ summary,
   color-scheme: dark;
   padding-top: 14px;
   border-top: 1px solid var(--color-border);
-}
-html.light .testing-card {
-  color-scheme: light;
 }
 /* The chapter grid leaves an empty row between the heading and the card: close it. */
 @media (min-width: 880px) {

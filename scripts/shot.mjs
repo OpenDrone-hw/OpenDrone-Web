@@ -3,13 +3,13 @@
 // Examples:
 //   node scripts/shot.mjs / dark            -> .mobile-audit/shots/home-dark.png (full page)
 //   node scripts/shot.mjs /products/openesc dark .board-art board-esc
-//   node scripts/shot.mjs /products light 800
+//   node scripts/shot.mjs /products dark 800
 import {chromium, devices} from 'playwright';
 import {mkdir} from 'node:fs/promises';
 import path from 'node:path';
 
 const BASE = process.env.BASE || 'http://localhost:3001';
-const [route = '/', scheme = 'light', target, outName, devName = 'iPhone 13'] =
+const [route = '/', scheme = 'dark', target, outName, devName = 'iPhone 13'] =
   process.argv.slice(2);
 const OUT = path.resolve('.mobile-audit/shots');
 await mkdir(OUT, {recursive: true});

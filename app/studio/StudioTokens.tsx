@@ -26,7 +26,6 @@ type Token = {
   value: string;
   group: string;
   derivedFrom: string[];
-  light: string | null;
 };
 
 const TOKENS = (catalogue as {tokens: Token[]}).tokens;
@@ -96,8 +95,7 @@ export function StudioTokens({
    *
    * A single `<style>` element owned by the studio, replaced wholesale on every
    * change. Appended last and scoped to `:root`, so it wins on order against
-   * `@theme` at the same specificity. `html.light` also targets a single class
-   * and would out-specify `:root`, so the block is emitted for both.
+   * `@theme` at the same specificity.
    */
   const paint = useCallback(() => {
     const doc = frame.current?.contentDocument;
@@ -113,7 +111,7 @@ export function StudioTokens({
       .map(([k, v]) => `  ${k}: ${v};`)
       .join('\n');
     el.textContent = body
-      ? `:root,\nhtml.light,\nhtml.dark {\n${body}\n}`
+      ? `:root {\n${body}\n}`
       : '';
   }, [overrides, frame]);
 

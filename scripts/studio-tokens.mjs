@@ -20,16 +20,14 @@ const OUT = path.resolve('app/studio/token-catalogue.json');
 // so a single `}` inside a comment truncates the block — and because it
 // returns a short-but-non-null string, the `if (!theme) throw` guard never
 // fires and the script silently writes zero tokens. Same class of bug as the
-// opener that used to match `html.light` inside a comment on line 76.
+// opener that matched inside a comment.
 const css = fs.readFileSync(CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
 /**
  * Pull the body of a top-level block, brace-counting so nested rules survive.
  *
  * `opener` is a regex anchored to the start of a line, not a plain substring:
- * app.css mentions `html.light` inside a comment on line 76, and an indexOf
- * would find that first and then brace-count from the wrong place. It silently
- * returned one token instead of eighteen.
+ * an indexOf could match inside a comment and brace-count from the wrong place.
  */
 function blockBody(source, opener) {
   const m = opener.exec(source);
@@ -51,12 +49,6 @@ function blockBody(source, opener) {
 
 const theme = blockBody(css, /^@theme\b/m);
 if (!theme) throw new Error('No @theme block found in app/styles/app.css');
-const light = blockBody(css, /^html\.light\s*\{/m);
-// Never write a catalogue that quietly lost the light theme. If the selector is
-// ever reformatted or grouped (`html.light,\nhtml.dark {`) this must be a loud
-// failure, not 18 missing overrides nobody notices until the studio is wrong.
-if (!light) throw new Error('No `html.light {` block found in app/styles/app.css');
-
 /** `--name: value;` at the top level of a block, ignoring comments. */
 function parseDecls(body) {
   const out = [];
@@ -70,8 +62,6 @@ function parseDecls(body) {
 }
 
 const themeDecls = parseDecls(theme);
-const lightDecls = light ? parseDecls(light) : [];
-const lightMap = Object.fromEntries(lightDecls.map((d) => [d.name, d.value]));
 
 /**
  * Group by what the value IS, not by name prefix. A token called `--pod-bg`
@@ -99,7 +89,6 @@ const tokens = themeDecls.map((d) => ({
   // read-only with their source, so nobody edits `--color-accent` wondering why
   // `--color-gold` did not move.
   derivedFrom: [...d.value.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]),
-  light: lightMap[d.name] ?? null,
 }));
 
 if (tokens.length === 0) throw new Error('Parsed zero tokens from @theme — refusing to write an empty catalogue');
@@ -122,4 +111,3 @@ console.warn(
     .map(([g, n]) => `  ${g}: ${n}`)
     .join('\n'),
 );
-console.warn(`  (${lightDecls.length} have a light-mode override)`);

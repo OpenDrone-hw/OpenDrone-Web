@@ -290,7 +290,7 @@ items remain as design rationale; the rest describe current behavior.
 - **No touch support.** The gate above means phones get the DOM copy rather than
   a broken scene, but tablets over 768px will load the 3D and be unable to drive
   it. A `touchmove` path is the missing piece.
-- **The 3D is hardcoded dark** and does not follow the site's light/dark toggle.
+- **The 3D is hardcoded dark**, like the rest of the site.
   Hemisphere and beam colours are literals, and `darkenRest: 1.0` would drive
   non-focused parts to black on a white page.
 - **No tiered loading.** The 6 MB GLB blocks the first frame.
