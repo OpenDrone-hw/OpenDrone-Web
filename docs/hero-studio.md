@@ -29,10 +29,9 @@ app/components/HeroDroneScene.tsx  ->  the site
    the stack first (it is a disassembly: screws leave with the part they thread into),
    and the stagger is continuous in the scroll position. The camera pulls back from the
    assembled to the exploded framing with it. No idle spin.
-2. Once exploded: hover a part for its name (the rest dims), click to select it (the
-   camera eases to it, the name stays; click empty space or press Escape to release).
-   The Collapse / Explode button under the viewer overrides the scroll until the reader
-   scrolls again.
+2. Once exploded: hover a part and the rest dims; click to select it (the camera eases
+   to it; click empty space or press Escape to release). There is no on-screen chrome:
+   no part label, no collapse / explode button, no progress rail.
 3. Orbit: drag turns the view around the current focus, damped, with the elevation
    clamped (no flipping under the model). The drag is an offset on the scripted view: the
    scripted camera is frozen while the pointer is down, the offset stays after release and
@@ -41,11 +40,11 @@ app/components/HeroDroneScene.tsx  ->  the site
    survives leaving the canvas, hover picking and wheel steps are off while pressed, and
    `touch-action: pan-y` keeps vertical swipes scrolling the page while a horizontal
    one-finger drag orbits.
-4. The scroll walkthrough is the existing one (stops, spring, rail ticks, keyboard, deep
+4. The scroll walkthrough is the existing one (stops, spring, keyboard, deep
    links `/#fc`, `#esc`, `#rx`, `#frame`, `#motors`, which land exploded). Each beat focuses
    a group of the exploded model: the camera moves straight from one beat's group to the
-   next (no pull-back to the overview between, no rest stops), eased and smoothed, the rest
-   dims and a spotlight lights the group. The dim crossfades (the lit set fades out, the
+   next (no pull-back to the overview between, no rest stops), eased and smoothed, and the
+   rest dims; the lights stay as they are. The dim crossfades (the lit set fades out, the
    new one fades in) instead of switching. A selection is dropped when the walkthrough
    moves.
 5. `prefers-reduced-motion`: the 3D still loads on desktop, but starts on the exploded
