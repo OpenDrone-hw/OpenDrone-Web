@@ -1,35 +1,37 @@
 {
   "name": "OpenDrone 3\"",
   "lighting": {
-    "exposure": 1.15,
-    "environment": 0.7,
-    "ambient": 0.3,
+    "toneMapping": "aces",
+    "exposure": 0.95,
+    "environment": 0.35,
+    "ambient": 0.04,
+    "groundShadow": 0.6,
     "background": "#0a0c0f",
     "key": {
-      "power": 3.2,
-      "azimuth": 89,
-      "elevation": 46,
-      "colour": "#e69728"
+      "power": 2.3,
+      "azimuth": 55,
+      "elevation": 52,
+      "colour": "#ffffff"
     },
     "fill": {
-      "power": 1.0,
-      "azimuth": 135,
-      "elevation": 36,
-      "colour": "#e5f7de"
+      "power": 0.25,
+      "azimuth": 150,
+      "elevation": 18,
+      "colour": "#9db4d8"
     },
     "rim": {
-      "power": 2.6,
-      "azimuth": 283,
-      "elevation": 31,
-      "colour": "#cfe2ff"
+      "power": 2.8,
+      "azimuth": 238,
+      "elevation": 24,
+      "colour": "#ffd2a0"
     },
     "bounce": {
-      "power": 0.3,
-      "colour": "#7d7417"
+      "power": 0.04,
+      "colour": "#555555"
     }
   },
   "spotlight": {
-    "power": 14,
+    "power": 5.5,
     "beam": 0.44,
     "strike": 0.27,
     "coneAngle": 26,
@@ -42,7 +44,7 @@
     "stageLeft": 0.28,
     "boardTilt": 0.04,
     "stageLift": -0.06,
-    "colour": "#ffd7a0",
+    "colour": "#fff1de",
     "beamColour": "#ffcf96",
     "beamGain": 4
   },
@@ -62,9 +64,19 @@
       "label": "side plate (anodised gold)",
       "match": null,
       "tint": null,
-      "metalness": 0.78,
-      "roughness": 0.26,
-      "env": 0.9,
+      "metalness": 0.9,
+      "roughness": 0.22,
+      "env": 1.0,
+      "sat": 1
+    },
+    {
+      "id": "carbonedge",
+      "label": "carbon cut edge",
+      "match": null,
+      "tint": null,
+      "metalness": 0.0,
+      "roughness": 0.8,
+      "env": 0.4,
       "sat": 1
     },
     {
@@ -82,9 +94,9 @@
       "label": "carbon fibre",
       "match": "^(Arm|Cross|Base-Top|Base-Bot|Top)$",
       "tint": null,
-      "metalness": 0.1,
-      "roughness": 0.3,
-      "env": 0.95,
+      "metalness": 0.0,
+      "roughness": 1.0,
+      "env": 0.9,
       "sat": 1
     },
     {
@@ -103,7 +115,7 @@
       "match": "^Admi",
       "tint": null,
       "metalness": 1,
-      "roughness": 0.32,
+      "roughness": 0.26,
       "env": 0.9,
       "sat": 1
     },
@@ -183,8 +195,8 @@
       "match": "(screw|hex nut|pressnut|press nut|washer)",
       "tint": null,
       "metalness": 1,
-      "roughness": 0.36,
-      "env": 0.9,
+      "roughness": 0.3,
+      "env": 0.7,
       "sat": 1
     },
     {
@@ -345,5 +357,5 @@
     "selectFade": 0.7
   },
   "_howto": "Exploded-view hero. Assets are built from the final STEP assemblies by scripts/hero-assets/explode (see docs/hero-studio.md): <chunk>.glb files streamed in the order of chunks.json, explode.json (parts, labels, timed moves, beat groups). This file holds look and motion tuning only. Materials are chosen by the class each GLB material is named with ('<class>|<r,g,b>'); the match regexes are a fallback for older exports.",
-  "_lightingNote": "Dark rig only (the site has no light theme). Near-black CAD colours are lifted to a dark grey at build time (build_explode.py) and the environment map is strong enough that carbon, TPU, props and grommets keep their shape and reflections on the dark background."
+  "_lightingNote": "Low-key studio: ACES filmic tone mapping at a pulled-back exposure, a soft white key, a warm kicker behind-left that traces edges and gives the gold side plates and motor bells a glint, a cool low fill, a modest environment map for reflections on carbon, gold and screws, and a soft contact shadow disc. Dark theme only (the site has no light theme)."
 }

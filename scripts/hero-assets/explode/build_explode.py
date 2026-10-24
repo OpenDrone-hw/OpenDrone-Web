@@ -26,6 +26,42 @@ MOTOR_GOLD = (0.984, 0.714, 0.0)
 MOTOR_GREEN = (0.078, 0.478, 0.192)
 SIDE_GOLD = (0.984, 0.714, 0.0)   # anodised Pantone 7549 C, #FBB600
 MM = 0.001
+TILE_MM = 8 * 1.8      # one twill tile: 8 tows of 1.8 mm, as in scripts/in-the-box
+EDGE_GREY = (0.17, 0.18, 0.20)
+
+
+def _subset(v, t, mask):
+    tt = t[mask]
+    used, inv = np.unique(tt, return_inverse=True)
+    return v[used], inv.reshape(-1, 3)
+
+
+def carbon_prims(groups):
+    """Carbon part: the flat faces get world-consistent planar UVs (one unit = one twill
+    tile, weave along the part's long axis) and the material `carbon|twill`, which the
+    scene dresses with public/models/carbon/twill-*.png (made by carbon_texture.py; the
+    GLB carries no image, the CSP has no blob: img-src). Cut edges stay plain dark matte.
+    groups: {rgb: (verts mm local, tris)} -> prims in mm."""
+    allv = np.concatenate([v for v, _ in groups.values()])
+    c = allv.mean(0)
+    _, _, vt = np.linalg.svd(allv - c, full_matrices=False)
+    e1, e2, e3 = vt                     # long, wide, thin (face normal)
+    out = []
+    for rgb, (v, t) in groups.items():
+        v = v.astype(np.float64)
+        a, b, cc = v[t[:, 0]], v[t[:, 1]], v[t[:, 2]]
+        n = np.cross(b - a, cc - a)
+        ln = np.linalg.norm(n, axis=1, keepdims=True)
+        n = n / np.where(ln == 0, 1, ln)
+        flat = np.abs(n @ e3) > 0.97
+        if flat.any():
+            fv, ft = _subset(v, t, flat)
+            uv = np.stack([(fv - c) @ e1, (fv - c) @ e2], 1) / TILE_MM
+            out.append(('carbon|twill', (0.5, 0.5, 0.51), fv, ft, dict(uv=uv)))
+        if (~flat).any():
+            ev, et = _subset(v, t, ~flat)
+            out.append(('carbonedge|' + ','.join(f'{x:.3f}' for x in EDGE_GREY), EDGE_GREY, ev, et))
+    return out
 
 
 LEGACY_FRAME = ('bottom', 'middle', 'top', 'arm', 'cross', 'side', 'standoff')
@@ -152,9 +188,12 @@ def main():
             leaf, cls = u.leaves[0]
             b = bases[leaf['base']]
             prims = []
-            for rgb, (v, t) in b['groups'].items():
-                c = recolour(cls or u.cls, rgb)
-                prims.append(((cls or u.cls) + '|' + ','.join(f'{x:.3f}' for x in c), c, v * MM, t))
+            if (cls or u.cls) == 'carbon':
+                prims = [(p[0], p[1], p[2] * MM, p[3], *p[4:]) for p in carbon_prims(b['groups'])]
+            else:
+                for rgb, (v, t) in b['groups'].items():
+                    c = recolour(cls or u.cls, rgb)
+                    prims.append(((cls or u.cls) + '|' + ','.join(f'{x:.3f}' for x in c), c, v * MM, t))
             mi = g.mesh(('base', leaf['base'], cls or u.cls), prims, b['name'])
             M = leaf['M'].copy(); M[:3, 3] *= MM
             node = g.node(u.id, mi, M, extras)

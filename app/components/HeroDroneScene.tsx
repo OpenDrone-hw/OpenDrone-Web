@@ -202,7 +202,7 @@ export function HeroDroneScene({
       onModel?.(folder);
       const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
       renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMapping = cfg.lighting.toneMapping === 'agx' ? THREE.AgXToneMapping : THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = cfg.lighting.exposure;
       el.append(renderer.domElement);
       renderer.domElement.style.display = 'block';
@@ -348,6 +348,30 @@ export function HeroDroneScene({
       const cache = new Map<string, THREE.MeshStandardMaterial>();
       const equivalentMaterials = new Map<string, THREE.MeshStandardMaterial>();
       const sourceMaterials = new Set<THREE.Material>();
+      // Carbon twill maps (public/models/carbon, made by scripts/hero-assets/explode/
+      // carbon_texture.py). Loaded here and not embedded in the GLB: the page's img-src
+      // allows 'self' but not the blob: URLs GLTFLoader makes for embedded images.
+      let carbonTex: {albedo: THREE.Texture; mr: THREE.Texture; normal: THREE.Texture} | null = null;
+      const carbonMaps = () => {
+        if (!carbonTex) {
+          const tl = new THREE.TextureLoader();
+          const aniso = renderer.capabilities.getMaxAnisotropy();
+          const load = (file: string, srgb: boolean) => {
+            const t = tl.load(`/models/carbon/${file}?v=${V}`);
+            t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            t.anisotropy = Math.min(8, aniso);
+            if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+            return t;
+          };
+          carbonTex = {albedo: load('twill-albedo.png', true), mr: load('twill-mr.png', false), normal: load('twill-normal.png', false)};
+          cleanup.push(() => {
+            carbonTex?.albedo.dispose();
+            carbonTex?.mr.dispose();
+            carbonTex?.normal.dispose();
+          });
+        }
+        return carbonTex;
+      };
       const paint = (sub: THREE.Object3D, root: THREE.Object3D) => {
         sub.traverse((o: any) => {
           if (!o.isMesh || o.userData.painted) return;
@@ -372,6 +396,16 @@ export function HeroDroneScene({
           if (!m) {
             m = o.material.clone();
             applyProfile(m as THREE.MeshStandardMaterial, key);
+            if (key === 'carbon' && o.geometry.attributes.uv) {
+              const tx = carbonMaps();
+              const sm = m as THREE.MeshStandardMaterial;
+              sm.map = tx.albedo;
+              sm.roughnessMap = tx.mr;
+              sm.normalMap = tx.normal;
+              sm.normalScale.set(0.3, 0.3);
+              sm.color.setRGB(1, 1, 1);
+              sm.needsUpdate = true;
+            }
             const {uuid: _uuid, name: _name, ...properties} = m!.toJSON();
             const signature = JSON.stringify(properties);
             const shared = equivalentMaterials.get(signature);
@@ -579,10 +613,34 @@ export function HeroDroneScene({
         scene.updateMatrixWorld(true);
         const b = new THREE.Box3().setFromObject(rig);
         const sph = b.getBoundingSphere(new THREE.Sphere());
-        return {centre: sph.center.clone(), radius: sph.radius};
+        return {centre: sph.center.clone(), radius: sph.radius, floor: b.min.y};
       };
       const F0 = framing(0);
       const F1 = framing(1);
+      // A soft contact shadow under the drone: a radial gradient disc, no shadow maps.
+      const blobCanvas = document.createElement('canvas');
+      blobCanvas.width = blobCanvas.height = 128;
+      {
+        const g = blobCanvas.getContext('2d')!;
+        const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+        grad.addColorStop(0, 'rgba(0,0,0,0.85)');
+        grad.addColorStop(0.45, 'rgba(0,0,0,0.38)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = grad;
+        g.fillRect(0, 0, 128, 128);
+      }
+      const blobTex = new THREE.CanvasTexture(blobCanvas);
+      const blobMat = new THREE.MeshBasicMaterial({map: blobTex, transparent: true, depthWrite: false, opacity: cfg.lighting.groundShadow ?? 0.6});
+      const blob = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blobMat);
+      blob.rotation.x = -Math.PI / 2;
+      blob.renderOrder = -1;
+      blob.frustumCulled = false;
+      scene.add(blob);
+      cleanup.push(() => {
+        blob.geometry.dispose();
+        blobMat.dispose();
+        blobTex.dispose();
+      });
       const droneCentre = F0.centre.clone();
       let droneRadius = F0.radius;
 
@@ -1430,6 +1488,8 @@ export function HeroDroneScene({
         // out to the exploded size as the parts fly apart.
         droneRadius = THREE.MathUtils.lerp(F0.radius, F1.radius, ep);
         const centreNow = F0.centre.clone().lerp(F1.centre, ep);
+        blob.position.set(centreNow.x, THREE.MathUtils.lerp(F0.floor, F1.floor, ep) - droneRadius * 0.04, centreNow.z);
+        blob.scale.setScalar(droneRadius * (1.05 + 0.2 * ep));
         updateHeroMatrices(moving);
         scene.updateMatrixWorld();
 

@@ -163,9 +163,25 @@ CAD whites and greys), and near-black CAD colours are lifted to a dark grey at b
 shipped colour: the only remaining orange-ish surfaces are small electronics on the boards
 and the air unit (JST connector, capacitors, ENIG pads).
 
-Lighting: ACES tone mapping at exposure 1.15, a RoomEnvironment map at 0.7 (this is what
-gives carbon, gold anodise and screws their reflections), a warm key, a cool rim, a fill and
-a faint hemisphere light; all in `studio.json` `lighting`.
+Carbon: the same 2x2 twill as the In-the-box art (`scripts/in-the-box`: 8x8 tows of 1.8 mm,
+one 14.4 mm tile, the Blender tone ramp, roughness 0.40 minus 0.12 on the warp, normal from
+crown minus gap). `explode/carbon_texture.py` writes albedo, roughness and normal PNGs
+(256 px, about 7 KB in all) to `public/models/carbon/`. At build time the flat faces of each carbon part
+(`build_explode.py`: bottom, middle and top plate, arms, cross) get planar UVs in the part's
+own long-axis frame, one UV unit per tile, so the weave runs along the part's long axis and
+the scale is the same on every part; the cut edges are a separate plain dark matte primitive
+(`carbonedge`), so nothing is stretched on the sides. The GLB carries the UVs and the material
+name `carbon|twill` only; the scene loads the three maps itself (a GLB-embedded image would
+become a blob: URL, which the page's CSP blocks) and dresses the carbon material with them
+(`normalScale` 0.3, anisotropic filtering). The sheen comes from the normal map under the
+key and kicker; MeshStandardMaterial has no anisotropy.
+
+Lighting (low-key studio, `studio.json` `lighting`): ACES filmic tone mapping at exposure
+0.95 (`toneMapping: "agx"` is also supported), a RoomEnvironment map at 0.35 for reflections
+on carbon, gold anodise and screws, a soft white key, a warm kicker behind-left that traces
+edges and gives the gold side plates and motor bells their glint, a cool low fill, almost no
+ambient, and a soft contact shadow disc under the drone (a radial gradient plane, no shadow
+maps; `groundShadow` is its opacity).
 
 ## Limits
 

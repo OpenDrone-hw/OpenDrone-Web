@@ -109,3 +109,24 @@ for (const design of designs) {
     }
   });
 }
+
+// Carbon twill: the flat faces of the carbon parts carry planar UVs (the scene loads the
+// maps from public/models/carbon, the GLB embeds no image: the CSP blocks blob: images).
+for (const design of designs) {
+  test(`${design}: carbon faces have UVs and the twill maps exist`, () => {
+    for (const f of ['twill-albedo.png', 'twill-mr.png', 'twill-normal.png']) {
+      assert.ok(statSync(join(root, 'carbon', f)).size > 500, f);
+    }
+    const b = readFileSync(join(root, design, 'frame.glb'));
+    const json = JSON.parse(b.toString('utf8', 20, 20 + b.readUInt32LE(12))) as {
+      materials?: Array<{name?: string}>;
+      images?: unknown[];
+      meshes?: Array<{primitives: Array<{material?: number; attributes: Record<string, number>}>}>;
+    };
+    const idx = new Set((json.materials ?? []).flatMap((m, i) => (m.name === 'carbon|twill' ? [i] : [])));
+    assert.ok(idx.size > 0, 'no carbon material');
+    assert.ok(!json.images?.length, 'the GLB must not embed images');
+    const prims = (json.meshes ?? []).flatMap((m) => m.primitives).filter((p) => p.material !== undefined && idx.has(p.material));
+    assert.ok(prims.length > 0 && prims.every((p) => 'TEXCOORD_0' in p.attributes), 'carbon prims lack TEXCOORD_0');
+  });
+}

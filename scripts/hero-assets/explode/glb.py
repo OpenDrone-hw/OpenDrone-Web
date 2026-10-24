@@ -1,5 +1,5 @@
 """Minimal glTF 2.0 binary writer (nodes, shared meshes, PBR colours, extras)."""
-import json, struct
+import json, struct, os
 import numpy as np
 
 
@@ -32,10 +32,8 @@ class Glb:
     def material(self, name, rgb):
         key = (name, tuple(rgb))
         if key not in self.matkey:
-            self.mats.append(dict(name=name, pbrMetallicRoughness=dict(baseColorFactor=[*rgb, 1.0], metalness=0.0 if False else None, roughnessFactor=1.0)))
-            m = self.mats[-1]['pbrMetallicRoughness']
-            m['metallicFactor'] = 0.0
-            del m['metalness']
+            pbr = dict(baseColorFactor=[*rgb, 1.0], metallicFactor=0.0, roughnessFactor=1.0)
+            self.mats.append(dict(name=name, pbrMetallicRoughness=pbr))
             self.matkey[key] = len(self.mats) - 1
         return self.matkey[key]
 
@@ -44,7 +42,9 @@ class Glb:
         if key in self.mesh_cache:
             return self.mesh_cache[key]
         gp = []
-        for matname, rgb, v, t in prims:
+        for prim in prims:
+            matname, rgb, v, t = prim[:4]
+            extra = prim[4] if len(prim) > 4 else {}
             v = v.astype(np.float32)
             n = normals_for(v, t)
             idx = t.astype(np.uint32).reshape(-1)
@@ -57,7 +57,12 @@ class Glb:
                 dict(bufferView=a_nor, componentType=5126, count=len(v), type='VEC3'),
                 dict(bufferView=a_idx, componentType=5125, count=len(idx), type='SCALAR'),
             ]
-            gp.append(dict(attributes=dict(POSITION=base, NORMAL=base + 1), indices=base + 2, material=self.material(matname, rgb)))
+            attrs = dict(POSITION=base, NORMAL=base + 1)
+            if 'uv' in extra:
+                a_uv = self._view(extra['uv'].astype(np.float32), 34962)
+                self.acc.append(dict(bufferView=a_uv, componentType=5126, count=len(v), type='VEC2'))
+                attrs['TEXCOORD_0'] = len(self.acc) - 1
+            gp.append(dict(attributes=attrs, indices=base + 2, material=self.material(matname, rgb)))
         self.meshes.append(dict(name=name, primitives=gp))
         self.mesh_cache[key] = len(self.meshes) - 1
         return self.mesh_cache[key]

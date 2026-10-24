@@ -5,8 +5,8 @@
       "id": "frame",
       "label": "airframe and hardware",
       "file": "frame.glb",
-      "bytes": 326528,
-      "verts": 41833
+      "bytes": 349840,
+      "verts": 37490
     },
     {
       "id": "drive",

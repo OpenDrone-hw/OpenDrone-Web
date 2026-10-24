@@ -49,7 +49,7 @@ for (const cid of chunkIds) {
   for (const n of [...cAsm.listChildren()]) {
     if (chunkOf.get(n.getName()) !== cid) { n.dispose(); }
   }
-  await clone.transform(prune({keepAttributes: false}));
+  await clone.transform(prune({keepAttributes: true}));
   mergePrimitives(clone);
   const isBoard = cid.startsWith('board-');
   const hiRes = isBoard || cid === 'frame';
@@ -61,7 +61,7 @@ for (const cid of chunkIds) {
         // Ink and pads are thin geometry: keep their exact triangles.
         if (/^(silk|padgold)\|/.test(mat)) continue;
         // Carbon plates are already cheap and need crisp edges.
-        if (/^carbon\|/.test(mat)) continue;
+        if (/^carbon(edge)?\|/.test(mat)) continue;
         simplifyPrimitive(p, {simplifier: MeshoptSimplifier, ratio: RATIO, error: isBoard ? Math.min(ERROR, 0.0005) : ERROR});
       }
     }
