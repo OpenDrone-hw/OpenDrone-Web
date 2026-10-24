@@ -285,19 +285,15 @@ export function HeroDroneScene({
       aim(keyL, L.key.azimuth, L.key.elevation);
       aim(fillL, L.fill.azimuth, L.fill.elevation);
       aim(rimL, L.rim.azimuth, L.rim.elevation);
-      const BASE = {
-        hemi: hemi.intensity,
-        key: keyL.intensity,
-        fill: fillL.intensity,
-        rim: rimL.intensity,
-        bounce: bncL.intensity,
-      };
+      // One fixed studio rig in world space, set once: exposure, environment and
+      // every light above keep these values from the first assembling frame to
+      // the end of the walkthrough. Nothing below may change them per frame.
+      // There used to be a focus spotlight placed relative to the camera (its
+      // highlight slid across the part as the camera swept) and a 12% dip of
+      // the whole rig on every focus: both read as the lighting never settling.
+      // A focused part is now set apart only by dimming the rest (darkenRest).
 
       const S = cfg.spotlight;
-      // A spotlight (no visible shaft) lights whatever the walkthrough or the
-      // reader is focusing on; it is dark otherwise.
-      const spotL = new THREE.SpotLight(S.colour ?? 0xffd7a0, S.power, 0, 0.5, S.softness, 2);
-      scene.add(spotL, spotL.target);
 
       // Onshape is Z-up, three is Y-up. `pivot` scales the drone about its own
       // centre so the airframe can recede without dragging the shown part.
@@ -366,27 +362,34 @@ export function HeroDroneScene({
       // Carbon twill maps (public/models/carbon, made by scripts/hero-assets/explode/
       // carbon_texture.py). Loaded here and not embedded in the GLB: the page's img-src
       // allows 'self' but not the blob: URLs GLTFLoader makes for embedded images.
+      // Fetched up front and awaited before the first chunk is painted: a lazy
+      // load left the carbon flat white until the maps landed, then it popped
+      // to twill mid-assembly. If they fail, every carbon part stays plain.
       let carbonTex: {albedo: THREE.Texture; mr: THREE.Texture; normal: THREE.Texture} | null = null;
-      const carbonMaps = () => {
-        if (!carbonTex) {
-          const tl = new THREE.TextureLoader();
-          const aniso = renderer.capabilities.getMaxAnisotropy();
-          const load = (file: string, srgb: boolean) => {
-            const t = tl.load(`/models/carbon/${file}?v=${V}`);
-            t.wrapS = t.wrapT = THREE.RepeatWrapping;
-            t.anisotropy = Math.min(8, aniso);
-            if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-            return t;
-          };
-          carbonTex = {albedo: load('twill-albedo.png', true), mr: load('twill-mr.png', false), normal: load('twill-normal.png', false)};
-          cleanup.push(() => {
-            carbonTex?.albedo.dispose();
-            carbonTex?.mr.dispose();
-            carbonTex?.normal.dispose();
-          });
-        }
-        return carbonTex;
-      };
+      const carbonReady = (async () => {
+        const tl = new THREE.TextureLoader();
+        const aniso = renderer.capabilities.getMaxAnisotropy();
+        const load = async (file: string, srgb: boolean) => {
+          const t = await tl.loadAsync(`/models/carbon/${file}?v=${V}`);
+          t.wrapS = t.wrapT = THREE.RepeatWrapping;
+          t.anisotropy = Math.min(8, aniso);
+          if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+          return t;
+        };
+        const [albedo, mr, normal] = await Promise.all([
+          load('twill-albedo.png', true),
+          load('twill-mr.png', false),
+          load('twill-normal.png', false),
+        ]);
+        carbonTex = {albedo, mr, normal};
+        cleanup.push(() => {
+          albedo.dispose();
+          mr.dispose();
+          normal.dispose();
+        });
+      })().catch((err: unknown) => {
+        console.warn('[hero] carbon maps did not load, carbon renders plain', err);
+      });
       const paint = (sub: THREE.Object3D, root: THREE.Object3D) => {
         sub.traverse((o: any) => {
           if (!o.isMesh || o.userData.painted) return;
@@ -411,8 +414,8 @@ export function HeroDroneScene({
           if (!m) {
             m = o.material.clone();
             applyProfile(m as THREE.MeshStandardMaterial, key);
-            if (key === 'carbon' && o.geometry.attributes.uv) {
-              const tx = carbonMaps();
+            if (key === 'carbon' && o.geometry.attributes.uv && carbonTex) {
+              const tx = carbonTex;
               const sm = m as THREE.MeshStandardMaterial;
               sm.map = tx.albedo;
               sm.roughnessMap = tx.mr;
@@ -578,6 +581,9 @@ export function HeroDroneScene({
       // Let HTTP/2 share the connection across all pieces. Parsing remains
       // serial and yields between pieces so downloads cannot stack CPU work.
       for (const chunk of chunks) void download(chunk);
+      // Every chunk gets its final materials the moment it lands, carbon included.
+      await carbonReady;
+      if (disposed) return;
       for (let i = 0; i < chunks.length; i++) {
         const c = chunks[i];
         activeChunk = c.id;
@@ -1659,12 +1665,6 @@ export function HeroDroneScene({
           u.brightness = bright;
         }
         lastBrightness = bright;
-        const d = 1 - S.dimLights * focusAmt;
-        hemi.intensity = BASE.hemi * d;
-        keyL.intensity = BASE.key * d;
-        fillL.intensity = BASE.fill * d;
-        rimL.intensity = BASE.rim * d;
-        bncL.intensity = BASE.bounce * d;
 
         /* ---- camera. The scripted view moves straight from one beat's framing to
          * the next (no pull-back to the overview between), eased and smoothed; the
@@ -1762,27 +1762,6 @@ export function HeroDroneScene({
         camera.updateMatrixWorld();
         const cursor = dragging ? 'grabbing' : hovered ? 'pointer' : 'grab';
         if (el.style.cursor !== cursor) el.style.cursor = cursor;
-        const rightV = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
-
-        // Spotlight on whatever is focused.
-        if (focusNodes.length && focusAmt > 0.002) {
-          const fc = sphereOf(focusNodes).center.clone();
-          const dist = camera.position.distanceTo(fc);
-          const fwd = camera.getWorldDirection(new THREE.Vector3());
-          const up = camera.up;
-          const sideAng = THREE.MathUtils.degToRad(S.sideAngle);
-          spotL.position
-            .copy(fc)
-            .addScaledVector(up, dist * S.height)
-            .addScaledVector(rightV, dist * 0.55 * Math.sin(sideAng))
-            .addScaledVector(fwd, -dist * 0.55 * Math.cos(sideAng));
-          spotL.target.position.copy(fc);
-          spotL.target.updateMatrixWorld();
-          spotL.angle = THREE.MathUtils.degToRad(S.coneAngle);
-          spotL.penumbra = S.softness;
-          spotL.intensity = S.power * focusAmt * droneRadius * droneRadius;
-        } else spotL.intensity = 0;
-        spotL.updateMatrixWorld();
 
         batches?.update();
 
