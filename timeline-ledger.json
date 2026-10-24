@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-23T10:05:50.695Z",
+  "updatedAt": "2026-10-24T09:33:39.917Z",
   "repos": {
     "OpenESC-20x20": {
       "createdAt": "2026-03-09",
@@ -161,7 +161,7 @@
       "status": "alpha",
       "statusSince": "2026-10-01",
       "archived": false,
-      "releases": 0
+      "releases": 2
     },
     "OpenGPS": {
       "createdAt": "2026-09-19",
@@ -182,7 +182,7 @@
       "status": "alpha",
       "statusSince": "2026-10-01",
       "archived": false,
-      "releases": 0
+      "releases": 2
     }
   },
   "events": [
@@ -821,6 +821,50 @@
       "prerelease": false,
       "url": "https://github.com/OpenDrone-hw/OpenRX/releases/tag/rev2.2",
       "observed": "2026-10-03"
+    },
+    {
+      "id": "release:OpenFrame-3F:rev1",
+      "kind": "release",
+      "repo": "OpenFrame-3F",
+      "date": "2026-10-23",
+      "tag": "rev1",
+      "name": "OpenFrame-3F rev1 (2026-07-05)",
+      "prerelease": false,
+      "url": "https://github.com/OpenDrone-hw/OpenFrame-3F/releases/tag/rev1",
+      "observed": "2026-10-24"
+    },
+    {
+      "id": "release:OpenFrame-3F:rev2",
+      "kind": "release",
+      "repo": "OpenFrame-3F",
+      "date": "2026-10-23",
+      "tag": "rev2",
+      "name": "OpenFrame-3F rev2 (2026-10-20)",
+      "prerelease": false,
+      "url": "https://github.com/OpenDrone-hw/OpenFrame-3F/releases/tag/rev2",
+      "observed": "2026-10-24"
+    },
+    {
+      "id": "release:OpenFrame-5F:rev1",
+      "kind": "release",
+      "repo": "OpenFrame-5F",
+      "date": "2026-10-23",
+      "tag": "rev1",
+      "name": "OpenFrame-5F rev1 (2026-07-05)",
+      "prerelease": false,
+      "url": "https://github.com/OpenDrone-hw/OpenFrame-5F/releases/tag/rev1",
+      "observed": "2026-10-24"
+    },
+    {
+      "id": "release:OpenFrame-5F:rev2",
+      "kind": "release",
+      "repo": "OpenFrame-5F",
+      "date": "2026-10-23",
+      "tag": "rev2",
+      "name": "OpenFrame-5F rev2 (2026-10-20)",
+      "prerelease": false,
+      "url": "https://github.com/OpenDrone-hw/OpenFrame-5F/releases/tag/rev2",
+      "observed": "2026-10-24"
     }
   ]
 }
