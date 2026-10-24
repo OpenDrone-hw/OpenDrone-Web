@@ -176,7 +176,7 @@
     ],
     [
       "Weight",
-      "115 g"
+      "170 g, without TPU parts"
     ]
   ],
   "optionAxis": "Model",
@@ -374,7 +374,7 @@
         ],
         [
           "Weight",
-          "55 g"
+          "80 g, without TPU parts"
         ]
       ],
       "pins": [
@@ -431,9 +431,6 @@
         "3\"",
         "3in",
         "3-inch"
-      ],
-      "placeholders": [
-        "Weight"
       ],
       "inTheBox": [
         {
@@ -586,8 +583,5 @@
   "keywords": [
     "frame",
     "chassis"
-  ],
-  "placeholders": [
-    "Weight"
   ]
 }
