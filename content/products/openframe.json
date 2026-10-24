@@ -11,7 +11,7 @@
     "lead": ""
   },
   "whatIsThis": {
-    "intro": "A freestyle frame in T700 carbon, in two sizes: 3-inch (141 mm wheelbase) and 5-inch (226 mm). The stack mounts in the middle, the motors at the arm tips, and the camera in an aluminium mount at the front. TPU inserts slide into that mount and hold the camera; one insert for each common camera size is in the box. The 3-inch and 5-inch frames use the same insert size, so a camera and its insert move between them. A stiff frame vibrates less, which gives the flight controller a cleaner gyro signal. The 20 × 20 OpenFC Lite and OpenESC fit both sizes. The 30 × 30 versions fit the 5-inch frame only.",
+    "intro": "A freestyle frame in T700 carbon, in two sizes: 3-inch (141 mm wheelbase) and 5-inch (226 mm). The stack mounts in the middle, the motors at the arm tips, and the camera between two CNC aluminium side plates at the front. Soft TPU mounts hold the camera and the air unit, and TPU boots protect the arm tips. Incutec prints the TPU parts itself. They are preliminary: they fit the DJI O4 Pro only today, and other video systems are not supported yet. A stiff frame vibrates less, which gives the flight controller a cleaner gyro signal. The 20 × 20 OpenFC Lite and OpenESC fit both sizes. The 30 × 30 versions fit the 5-inch frame only.",
     "needs": [
       "A flight controller and ESC stack bolted in the middle",
       "Four motors and props at the arm tips",
@@ -57,7 +57,7 @@
       },
       {
         "ref": "⑦",
-        "part": "18 mm aluminium standoffs",
+        "part": "20 mm aluminium standoffs, M3 female-female",
         "cost": "×4"
       },
       {
@@ -66,11 +66,11 @@
       },
       {
         "ref": "⑨",
-        "part": "M3 hardware kit"
+        "part": "M3 and M4 hardware kit"
       },
       {
         "ref": "⑩",
-        "part": "TPU camera inserts for every camera size, arm boots, VTX mount and antenna mount: printed by Incutec, included",
+        "part": "TPU parts: arm boots, air unit mount, camera soft mounts, AirTag and antenna mount, bumper. Printed by Incutec, preliminary, DJI O4 Pro only, included",
         "cost": "set"
       }
     ],
@@ -85,15 +85,31 @@
     },
     {
       "qty": "3×",
-      "item": "Carbon plates: bottom, middle, top"
+      "item": "Carbon plates: bottom, middle, top. Threaded inserts are already pressed into the carbon"
     },
     {
       "qty": "1×",
       "item": "CNC aluminium camera mount pair"
     },
     {
+      "qty": "4×",
+      "item": "TPU arm boots"
+    },
+    {
       "qty": "1×",
-      "item": "TPU parts set: camera inserts for every camera size, arm boots, VTX mount, antenna mount (printed by Incutec)"
+      "item": "TPU air unit mount"
+    },
+    {
+      "qty": "2×",
+      "item": "TPU camera soft mounts, left and right"
+    },
+    {
+      "qty": "1×",
+      "item": "TPU AirTag and antenna mount"
+    },
+    {
+      "qty": "1×",
+      "item": "TPU bumper"
     },
     {
       "qty": "1×",
@@ -101,7 +117,7 @@
     },
     {
       "qty": "1×",
-      "item": "Hardware kit: screws, nuts, press nuts, standoffs and soft-mount grommets, with 2 spares of every screw size"
+      "item": "Hardware kit: screws, nylon lock nuts, standoffs and soft-mount grommets, with 2 spares of every screw and nut size"
     },
     {
       "qty": "1×",
@@ -147,8 +163,8 @@
       "20 mm max"
     ],
     [
-      "Cam inserts (TPU)",
-      "Analog, DJI, Walksnail, HDZero, all included"
+      "TPU parts",
+      "Preliminary, DJI O4 Pro only. Black, PCB green"
     ],
     [
       "Material",
@@ -156,11 +172,11 @@
     ],
     [
       "Hardware",
-      "M3"
+      "M3, M4"
     ],
     [
       "Weight",
-      "115 g"
+      "180 g, no TPU parts"
     ]
   ],
   "optionAxis": "Model",
@@ -194,109 +210,13 @@
         {
           "qty": "2×",
           "item": "Battery straps, 20 × 220 mm"
-        },
-        {
-          "item": "Aluminium M3 cup washers, anodised"
         }
       ],
       "inTheBoxImage": {
         "src": "/boxes/openframe/5in.png",
         "width": 1600,
         "height": 2195,
-        "v": "26eb90598a81",
-        "boxes": [
-          {
-            "item": 0,
-            "x": 42.13,
-            "y": 59.61,
-            "w": 6.82,
-            "h": 6.99
-          },
-          {
-            "item": 1,
-            "x": 38.84,
-            "y": 3.05,
-            "w": 56.97,
-            "h": 32.38
-          },
-          {
-            "item": 2,
-            "x": 10.92,
-            "y": 49.63,
-            "w": 20.35,
-            "h": 10.41
-          },
-          {
-            "item": 3,
-            "x": 39.5,
-            "y": 50.53,
-            "w": 12.07,
-            "h": 9.27
-          },
-          {
-            "item": 3,
-            "x": 4.18,
-            "y": 59.69,
-            "w": 33.82,
-            "h": 7.79
-          },
-          {
-            "item": 4,
-            "x": 66.53,
-            "y": 59.68,
-            "w": 29.29,
-            "h": 4.64
-          },
-          {
-            "item": 5,
-            "x": 53.07,
-            "y": 55.75,
-            "w": 11.95,
-            "h": 5.74
-          },
-          {
-            "item": 5,
-            "x": 4.18,
-            "y": 81.84,
-            "w": 91.64,
-            "h": 15.11
-          },
-          {
-            "item": 6,
-            "x": 4.18,
-            "y": 3.04,
-            "w": 32.81,
-            "h": 32.49
-          },
-          {
-            "item": 7,
-            "x": 68.02,
-            "y": 53.13,
-            "w": 26.31,
-            "h": 6.58
-          },
-          {
-            "item": 8,
-            "x": 8.74,
-            "y": 35.67,
-            "w": 82.52,
-            "h": 13.85
-          },
-          {
-            "item": 9,
-            "x": 4.18,
-            "y": 67.88,
-            "w": 70.79,
-            "h": 12.85
-          },
-          {
-            "item": 10,
-            "x": 75.06,
-            "y": 67.81,
-            "w": 20.76,
-            "h": 6.14
-          }
-        ]
+        "v": "26eb90598a81"
       },
       "repoUrl": "https://github.com/OpenDrone-hw/OpenFrame-5F"
     },
@@ -338,12 +258,16 @@
           "9x9, 12x12, M2"
         ],
         [
+          "TPU parts",
+          "Preliminary, DJI O4 Pro only. Black, PCB green"
+        ],
+        [
           "Hardware",
-          "M2, M2.5"
+          "M2, M3"
         ],
         [
           "Weight",
-          "55 g"
+          "95 g, no TPU parts"
         ]
       ],
       "pins": [
@@ -384,11 +308,11 @@
         },
         {
           "ref": "⑨",
-          "part": "M2 and M2.5 hardware kit"
+          "part": "M2 and M3 hardware kit"
         },
         {
           "ref": "⑩",
-          "part": "TPU camera inserts for every camera size, arm boots, VTX mount and antenna mount: printed by Incutec, included",
+          "part": "TPU parts: arm boots, air unit mount, camera soft mounts, AirTag and antenna mount, bumper. Printed by Incutec, preliminary, DJI O4 Pro only, included",
           "cost": "set"
         }
       ],
@@ -406,6 +330,14 @@
       ],
       "inTheBox": [
         {
+          "qty": "1×",
+          "item": "TPU XT30 mount"
+        },
+        {
+          "qty": "5×",
+          "item": "M3 washers"
+        },
+        {
           "qty": "4×",
           "item": "3\" carbon arms, 4 mm"
         },
@@ -418,93 +350,7 @@
         "src": "/boxes/openframe/3in.png",
         "width": 1600,
         "height": 2227,
-        "v": "02497c94a878",
-        "boxes": [
-          {
-            "item": 0,
-            "x": 51.64,
-            "y": 64.38,
-            "w": 6.98,
-            "h": 6.03
-          },
-          {
-            "item": 1,
-            "x": 42.97,
-            "y": 7.24,
-            "w": 52.78,
-            "h": 28.79
-          },
-          {
-            "item": 2,
-            "x": 22.53,
-            "y": 53.53,
-            "w": 21.57,
-            "h": 11.16
-          },
-          {
-            "item": 3,
-            "x": 49.31,
-            "y": 53.95,
-            "w": 11.65,
-            "h": 10.25
-          },
-          {
-            "item": 3,
-            "x": 18.13,
-            "y": 64.46,
-            "w": 30.37,
-            "h": 6.64
-          },
-          {
-            "item": 4,
-            "x": 61.77,
-            "y": 63.57,
-            "w": 33.97,
-            "h": 5.13
-          },
-          {
-            "item": 5,
-            "x": 4.26,
-            "y": 59.13,
-            "w": 13.07,
-            "h": 6.4
-          },
-          {
-            "item": 5,
-            "x": 4.26,
-            "y": 83.45,
-            "w": 91.48,
-            "h": 13.49
-          },
-          {
-            "item": 6,
-            "x": 4.26,
-            "y": 3.05,
-            "w": 38.09,
-            "h": 37.26
-          },
-          {
-            "item": 7,
-            "x": 63.51,
-            "y": 56.2,
-            "w": 30.49,
-            "h": 7.37
-          },
-          {
-            "item": 8,
-            "x": 19.24,
-            "y": 40.53,
-            "w": 61.53,
-            "h": 12.82
-          },
-          {
-            "item": 9,
-            "x": 12.88,
-            "y": 71.48,
-            "w": 74.24,
-            "h": 11.42
-          }
-        ]
+        "v": "02497c94a878"
       },
       "repoUrl": "https://github.com/OpenDrone-hw/OpenFrame-3F"
     }
