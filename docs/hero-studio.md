@@ -163,9 +163,10 @@ CAD whites and greys), and near-black CAD colours are lifted to a dark grey at b
 shipped colour: the only remaining orange-ish surfaces are small electronics on the boards
 and the air unit (JST connector, capacitors, ENIG pads).
 
-Carbon: the same 2x2 twill as the In-the-box art (`scripts/in-the-box`: 8x8 tows of 1.8 mm,
-one 14.4 mm tile, the Blender tone ramp, roughness 0.40 minus 0.12 on the warp, normal from
-crown minus gap). `explode/carbon_texture.py` writes albedo, roughness and normal PNGs
+Carbon: the weave of the In-the-box art (`scripts/in-the-box`: 8x8 tows of 1.8 mm, one 14.4 mm
+tile, 2x2 twill), tuned matte and subtle for the hero: a few percent of albedo between tows,
+roughness about 0.65, a soft normal map at `normalScale` 0.12, so the weave only shows on a close
+look or at grazing light. `explode/carbon_texture.py` writes albedo, roughness and normal PNGs
 (256 px, about 7 KB in all) to `public/models/carbon/`. At build time the flat faces of each carbon part
 (`build_explode.py`: bottom, middle and top plate, arms, cross) get planar UVs in the part's
 own long-axis frame, one UV unit per tile, so the weave runs along the part's long axis and
@@ -173,8 +174,22 @@ the scale is the same on every part; the cut edges are a separate plain dark mat
 (`carbonedge`), so nothing is stretched on the sides. The GLB carries the UVs and the material
 name `carbon|twill` only; the scene loads the three maps itself (a GLB-embedded image would
 become a blob: URL, which the page's CSP blocks) and dresses the carbon material with them
-(`normalScale` 0.3, anisotropic filtering). The sheen comes from the normal map under the
-key and kicker; MeshStandardMaterial has no anisotropy.
+(anisotropic filtering on). MeshStandardMaterial has no anisotropy, so there is no sheen.
+
+Metals (screws, nuts, standoffs, side plates, motors) are metalness 0.95 to 1, roughness 0.15 to
+0.18 and environment intensity 1.3 to 1.4: polished or anodised, with crisp highlights from the key
+and the warm kicker and visible environment reflections, not a chrome mirror.
+
+Transitions: the camera is damped (critically damped smoothing, about 1 s, no overshoot, the
+velocity carries across a retarget so a quick second step or click continues from the current
+state). Between two groups the camera also sweeps round the model (a swing of up to 0.42 rad
+in yaw, bell-shaped over the move, direction from which side the next group is on) instead of
+cutting across it, the explode state is not touched (it only depends on the scroll position), the
+dim crossfades (fade out, swap, fade in) and so does the part label (the old name fades, the text
+swaps while clear, the new name fades in).
+
+Performance: pixel ratio capped at 1.75, render loop pauses 5 s after the last input and when the
+canvas is off screen or the tab is hidden, repeated fasteners are drawn instanced.
 
 Lighting (low-key studio, `studio.json` `lighting`): ACES filmic tone mapping at exposure
 0.95 (`toneMapping: "agx"` is also supported), a RoomEnvironment map at 0.35 for reflections

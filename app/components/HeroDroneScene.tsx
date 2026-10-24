@@ -144,6 +144,21 @@ type StudioConfig = {
   beats: any[];
 };
 
+/** Pixel ratio cap: past this the extra pixels cost fill rate and no visible detail. */
+const MAX_DPR = 1.75;
+
+/** Critically damped smoothing (no overshoot, continuous velocity so a retarget mid-move
+ *  continues from the current state). `vel` carries the velocity between frames. */
+function smoothDamp(cur: number, goal: number, vel: {v: number}, smoothTime: number, dt: number) {
+  const omega = 2 / Math.max(1e-4, smoothTime);
+  const x = omega * dt;
+  const e = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  const change = cur - goal;
+  const temp = (vel.v + omega * change) * dt;
+  vel.v = (vel.v - omega * temp) * e;
+  return goal + (change + temp) * e;
+}
+
 export function HeroDroneScene({
   model = 'od3',
   onModel,
@@ -201,7 +216,7 @@ export function HeroDroneScene({
       if (disposed) return;
       onModel?.(folder);
       const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
-      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_DPR));
       renderer.toneMapping = cfg.lighting.toneMapping === 'agx' ? THREE.AgXToneMapping : THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = cfg.lighting.exposure;
       el.append(renderer.domElement);
@@ -234,7 +249,7 @@ export function HeroDroneScene({
       let lastDpr = 0;
       let sizedTo = '';
       const resizeIfNeeded = () => {
-        const dpr = Math.min(devicePixelRatio, 2);
+        const dpr = Math.min(devicePixelRatio, MAX_DPR);
         if (!needsResize && dpr === lastDpr) return;
         needsResize = false;
         lastDpr = dpr;
@@ -402,7 +417,7 @@ export function HeroDroneScene({
               sm.map = tx.albedo;
               sm.roughnessMap = tx.mr;
               sm.normalMap = tx.normal;
-              sm.normalScale.set(0.3, 0.3);
+              sm.normalScale.set(0.12, 0.12);
               sm.color.setRGB(1, 1, 1);
               sm.needsUpdate = true;
             }
@@ -807,6 +822,14 @@ export function HeroDroneScene({
       // Canvas rect, cached: read on pointer events, never per frame.
       let rect = el.getBoundingClientRect();
       let labelW = 0;
+      let labelWant = '';
+      let labelSwapAt = 0;
+      // Velocities for the damped camera: focus xyz, distance, height, swing.
+      const camVel = [0, 1, 2, 3, 4, 5].map(() => ({v: 0}));
+      let swing = 0;
+      let selectedPrev: Unit | null = null;
+      let selT = 1;
+      let selDir = 1;
       const resizeRect = new ResizeObserver(() => {
         rect = el.getBoundingClientRect();
       });
@@ -1578,6 +1601,15 @@ export function HeroDroneScene({
           };
         };
         let want: {c: THREE.Vector3; back: number; h: number};
+        const yawBase = (cfg.camera?.azimuth ?? 0.7) + userYaw;
+        // Lateral axis of the current view, to tell which way a move goes.
+        const rx = Math.sin(yawBase);
+        const rz = -Math.cos(yawBase);
+        let swingGoal = 0;
+        if (selected !== selectedPrev) {
+          selectedPrev = selected;
+          selT = 0;
+        }
         if (selected) {
           const sp = sphereOf([selected.node]);
           want = {
@@ -1585,26 +1617,43 @@ export function HeroDroneScene({
             back: THREE.MathUtils.clamp(sp.radius / (0.34 * halfTan), droneRadius * 0.3, baseBack),
             h: heightPart,
           };
+          if (selT === 0) selDir = Math.sign((want.c.x - camFocus.x) * rx + (want.c.z - camFocus.z) * rz) || 1;
         } else {
           const f = (pos - stopForBeat(0)) / dur();
           const i0 = THREE.MathUtils.clamp(Math.floor(f), 0, Math.max(0, BEATS.length - 2));
-          const u = f <= 0 || BEATS.length < 2 ? 0 : ease(clamp01(f - i0));
+          const raw = f <= 0 || BEATS.length < 2 ? 0 : clamp01(f - i0);
+          const u = ease(raw);
           const A = camStateOf(i0, Q.partSize);
           if (u === 0) want = A;
           else {
             const Bs = camStateOf(i0 + 1, Q.partSize);
             want = {c: A.c.clone().lerp(Bs.c, u), back: THREE.MathUtils.lerp(A.back, Bs.back, u), h: THREE.MathUtils.lerp(A.h, Bs.h, u)};
+            // The camera sweeps round the model between two groups instead of cutting across.
+            const dirB = Math.sign((Bs.c.x - A.c.x) * rx + (Bs.c.z - A.c.z) * rz) || 1;
+            swingGoal = dirB * 0.42 * Math.sin(Math.PI * raw);
           }
         }
+        if (selT < 1) {
+          selT = Math.min(1, selT + dt);
+          if (selected) swingGoal = selDir * 0.4 * Math.sin(Math.PI * selT);
+        }
         // The copy panel owns the right of the stage: slide the subject left of it.
-        const yawNow = (cfg.camera?.azimuth ?? 0.7) + userYaw;
-        want.c.x += Math.sin(yawNow) * want.back * halfTan * camera.aspect * (cfg.camera?.stageShift ?? 0.2) * Math.min(1, camera.aspect / 1.4);
-        want.c.z -= Math.cos(yawNow) * want.back * halfTan * camera.aspect * (cfg.camera?.stageShift ?? 0.2) * Math.min(1, camera.aspect / 1.4);
-        const smoothK = reduced || !camReady ? 1 : 1 - 0.06 ** dt;
-        if (!dragging) {
-          camFocus.lerp(want.c, smoothK);
-          camBack += (want.back - camBack) * smoothK;
-          camH += (want.h - camH) * smoothK;
+        const shift = want.back * halfTan * camera.aspect * (cfg.camera?.stageShift ?? 0.2) * Math.min(1, camera.aspect / 1.4);
+        want.c.x += rx * shift;
+        want.c.z += rz * shift;
+        if (reduced || !camReady) {
+          camFocus.copy(want.c);
+          camBack = want.back;
+          camH = want.h;
+          swing = 0;
+        } else if (!dragging) {
+          // ~1 s ease in and out, interruptible: the velocity carries across retargets.
+          camFocus.x = smoothDamp(camFocus.x, want.c.x, camVel[0], 0.45, dt);
+          camFocus.y = smoothDamp(camFocus.y, want.c.y, camVel[1], 0.45, dt);
+          camFocus.z = smoothDamp(camFocus.z, want.c.z, camVel[2], 0.45, dt);
+          camBack = smoothDamp(camBack, want.back, camVel[3], 0.45, dt);
+          camH = smoothDamp(camH, want.h, camVel[4], 0.45, dt);
+          swing = smoothDamp(swing, swingGoal, camVel[5], 0.25, dt);
         }
         camReady = true;
         // The offset eases back to the beat's framing when the timeline moves.
@@ -1618,7 +1667,7 @@ export function HeroDroneScene({
         userYaw += (userYawT - userYaw) * orbitK;
         userPitch += (userPitchT - userPitch) * orbitK;
         const pitch = THREE.MathUtils.clamp(Math.atan(camH) + userPitch, 0.12, 1.3);
-        const yaw = (cfg.camera?.azimuth ?? 0.7) + userYaw;
+        const yaw = (cfg.camera?.azimuth ?? 0.7) + userYaw + swing;
         camera.position.set(
           camFocus.x + Math.cos(pitch) * Math.cos(yaw) * camBack,
           camFocus.y + Math.sin(pitch) * camBack,
@@ -1652,9 +1701,17 @@ export function HeroDroneScene({
 
         // Label: follows the pointer for a hover, sits on the selected part. Uses the
         // cached canvas rect and label width so no layout is read per frame.
-        if (wantUnit && explodeP > 0.02 && !dragging) {
-          if (label.textContent !== wantUnit.label) {
-            label.textContent = wantUnit.label;
+        // Label crossfade: the old name fades out, the text swaps while it is clear, the
+        // new one fades in.
+        const wantText = wantUnit && explodeP > 0.02 && !dragging ? wantUnit.label : '';
+        if (wantText !== labelWant) {
+          labelWant = wantText;
+          labelSwapAt = label.textContent && wantText ? now + 120 : now;
+          label.style.opacity = '0';
+        }
+        if (labelWant && wantUnit && now >= labelSwapAt) {
+          if (label.textContent !== labelWant) {
+            label.textContent = labelWant;
             labelW = label.offsetWidth;
           }
           let lx = ptr.x - rect.left + 16;
@@ -1666,7 +1723,7 @@ export function HeroDroneScene({
           }
           label.style.transform = `translate(${Math.round(Math.min(lx, rect.width - labelW - 12))}px, ${Math.round(Math.min(ly, rect.height - 40))}px)`;
           label.style.opacity = '1';
-        } else label.style.opacity = '0';
+        } else if (!labelWant) label.style.opacity = '0';
         batches?.update();
 
         renderer.render(scene, camera);
