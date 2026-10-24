@@ -158,7 +158,7 @@ placed once that many units are ordered. Only SKUs the policy sells as
 | Price steps | `app/lib/shopify-price-tier.ts` | `priceTiers` steps the price off the compare-at (retail) price as the EU step bar fills ("Run a preorder campaign"); written to Shopify only when `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`; a SKU Shopify prices under its step closes |
 | Holds and tags | `app/lib/preorder-fulfilment.ts` | holds each open fulfillment order (handle `opendrone-preorder`) and tags the order `preorder` and `batch:<SKU>:<N>`; a tagged order is never held again |
 | Accessories | `shipsWith` in `content/preorders.json` | spares ride a campaign SKU at a flat price, pinned to a dated batch or following the lead's next unit; they do not count toward the lead |
-| Health | `/api/status/campaign` | per campaign SKU: open or closed, paid counts, pending price steps, hold health (unheld paid orders, overfull batches; reused for a minute per isolate), last job runs; `503` when a campaign SKU is closed or `holdsOk` is false |
+| Health | `/api/status/campaign` | anonymous: `allOpen` and the status code only; with `Authorization: Bearer <CAMPAIGN_STATUS_TOKEN>` (Worker secret): per campaign SKU: open or closed, paid counts, pending price steps, hold health (unheld paid orders, overfull batches; reused for a minute per isolate), last job runs; `503` when a campaign SKU is closed or `holdsOk` is false |
 
 Price steps and holds run from the `orders/paid` webhook
 (`/api/shopify/orders-paid`, HMAC-verified with `SHOPIFY_WEBHOOK_SECRET`,
@@ -1084,7 +1084,7 @@ An open shop also depends on Shopify settings this repository cannot check:
 | Online Store password page off | checkout opens for customers, not only staff |
 
 After any change: `BASE=https://opendrone.be node scripts/smoke.mjs` and
-`curl https://opendrone.be/api/status/campaign`.
+`curl -H "Authorization: Bearer $CAMPAIGN_STATUS_TOKEN" https://opendrone.be/api/status/campaign`.
 
 ### US preorders
 

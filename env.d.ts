@@ -227,6 +227,9 @@ declare global {
     SUPPORT_COMMUNITY_ROUTE?: string;
     SUPPORT_FILES?: R2Bucket;
     SUPPORT_STAFF_API_TOKEN?: string;
+    // Bearer token for the full body of GET /api/status/campaign (paid counts, price sync, holds); without it the
+    // route answers only allOpen and the status code. Worker secret.
+    CAMPAIGN_STATUS_TOKEN?: string;
     SUPPORT_STAFF_ACCESS_TEAM_DOMAIN?: string;
     SUPPORT_STAFF_ACCESS_AUD?: string;
     SUPPORT_STAFF_ACCESS_CLIENT_ID?: string;

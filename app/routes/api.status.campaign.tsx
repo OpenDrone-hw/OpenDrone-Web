@@ -8,6 +8,7 @@ import {paidUnitRuns, sumRuns} from '~/lib/shopify-orders';
 import {appCommerceEnabled} from '~/lib/commerce/app-api';
 import {appCampaignStatus} from '~/lib/commerce/app-campaign-status';
 import {priceTierWritesEnabled, syncPriceTiers} from '~/lib/shopify-price-tier';
+import {constantTimeEqual} from '~/lib/support/tokens';
 
 /**
  * Campaign health for an uptime monitor: `GET /api/status/campaign`.
@@ -28,10 +29,12 @@ import {priceTierWritesEnabled, syncPriceTiers} from '~/lib/shopify-price-tier';
  *   Worker isolate, with its time and error. Best effort: another isolate
  *   may have run later.
  *
- * No secrets, no order or customer data: the counts are the ones the
- * product pages show, and holds report counts and batch names only. Never
+ * No secrets, no order or customer data, but the paid counts are sales
+ * figures: the body above needs `Authorization: Bearer
+ * <CAMPAIGN_STATUS_TOKEN>`. Without it (or with the secret unset) the answer
+ * is only `checkedAt` and `allOpen`, with the same status code. Never
  * cached by the browser; the hold check is reused for a minute per isolate. Answers 200 when every SKU is open and `holdsOk`, and 503
- * otherwise, so a plain HTTP check can alert on it.
+ * otherwise, so a plain HTTP check can alert on it without the token.
  */
 
 const NO_STORE = {'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex'};
@@ -53,7 +56,19 @@ function message(error: unknown): string {
   return (error instanceof Error ? error.message : String(error)).replace(/\s+/g, ' ').slice(0, 200);
 }
 
-export async function loader({context}: Route.LoaderArgs) {
+function authorized(request: Request, secret: string | undefined): boolean {
+  const given = /^Bearer\s+(.+)$/i.exec(request.headers.get('Authorization') ?? '')?.[1]?.trim() ?? '';
+  return Boolean(secret && given && constantTimeEqual(given, secret));
+}
+
+export async function loader({request, context}: Route.LoaderArgs) {
+  const full = await campaignStatus(context);
+  if (authorized(request, context.env.CAMPAIGN_STATUS_TOKEN)) return full;
+  const {checkedAt, allOpen} = (await full.json()) as {checkedAt: string; allOpen: boolean};
+  return Response.json({checkedAt, allOpen}, {status: full.status, headers: NO_STORE});
+}
+
+async function campaignStatus(context: Route.LoaderArgs['context']) {
   const env = context.env;
   const checkedAt = new Date().toISOString();
   const skus = Object.keys(CAMPAIGN.skus);
