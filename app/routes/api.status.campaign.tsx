@@ -1,9 +1,10 @@
 import type {Route} from './+types/api.status.campaign';
 import {CAMPAIGN} from '~/lib/catalog-client';
+import type {UnitRuns} from '~/lib/preorder-campaign';
 import {fetchPreorderOrders, holdHealth, type OverfullBatch} from '~/lib/preorder-fulfilment';
 import {preorderHoldsEnabled} from '~/lib/preorder-ops';
 import {opsStatus} from '~/lib/preorder-ops-status';
-import {paidUnits} from '~/lib/shopify-orders';
+import {paidUnitRuns, sumRuns} from '~/lib/shopify-orders';
 import {appCommerceEnabled} from '~/lib/commerce/app-api';
 import {appCampaignStatus} from '~/lib/commerce/app-campaign-status';
 import {priceTierWritesEnabled, syncPriceTiers} from '~/lib/shopify-price-tier';
@@ -100,10 +101,12 @@ export async function loader({context}: Route.LoaderArgs) {
     catalogError = message(error);
   }
 
+  let runs: Record<string, UnitRuns> | null = null;
   let units: Record<string, number> | null = null;
   let countsError: string | null = null;
   try {
-    units = await paidUnits(env, CAMPAIGN.countFrom, new Set(skus));
+    runs = await paidUnitRuns(env, CAMPAIGN.countFrom, new Set(skus));
+    units = sumRuns(runs);
   } catch (error) {
     countsError = message(error);
   }
@@ -111,9 +114,9 @@ export async function loader({context}: Route.LoaderArgs) {
   const writesEnabled = priceTierWritesEnabled(env);
   let pending: string[] | null = null;
   let priceError: string | null = null;
-  if (units) {
+  if (runs) {
     try {
-      const plan = await syncPriceTiers(env, CAMPAIGN, units, {apply: false});
+      const plan = await syncPriceTiers(env, CAMPAIGN, runs, {apply: false});
       pending = plan.changed.map((change) => change.sku);
     } catch (error) {
       priceError = message(error);

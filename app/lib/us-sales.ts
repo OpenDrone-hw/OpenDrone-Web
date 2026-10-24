@@ -177,7 +177,7 @@ export function withMarketPrices(
         const tiers = config && variant.campaign ? tiersFor(config, variant.sku) : [];
         const usLadder =
           variant.campaign && band && tiers.length && variant.compare_price != null && variant.compare_price > 0
-            ? usdLadder(variant.compare_price, tiers, band, variant.campaign.ordered + 1, us.price)
+            ? usdLadder(variant.compare_price, tiers, band, (variant.campaign.tierOrdered ?? variant.campaign.ordered) + 1, us.price)
             : undefined;
         const campaign = variant.campaign
           ? {...variant.campaign, price: us.price, nextPrice: null, ...(usLadder ? {usLadder} : {})}

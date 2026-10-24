@@ -155,7 +155,7 @@ placed once that many units are ordered. Only SKUs the policy sells as
 | Paid counts | `app/lib/shopify-orders.ts` | counts paid Shopify orders per SKU since `countFrom`, cached one minute per isolate; if unreadable, campaign SKUs close |
 | Batch and promise | `app/lib/preorder-campaign.ts` | derives the batch, the meter and the ship promise (ship date only, never a delivery date) |
 | Cart line | `app/lib/shopify-cart-action.ts` | every preorder line carries its promise as a `Preorder` attribute, so checkout and the confirmation state it |
-| Price steps | `app/lib/shopify-price-tier.ts` | `priceTiers` steps the price off the compare-at (retail) price as paid units come in; written to Shopify only when `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`; a SKU Shopify prices under its step closes |
+| Price steps | `app/lib/shopify-price-tier.ts` | `priceTiers` steps the price off the compare-at (retail) price as the EU step bar fills ("Run a preorder campaign"); written to Shopify only when `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`; a SKU Shopify prices under its step closes |
 | Holds and tags | `app/lib/preorder-fulfilment.ts` | holds each open fulfillment order (handle `opendrone-preorder`) and tags the order `preorder` and `batch:<SKU>:<N>`; a tagged order is never held again |
 | Accessories | `shipsWith` in `content/preorders.json` | spares ride a campaign SKU at a flat price, pinned to a dated batch or following the lead's next unit; they do not count toward the lead |
 | Health | `/api/status/campaign` | per campaign SKU: open or closed, paid counts, pending price steps, hold health (unheld paid orders, overfull batches; reused for a minute per isolate), last job runs; `503` when a campaign SKU is closed or `holdsOk` is false |
@@ -1209,7 +1209,12 @@ batch; set `stock` from InvenTree stock on hand. The storefront keeps dispatch p
 checkout property, cart and confirmation, and order the lines of a combined cart. A batch with `regions` (`["EU"]` for paid stock in Belgium) takes
 only units shipping there: each paid unit takes the first batch with room
 that serves its order's shipping region (EU, US or INT), so a non-EU unit skips an
-EU-only batch. Price steps and funding targets count every region. The dates in
+EU-only batch. Funding targets count every region. A price step counts what
+the product page step bar shows an EU buyer (`tierUnits` in
+`app/lib/preorder-campaign.ts`): the batches the EU buyer has seen sell out
+plus the units in their current batch, so units in a batch the EU buyer cannot
+get never move the price. Shopify holds one price per variant, so every region
+pays that step (founder 2026-10-24). The dates in
 the ship promises, terms and product notes derive from `endsOn`, `shipsBy`,
 `deliveryBy`, `deliveryByUS` and `deliveryByINT` in this file; `app/lib/preorder-campaign.test.ts`
 fails when the committed copy and legal text drift from it. A producer

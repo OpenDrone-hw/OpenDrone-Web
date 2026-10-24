@@ -95,6 +95,31 @@ describe('campaignState', () => {
     assert.equal(campaignState(FRAME, 0, PENDING, TIERS).price, null, 'no retail, no price');
   });
 
+  it('steps the price where the EU step bar stands: another region\'s units never move it', () => {
+    // EU-only paid stock, then the funding batch every region shares.
+    const lite: CampaignBatch[] = [
+      {units: 250, reserved: 25, paid: true, ships: 'ships early November 2026', regions: ['EU']},
+      {units: 250},
+    ];
+    const runs = [{region: 'EU' as const, units: 172}, {region: 'US' as const, units: 117}];
+    for (const region of ['EU', 'US'] as const) {
+      const s = campaignState(lite, runs, PENDING, TIERS, 39, region);
+      assert.equal(s.ordered, 289);
+      assert.equal(s.tierOrdered, 172);
+      assert.equal(s.earlyPrice, true);
+      assert.equal(s.tierUpTo, 250);
+      assert.equal(s.tierLeft, 78);
+      assert.equal(s.price, 35.1, `${region} pays the EU batch's step`);
+    }
+    // Once the EU stock is sold out, the EU bar counts it and every unit in the shared batch.
+    const past = campaignState(lite, [{region: 'EU', units: 225}, {region: 'US', units: 20}, {region: 'EU', units: 4}], PENDING, TIERS, 39);
+    assert.equal(past.tierOrdered, 249);
+    assert.equal(past.tierLeft, 1);
+    const retail = campaignState(lite, [{region: 'EU', units: 225}, {region: 'US', units: 25}], PENDING, TIERS, 39);
+    assert.equal(retail.earlyPrice, false);
+    assert.equal(retail.price, 39);
+  });
+
   it('rounds a step to the cent', () => {
     assert.equal(campaignState(FRAME, 0, PENDING, TIERS, 29).price, 23.2);
     assert.equal(campaignState(FRAME, 150, PENDING, TIERS, 29).price, 26.1);

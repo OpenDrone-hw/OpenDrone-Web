@@ -17,7 +17,7 @@
  * The Admin token needs `write_products` on top of the order scopes.
  */
 
-import {tierPrice, tiersFor, type CampaignConfig} from './preorder-campaign.ts';
+import {tierPrice, tierUnits, tiersFor, type CampaignConfig, type PaidUnitsOf} from './preorder-campaign.ts';
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
 
@@ -112,7 +112,8 @@ async function admin<T>(
 }
 
 /** The step a SKU's next unit sells at: its price, and retail while a step
- *  is left. Past the last step, retail with no compare-at price. */
+ *  is left. Past the last step, retail with no compare-at price. `units` is
+ *  the count the step reads ({@link tierUnits}). */
 export function targetPrice(
   config: CampaignConfig,
   units: number,
@@ -128,14 +129,15 @@ export function targetPrice(
 const cents = (value: number) => Math.round(value * 100);
 
 /**
- * Make Shopify agree with the step every campaign SKU's paid count implies.
+ * Make Shopify agree with the step every campaign SKU's paid units imply,
+ * counted as the step bar reads ({@link tierUnits}).
  * `apply` false plans without writing. A variant with no retail price (no
  * compare-at price and already at or under its step) is skipped and named.
  */
 export async function syncPriceTiers(
   env: TierEnv,
   config: CampaignConfig,
-  units: Record<string, number>,
+  units: Record<string, PaidUnitsOf>,
   {apply = false, fetcher = fetch}: {apply?: boolean; fetcher?: typeof fetch} = {},
 ): Promise<TierSync> {
   const skus = Object.keys(config.skus);
@@ -171,7 +173,7 @@ export async function syncPriceTiers(
       skipped[sku] = 'no retail price in Shopify';
       continue;
     }
-    const target = targetPrice(config, units[sku] ?? 0, retail, sku);
+    const target = targetPrice(config, tierUnits(config.skus[sku].batches, units[sku] ?? 0), retail, sku);
     const samePrice = cents(price) === cents(target.price);
     const sameCompare =
       target.compareAt == null ? compareAt == null : compareAt != null && cents(compareAt) === cents(target.compareAt);
