@@ -1,3 +1,4 @@
+import {imageTier} from '~/lib/gallery-tier';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {ChatFpvWidget} from '~/components/ChatFpvWidget';
 import {ChatFpvInlineLink} from '~/components/ChatFpvEntry';
@@ -1069,30 +1070,16 @@ function ProductPage() {
     if (own && !seen.has(own.url.split('?')[0])) deduped.push(own);
     const tierKeys = content.variants ? Object.keys(content.variants) : [];
     if (tierKeys.length < 2) return deduped;
-    const norm = (v: string) =>
-      v.trim().toLowerCase().replace(/[×x]/g, 'x').replace(/\s+/g, '');
-    const active = norm(activeTier);
-    const keys = tierKeys.map(norm).filter(Boolean);
-    // Longest-match-wins: tier keys can be substrings of each other
-    // (Lite vs Lite-UFL). Naively excluding every other-tier key dropped
-    // the Lite-UFL render under its own tier ("lite" matches inside
-    // "lite-ufl"), leaving an empty gallery. An image belongs to the
-    // longest tier key its filename contains; keep it when that's the
-    // active tier or when it names no tier at all.
-    // Alt text is free prose ("OpenRX Lite UFL, top"), so its match also
-    // ignores hyphens and underscores on both sides; filenames keep the
-    // hyphenated key (openesc-20x20-back.png).
-    const loose = (v: string) => v.replace(/[-_]/g, '');
-    const looseKeys = keys.map(loose);
+    // Tier names are the variant keys plus their aliases ("5", "5in"); see
+    // imageTier for the matching rules (whole-token match for short names).
+    const tiers = Object.fromEntries(
+      Object.entries(content.variants ?? {}).map(([k, v]) => [k, v.aliases ?? []]),
+    );
     const featuredUrl = selectedVariant?.image?.url.split('?')[0] ?? null;
     return deduped.filter((img) => {
       if (featuredUrl && img.url.split('?')[0] === featuredUrl) return true;
-      const name = img.url.split('?')[0].toLowerCase();
-      const alt = loose(norm(img.altText ?? ''));
-      const best = keys
-        .filter((k, i) => name.includes(k) || alt.includes(looseKeys[i]))
-        .sort((a, b) => b.length - a.length)[0];
-      return !best || best === active;
+      const tier = imageTier(img.url, img.altText, tiers);
+      return !tier || tier === activeTier;
     });
   }, [product.images, selectedVariant?.image, content.variants, activeTier]);
   // The selected variant's own image, matched by URL: the catalog numbers

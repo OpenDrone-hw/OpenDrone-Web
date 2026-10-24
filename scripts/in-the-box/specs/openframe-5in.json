@@ -6,8 +6,7 @@
     "variant": "5\" Freestyle"
   },
   "sources": [
-    "public/models/od5/frame.glb",
-    "public/models/od5/drive.glb"
+    "scripts/in-the-box/models/openframe-5in.glb"
   ],
   "camera": {
     "tiltDeg": 12
@@ -18,9 +17,11 @@
     "aspect": 1.2
   },
   "notes": [
-    "Black-Oxide flat head screws belong to the DJI O4 air unit reference model: excluded.",
-    "Cam-Mount-L/R (TPU) are not in the box list; the camera mount is the CNC aluminium pair (Standoff-L/R).",
-    "VTX-Mount is in the box list but not in the GLB."
+    "Source is a glTF built from the final STEP export (assembly with electronics): carbon, aluminium, TPU and kit hardware only; motors, props, boards, DJI O4 and the 2 M3x6 under the bumper M3x8 are left out when the model is built.",
+    "TPU colours are the CAD appearance colours: boots, bumper and AirTag/antenna mount green (PCB green), camera soft mounts black. VTX-Mount and xt30Mount are orange in the CAD and rendered black (founder 2026-10-24: shipped TPU is black and green).",
+    "Kit quantities: frame count plus 2 spares of every screw and nut kind (extra); washers, grommets and standoffs are exactly the frame count. Press nuts are pressed into the carbon by the supplier and not shown.",
+    "5 inch has only Cam-Mount-L in the CAD assembly (flagged): the right mount is mirrored when it is laid out.",
+    "Aluminium camera side plates: Pantone 7549 C gold anodising #FBB600 (founder 2026-10-24). Standoffs: natural aluminium."
   ],
   "groups": [
     {
@@ -59,34 +60,6 @@
       "perRow": 2
     },
     {
-      "label": "Camera mount pair",
-      "match": "^Standoff-(L|R)$",
-      "finish": "alu",
-      "color": "#1b1c1f",
-      "material": {
-        "roughness": 0.55
-      },
-      "row": 3,
-      "item": "CNC aluminium"
-    },
-    {
-      "label": "Arm boots",
-      "match": "^Boot-",
-      "finish": "tpu",
-      "color": "#f2ae00",
-      "item": "TPU parts set",
-      "perRow": 4,
-      "below": "Camera mount pair"
-    },
-    {
-      "label": "Antenna mount",
-      "match": "^Airtag/Antenna[- ]mount$",
-      "finish": "tpu",
-      "color": "#f2ae00",
-      "row": 3,
-      "item": "TPU parts set"
-    },
-    {
       "label": "Cross brace",
       "match": "^Cross$",
       "finish": "carbon",
@@ -94,12 +67,65 @@
       "below": "Antenna mount"
     },
     {
-      "label": "Standoffs 18 mm",
-      "match": "^18mmx4mm$",
+      "label": "Camera mount pair",
+      "match": "^Standoff-(L|R)$",
       "finish": "alu",
-      "color": "#2c2e33",
+      "color": "#FBB600",
+      "material": {
+        "roughness": 0.55
+      },
       "row": 3,
-      "item": "Hardware kit"
+      "item": "CNC aluminium camera mount pair"
+    },
+    {
+      "label": "Arm boots",
+      "match": "^boot[FR][LR]$|^Boot-[LR]$",
+      "finish": "tpu",
+      "color": "#17181a",
+      "item": "TPU arm boots",
+      "below": "Camera mount pair",
+      "perRow": 4
+    },
+    {
+      "label": "Antenna mount",
+      "match": "^Airtag/Antenna[- ][Mm]ount$",
+      "finish": "tpu",
+      "color": "#023208",
+      "row": 3,
+      "item": "TPU AirTag and antenna mount"
+    },
+    {
+      "label": "Standoffs 20 mm",
+      "match": "^Standoff M3 F-F 20 OD5$",
+      "finish": "alu",
+      "color": "#b4b8bf",
+      "row": 3,
+      "item": "Hardware kit",
+      "material": {
+        "roughness": 0.4
+      }
+    },
+    {
+      "label": "Air unit mount",
+      "match": "^VTX-Mount$",
+      "finish": "tpu",
+      "color": "#17181a",
+      "item": "TPU air unit mount"
+    },
+    {
+      "label": "Camera soft mounts",
+      "match": "^Cam-Mount-[LR]$",
+      "finish": "tpu",
+      "color": "#17181a",
+      "item": "TPU camera soft mounts",
+      "perRow": 2
+    },
+    {
+      "label": "Bumper",
+      "match": "^Bumpr$|^Bumper$",
+      "finish": "tpu",
+      "color": "#023208",
+      "item": "TPU bumper"
     },
     {
       "label": "Sticker",
@@ -110,22 +136,6 @@
       },
       "row": 3,
       "item": "Sticker"
-    },
-    {
-      "label": "Anti-slip pad",
-      "match": "^anti-slip pad$",
-      "finish": "rubber",
-      "color": "#1d1e21",
-      "lay": "x",
-      "decal": {
-        "art": "incutec",
-        "base": "#1d1e21",
-        "widthFrac": 0.5,
-        "alpha": 0.85
-      },
-      "note": "GLB colours are placeholder grey and white; the pad is dark silicone with the Incutec wordmark",
-      "item": "Anti-slip",
-      "below": "Sticker"
     },
     {
       "label": "Battery straps",
@@ -141,102 +151,97 @@
       "item": "Battery straps"
     },
     {
-      "label": "M3 cup washers",
-      "procedural": {
-        "kind": "cupWasher",
-        "od": 9,
-        "h": 2.5,
-        "bore": 3.2
-      },
-      "count": 10,
-      "perRow": 5,
-      "section": "hardware",
-      "item": "Aluminium M3 cup washers",
-      "row": 4
-    },
-    {
-      "label": "Soft-mount grommets",
-      "match": "^softmount m2$",
+      "label": "Anti-slip pad",
+      "match": "^anti-slip pad$",
       "finish": "rubber",
-      "section": "hardware",
-      "item": "Hardware kit",
-      "perRow": 4
+      "color": "#1d1e21",
+      "lay": "x",
+      "decal": {
+        "art": "incutec",
+        "base": "#1d1e21",
+        "widthFrac": 0.5,
+        "alpha": 0.85
+      },
+      "note": "GLB colours are placeholder grey and white; the pad is dark silicone with the Incutec wordmark",
+      "item": "Anti-slip battery pad",
+      "below": "Sticker"
     },
     {
-      "label": "M3x6 button head",
-      "match": "^Socket button head screw M3x0\\.5 x 6$",
+      "label": "M4x12 button head",
+      "match": "^Socket button head screw M4x0\\.7 x 12$",
       "finish": "steel",
       "extra": 2,
-      "perRow": 10,
+      "perRow": 6,
       "section": "hardware",
       "item": "Hardware kit",
-      "headTo": "z"
-    },
-    {
-      "label": "M3x8 button head",
-      "match": "^Socket button head screw M3x0\\.5 x 8$",
-      "finish": "steel",
-      "extra": 2,
-      "perRow": 12,
-      "section": "hardware",
-      "item": "Hardware kit",
-      "headTo": "z"
+      "headTo": "z",
+      "color": "#2e3136"
     },
     {
       "label": "M3x12 button head",
       "match": "^Socket button head screw M3x0\\.5 x 12$",
       "finish": "steel",
       "extra": 2,
-      "perRow": 6,
+      "perRow": 3,
       "section": "hardware",
       "item": "Hardware kit",
-      "headTo": "z"
+      "headTo": "z",
+      "color": "#2e3136"
     },
     {
-      "label": "M3x20 button head",
-      "match": "^Socket button head screw M3x0\\.5 x 20$",
+      "label": "M3x6 button head",
+      "match": "^Socket button head screw M3x0\\.5 x 6$",
+      "finish": "steel",
+      "extra": 6,
+      "perRow": 11,
+      "section": "hardware",
+      "item": "Hardware kit",
+      "headTo": "z",
+      "color": "#2e3136"
+    },
+    {
+      "label": "M3x8 button head",
+      "match": "^Socket button head screw M3x0\\.5 x 8$",
+      "finish": "steel",
+      "extra": 2,
+      "perRow": 4,
+      "section": "hardware",
+      "item": "Hardware kit",
+      "headTo": "z",
+      "color": "#2e3136"
+    },
+    {
+      "label": "M3x20 socket cap",
+      "match": "^Hex socket head cap screw M3x0\\.50 x 20$",
       "finish": "steel",
       "extra": 2,
       "perRow": 6,
       "section": "hardware",
       "item": "Hardware kit",
-      "headTo": "z"
+      "headTo": "z",
+      "color": "#2e3136"
     },
     {
-      "label": "M3x8 socket cap",
-      "match": "^Hex socket head cap screw M3x0\\.50 x 8$",
+      "label": "M3 nylon lock nut",
+      "match": "^Prevailing torque nut thin M3x0\\.50$",
       "finish": "steel",
       "extra": 2,
-      "perRow": 9,
+      "perRow": 6,
       "section": "hardware",
       "item": "Hardware kit",
-      "headTo": "z"
+      "color": "#2e3136"
     },
     {
-      "label": "M3 locknut",
-      "match": "^Prevailing torque nut M3x0\\.5$",
-      "finish": "steel",
-      "color": "#80868f",
-      "section": "hardware",
-      "item": "Hardware kit"
-    },
-    {
-      "label": "M3 press nut",
-      "match": "^m3 pressnut$",
-      "finish": "zinc",
-      "perRow": 10,
+      "label": "M3 grommets",
+      "match": "^Grommet M3$",
+      "finish": "rubber",
+      "extra": 0,
+      "perRow": 4,
       "section": "hardware",
       "item": "Hardware kit"
     }
   ],
   "exclude": [
-    "^Black-Oxide Alloy Steel Hex Drive Flat Head Screw",
-    "^Cam-Mount-(L|R)$",
-    "^AirTag$",
-    "^Dual-Band-UFL-Antenna$",
-    "^Rear Housing:1__Body1$",
-    "^Prevailing torque nut M5x0\\.80$",
-    "^2306\\.5-2026\\.7\\.14$",
-    "^5in-prop c?cw$"
+    "^m[234] pressnut$"
   ]
 }
