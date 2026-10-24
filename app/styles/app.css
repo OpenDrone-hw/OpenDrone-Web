@@ -17419,6 +17419,63 @@ html.hero-header-in .homepage-layout .site-header {
 .hp-fallback h3 { font-size: 1.15rem; margin: 0 0 0.3rem; color: var(--color-text); }
 .hp-fallback p { margin: 0; color: var(--color-text-muted); }
 .hp-dot { padding: 0; cursor: pointer; }
+/* Collapse / explode control, centred over the rail. */
+.hp-explode {
+  --hp-rail-w: min(
+    27.5rem,
+    42vw,
+    calc(100vw - var(--hero-brand-right, 32rem) - 1.5rem - 29.5rem)
+  );
+  position: absolute;
+  left: max(
+    50%,
+    calc(var(--hero-brand-right, 32rem) + 1.5rem + var(--hp-rail-w) / 2)
+  );
+  bottom: calc(var(--hero-strip-mid, 93px) + 16px);
+  transform: translateX(-50%);
+  z-index: 22;
+  padding: 0.38rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--color-text-dim) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg, #0a0c0f) 55%, transparent);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.hp-explode:hover,
+.hp-explode:focus-visible {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+}
+.hp-explode:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+@media (max-width: 65em) {
+  .hp-explode { left: 50%; bottom: calc(var(--hero-strip-mid, 93px) + 8px); }
+}
+/* Name of the part under the pointer (or selected) in the exploded view. */
+.hp-partlabel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  max-width: 22rem;
+  padding: 0.28rem 0.6rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-bg, #0a0c0f) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  color: var(--color-text);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
 .hp-dot:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
 @media (max-width: 65em) {
   .hp-rail {

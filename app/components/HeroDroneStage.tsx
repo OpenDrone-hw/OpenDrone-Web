@@ -1,15 +1,16 @@
 /**
- * The hero's 3D layer: the scroll-driven walkthrough, its progress rail, and the
- * copy panel that follows it.
+ * The hero's 3D layer: the scroll-driven walkthrough and the copy panel that
+ * follows it. No on-screen controls: scroll drives it, a drag orbits it.
  *
  * This is an absolutely-positioned layer, not a section of its own - it fills
  * the hero's sticky pane so the wordmark, size selector and buy bubble sit over
  * the same drone. The route owns the splash; this owns the drone.
  *
  * Rendering rules live here rather than in the scene: the 3D is skipped under
- * 768px or `prefers-reduced-motion`, matching the policy the rest of the
- * homepage uses, and in that case the fallback list becomes the actual content
- * instead of being visually hidden.
+ * 768px, matching the policy the rest of the homepage uses, and in that case the
+ * fallback list becomes the actual content instead of being visually hidden.
+ * Under `prefers-reduced-motion` the scene still loads but shows the exploded
+ * pose statically (no intro, no travelling camera).
  */
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Link} from 'react-router';
@@ -24,7 +25,6 @@ import {WHAT_IS_THIS_ID} from '~/lib/product-content';
 
 function shouldLoad3D() {
   if (typeof window === 'undefined') return false;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
   if (window.innerWidth < 768) return false;
   return true;
 }
@@ -86,6 +86,12 @@ export function HeroDroneStage({
     ? requestedFolder
     : 'od3';
   const [use3D, setUse3D] = useState(false);
+  const [reduced, setReduced] = useState(false);
+  const [exploded, setExploded] = useState(true);
+  const explodeApi = useRef<{toggle: () => void; set: (on: boolean) => void} | null>(null);
+  const handleExplode = useCallback((api: {toggle: () => void; set: (on: boolean) => void} | null) => {
+    explodeApi.current = api;
+  }, []);
   const [Scene, setScene] = useState<React.ComponentType<HeroDroneSceneProps> | null>(
     null,
   );
@@ -96,6 +102,7 @@ export function HeroDroneStage({
       onReady?.();
       return;
     }
+    setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     setUse3D(true);
     scenePromise
       .then((m) => setScene(() => m.HeroDroneScene))
@@ -119,7 +126,6 @@ export function HeroDroneStage({
   // opening whole-drone hold reports too, carrying the beginner intro).
   const [resting, setResting] = useState(true);
   const seek = useRef<((i: number) => void) | null>(null);
-  const fillRef = useRef<HTMLDivElement>(null);
   const handleBuilding = useCallback((building: boolean) => {
     onBuilding?.(building);
     if (building) {
@@ -157,15 +163,7 @@ export function HeroDroneStage({
     } : null);
     return () => onSeeker?.(null);
   }, [beats, onSeeker, use3D]);
-  // Fires every frame, so it writes straight to the DOM rather than to state.
-  const handleProgress = useCallback(
-    (f: number) => {
-      if (fillRef.current)
-        fillRef.current.style.width = `${Math.max(0, Math.min(1, f)) * 100}%`;
-      onProgress?.(f);
-    },
-    [onProgress],
-  );
+  const handleProgress = useCallback((f: number) => onProgress?.(f), [onProgress]);
 
   return (
     <div className="hp-stage">
@@ -180,6 +178,9 @@ export function HeroDroneStage({
           onReady={onReady}
           onBuilding={handleBuilding}
           onSeeker={handleSeeker}
+          reduced={reduced}
+          onExplode={handleExplode}
+          onExploded={setExploded}
         />
       ) : null}
 
@@ -189,26 +190,6 @@ export function HeroDroneStage({
             size: resolvedModel.replace(/^od/, ''),
           })}
         </p>
-      ) : null}
-
-      {use3D ? (
-        <nav
-          className="hp-rail"
-          aria-label={copyText('home.hero_rail_aria') ?? 'Drone parts'}
-        >
-          <div className="hp-rail-fill" ref={fillRef} />
-          {beats.map((b, i) => (
-            <button
-              key={b.id}
-              type="button"
-              className={`hp-dot${i === active ? ' on' : ''}${i < active ? ' done' : ''}`}
-              style={{left: `${(i / Math.max(1, beats.length - 1)) * 100}%`}}
-              aria-label={b.title}
-              aria-current={i === active ? 'true' : undefined}
-              onClick={() => seek.current?.(i)}
-            />
-          ))}
-        </nav>
       ) : null}
 
       {/* The spotlight cuts as a part leaves; that is the cue for this.

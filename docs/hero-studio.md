@@ -1,303 +1,209 @@
-# Hero studio
+# Hero: exploded build
 
-How the homepage drone animation is made, and how to add a new frame size.
-
-The pipeline is three stages. Onshape is the source of truth for geometry and
-placement; the studio is where a human tunes how it looks and moves; the hero
-component plays the result on the site.
+How the homepage 3D hero is made and how it plays. The drone sits whole, comes
+apart into a logical exploded view, and then the scroll walkthrough visits its parts.
 
 ```
-Onshape assembly
-      │  export as glTF (Resolution: Medium, Compress: off)
-      ▼
-scripts/hero-assets/build-hero.mjs --all
-      │  one optimised drone.glb
-      ▼
-public/models/<design>/drone.glb  +  studio.json
-      │                                  ▲
-      │  _studio.html  ────tune────────  │   (human in the loop)
-      ▼
-app/components/HeroDroneScene.tsx  →  the site
+STEP assembly (Onshape release OpenFrame-3F rev2.2 / OpenFrame-5F rev2.2)
+      |  scripts/hero-assets/explode/step_extract.py     (python3 + OCP, numpy)
+      v
+assembly.pkl  (every distinct part meshed once, every occurrence placed, CAD colours)
+      |  scripts/hero-assets/explode/build_explode.py    (units, assembly order, moves)
+      v
+raw.glb + explode.json      (one named node per part; label, kind, timed moves, beat groups)
+      |  scripts/hero-assets/compress-explode.mjs        (weld, simplify, meshopt, split)
+      v
+public/models/od3|od5/  frame.glb drive.glb video.glb board-*.glb chunks.json explode.json
+                        + studio.json (look and motion tuning)
+      |
+      v
+app/components/HeroDroneScene.tsx  ->  the site
 ```
 
-## Why it is built this way
+## What plays
 
-Two things drove the design, both learned the hard way.
+1. The drone sits assembled until the visitor scrolls. The first scroll step is the
+   explode: the spring-smoothed scroll position drives the explode progress from the
+   assembled stop to the whole-drone stop, so it is scroll-linked and scrolling back up
+   reassembles it. Every part eases (smootherstep) through its own timed moves, top of
+   the stack first (it is a disassembly: screws leave with the part they thread into),
+   and the stagger is continuous in the scroll position. The camera pulls back from the
+   assembled to the exploded framing with it. No idle spin.
+2. Once exploded: hover a part for its name (the rest dims), click to select it (the
+   camera eases to it, the name stays; click empty space or press Escape to release).
+   The Collapse / Explode button under the viewer overrides the scroll until the reader
+   scrolls again.
+3. Orbit: drag turns the view around the current focus, damped, with the elevation
+   clamped (no flipping under the model). The drag is an offset on the scripted view: the
+   scripted camera is frozen while the pointer is down, the offset stays after release and
+   eases back to the beat's framing when the timeline next moves. The press has to travel
+   4 px before it is a drag (otherwise it is a click), the pointer is captured so the drag
+   survives leaving the canvas, hover picking and wheel steps are off while pressed, and
+   `touch-action: pan-y` keeps vertical swipes scrolling the page while a horizontal
+   one-finger drag orbits.
+4. The scroll walkthrough is the existing one (stops, spring, rail ticks, keyboard, deep
+   links `/#fc`, `#esc`, `#rx`, `#frame`, `#motors`, which land exploded). Each beat focuses
+   a group of the exploded model: the camera moves straight from one beat's group to the
+   next (no pull-back to the overview between, no rest stops), eased and smoothed, the rest
+   dims and a spotlight lights the group. The dim crossfades (the lit set fades out, the
+   new one fades in) instead of switching. A selection is dropped when the walkthrough
+   moves.
+5. `prefers-reduced-motion`: the 3D still loads on desktop, but starts on the exploded
+   whole-drone stop (static exploded pose), the camera cuts instead of travelling, scroll
+   steps are instant and the orbit is undamped. Under 768 px the 3D is still skipped (the
+   fallback list is the content).
 
-**Onshape owns placement, KiCad owns the boards.** A PCB routed through Onshape
-loses its silkscreen, soldermask and pad colour, because STEP carries none of
-them. Early versions substituted KiCad-built board GLBs at the Onshape
-transforms. That works and the code is still here (`export-boards.mjs`,
-`place-boards.mjs`), but it was abandoned once the boards were cleaned up inside
-Onshape: one export is simpler than two pipelines that must agree.
+Frame cost: about 1.4 ms of CPU per frame mid-explode (matrix updates, instanced hardware
+draws, no layout reads: the canvas rect and the label width are cached), rendering is
+capped at 60 fps and pauses after 5 s idle.
 
-**The studio exists because the failures are visual.** Every serious bug found
-while building this was invisible in code and obvious on screen: props orbiting
-a point 7 mm off the hub, screws travelling with the wrong assembly, a board
-rendering as a white blob. A human glancing at it spots those in a second. The
-studio's job is to put a person in front of the real assembly with every knob
-exposed.
+Load and cost are comparable to the previous hero: the same meshopt compression, the
+same chunked streaming (airframe first, boards last), and the same material look from
+`studio.json`.
 
-## Stage 1: export from Onshape
-
-Right-click the assembly tab, Export, then:
-
-| Setting | Value | Why |
+| design | before (6 chunks) | after (6 chunks) |
 |---|---|---|
-| Format | **GLB** | one binary file |
-| Resolution | **Medium** | Fine multiplies triangles for no visible gain at hero scale |
-| Compress | **off** | it applies Draco, and the build re-encodes with meshopt anyway. Draco's decoder needs a worker, which Hydrogen's CSP blocks |
-| Include hidden instances | off | |
+| od3 (3") | 3.2 MB | 2.5 MB |
+| od5 (5") | 3.0 MB | 2.9 MB |
 
-Chrome must have "Ask where to save each file" **disabled** or the download sits
-behind a native dialog.
+## How the explode is computed
 
-## Stage 2: build
+`units.py` groups the STEP leaves into parts ("units"): one screw, one plate, one
+board (all SMD parts that stand on it merged in), one motor (its fragments merged),
+the camera, the air unit, and so on. Names come from the CAD part names; a missing
+mirrored camera soft mount is mirrored from the other one. The CAD colours are kept,
+except TPU parts, which ship black and green: anything else is drawn black. The
+camera side plates are anodised gold (#FBB600).
+
+`plan.py` is the assembly-order model. Only the order and the clearances are authored;
+every distance comes from the geometry:
+
+- Layers bottom to top: bottom plate; arms and cross (also out radially along the
+  arm axis, boots further along it, off the arm tips); middle plate with its press-fit
+  inserts hovering over their holes; standoffs; the stack column (grommets, ESC,
+  grommets, FC, nylon nuts); air unit mount, receiver (its antenna slides out of the
+  mount first), air unit, air unit antennas up and back; top plate; battery pad and
+  XT30 mount and connector. Each layer clears the one below by a gap measured on
+  height maps of the actual parts (the top plate clears whatever is under its
+  footprint after the sideways moves).
+- Camera and its soft mounts go forward (the mounts then outward, once clear of the
+  side plates), the bumper further forward, the side plates up above the arm layer
+  and then out sideways, the AirTag mount back and down with the AirTag dropping out
+  of it. Motors lift off the arm ends with their arm's sideways move, props above,
+  prop nuts above those.
+- Every screw: its axis, head end and tip come from its own mesh. The parts it passes
+  through are the parts with surface inside the hole clearance of its shank (this is
+  what `screwcheck` does with booleans). It threads into the tip-most of them (the
+  bumper's screws follow the bumper). Its move is that part's sideways move plus a
+  move along its axis, toward the head side, until its tip clears the head-side face of
+  every part it passed through, as they stand in the exploded pose. It therefore stays
+  lined up with its hole, and moves with the same timing as the part it threads into so
+  that it withdraws along its axis. Washers sit between a screw and its seat.
+- The bumper holes model both an M3x6 and an M3x8: only the M3x8 is kept (the shorter
+  screw of two screws on one hole axis is dropped).
+- Timing: a start time per kind of part, top of the stack first, each move 40% of the
+  explode; parts that must wait for others have their sideways move delayed.
+
+`check_explode.py` voxelises every part in the exploded pose and fails the build review
+when two parts share surface. `check_motion.py` replays the whole timeline and
+reports parts that pass through each other; screws sliding out of their own holes show
+as growth over the assembled baseline and are expected.
 
 ```bash
-cd scripts/hero-assets
-npm install
-node --max-old-space-size=8192 build-hero.mjs <export.glb> \
-     ../../public/models/<design> --split --assembly-json <assembly.json> \
-     --ratio 0.2 --error 0.004
+cd scripts/hero-assets && npm install
+python3 explode/step_extract.py OpenDrone-asm-3F.step /tmp/3F.pkl   # minutes, 80 MB STEP
+python3 explode/build_explode.py /tmp/3F.pkl /tmp/out3
+python3 explode/check_explode.py /tmp/3F.pkl /tmp/out3/units.json 1
+python3 explode/check_motion.py  /tmp/3F.pkl /tmp/out3/units.json 40
+node --max-old-space-size=8192 compress-explode.mjs /tmp/out3 ../../public/models/od3
+cp /tmp/out3/explode.json ../../public/models/od3/
 ```
 
-For API exports, use the assembly translations endpoint with `formatName: GLB`,
-`grouping: true`, `resolution: medium`, `useGlbCompression: false`,
-`excludeHiddenEntities: true` and `storeInDocument: false`. Save the assembly
-response at the same microversion as `assembly.json`. Source document,
-workspace, element and microversion are recorded in each `studio.json`.
+`app/lib/hero-explode.test.ts` checks the shipped assets: every unit has a label and
+finite timed moves, exists as a node in its chunk, every beat selects a real group, chunk
+sizes match `chunks.json`.
 
-The builder matches leaf occurrence IDs to CAD part identities, shares repeated
-parts with matching materials and bounds, batches each board by material, and
-compresses geometry with meshopt. Board simplification uses a tighter error
-bound of 0.0005. Silkscreen triangles are preserved, and boards use 16-bit
-position quantization. Named frame parts remain separate
-for the exploded animation. Final assemblies retain all exported visible parts;
-legacy imports without assembly metadata retain their stray-geometry filter.
+## Other readers of these assets
 
-`npm run build` fingerprints hero chunks and gzip-compresses deployment GLBs.
-The shared model loader decodes gzip payloads after HTTP decoding; source files
-remain ordinary GLBs. Manifests and studio configuration revalidate on each visit.
-The runtime downloads chunks concurrently, prepares geometry in batches and
-pauses rendering outside the visible hero. Settled views pause after five
-seconds without input and wake on interaction; active rendering is capped at
-60 frames per second.
+- **Product page Specs drawing** (`FrameViewer`, OpenFrame and OpenMotor): reads `od3|od5/frame.glb` and `drive.glb`. It matches parts by CAD name, so every node carries `extras.part` (the CAD part name) and `FrameViewer.partName` prefers it over the node name. Each motor is one node whose children are its bodies, shaft along local Y, so the shaft-axis explode and the spinning bell keep working. Verified for both sizes on `/products/openframe` and `/products/openmotor`.
+- **Builder airframe** (`public/models/frame3.glb`, `frame5.glb`, listed in `app/lib/builder/registry.ts`): `build_explode.py` also writes `frame-legacy.glb` (root `Frame`, one `occurrence of <part>` node per carbon plate, arm, cross, aluminium side plate and standoff, CAD colours with gold side plates), and `compress-explode.mjs --legacy <in> <out>` compresses it undecimated. 165 KB (3") and 171 KB (5"), was 187 KB and 172 KB. Same coordinates as before (and as the boards), z up. No route mounts the legacy `HeroScene` that reads them today.
 
-## Stage 3: tune in the studio
+## studio.json
 
-Serve the repo and open
-`/<...>/public/models/<design>/_studio.html`. Any static server works:
+Look and motion tuning only: lighting (dark rig only, the site has no light theme), the spotlight, camera (`distance`, `height`,
+`heightOnPart`, `lift`, `stageShift`, `azimuth`), the dim of a selected part, scroll feel, material
+profiles, and the beat copy. A beat is `select: {none: true}` or `select: {group}` with
+a group from `explode.json` (`fc`, `esc`, `rx`, `motor` (one motor with prop, boot and
+screws), `frame`, `video`); `partSize` is the fraction of the viewport height the group
+fills. The beat copy is unchanged from before (`handle` pulls the caption and the link
+from the product's What-does-this-do content).
 
-```bash
-python3 -m http.server 8731     # from the repo root
-```
+Materials: each GLB material is named `<class>|<r,g,b>` and the class picks the profile
+in `materials[]` (carbon, alu, sideplate, steel, rubber, tpu, motor, prop, camera, tag,
+antenna, heatsink, smd, fr4, padgold, silk, mask). The CAD colour is 8-bit sRGB written
+into the linear glTF field, and the scene decodes it on load, so never tint to fix
+brightness.
 
-The right-hand panel is grouped: look presets, the three lights plus bounce, the
-spotlight, sequence timing, the beat timeline, the camera, materials, and save.
-Three panels matter most:
+## Adding a frame size
 
-**Inspect (click a part).** Click anything in the view. It reports the
-normalised name, which material class matched it, **which beats claim it** (or
-"NONE, it never moves"), triangle count and size in mm, and jumps the material
-panel to that class. This is the fastest way to answer "why is that part the
-wrong colour" or "why did that screw fly off with the wrong thing".
+1. Export the STEP assembly, run the pipeline above into `public/models/od<N>/`.
+2. Check the log: `UNCLAIMED leaves` must be empty and every kind of part must be
+   recognised by `units.classify` (a new part name needs one line there).
+3. Copy `studio.json` from a neighbouring design, set `name`, `source`, the beat copy.
+4. `check_explode.py` and `check_motion.py` must be clean, then look at it on `/hero-preview`
+   (`?herotest` exposes `window.__hero` with `setExplode(p)`, `goTo(i)`, `step(n)`).
 
-**Parts audit.** Every part family with its class, claiming beats and triangle
-cost, filterable, with anything unclaimed flagged in red. Check this reads
-0 orphans before you call a design done.
+## Colours and lighting
 
-**Beats.** Pick a beat and the view jumps to it and holds, so you edit what you
-are looking at. Its caption, its stop captions, the beginner explainer fields
-(`caption`, `hint`, `href`, on the beat and on each stop; an active stop's set
-replaces the beat's on the site), and the numbers (`fade`, `partSize`, each
-stop's `at`) are editable. `fade` and `partSize` each have a
-tick box: unticked means the key is absent and the beat inherits
-`spotlight.darkenRest` and `sequence.partSize`.
+CAD colours are kept except: TPU is black or green (any other print colour is drawn black),
+side plates are anodised gold #FBB600, standoffs are plain aluminium (no colour chosen yet),
+motors keep the previous hero's look (gold anodised bell #FBB600, green stator #147A31,
+CAD whites and greys), and near-black CAD colours are lifted to a dark grey at build time
+(`build_explode.py`) so carbon, props, grommets and TPU keep their shape. Orange is not a
+shipped colour: the only remaining orange-ish surfaces are small electronics on the boards
+and the air unit (JST connector, capacitors, ENIG pads).
 
-When it looks right, press **save to studio.json**. The file is written
-directly, so there is no copy-paste step: the panel loads `studio.json` on
-startup and saves back into it in the same shape, carrying through everything
-it does not control. Saving needs the dev server, because the write goes
-through its studio endpoint. Opened as a bare file, the panel still works and
-**copy JSON** is the fallback.
+Carbon: the weave of the In-the-box art (`scripts/in-the-box`: 8x8 tows of 1.8 mm, one 14.4 mm
+tile, 2x2 twill), tuned matte and subtle for the hero: a few percent of albedo between tows,
+roughness about 0.65, a soft normal map at `normalScale` 0.12, so the weave only shows on a close
+look or at grazing light. `explode/carbon_texture.py` writes albedo, roughness and normal PNGs
+(256 px, about 7 KB in all) to `public/models/carbon/`. At build time the flat faces of each carbon part
+(`build_explode.py`: bottom, middle and top plate, arms, cross) get planar UVs in the part's
+own long-axis frame, one UV unit per tile, so the weave runs along the part's long axis and
+the scale is the same on every part; the cut edges are a separate plain dark matte primitive
+(`carbonedge`), so nothing is stretched on the sides. The GLB carries the UVs and the material
+name `carbon|twill` only; the scene loads the three maps itself (a GLB-embedded image would
+become a blob: URL, which the page's CSP blocks) and dresses the carbon material with them
+(anisotropic filtering on). MeshStandardMaterial has no anisotropy, so there is no sheen.
 
-## The three name hazards
+Metals (screws, nuts, standoffs, side plates, motors) are metalness 0.95 to 1, roughness 0.15 to
+0.18 and environment intensity 1.3 to 1.4: polished or anodised, with crisp highlights from the key
+and the warm kicker and visible environment reflections, not a chrome mirror.
 
-Almost every wrong-part bug in this project traces to one of these. three.js
-mangles names on import:
+Transitions: the camera is damped (critically damped smoothing, about 1 s, no overshoot, the
+velocity carries across a retarget so a quick second step or click continues from the current
+state). Between two groups the camera also sweeps round the model (a swing of up to 0.42 rad
+in yaw, bell-shaped over the move, direction from which side the next group is on) instead of
+cutting across it, the explode state is not touched (it only depends on the scroll position), the
+dim crossfades (fade out, swap, fade in) and so does the part label (the old name fades, the text
+swaps while clear, the new name fades in).
 
-1. It appends `_1`, `_2` to duplicates. `_` is a **word character**, so `\b` in
-   a regex silently fails: `/pad\b/` does not match `4in1-mini_pad_744`. This
-   alone had ~1900 board meshes falling through to a catch-all material.
-2. It turns spaces into underscores: `Top Casing` arrives as `Top_Casing`.
-3. It **deletes** `[ ] . : /` entirely
-   (`three/src/animation/PropertyBinding.js`). `Airtag/Antenna-Mount` arrives as
-   `AirtagAntenna-Mount`, so a config regex containing a slash never fires.
+Performance: pixel ratio capped at 1.75, render loop pauses 5 s after the last input and when the
+canvas is off screen or the tab is hidden, repeated fasteners are drawn instanced.
 
-Onshape additionally wraps every part in `occurrence_of_<name>`.
+Lighting (low-key studio, `studio.json` `lighting`): ACES filmic tone mapping at exposure
+0.95 (`toneMapping: "agx"` is also supported), a RoomEnvironment map at 0.35 for reflections
+on carbon, gold anodise and screws, a soft white key, a warm kicker behind-left that traces
+edges and gives the gold side plates and motor bells their glint, a cool low fill, almost no
+ambient, and a soft contact shadow disc under the drone (a radial gradient plane, no shadow
+maps; `groundShadow` is its opacity).
 
-`tidy()` in both the studio and the hero component undoes 1, 2 and the Onshape
-prefix. **It does not yet handle 3.** If a part is silently getting the wrong
-material, check for a deleted character in its name first.
+## Limits
 
-## Colour
-
-Onshape's exporter writes 8-bit sRGB values into glTF's `baseColorFactor`, which
-the spec defines as **linear**. Measured on the 3-inch export: 183 of 183
-components are exact `n/255`. Both the studio and the hero decode this on load.
-
-Consequence: never set a material `tint` to fix brightness. If something looks
-washed out, the decode is broken, not the colour. Tint only where the CAD colour
-is genuinely absent, which today is the PCB soldermask, silkscreen, pads and
-core.
-
-## Adding a new frame size
-
-Say you are adding the 5-inch.
-
-1. **Export and build** as above into `public/models/od5/`.
-2. **Copy `od3/studio.json` to `od5/`** and edit:
-   - `name`, and `model` if the GLB has a different filename.
-   - `boards[]`: the id must be the KiCad board name as it appears in the node
-     names, e.g. `OpenFC`, `4in1`, `OpenRX-Gemini`. Get these from the parts
-     audit.
-   - `materials[].match`: the regexes are name-based and the 5-inch uses
-     different motors and mounts. Work through the parts audit until it reads
-     0 orphans and no material class has zero members.
-   - `videoModule`, `notFrame`, `boardExclude`: same exercise.
-   - `beats[]`: ids, titles and notes are free text; `select` is one of
-     `{none}`, `{board: "<id>"}`, `{cluster: "<regex>", withProp: true}` or
-     `{complement: true, plus: "videoModule"}`.
-3. **Copy `_studio.html` and a `studio.json` into the new folder** and open it.
-   The panel reads its starting values from the file beside it, so the copy
-   needs both. Tune, then save.
-4. **Render the hero** with `<HeroDroneScene model="od5" />`.
-
-### What will not work without code changes
-
-Be aware before you start. These are hardcoded in `HeroDroneScene.tsx`:
-
-- **Props are found by occurrence name being all digits** (`occurrence_of_1`),
-  which is Onshape's default part name. If the 5-inch props are named
-  "HQ 5x4.3x3" you get zero pivots and no spin, with only a `console.warn`.
-- **Motors are clustered with a 15 mm tolerance** and props matched within
-  30 mm. Both are absolute distances tuned to a 3-inch.
-- **Four props are assumed**, and prop handedness is inferred from
-  `sign(dx * dz)` about the drone's bounding-box centre. A hexacopter, an X8, or
-  an asymmetric layout will be wrong.
-- **The teardown expects a part named exactly `Top`.** No match means the top
-  plate never lifts, silently, while the caption still says it does.
-- **Board bounding boxes are padded on the wrong axes** (the code pads X and Y
-  as the board plane, but the scene is Y-up so the board normal is Y). It works
-  today only because `boardExclude` names every standoff and screw that the
-  wrong-axis over-grow would otherwise sweep in. Components taller than about
-  2.5 mm on a new board may not be claimed by it.
-- **`build-hero.mjs` culls anything beyond 0.25 m** from the origin. A 3-inch is
-  ~0.14 m corner to corner; a 7-inch is ~0.30 m, so **real parts would be
-  deleted**, logged only among hundreds of lines. Raise `FAR_RADIUS` before
-  building anything larger.
-
-## Studio and hero: what is shared and what is not
-
-The hero component is the studio's scene core minus the tuning panel. It is
-deliberately vanilla three.js in a ref container rather than react-three-fiber,
-because the studio version is the one that has been debugged against the real
-assembly.
-
-Both read `studio.json` for every value in it: lighting, spotlight, sequence,
-camera, scroll, materials, boards and the beat timeline. The studio also writes
-it back, so the loop is tune, save, reload. Neither one hardcodes a value the
-other reads; each keeps a fallback copy of the file's contents only for the case
-where the fetch fails.
-
-Code is still duplicated: the teardown choreography, prop rigging, board merging
-and the four `select` shapes exist in both files. They agree today, but nothing
-enforces that. Changing one without the other will cause drift, and that
-duplication is the main maintenance limitation.
-
-## Current limitations
-
-- The choreography, prop rigging and group membership rules are code, not
-  config, so a new design with a different structure still needs edits.
-- The panel edits what a beat says and how it is presented, not the shape of the
-  timeline. Adding, deleting and reordering beats, and every `select` and
-  `choreo`, are file edits: a `select` has four valid shapes and a text box that
-  can produce a fifth is worse than no box.
-- Not exposed as controls, though carried through a save unchanged:
-  `spotlight.beamGain` (the panel's beam is a plain additive cone, not the
-  hero's shader, so the gain has nothing to act on), `scroll.minDwellS`, each
-  material's `id`/`label`/`match`, and `boards`/`boardExclude`/`videoModule`/
-  `notFrame`.
-- The studio and the site do not render materials identically: side by side at
-  the same beat, the site shows gold motor bells where the studio shows red.
-  Both apply the same profile table, so the divergence is in the renderer paths
-  rather than in the settings.
-- Failures are mostly `console.warn`, not visible. A beat that resolves to zero
-  nodes still runs, still spotlights nothing, and still shows its caption, which
-  reads as an animation bug rather than a config one.
-- `tidy()` does not undo three.js's character deletion.
-- `build-hero.mjs` still contains a dead non-`--all` code path that is the
-  default, and produces GLBs the studio cannot load.
-
-## Review findings
-
-An adversarial review of the hero component produced the list below. Fixed
-items remain as design rationale; the rest describe current behavior.
-
-### Fixed
-
-- **One trackpad flick played the whole sequence.** A momentum tail fires at
-  frame rate for a second or more after the finger lifts, and a time-based
-  "gesture ended" test cannot tell it from real input. The fix is to bound the
-  distance instead: within one gesture the target can never travel more than one
-  stop from where it began. Verified: 45 events including a decaying tail now
-  land exactly on `stopFor(gestureFrom + 1)`.
-- **Scroll trapped the reader at both ends.** Release is now keyed off which
-  stop the gesture began at, with a margin, rather than a raw position that
-  happened to coincide with the last snap point.
-- **ctrl+wheel was swallowed**, blocking pinch and browser zoom.
-- **Firefox scrolled about 20x slower**: `deltaMode` was assumed to be pixels.
-- **An unguarded render loop** would throw 60 times a second forever with
-  nothing visible. Now caught, with the loop stopped after three errors.
-- **A leaked WebGL context per remount.** `dispose()` does not release the
-  context; `forceContextLoss()` is now called, and the PMREM generator, its
-  render target, all cloned materials, the dim twins and the merged and source
-  board geometries are disposed.
-- **The loop ran off screen and in background tabs.** Gated on an
-  IntersectionObserver and `document.hidden`.
-- **Prop pivots leaked into the airframe teardown** because the group was never
-  named, so the `notFrame` exclusion could not match it.
-- **Progress never reached 0 or 1**, so the rail fill never lined up with its
-  own dots. Progress is now measured across the stops, not the raw timeline.
-- **Every failure path left a permanent LOADING overlay.** `onReady` now fires
-  from the catch too.
-- **No context-loss recovery.**
-- **Five of six beats existed only in JS state**, invisible to crawlers and
-  screen readers. All beat copy is now in the DOM, visually hidden while the 3D
-  drives presentation and becoming the actual content when it does not.
-- **No keyboard path.** Arrows, PageUp/Down and Home/End step between stops, and
-  the rail dots are real buttons with `aria-current`.
-- **No reduced-motion or small-screen gate.** Now matches the policy the rest of
-  the site already uses: no 3D under 768px or under `prefers-reduced-motion`.
-- **`stops` was parsed and never used**, so the second caption of the airframe
-  beat ("Video module") never appeared even though the choreography ran. The
-  site now honours stops the same way the studio does: the copy panel switches
-  to the active stop's title, note, caption, hint and href mid-hold.
-
-### Still open
-
-- **No touch support.** The gate above means phones get the DOM copy rather than
-  a broken scene, but tablets over 768px will load the 3D and be unable to drive
-  it. A `touchmove` path is the missing piece.
-- **The 3D is hardcoded dark** and does not follow the site's light/dark toggle.
-  Hemisphere and beam colours are literals, and `darkenRest: 1.0` would drive
-  non-focused parts to black on a white page.
-- **No tiered loading.** The 6 MB GLB blocks the first frame.
-- **The shader warm-up was not carried over** from the studio, so the first
-  spotlight compiles shaders during the reader's first scroll.
-- **`mergeGeometries` is one unchunked call**, where `HeroScene.tsx` deliberately
-  chunks it.
-- **About half the component is copy-pasted from `_studio.html` and has already
-  drifted**: staging distance, the fastener regex, motor clustering, and
-  `boardTilt`. This is the main structural debt.
+- The studio panel (`_studio.html`) is retired: it drove the old Onshape GLB structure.
+  Tune by editing `studio.json` and reloading.
+- The TPU parts (boots, air unit mount, camera soft mounts, AirTag and antenna mount,
+  bumper, XT30 mount) are preliminary in the CAD and fit the DJI O4 Pro only.
+- Part names are English strings in `explode.json`, not site copy.
+- `build-hero.mjs` and the board scripts remain for Onshape GLB exports of older
+  assemblies; the current od3 and od5 do not use them.
