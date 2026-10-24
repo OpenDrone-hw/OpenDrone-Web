@@ -446,14 +446,61 @@ export function HeroDroneScene({
 
       /* --------------------------------------------------- assembling view
        * The real loop cannot start until the rigging is done, and the rigging
-       * cannot start until every chunk has landed. Without something here the
-       * whole download is a blank canvas. So run a minimal loop that frames
-       * whatever has arrived and turns it slowly: each chunk visibly drops into
-       * place, which is the honest progress indicator.
+       * cannot start until every chunk has landed. This minimal loop is the
+       * loading screen: each chunk, as it lands, plays the CAD explode backwards
+       * (explode.json, fetched up front), so the drone builds itself in the
+       * order it is really put together. When the last part has seated, the
+       * orbit eases onto the walkthrough's opening view and the main loop takes
+       * the camera from exactly there: no cut.
        */
+      type ExplodeMove = {v: [number, number, number]; t: number; dur: number};
+      type ExplodeUnit = {id: string; label: string; kind: string; moves: ExplodeMove[]};
+      const exPromise = fetch(modelUrl(folder, 'explode.json'), {signal: controller.signal}).then((r) => {
+        if (!r.ok) throw new Error(`explode.json ${r.status}`);
+        return r.json() as Promise<{units: ExplodeUnit[]; groups: Record<string, string[]>}>;
+      });
+      void exPromise.catch(() => {});
+      const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
+      // Smootherstep per move: each part eases off and settles with no kink at either end.
+      const moveEase = (x: number) => x * x * x * (x * (6 * x - 15) + 10);
+      const offsetAt = (moves: ExplodeMove[], p: number, out: THREE.Vector3) => {
+        out.set(0, 0, 0);
+        for (const m of moves) {
+          const q = moveEase(clamp01((p - m.t) / m.dur));
+          out.x += m.v[0] * q;
+          out.y += m.v[1] * q;
+          out.z += m.v[2] * q;
+        }
+        return out;
+      };
+      // One assembly per chunk: the chunk's parts run explode p from 1 to 0.
+      // ASSEMBLE_S is one chunk's build; the next may start ASSEMBLE_GAP_S
+      // after it, so a cached load still reads as a sequence, not one jump.
+      const ASSEMBLE_S = reduced ? 0 : 1.5;
+      const ASSEMBLE_GAP_S = reduced ? 0 : 0.45;
+      type Build = {parts: Array<{node: THREE.Object3D; base: THREE.Vector3; moves: ExplodeMove[]}>; start: number};
+      const builds: Build[] = [];
+      let nextBuildAt = 0;
+      const tmpOff = new THREE.Vector3();
+      const stepBuilds = (now: number) => {
+        let busy = false;
+        for (const b of builds) {
+          const k = ASSEMBLE_S ? clamp01((now - b.start) / ASSEMBLE_S) : 1;
+          // Ease the timeline itself too, so the build lands softly.
+          const p = 1 - moveEase(k);
+          for (const part of b.parts) part.node.position.copy(part.base).add(offsetAt(part.moves, p, tmpOff));
+          if (k < 1) busy = true;
+        }
+        return busy;
+      };
       let previewOn = true;
       const previewClock = new THREE.Clock();
+      let previewNow = 0;
       let previewAngle = 0.9;
+      // Set once everything has seated: the orbit then eases onto this yaw.
+      let previewGoal: number | null = null;
+      const previewVel = {v: 0};
+      const previewPitch = Math.atan(cfg.camera?.height ?? 0.5);
       // Framed on the finished drone from the first frame, not on the airframe
       // alone, so the camera does not lurch outward as the heavy chunks land.
       // 0.075 m is a 3 inch airframe's bounding radius; refined once measured.
@@ -472,10 +519,17 @@ export function HeroDroneScene({
         if (!previewOn) return;
         if (document.hidden) return;
         resizeIfNeeded();
-        previewAngle += Math.min(previewClock.getDelta(), 0.05) * 0.24;
-        const off = new THREE.Vector3(Math.cos(previewAngle), 0.5, Math.sin(previewAngle))
-          .normalize()
-          .multiplyScalar(previewRadius * (cfg.camera?.distance ?? 2.15));
+        const dt = Math.min(previewClock.getDelta(), 0.05);
+        previewNow += dt;
+        stepBuilds(previewNow);
+        if (previewGoal === null) previewAngle += dt * 0.24;
+        else previewAngle = smoothDamp(previewAngle, previewGoal, previewVel, 0.6, dt);
+        const back = previewRadius * (cfg.camera?.distance ?? 2.15);
+        const off = new THREE.Vector3(
+          Math.cos(previewPitch) * Math.cos(previewAngle) * back,
+          Math.sin(previewPitch) * back,
+          Math.cos(previewPitch) * Math.sin(previewAngle) * back,
+        );
         camera.position.copy(previewCentre.clone().add(off));
         camera.lookAt(previewCentre);
         renderer.render(scene, camera);
@@ -487,12 +541,20 @@ export function HeroDroneScene({
         .catch(() => null);
       if (disposed) return;
       // No manifest means an older single-file build. Still supported.
-      // Smallest chunks first: the whole download happens behind the splash,
-      // so the order's only job is to get the first pieces in fast and keep
-      // the pipe busy, not to tell a story.
+      // Build order, not size order: every download starts at once below, and
+      // the chunks seat in the order a drone is put together, frame first.
+      const buildRank = (c: Chunk) => {
+        const id = c.id.toLowerCase();
+        const order = ['frame', 'esc', 'fc', 'rx', 'video', 'drive'];
+        const i = order.findIndex((k) => id === k || id.includes(`open${k}`) || id.endsWith(`-${k}`));
+        return i < 0 ? order.length : i;
+      };
       const chunks: Chunk[] = manifest?.chunks?.length
-        ? [...manifest.chunks].sort((a, b) => (a.bytes || 1) - (b.bytes || 1))
+        ? [...manifest.chunks].sort((a, b) => buildRank(a) - buildRank(b))
         : [{id: 'drone', label: 'drone', file: cfg.model ?? 'drone.glb', bytes: 1}];
+      const exDefs = await exPromise.catch(() => null);
+      if (disposed) return;
+      const exByIdEarly = new Map((exDefs?.units ?? []).map((u) => [u.id, u]));
       const totalBytes = chunks.reduce((s, c) => s + (c.bytes || 1), 0);
       const pieces = chunks.map((c) => ({id: c.id, label: c.label}));
       let bytesDone = 0;
@@ -546,9 +608,23 @@ export function HeroDroneScene({
         } else if (!asm.position.equals(src.position) || !asm.quaternion.equals(src.quaternion)) {
           console.warn(`[hero] chunk "${c.id}" assembly transform differs from the first chunk`);
         }
-        for (const child of [...src.children]) asm.add(child);
+        const landed = [...src.children];
+        for (const child of landed) asm.add(child);
         paint(asm, droneRoot);
+        // Framed on the seated parts, before they are pushed out to their
+        // exploded start, so the camera never chases a flying part.
         previewFit();
+        const parts: Build['parts'] = [];
+        for (const node of landed) {
+          const def = exByIdEarly.get(node.name) ?? exByIdEarly.get(node.userData?.unit);
+          if (!def?.moves.length) continue;
+          const base = node.position.clone();
+          node.position.copy(base).add(offsetAt(def.moves, 1, tmpOff));
+          parts.push({node, base, moves: def.moves});
+        }
+        const start = Math.max(previewNow, nextBuildAt);
+        nextBuildAt = start + ASSEMBLE_GAP_S;
+        builds.push({parts, start});
         bytesDone += c.bytes || 1;
         onLoad?.({label: c.label, frac: bytesDone / totalBytes, chunk: c.id, done: true, pieces});
         // Hand the main thread back so the preview loop paints the part that
@@ -568,7 +644,18 @@ export function HeroDroneScene({
         if (disposed) return;
       }
       if (!asm) throw new Error('no geometry loaded');
-      previewOn = false;
+      // Let every chunk finish seating before the rig reads base positions, then
+      // swing the orbit onto the walkthrough's opening yaw (nearest turn).
+      // A hidden tab runs no frames, so it skips the show and seats everything.
+      while (!reduced && !disposed && !document.hidden && builds.some((b) => previewNow < b.start + ASSEMBLE_S)) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      stepBuilds(Infinity);
+      if (disposed) return;
+      {
+        const az = cfg.camera?.azimuth ?? 0.7;
+        previewGoal = az + Math.ceil((previewAngle - az) / (Math.PI * 2)) * Math.PI * 2;
+      }
 
       const occRoot: THREE.Object3D = asm;
 
@@ -577,11 +664,7 @@ export function HeroDroneScene({
        * as a named node with a label and a few timed moves, derived from the CAD:
        * which parts a screw passes through, what sits on what, in which order the
        * build comes apart. This scene only plays it. */
-      type ExplodeMove = {v: [number, number, number]; t: number; dur: number};
-      type ExplodeUnit = {id: string; label: string; kind: string; moves: ExplodeMove[]};
-      const exRes = await fetch(modelUrl(folder, 'explode.json'), {signal: controller.signal});
-      if (!exRes.ok) throw new Error(`explode.json ${exRes.status}`);
-      const EX = (await exRes.json()) as {units: ExplodeUnit[]; groups: Record<string, string[]>};
+      const EX = exDefs ?? (await exPromise);
       if (disposed) return;
       type Unit = ExplodeUnit & {node: THREE.Object3D; base: THREE.Vector3};
       const UNITS = new Map<string, Unit>();
@@ -602,9 +685,6 @@ export function HeroDroneScene({
         }
         return null;
       };
-      const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
-      // Smootherstep per move: each part eases off and settles with no kink at either end.
-      const moveEase = (x: number) => x * x * x * (x * (6 * x - 15) + 10);
       function applyExplode(p: number) {
         for (const u of UNITS.values()) {
           let x = 0;
@@ -815,15 +895,14 @@ export function HeroDroneScene({
       let t = 0;
       let camH = cfg.camera?.height ?? 0.5;
       // Scripted camera state, smoothed: the point it orbits, distance, height.
-      const camFocus = droneCentre.clone();
-      let camBack = droneRadius * (cfg.camera?.distance ?? 2.15);
-      let camReady = false;
+      // Starts where the assembling view left the camera; the damping below
+      // carries it onto the first beat's framing.
+      const camFocus = previewCentre.clone();
+      let camBack = previewRadius * (cfg.camera?.distance ?? 2.15);
+      let camReady = !reduced;
       let wasTravelling = false;
       // Canvas rect, cached: read on pointer events, never per frame.
       let rect = el.getBoundingClientRect();
-      let labelW = 0;
-      let labelWant = '';
-      let labelSwapAt = 0;
       // Velocities for the damped camera: focus xyz, distance, height, swing.
       const camVel = [0, 1, 2, 3, 4, 5].map(() => ({v: 0}));
       let swing = 0;
@@ -862,18 +941,13 @@ export function HeroDroneScene({
         wake();
       };
 
-      /* ------------------------------------------- hover, select, label */
+      /* ------------------------------------------------- hover, select */
       let hovered: Unit | null = null;
       let selected: Unit | null = null;
       const ptr = {x: 0, y: 0, inside: false, dirty: false, downX: 0, downY: 0};
       let lastRay = 0;
       const raycaster = new THREE.Raycaster();
       const pickRoots = [...UNITS.values()].map((u) => u.node);
-      const label = document.createElement('div');
-      label.className = 'hp-partlabel';
-      label.setAttribute('aria-hidden', 'true');
-      el.append(label);
-      cleanup.push(() => label.remove());
       const tmpBox = new THREE.Box3();
       const tmpSph = new THREE.Sphere();
       const sphereOf = (nodes: THREE.Object3D[]) => {
@@ -1139,7 +1213,8 @@ export function HeroDroneScene({
        */
       let pressed = false;
       let dragging = false;
-      let userYaw = 0;
+      // The assembling orbit may still be swinging onto the opening yaw.
+      let userYaw = previewGoal === null ? 0 : previewAngle - previewGoal;
       let userYawT = 0;
       let userPitch = 0;
       let userPitchT = 0;
@@ -1596,7 +1671,7 @@ export function HeroDroneScene({
           const sp = sphereOf(bb.nodes.map((n) => n.node));
           return {
             c: sp.center.clone(),
-            back: THREE.MathUtils.clamp(sp.radius / ((bb.partSize ?? size0) * halfTan), droneRadius * 0.45, baseBack),
+            back: THREE.MathUtils.clamp(sp.radius / ((bb.partSize ?? size0) * halfTan), droneRadius * 0.28, baseBack),
             h: heightPart,
           };
         };
@@ -1699,31 +1774,6 @@ export function HeroDroneScene({
         } else spotL.intensity = 0;
         spotL.updateMatrixWorld();
 
-        // Label: follows the pointer for a hover, sits on the selected part. Uses the
-        // cached canvas rect and label width so no layout is read per frame.
-        // Label crossfade: the old name fades out, the text swaps while it is clear, the
-        // new one fades in.
-        const wantText = wantUnit && explodeP > 0.02 && !dragging ? wantUnit.label : '';
-        if (wantText !== labelWant) {
-          labelWant = wantText;
-          labelSwapAt = label.textContent && wantText ? now + 120 : now;
-          label.style.opacity = '0';
-        }
-        if (labelWant && wantUnit && now >= labelSwapAt) {
-          if (label.textContent !== labelWant) {
-            label.textContent = labelWant;
-            labelW = label.offsetWidth;
-          }
-          let lx = ptr.x - rect.left + 16;
-          let ly = ptr.y - rect.top + 18;
-          if (!hovered) {
-            const sp = sphereOf([wantUnit.node]).center.clone().project(camera);
-            lx = ((sp.x + 1) / 2) * rect.width + 14;
-            ly = ((1 - sp.y) / 2) * rect.height - 8;
-          }
-          label.style.transform = `translate(${Math.round(Math.min(lx, rect.width - labelW - 12))}px, ${Math.round(Math.min(ly, rect.height - 40))}px)`;
-          label.style.opacity = '1';
-        } else if (!labelWant) label.style.opacity = '0';
         batches?.update();
 
         renderer.render(scene, camera);
@@ -1737,6 +1787,7 @@ export function HeroDroneScene({
         }
        }
       };
+      previewOn = false;
       let playing: boolean | null = null;
       syncPlayback = () => {
         const play = TEST || (onScreen && !document.hidden && !idlePaused);

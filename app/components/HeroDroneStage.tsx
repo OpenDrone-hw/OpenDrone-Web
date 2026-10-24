@@ -1,6 +1,6 @@
 /**
- * The hero's 3D layer: the scroll-driven walkthrough, its progress rail, and the
- * copy panel that follows it.
+ * The hero's 3D layer: the scroll-driven walkthrough and the copy panel that
+ * follows it. No on-screen controls: scroll drives it, a drag orbits it.
  *
  * This is an absolutely-positioned layer, not a section of its own - it fills
  * the hero's sticky pane so the wordmark, size selector and buy bubble sit over
@@ -126,7 +126,6 @@ export function HeroDroneStage({
   // opening whole-drone hold reports too, carrying the beginner intro).
   const [resting, setResting] = useState(true);
   const seek = useRef<((i: number) => void) | null>(null);
-  const fillRef = useRef<HTMLDivElement>(null);
   const handleBuilding = useCallback((building: boolean) => {
     onBuilding?.(building);
     if (building) {
@@ -164,15 +163,7 @@ export function HeroDroneStage({
     } : null);
     return () => onSeeker?.(null);
   }, [beats, onSeeker, use3D]);
-  // Fires every frame, so it writes straight to the DOM rather than to state.
-  const handleProgress = useCallback(
-    (f: number) => {
-      if (fillRef.current)
-        fillRef.current.style.width = `${Math.max(0, Math.min(1, f)) * 100}%`;
-      onProgress?.(f);
-    },
-    [onProgress],
-  );
+  const handleProgress = useCallback((f: number) => onProgress?.(f), [onProgress]);
 
   return (
     <div className="hp-stage">
@@ -199,37 +190,6 @@ export function HeroDroneStage({
             size: resolvedModel.replace(/^od/, ''),
           })}
         </p>
-      ) : null}
-
-      {use3D ? (
-        <nav
-          className="hp-rail"
-          aria-label={copyText('home.hero_rail_aria') ?? 'Drone parts'}
-        >
-          <div className="hp-rail-fill" ref={fillRef} />
-          {beats.map((b, i) => (
-            <button
-              key={b.id}
-              type="button"
-              className={`hp-dot${i === active ? ' on' : ''}${i < active ? ' done' : ''}`}
-              style={{left: `${(i / Math.max(1, beats.length - 1)) * 100}%`}}
-              aria-label={b.title}
-              aria-current={i === active ? 'true' : undefined}
-              onClick={() => seek.current?.(i)}
-            />
-          ))}
-        </nav>
-      ) : null}
-
-      {use3D && Scene ? (
-        <button
-          type="button"
-          className="hp-explode"
-          aria-pressed={exploded}
-          onClick={() => explodeApi.current?.toggle()}
-        >
-          {exploded ? 'Collapse' : 'Explode'}
-        </button>
       ) : null}
 
       {/* The spotlight cuts as a part leaves; that is the cue for this.

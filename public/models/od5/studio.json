@@ -270,7 +270,7 @@
         "group": "fc"
       },
       "handle": "openfc-lite",
-      "partSize": 0.55
+      "partSize": 0.62
     },
     {
       "id": "esc",
@@ -282,7 +282,7 @@
         "group": "esc"
       },
       "handle": "openesc",
-      "partSize": 0.55
+      "partSize": 0.62
     },
     {
       "id": "rx",
@@ -292,7 +292,7 @@
         "group": "rx"
       },
       "handle": "openrx",
-      "partSize": 0.65
+      "partSize": 0.7
     },
     {
       "id": "motor",
@@ -328,7 +328,7 @@
         "group": "video"
       },
       "fade": 0.8,
-      "partSize": 0.75
+      "partSize": 0.78
     }
   ],
   "camera": {
