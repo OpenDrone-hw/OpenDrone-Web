@@ -7,9 +7,10 @@
  * the same drone. The route owns the splash; this owns the drone.
  *
  * Rendering rules live here rather than in the scene: the 3D is skipped under
- * 768px or `prefers-reduced-motion`, matching the policy the rest of the
- * homepage uses, and in that case the fallback list becomes the actual content
- * instead of being visually hidden.
+ * 768px, matching the policy the rest of the homepage uses, and in that case the
+ * fallback list becomes the actual content instead of being visually hidden.
+ * Under `prefers-reduced-motion` the scene still loads but shows the exploded
+ * pose statically (no intro, no travelling camera).
  */
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Link} from 'react-router';
@@ -24,7 +25,6 @@ import {WHAT_IS_THIS_ID} from '~/lib/product-content';
 
 function shouldLoad3D() {
   if (typeof window === 'undefined') return false;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
   if (window.innerWidth < 768) return false;
   return true;
 }
@@ -86,6 +86,12 @@ export function HeroDroneStage({
     ? requestedFolder
     : 'od3';
   const [use3D, setUse3D] = useState(false);
+  const [reduced, setReduced] = useState(false);
+  const [exploded, setExploded] = useState(true);
+  const explodeApi = useRef<{toggle: () => void; set: (on: boolean) => void} | null>(null);
+  const handleExplode = useCallback((api: {toggle: () => void; set: (on: boolean) => void} | null) => {
+    explodeApi.current = api;
+  }, []);
   const [Scene, setScene] = useState<React.ComponentType<HeroDroneSceneProps> | null>(
     null,
   );
@@ -96,6 +102,7 @@ export function HeroDroneStage({
       onReady?.();
       return;
     }
+    setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     setUse3D(true);
     scenePromise
       .then((m) => setScene(() => m.HeroDroneScene))
@@ -180,6 +187,9 @@ export function HeroDroneStage({
           onReady={onReady}
           onBuilding={handleBuilding}
           onSeeker={handleSeeker}
+          reduced={reduced}
+          onExplode={handleExplode}
+          onExploded={setExploded}
         />
       ) : null}
 
@@ -209,6 +219,17 @@ export function HeroDroneStage({
             />
           ))}
         </nav>
+      ) : null}
+
+      {use3D && Scene ? (
+        <button
+          type="button"
+          className="hp-explode"
+          aria-pressed={exploded}
+          onClick={() => explodeApi.current?.toggle()}
+        >
+          {exploded ? 'Collapse' : 'Explode'}
+        </button>
       ) : null}
 
       {/* The spotlight cuts as a part leaves; that is the cue for this.
