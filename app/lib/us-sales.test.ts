@@ -35,6 +35,21 @@ describe('US sales gate', () => {
     for (const gate of [undefined, '0', 'true', ' 1']) assert.equal(usSalesRate({PUBLIC_US_SALES: gate}), null);
   });
 
+  it('is closed in app mode whatever the gate says, and unchanged in Shopify mode', () => {
+    const app = {PUBLIC_US_SALES: '1', COMMERCE_SOURCE: 'app', APP_API_URL: 'https://app.example'};
+    assert.equal(usSalesRate(app), null);
+    assert.equal(usSalesRate({...app, COMMERCE_SOURCE: 'shopify'}), 9.95);
+    // app mode needs its URL, as everywhere else: COMMERCE_SOURCE alone is not app mode
+    assert.equal(usSalesRate({PUBLIC_US_SALES: '1', COMMERCE_SOURCE: 'app'}), 9.95);
+  });
+
+  it('app mode quotes a US buyer as sold through shops, Shopify mode as a US order', async () => {
+    const {shippingQuote} = await import('./shipping-rates.ts');
+    const app = {PUBLIC_US_SALES: '1', COMMERCE_SOURCE: 'app', APP_API_URL: 'https://app.example'};
+    assert.equal(shippingQuote('US', undefined, usSalesRate(app))?.kind, 'shops');
+    assert.equal(shippingQuote('US', undefined, usSalesRate({PUBLIC_US_SALES: '1'}))?.kind, 'direct');
+  });
+
   it('stays closed with the gate on while the rate is null (fail closed)', () => {
     assert.equal(usSalesRate({PUBLIC_US_SALES: '1'}, {rate: null}), null);
     assert.equal(usSalesRate({PUBLIC_US_SALES: '1'}, {}), null);

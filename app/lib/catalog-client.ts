@@ -55,7 +55,7 @@ export type CatalogReader = {
 export type CatalogClient = CatalogReader & {fresh: CatalogReader};
 
 /** The allocation region for a destination with consumer checkout. */
-export function buyerRegion(request: Request | undefined, env: Pick<Env, 'PUBLIC_US_SALES'>): Region {
+export function buyerRegion(request: Request | undefined, env: Pick<Env, 'PUBLIC_US_SALES' | 'COMMERCE_SOURCE' | 'APP_API_URL'>): Region {
   if (!request) return 'EU';
   const quote = shippingQuote(shipCountryForRequest(request), undefined, usSalesRate(env));
   return isUsQuote(quote) ? 'US' : isInternationalQuote(quote) ? 'INT' : 'EU';
