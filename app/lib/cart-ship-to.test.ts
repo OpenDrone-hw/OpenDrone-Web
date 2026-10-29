@@ -392,8 +392,12 @@ describe('international cart country switches', () => {
       assert.equal(summary.summary.subtotal.currencyCode,currency);
       assert.equal(fake.state.country,country);
       assert.ok(fake.state.lines.every(line=>line.shipRegion==='INT'));
-      assert.ok(fake.state.lines.every(line=>line.deliveryBy==='30 April 2027'));
-      assert.ok(fake.state.lines.every(line=>/31 March 2027/.test(line.shipPromise??'')));
+      // Batch 1 FC stock now serves international addresses: it keeps its November promise and
+      // names no delivery date (batch 1 has no deliveryByINT). The preorder line takes the March batch.
+      assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
+      assert.ok(!fake.state.lines[0].deliveryBy);
+      assert.equal(fake.state.lines[1].deliveryBy,'30 April 2027');
+      assert.match(fake.state.lines[1].shipPromise??'',/31 March 2027/);
       await handleCartCountry(switchRequest('BE'),ENV,dependencies);
       assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
       assert.equal(fake.state.lines[0].deliveryBy,'30 November 2026');
@@ -402,14 +406,14 @@ describe('international cart country switches', () => {
     }
   });
 
-  it('does not silently hand an EU stock promise to an international checkout', async () => {
+  it('keeps the batch 1 stock promise for an international checkout and re-checks the cart once', async () => {
     const fake=shopify('BE',[euLine()]);
     const regions:Region[]=[];
     const first=await handleShopifyCartAction(checkoutRequest('CA'),ENV,actionDeps(fake,regions));
     assert.equal(first.headers.get('Location'),'/cart?check=market');
     assert.equal(fake.state.country,'CA');
     assert.equal(fake.state.lines[0].shipRegion,'INT');
-    assert.match(fake.state.lines[0].shipPromise??'',/31 March 2027/);
+    assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
     const second=await handleShopifyCartAction(checkoutRequest('CA'),ENV,actionDeps(fake,regions));
     assert.equal(second.headers.get('Location'),CHECKOUT);
     assert.deepEqual(regions,['INT','INT']);
@@ -434,6 +438,7 @@ it('an international product add reprices the existing EU cart and refreshes its
   assert.equal(summary.subtotal.currencyCode,'CAD');
   assert.equal(fake.state.country,'CA');
   assert.equal(summary.lines.length,2);
-  assert.ok(summary.lines.every(line=>/31 March 2027/.test(line.shipPromise)));
+  assert.equal(summary.lines[0].shipPromise,EU_PROMISE);
+  assert.match(summary.lines[1].shipPromise,/31 March 2027/);
   assert.ok(fake.state.lines.every(line=>line.shipRegion==='INT'));
 });

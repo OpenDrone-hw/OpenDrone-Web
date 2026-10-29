@@ -1112,7 +1112,7 @@ page renders as before. Open:
 | Destination | `shippingQuote` zone `us`, rate from `us-sales.json` | unchanged |
 | Prices | the US catalog's USD list price: duties included, no sales tax. The price steps list shows USD too (see "US prices" below) | EUR incl. VAT |
 | Counter | "0 / 250 ordered for the March 2027 batch": same sentence and bar as the EU, counting the highlighted batch | "1 / 250 ordered for batch 1" |
-| Batches | one row per batch in batch order in both regions (`app/lib/availability.ts`, `app/components/Availability.tsx`): batch 1 "EU only" first, the March 2027 batch "EU and US" second; the buyer's batch is highlighted (US: March 2027, with batch 1 tagged "Not available in the US"; EU: batch 1 while units remain); other products one March row | batch 1 highlighted, March 2027 batch below |
+| Batches | one row per batch in batch order in both regions (`app/lib/availability.ts`, `app/components/Availability.tsx`): batch 1 "EU and international, not the US" first, the March 2027 batch "EU, US and more" second; the buyer's batch is highlighted (US: March 2027, with batch 1 tagged "Not available in the US"; EU: batch 1 while units remain); other products one March row | batch 1 highlighted, March 2027 batch below |
 | Refund line | "If we cannot deliver to you, you get a full refund." (terms 7ter.5, US only) | none |
 | Sells | everything for sale: campaign SKUs from their first US-serving batch, every other SKU (in stock, accessories) as a preorder of `usStock` in `content/preorders.json` (March 2027 batch). Sold out stays sold out | everything for sale |
 | Batch | first batch with room whose `regions` include US | first with room whose `regions` include EU |
@@ -1131,8 +1131,8 @@ batch tag.
 hand.
 
 The cart line and the checkout line property `Availability` carry the same
-words as the product page ("Batch 1 · EU only", "March 2027 batch · EU and
-US"; `batchText` in `app/lib/availability.ts`, words from
+words as the product page ("Batch 1 · EU and international, not the US", "March 2027 batch · EU, US and
+more"; `batchText` in `app/lib/availability.ts`, words from
 `content/copy/preorder.json`). Product pages are English only; the legal terms
 (art. 7bis) are unchanged.
 
@@ -1168,9 +1168,14 @@ rate, and HS codes and country of origin on every variant.
 
 ### International preorders
 
-Other permitted destinations use allocation region `INT`. EU-only paid stock
-stays in the EU; international products and accessories use the March batch,
-including the existing `usStock` rule for otherwise unlisted accessories.
+Other permitted destinations use allocation region `INT`. Batch-1 paid stock
+of FC and ESC serves the EU and `INT` but not the US (founder 2026-10-29), with
+the early November promise and no international delivery date; international
+products, accessories and a full batch 1 use the March batch, including the
+existing `usStock` rule for otherwise unlisted accessories. The Shopify
+shipping rates of the international zones are still named for the March ship
+date: add a batch-1 rate per zone, with the same price and the November ship
+date, before this reaches production (`docs/batch1-shipping-rates.md`).
 The selected country supplies Shopify's catalog prices, cart market and currency.
 A null shipping preview means the charge is confirmed at checkout, never free.
 Before checkout, the cart and the added-to-cart drawer show "from X, confirmed
@@ -1221,10 +1226,10 @@ order, then set that batch's `ships`. An accessory with `stock` sells that
 many units with its dated `batch`, then ships with the lead's `after`
 batch; set `stock` from InvenTree stock on hand. The storefront keeps dispatch promises separate from arrival deadlines.
 `deliveryBy`, `deliveryByUS` and `deliveryByINT` supply the visible `Delivery by`
-checkout property, cart and confirmation, and order the lines of a combined cart. A batch with `regions` (`["EU"]` for paid stock in Belgium) takes
+checkout property, cart and confirmation, and order the lines of a combined cart. A batch with `regions` (`["EU", "INT"]` for paid stock in Belgium) takes
 only units shipping there: each paid unit takes the first batch with room
-that serves its order's shipping region (EU, US or INT), so a non-EU unit skips an
-EU-only batch. Funding targets count every region. A price step counts what
+that serves its order's shipping region (EU, US or INT), so a US unit skips a
+batch that does not serve the US. Funding targets count every region. A price step counts what
 the product page step bar shows an EU buyer (`tierUnits` in
 `app/lib/preorder-campaign.ts`): the batches the EU buyer has seen sell out
 plus the units in their current batch, so units in a batch the EU buyer cannot

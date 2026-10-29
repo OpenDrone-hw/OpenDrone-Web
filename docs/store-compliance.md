@@ -15,7 +15,7 @@ only the storefront evidence a release review must inspect.
 | Prices and tax | Reviewed price presentation, tax-inclusive totals and accepted destination VAT treatment |
 | Fulfilment | Held preorder, authorised release, accepted label, tracking and reconciliation, including mixed and refunded orders |
 | Privacy and interest | Consent, unsubscribe and failure states; no fabricated retail availability or sales evidence |
-| US preorders | Consumer preorders for every product, including OpenRX, while `PUBLIC_US_SALES` is `1` and `content/us-sales.json` has a rate. Batch-1 FC/ESC stock is EU only: the storefront refuses it for a US ship-to and the Worker holds a US order that carries it as `us-review`. Retailer enquiries stay on `/wholesale` |
+| US preorders | Consumer preorders for every product, including OpenRX, while `PUBLIC_US_SALES` is `1` and `content/us-sales.json` has a rate. Batch-1 FC/ESC stock ships from Belgium to the EU and other permitted destinations, not the US (founder 2026-10-29): the storefront refuses it for a US ship-to and the Worker holds a US order that carries it as `us-review`. Retailer enquiries stay on `/wholesale` |
 
 Evidence is attached to the existing release tasks, not copied into a second
 checklist here. A local build does not establish payment-provider acceptance,

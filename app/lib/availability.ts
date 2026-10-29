@@ -40,6 +40,7 @@ export type TargetDates = {deadline: string; eta: string};
 function scopeOf(regions: Batch['regions'], words: Words): string {
   if (regions.length === 1 && regions[0] === 'EU') return words('scope_eu', 'EU only');
   if (regions.length === 1 && regions[0] === 'US') return words('scope_us', 'US only');
+  if (regions.includes('INT') && !regions.includes('US')) return words('scope_eu_international', 'EU and international, not the US');
   if (regions.includes('INT')) return words('scope_international', 'International preorders');
   return words('scope_both', 'EU and US');
 }
