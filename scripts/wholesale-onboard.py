@@ -24,8 +24,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from wholesale_lib import (EU, EXEMPTION, GROUPS, WHOLESALE_PERCENT, apply_slot, gql, groups,  # noqa: E402
-                           live_variants, load_env, plan_slot, read_code, rounding_check, slot_code, user_errors)
+from wholesale_lib import (EU, EXEMPTION, GROUPS, WHOLESALE_PERCENT, apply_slot, divisor, gql, groups,  # noqa: E402
+                           live_variants, load_env, plan_slot, read_code, rounding_check, slot_code, tax_pricing_problem,
+                           user_errors)
 
 VIES = "https://ec.europa.eu/taxation_customs/vies/rest-api/ms/{cc}/vat/{num}"
 
@@ -91,7 +92,7 @@ def main():
            "no VAT number given" if not o.vat else "VIES did not confirm the number")
 
     cust = find_customer(env, email)
-    tags = sorted(set((cust or {}).get("tags") or []) | {"wholesale"} | ({"reverse-charge"} if exempt else set()))
+    tags = sorted(set((cust or {}).get("tags") or []) | {"wholesale"} | ({"reverse-charge", f"country-{cc.lower()}"} if exempt else set()))
     exemptions = sorted(set((cust or {}).get("taxExemptions") or []) | ({EXEMPTION} if exempt else set()))
     cust_input = {"email": email, "tags": tags, **({"taxExemptions": exemptions} if exempt else {})}
     old_note = ((cust or {}).get("note") or "").strip()
@@ -104,7 +105,9 @@ def main():
         cust_input["note"] = "\n".join(lines)
 
     main = o.code.strip().upper() or main_code(o.percent, o.slug, o.company, email)
-    gs = groups(live_variants(env), o.percent)
+    div = divisor(cc, exempt)  # reverse charge: price base is net of the retailer's VAT (wholesale_lib.divisor)
+    tax_problem = tax_pricing_problem(env) if exempt else None
+    gs = groups(live_variants(env), o.percent, div)
     cids = [cust["id"]] if cust else ["<new customer id>"]
     slots = []
     for n in range(1, GROUPS + 1):
@@ -118,17 +121,21 @@ def main():
     print(f"tax exemption: {'SET ' + EXEMPTION if exempt else 'NOT set'} ({why})")
     print(f"customer: {'found ' + cust['id'] if cust else 'will be created'} (tags {(cust or {}).get('tags')}, exemptions {(cust or {}).get('taxExemptions')})")
     print(f"planned write 1: {'customerUpdate' if cust else 'customerCreate'} {json.dumps(cust_input)}")
-    print(f"planned writes 2..: {o.percent:g}% off retail, {len(gs)} price group(s)")
+    print(f"price base: {'NET of ' + str(round((div - 1) * 100, 1)) + '% ' + cc + ' VAT (reverse charge)' if exempt else 'gross retail'}"
+          + (f"; WARNING tax pricing: {tax_problem}" if tax_problem else ""))
+    print(f"planned writes 2..: {o.percent:g}% off the price base, {len(gs)} price group(s)")
     for n, code, want, existing, action in slots:
         if want:
             skus = ",".join(v["sku"] for v in want["variants"])
-            print(f"  slot {n} {code}: {action} percentage={want['pct']} (worst {rounding_check(want, o.percent)[0]:.2f} cent per unit, {rounding_check(want, o.percent)[1]:.1f} cent per line up to 50) variants={skus}")
+            print(f"  slot {n} {code}: {action} percentage={want['pct']} (worst {rounding_check(want, o.percent, 50, div)[0]:.2f} cent per unit, {rounding_check(want, o.percent, 50, div)[1]:.1f} cent per line up to 50) variants={skus}")
         else:
             print(f"  slot {n} {code}: {action} (no group)")
     if not o.apply:
         print("\ndry run: nothing written. Re-run with --apply after the founder's go.")
         return
 
+    if tax_problem:
+        raise SystemExit(f"refusing --apply: {tax_problem}; the net price would be discounted twice (wholesale_lib.tax_pricing_problem)")
     if cust:
         r = gql(env, 'mutation($i:CustomerInput!){customerUpdate(input:$i){customer{id} userErrors{field message}}}',
                 {"i": {"id": cust["id"], **{k: v for k, v in cust_input.items() if k != "email"}}})["customerUpdate"]

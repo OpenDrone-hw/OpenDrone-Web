@@ -18,6 +18,8 @@ flowchart LR
 
 A retailer pays 75% of retail (25% off, founder 2026-10-29), where retail is the variant's Shopify compare-at price, whatever preorder step the live price is on. The rate is `WHOLESALE_PERCENT` in `scripts/wholesale_lib.py` (or `--percent` for one retailer, which then names the code `WS<rate>-...`).
 
+Reverse-charge retailers (EU, outside Belgium, VIES-valid) pay 75% of NET retail: retail divided by 1 plus the standard VAT rate of their country (`EU_VAT` in `wholesale_lib.py`, with its source and date), for example 39.00 x 0.75 / 1.21 = 24.17 for a Spanish retailer on FC Lite 30x30. Reason: Shopify keeps a tax-inclusive price unchanged for a tax-exempt customer (no VAT line, same gross price; [Shopify help, Tax overrides and exemptions](https://help.shopify.com/en/manual/taxes/tax-overrides): the customer "will still be charged the full listed product price"), so without the division they would pay 0.75 x gross and then add their own VAT on top. The groups are therefore per customer, and `wholesale-sync.py` and `wholesale-check.py` expect the net price for an exempt customer. Non-EU and Belgian retailers stay on the gross price: for non-EU that is a founder pricing choice (the shop does not strip Belgian VAT there either). The premise is a constant tax-inclusive price in every market (`INCLUDES_TAXES_IN_PRICE`; today true for Belgium, International and United States). With "dynamic" tax-inclusive pricing ([Shopify help, tax-inclusive pricing](https://help.shopify.com/en/manual/international/tax-inclusive)) Shopify may strip VAT itself and the net price would be discounted twice, so `wholesale-onboard.py --apply` refuses and the health check reports `tax-pricing` when any market is not constant.
+
 Shopify discount codes take a percentage off the live price, so one code cannot do this. Each retailer gets up to four customer-limited codes, one per price group:
 
 | Slot | Code | Covers | Percentage |
@@ -55,7 +57,7 @@ Percentages are stored with 4 decimals (0.1667). Every unit still lands on 75% o
 The opendrone.be session is not passed to checkout: the cart is created without buyer identity and the sign-in keeps no Shopify token (`app/lib/accounts/shopify-idp.ts`, data minimisation, kept on purpose). So:
 
 1. The retailer adds to cart and enters the code in the cart's "Wholesale code" field.
-2. At Shopify checkout the retailer signs in with the approved email (Shopify mails a code). The customer-limited codes and the tax exemption apply to a signed-in customer.
+2. At Shopify checkout the retailer signs in with the approved email (Shopify mails a code). Shopify's help says exempt customers "need to check out using the same email address as the one listed on their customer account"; the customer-limited codes apply to a signed-in customer.
 3. Pay at checkout.
 
 ## VAT per case
@@ -63,7 +65,7 @@ The opendrone.be session is not passed to checkout: the cart is created without 
 | Retailer | Tax exemption | What the buyer pays |
 |---|---|---|
 | Belgium | none | 21% Belgian VAT |
-| Other EU, VIES valid | `EU_REVERSE_CHARGE_EXEMPTION_RULE`, tag `reverse-charge` | no Belgian VAT, the buyer accounts for VAT locally |
+| Other EU, VIES valid | `EU_REVERSE_CHARGE_EXEMPTION_RULE`, tags `reverse-charge` and `country-xx` | no VAT line, and codes price 75% of NET retail (see The rule); the buyer accounts for VAT locally |
 | Other EU, VIES invalid, unreachable or no number | none | VAT as for a consumer, until the number is fixed and the script is rerun |
 | Outside the EU (CH, AU, US, PH, ...) | none, no VIES check | checked per destination, see below |
 

@@ -17,6 +17,15 @@ DECIMALS = 4  # Shopify stores a discount percentage with 4 decimals (0.166667 r
 PCT_TOLERANCE = 5e-5
 EXEMPTION = "EU_REVERSE_CHARGE_EXEMPTION_RULE"
 EU = set("AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE".split())
+# Standard VAT rate (percent) per EU member state, as of 29 Oct 2026. Source: the 2026 rate tables of
+# https://www.eurofiscalis.com/en/vat-rates-in-ue/ and https://www.numeral.com/blog/eu-vat-rates (consistent for all 27
+# states; HU 27, FI 25.5, EE 24, SK 23 and LU 17 confirmed by a search of five 2026 tables; RO 21 is the usual 2026 figure,
+# older tables say 19: verify before the first Romanian retailer). Cross-checked against the VAT lines of this shop's
+# own paid orders (DE 19, FI 25.5, FR 20, IE 23, IT 22, LT 21, NL 21, PL 23, PT 23, SE 25, SI 22, CZ 21, BG 20). The
+# European Commission points to the Member States' TEDB database for the official figures.
+EU_VAT = {"AT": 20, "BE": 21, "BG": 20, "HR": 25, "CY": 19, "CZ": 21, "DK": 25, "EE": 24, "FI": 25.5, "FR": 20,
+          "DE": 19, "GR": 24, "HU": 27, "IE": 23, "IT": 22, "LV": 21, "LT": 21, "LU": 17, "MT": 18, "NL": 21,
+          "PL": 23, "PT": 23, "RO": 21, "SK": 23, "SI": 22, "ES": 21, "SE": 25}
 CODE_RE = re.compile(r"^(WS(\d{1,2})-[A-Z0-9]{2,16})(?:-G([2-4]))?$")
 
 
@@ -69,12 +78,53 @@ def live_variants(env):
     return sorted(out, key=lambda v: v["sku"])
 
 
-def groups(variants, rate_percent):
+def divisor(country, exempt):
+    """What the gross retail price is divided by for this customer: 1 for everyone except a reverse-charge customer.
+
+    Shopify keeps a tax-inclusive price unchanged for a tax-exempt customer (no VAT line, same gross price; Shopify help,
+    "Tax overrides and exemptions": the customer "will still be charged the full listed product price"). Reverse charge
+    means the retailer pays NET prices and accounts for VAT at home, so the price base becomes retail / (1 + the standard
+    VAT rate of the retailer's country). Non-EU retailers stay on the gross price (founder pricing choice)."""
+    if not exempt:
+        return 1.0
+    if country not in EU_VAT:
+        raise SystemExit(f"reverse charge for {country!r}: no standard VAT rate in EU_VAT")
+    return 1 + EU_VAT[country] / 100
+
+
+def customer_country(customer):
+    """The EU country of a reverse-charge customer: tag country-XX, else the VAT ID on the onboarding note line."""
+    for t in customer.get("tags") or []:
+        if t.startswith("country-") and len(t) == 10:
+            return t[-2:].upper()
+    m = re.search(r"VAT ([A-Z]{2})[A-Z0-9]", customer.get("note") or "")
+    return ("GR" if m.group(1) == "EL" else m.group(1)) if m else None
+
+
+def customer_divisor(customer):
+    exempt = EXEMPTION in (customer.get("taxExemptions") or [])
+    return divisor(customer_country(customer), exempt) if exempt else 1.0
+
+
+def tax_pricing_problem(env):
+    """None when every market keeps a constant tax-inclusive price (the premise of divisor()), else the reason.
+    With dynamic tax-inclusive pricing Shopify may strip VAT itself and the net price would be discounted twice."""
+    d = gql(env, "{shop{taxesIncluded} markets(first:50){nodes{name priceInclusions{inclusiveTaxPricingStrategy}}}}")
+    if not d["shop"]["taxesIncluded"]:
+        return "shop prices exclude tax"
+    for m in d["markets"]["nodes"]:
+        strategy = (m.get("priceInclusions") or {}).get("inclusiveTaxPricingStrategy")
+        if strategy not in (None, "INCLUDES_TAXES_IN_PRICE"):
+            return f"market {m['name']} uses {strategy}"
+    return None
+
+
+def groups(variants, rate_percent, divisor_=1.0):
     """Price groups: list of {pct, variants}, largest group first (slot 1).
 
-    pct = 1 - (1 - rate) * retail / price. A variant whose live price is at or
+    pct = 1 - (1 - rate) * retail / divisor / price. A variant whose live price is at or
     under the wholesale price gets no code (it is already cheaper)."""
-    target = 1 - rate_percent / 100
+    target = (1 - rate_percent / 100) / divisor_
     by = {}
     for v in variants:
         pct = round(1 - target * v["retail"] / v["price"], DECIMALS)
@@ -87,14 +137,14 @@ def groups(variants, rate_percent):
     return out
 
 
-def rounding_check(group, rate_percent, max_qty=50):
+def rounding_check(group, rate_percent, max_qty=50, divisor_=1.0):
     """(worst per unit, worst per line) deviation in cents of the final price from
     rate x retail with the 4-decimal percentage, after Shopify rounds the
     discount of a line to cents (assumed: half up). Per unit is what a single
     unit costs more or less than 75% of retail; per line grows with quantity."""
     unit = line_worst = 0.0
     for v in group["variants"]:
-        want_unit = v["retail"] * (1 - rate_percent / 100)
+        want_unit = v["retail"] * (1 - rate_percent / 100) / divisor_
         unit = max(unit, abs(v["price"] - round(v["price"] * group["pct"] + 1e-9, 2) - want_unit) * 100)
         for q in range(1, max_qty + 1):
             line = round(q * v["price"], 2)
