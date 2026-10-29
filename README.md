@@ -233,7 +233,8 @@ plan. No customer or company record is created, nothing is mailed to the
 applicant, and no pricing, tax exemption, order or delivery commitment is made
 by an application.
 
-An approved retailer orders in the normal shop and pays 75% of retail (25%
+An approved retailer orders in the normal shop and pays 75% of retail (for a
+reverse-charge customer 75% of net retail, see `docs/wholesale.md`; 25%
 off, `WHOLESALE_PERCENT` in `scripts/wholesale_lib.py`) whatever preorder price
 step a product is on. Retail is the Shopify compare-at price. The retailer
 types one personal code, `WS<rate>-<NAME>` (for example `WS25-FPV24`), in the

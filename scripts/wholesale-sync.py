@@ -15,8 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from wholesale_lib import (CODE_RE, GROUPS, apply_slot, gql, groups, live_variants, load_env,  # noqa: E402
-                           plan_slot, read_code, slot_code)
+from wholesale_lib import (CODE_RE, GROUPS, apply_slot, customer_divisor, gql, groups, live_variants, load_env,  # noqa: E402
+                           plan_slot, read_code, slot_code, tax_pricing_problem)
 
 
 def retailers(env):
@@ -88,13 +88,24 @@ def health(env):
     chk = importlib.util.spec_from_file_location("wholesale_check", Path(__file__).resolve().parent / "wholesale-check.py")
     mod = importlib.util.module_from_spec(chk)
     chk.loader.exec_module(mod)
+    tax = tax_pricing_problem(env)
+    if tax:
+        problems.append({"kind": "tax-pricing", "ref": "shop", "detail": f"{tax}: reverse-charge net prices assume constant tax-inclusive prices"})
     for main in sorted(mains):
+        owner = codes[main]["customers"][0] if main in codes and codes[main]["customers"] else None
+        div = divisor_of(env, owner) if owner else 1.0
         if env.get("SHOPIFY_STOREFRONT_TOKEN"):
-            for p in mod.check(env, main, float(CODE_RE.match(main).group(2))):
+            for p in mod.check(env, main, float(CODE_RE.match(main).group(2)), div):
                 problems.append({"kind": "cart-check", "ref": main, "detail": p})
         else:
             problems.append({"kind": "cart-check", "ref": main, "detail": "SHOPIFY_STOREFRONT_TOKEN missing, cart not checked"})
     return problems
+
+
+def divisor_of(env, customer_id):
+    """The price-base divisor of a retailer (VAT of a reverse-charge customer's country, else 1)."""
+    c = gql(env, "query($id:ID!){customer(id:$id){tags taxExemptions note}}", {"id": customer_id})["customer"]
+    return customer_divisor(c or {})
 
 
 def run(env, apply_):
@@ -102,11 +113,12 @@ def run(env, apply_):
     variants = live_variants(env)
     diffs = 0
     for main, rate in sorted(retailers(env).items()):
-        gs = groups(variants, rate)
         first = read_code(env, main)
         if not first or not first["customers"]:
             print(f"{main}: main code missing or without customer, skipped")
             continue
+        div = divisor_of(env, first["customers"][0])
+        gs = groups(variants, rate, div)
         for n in range(1, GROUPS + 1):
             code = slot_code(main, n)
             want = gs[n - 1] if n <= len(gs) else None
