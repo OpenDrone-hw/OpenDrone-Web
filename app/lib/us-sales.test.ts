@@ -61,8 +61,8 @@ describe('batch regions', () => {
     assert.ok(parseCampaignConfig({...base, skus: {A: {batches: EU_FIRST}}}));
   });
 
-  it('marks the four paid batch-1 entries EU only in the committed file', () => {
-    const euOnly = Object.entries(REAL.skus).filter(([, e]) => e.batches.some((b) => b.regions?.join() === 'EU'));
+  it('marks the four paid batch-1 entries EU and international, never the US, in the committed file', () => {
+    const euOnly = Object.entries(REAL.skus).filter(([, e]) => e.batches.some((b) => b.regions?.join() === 'EU,INT'));
     assert.deepEqual(euOnly.map(([sku]) => sku).sort(), ['OPENESC-2020', 'OPENESC-3030', 'OPENFC-LITE-2020', 'OPENFC-LITE-3030']);
   });
 
@@ -100,7 +100,7 @@ describe('batch regions', () => {
     const eu = ['OPENFC-LITE-2020', 'OPENFC-LITE-3030', 'OPENESC-2020', 'OPENESC-3030'];
     for (const sku of eu) {
       const batches = REAL.skus[sku].batches;
-      assert.deepEqual(batches[0].regions, ['EU'], `${sku} batch 1 is EU only`);
+      assert.deepEqual(batches[0].regions, ['EU', 'INT'], `${sku} batch 1 serves the EU and international, not the US`);
       assert.equal(batches[0].paid, true);
       assert.equal(batches[0].ships, 'ships early November 2026');
       for (const ordered of [0, 1, 249, 250, 400]) {
@@ -109,14 +109,15 @@ describe('batch regions', () => {
         assert.equal(us.paidStock, false);
         assert.ok(!/November 2026/.test(us.shipPromise), 'a US promise never names the early-November batch');
       }
-      // US units do not use up batch-1 stock.
+      // US units do not use up batch-1 stock; international units do.
       assert.deepEqual(batchFill(batches, [{region: 'US', units: 100}]), [0, 100]);
+      assert.deepEqual(batchFill(batches, [{region: 'INT', units: 100}]), [100, 0]);
       // The last batch of every SKU serves the US, so the US can always buy the run.
       assert.equal(batches[batches.length - 1].regions, undefined);
     }
     // Only the four FC/ESC SKUs carry Belgian batch-1 stock.
     for (const [sku, entry] of Object.entries(REAL.skus)) {
-      if (!eu.includes(sku)) assert.ok(entry.batches.every((b) => !b.regions), `${sku} has no EU-only batch`);
+      if (!eu.includes(sku)) assert.ok(entry.batches.every((b) => !b.regions), `${sku} has no regional batch`);
     }
   });
 

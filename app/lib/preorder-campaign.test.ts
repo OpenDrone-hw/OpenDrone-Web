@@ -809,7 +809,7 @@ describe('committed dates derive from content/preorders.json', () => {
     assert.equal(funded.deliveryBy, '2027-04-15');
     assert.equal(funded.deliveryByUS, '2027-04-30');
     assert.equal(early.deliveryBy, '2026-11-30');
-    assert.deepEqual(early.regions, ['EU']);
+    assert.deepEqual(early.regions, ['EU', 'INT']);
     assert.equal(early.ships, 'ships early November 2026');
   });
 

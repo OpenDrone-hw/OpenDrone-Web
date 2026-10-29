@@ -186,10 +186,10 @@ export async function loader({context}: Route.LoaderArgs) {
     // Present only for a US buyer: the US copy on this page.
     ...(us ? {us: true as const} : {}),
     international,
-    // Its FC and ESC batch 1 is EU stock: the month it ships and the batch
-    // the US buyer gets instead.
+    // FC and ESC batch 1 is not sold to the US: the month it ships and the
+    // batch the US buyer gets instead.
     usBatchNote:
-      (us || international) && paidShips
+      us && paidShips
         ? {
             first: shipMonth(paidShips),
             batch: new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric', timeZone: 'UTC'}).format(
@@ -303,7 +303,7 @@ export default function PreorderRoute() {
           {usBatchNote?.first ? (
             <p className="po-group-line">
               {(
-                copyText(international ? 'preorder.international_batch_note' : 'preorder.us_batch_note') ??
+                copyText('preorder.us_batch_note') ??
                 'FC and ESC batch 1 ({month}) is EU only. US orders ship from the {batch} batch.'
               )
                 .replace('{month}', usBatchNote.first)
