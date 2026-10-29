@@ -1,0 +1,157 @@
+"""Shared helpers of wholesale-onboard.py and wholesale-sync.py (stdlib only).
+
+A retailer pays WHOLESALE_PERCENT off RETAIL (a variant's compare-at price),
+whatever preorder price step the variant is on. Shopify takes a percentage off
+the live price, so one code cannot do it: each retailer gets one customer-limited
+code per price group, percentage = 1 - (1 - rate) * compare_at / price, scoped
+to the variants of that group. Slot 1 is the code the retailer types
+(WS25-FPV24); slots 2 to 4 are WS25-FPV24-G2 .. -G4 and the cart sends all of
+them (app/lib/wholesale-codes.ts).
+"""
+import json, os, re, urllib.request
+from pathlib import Path
+
+WHOLESALE_PERCENT = 25.0  # standard wholesale rate off retail (founder 2026-10-29); the one place to change it
+GROUPS = 4                # same number as WHOLESALE_GROUPS in app/lib/wholesale-codes.ts
+DECIMALS = 6
+EXEMPTION = "EU_REVERSE_CHARGE_EXEMPTION_RULE"
+EU = set("AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE".split())
+CODE_RE = re.compile(r"^(WS(\d{1,2})-[A-Z0-9]{2,16})(?:-G([2-4]))?$")
+
+
+def load_env():
+    env = dict(os.environ)
+    p = Path(__file__).resolve().parent.parent / ".env"
+    if p.exists():
+        for line in p.read_text().splitlines():
+            if "=" in line and not line.lstrip().startswith("#"):
+                k, v = line.split("=", 1)
+                env.setdefault(k.strip(), v.strip().strip("'\""))
+    for k in ("SHOPIFY_STORE_DOMAIN", "SHOPIFY_ADMIN_API_TOKEN"):
+        if not env.get(k):
+            raise SystemExit(f"missing {k}")
+    return env
+
+
+def gql(env, query, variables=None):
+    url = f"https://{env['SHOPIFY_STORE_DOMAIN']}/admin/api/{env.get('SHOPIFY_ADMIN_API_VERSION', '2026-01')}/graphql.json"
+    req = urllib.request.Request(
+        url, json.dumps({"query": query, "variables": variables or {}}).encode(),
+        {"X-Shopify-Access-Token": env["SHOPIFY_ADMIN_API_TOKEN"], "Content-Type": "application/json"})
+    out = json.loads(urllib.request.urlopen(req, timeout=60).read())
+    if out.get("errors"):
+        raise SystemExit(f"shopify error: {json.dumps(out['errors'])[:400]}")
+    return out["data"]
+
+
+def user_errors(payload):
+    if payload.get("userErrors"):
+        raise SystemExit(f"shopify userErrors: {json.dumps(payload['userErrors'])}")
+
+
+def slot_code(main, slot):
+    return main if slot == 1 else f"{main}-G{slot}"
+
+
+def live_variants(env):
+    """Active variants with a compare-at (retail) price: id, sku, price, retail."""
+    d = gql(env, '{productVariants(first:100,query:"sku:OPEN*"){nodes{id sku price compareAtPrice product{status}}}}')
+    out = []
+    for v in d["productVariants"]["nodes"]:
+        if v["product"]["status"] == "ACTIVE" and v["compareAtPrice"]:
+            out.append({"id": v["id"], "sku": v["sku"], "price": float(v["price"]), "retail": float(v["compareAtPrice"])})
+    return sorted(out, key=lambda v: v["sku"])
+
+
+def groups(variants, rate_percent):
+    """Price groups: list of {pct, variants}, largest group first (slot 1).
+
+    pct = 1 - (1 - rate) * retail / price. A variant whose live price is at or
+    under the wholesale price gets no code (it is already cheaper)."""
+    target = 1 - rate_percent / 100
+    by = {}
+    for v in variants:
+        pct = round(1 - target * v["retail"] / v["price"], DECIMALS)
+        if pct > 0:
+            by.setdefault(pct, []).append(v)
+    out = [{"pct": p, "variants": vs} for p, vs in by.items()]
+    out.sort(key=lambda g: (-len(g["variants"]), g["pct"]))
+    if len(out) > GROUPS:
+        raise SystemExit(f"{len(out)} price groups, at most {GROUPS} fit the cart's codes")
+    return out
+
+
+def rounding_check(group, rate_percent, max_qty=50):
+    """Worst deviation in cents of the final line total from rate x retail, after
+    Shopify rounds the discount of a line to cents (assumed: half up)."""
+    worst = 0.0
+    for v in group["variants"]:
+        for q in range(1, max_qty + 1):
+            line = round(q * v["price"], 2)
+            final = line - round(line * group["pct"] + 1e-9, 2)
+            want = q * v["retail"] * (1 - rate_percent / 100)
+            worst = max(worst, abs(final - want) * 100)
+    return worst
+
+
+def code_input(title, code, pct, variant_ids, customer_ids, starts_at):
+    return {
+        "title": title, "code": code, "startsAt": starts_at, "appliesOncePerCustomer": False,
+        "context": {"customers": {"add": customer_ids}},
+        "customerGets": {"value": {"percentage": pct},
+                         "items": {"products": {"productVariantsToAdd": variant_ids}}},
+        "combinesWith": {"productDiscounts": True, "orderDiscounts": False, "shippingDiscounts": True},
+    }
+
+
+CODE_FIELDS = """id codeDiscount{... on DiscountCodeBasic{title status startsAt endsAt codes(first:1){nodes{code}}
+  context{... on DiscountCustomers{customers{id}}}
+  customerGets{value{... on DiscountPercentage{percentage}} items{... on DiscountProducts{productVariants(first:100){nodes{id}}}}}}}"""
+
+
+def read_code(env, code):
+    n = gql(env, "query($c:String!){codeDiscountNodeByCode(code:$c){%s}}" % CODE_FIELDS, {"c": code})["codeDiscountNodeByCode"]
+    if not n:
+        return None
+    d = n["codeDiscount"]
+    return {
+        "id": n["id"], "status": d["status"], "title": d["title"],
+        "customers": sorted(c["id"] for c in (d.get("context") or {}).get("customers", [])),
+        "pct": ((d.get("customerGets") or {}).get("value") or {}).get("percentage"),
+        "variants": sorted(x["id"] for x in ((d.get("customerGets") or {}).get("items") or {}).get("productVariants", {}).get("nodes", [])),
+    }
+
+
+def plan_slot(existing, want, customer_ids):
+    """Compare an existing slot code with the wanted group; return the action."""
+    if want is None:
+        return "deactivate" if existing and existing["status"] == "ACTIVE" else "none"
+    if existing is None:
+        return "create"
+    same = (existing["status"] == "ACTIVE" and existing["customers"] == sorted(customer_ids)
+            and existing["variants"] == sorted(v["id"] for v in want["variants"])
+            and existing["pct"] is not None and abs(existing["pct"] - want["pct"]) < 1e-6)
+    return "none" if same else "update"
+
+
+def apply_slot(env, action, existing, title, code, want, customer_ids, starts_at):
+    ids = sorted(v["id"] for v in want["variants"]) if want else []
+    if action == "create":
+        r = gql(env, "mutation($i:DiscountCodeBasicInput!){discountCodeBasicCreate(basicCodeDiscount:$i){codeDiscountNode{id} userErrors{field message}}}",
+                {"i": code_input(title, code, want["pct"], ids, customer_ids, starts_at)})["discountCodeBasicCreate"]
+        user_errors(r)
+    elif action == "update":
+        inp = code_input(title, code, want["pct"], ids, customer_ids, starts_at)
+        inp.pop("code")  # the code itself does not change
+        inp["customerGets"]["items"]["products"]["productVariantsToRemove"] = [v for v in existing["variants"] if v not in ids]
+        inp["context"] = {"customers": {"add": [c for c in customer_ids if c not in existing["customers"]],
+                                       "remove": [c for c in existing["customers"] if c not in customer_ids]}}
+        r = gql(env, "mutation($id:ID!,$i:DiscountCodeBasicInput!){discountCodeBasicUpdate(id:$id,basicCodeDiscount:$i){codeDiscountNode{id} userErrors{field message}}}",
+                {"id": existing["id"], "i": inp})["discountCodeBasicUpdate"]
+        user_errors(r)
+        if existing["status"] != "ACTIVE":
+            r = gql(env, "mutation($id:ID!){discountCodeActivate(id:$id){userErrors{field message}}}", {"id": existing["id"]})["discountCodeActivate"]
+            user_errors(r)
+    elif action == "deactivate":
+        r = gql(env, "mutation($id:ID!){discountCodeDeactivate(id:$id){userErrors{field message}}}", {"id": existing["id"]})["discountCodeDeactivate"]
+        user_errors(r)

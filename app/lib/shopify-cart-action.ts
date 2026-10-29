@@ -6,6 +6,7 @@ import {requestedLines} from './shopify-cart-input.ts';
 import {destinationForRequest, isInternationalQuote, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
+import {wholesaleCodes, wholesaleMainCode} from './wholesale-codes.ts';
 import {cartAttributesFromForm, ORDER_ATTRIBUTE} from './growth/attribution.ts';
 import {internationalShippingFrom} from './international-shipping.ts';
 import {
@@ -51,6 +52,8 @@ export type ShopifyCartDependencies = {
   removeCartLines?: (id: string, lineIds: string[]) => Promise<ShopifyCart>;
   /** `cartAttributesUpdate`: the first-touch attribution an add carries. */
   setAttributes?: (cartId: string, attributes: Array<{key: string; value: string}>) => Promise<void>;
+  /** `cartDiscountCodesUpdate`: a retailer's personal code and its price groups. */
+  setDiscountCodes?: (cartId: string, codes: string[]) => Promise<unknown>;
   logError?: (message: string) => void;
 };
 
@@ -529,6 +532,8 @@ export function regionForDestination(destination: ShippingQuote | null): Region 
 
 /** Where the checkout intent sends the buyer back to the cart, and why. */
 export const CART_CHECK = {
+  /** The typed wholesale code is not a wholesale code. */
+  code: 'code',
   /** A paid-batch line asks for more units than the batch has left. */
   paidBatch: 'paid-batch',
   /** A preorder line's ship date changed since it was added. */
@@ -627,6 +632,17 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
 
   try {
     const existingId = dependencies.getCartId?.();
+
+    if (intent === 'discount') {
+      // A retailer's personal code (README "Trade"): the main code goes in
+      // with its price-group companions; an empty field clears the codes.
+      if (!existingId || !dependencies.setDiscountCodes) throw fail('Cart is empty.', 409);
+      const typed = String(form.get('code') ?? '');
+      const main = wholesaleMainCode(typed);
+      if (typed.trim() && !main) return redirect(`/cart?check=${CART_CHECK.code}`);
+      await dependencies.setDiscountCodes(existingId, main ? wholesaleCodes(main) : []);
+      return redirect('/cart');
+    }
 
     if (intent === 'update' || intent === 'remove') {
       if (!existingId) throw fail('Cart is empty.', 409);

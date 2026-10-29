@@ -702,6 +702,37 @@ export async function updateCartAttributes(
   }
 }
 
+export const CART_DISCOUNT_CODES_UPDATE_MUTATION = `#graphql
+  mutation OpenDroneCartDiscountCodesUpdate($cartId: ID!, $discountCodes: [String!]) {
+    cartDiscountCodesUpdate(cartId: $cartId, discountCodes: $discountCodes) {
+      cart { id discountCodes { code applicable } }
+      userErrors { field message }
+      warnings { message }
+    }
+  }
+`;
+
+/** Replace the cart's discount codes (an empty list removes them). Returns
+ *  each code with whether Shopify says it applies to the cart now. */
+export async function updateCartDiscountCodes(
+  env: StorefrontEnv,
+  cartId: string,
+  codes: string[],
+  fetcher: typeof fetch = fetch,
+): Promise<Array<{code: string; applicable: boolean}>> {
+  const data = await storefrontRequest<{
+    cartDiscountCodesUpdate: {
+      cart: {id: string; discountCodes: Array<{code: string; applicable: boolean}>} | null;
+      userErrors: Array<{message: string}>;
+    };
+  }>(env, CART_DISCOUNT_CODES_UPDATE_MUTATION, {cartId, discountCodes: codes}, fetcher);
+  const payload = data.cartDiscountCodesUpdate;
+  if (payload.userErrors.length || !payload.cart || payload.cart.id !== cartId) {
+    throw new Error('shopify: cartDiscountCodesUpdate failed');
+  }
+  return payload.cart.discountCodes;
+}
+
 const PAYMENT_SETTINGS_QUERY = `#graphql
   query PaymentSettings {
     shop {

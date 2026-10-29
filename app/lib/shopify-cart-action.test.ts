@@ -1253,3 +1253,24 @@ describe('international cart destination handoffs', () => {
     assert.equal(result.headers.get('Location'),CHECKOUT);
   });
 });
+
+describe('Shopify cart action: wholesale code', () => {
+  it('sends the main code with its price-group companions, refuses other codes, clears on empty', async () => {
+    const sent: string[][] = [];
+    const deps: ShopifyCartDependencies = {
+      fetchCatalog: async () => CATALOG,
+      getCartId: () => 'cart-a',
+      setDiscountCodes: async (_id, codes) => { sent.push(codes); },
+      ...MUST_NOT,
+    };
+    const ok = await handleShopifyCartAction(request({intent: 'discount', code: ' ws25-fpv24 '}), ENABLED_ENV, deps);
+    assert.equal(ok.headers.get('Location'), '/cart');
+    assert.deepEqual(sent[0], ['WS25-FPV24', 'WS25-FPV24-G2', 'WS25-FPV24-G3', 'WS25-FPV24-G4']);
+    const bad = await handleShopifyCartAction(request({intent: 'discount', code: 'SUMMER10'}), ENABLED_ENV, deps);
+    assert.equal(bad.headers.get('Location'), '/cart?check=code');
+    assert.equal(sent.length, 1);
+    const cleared = await handleShopifyCartAction(request({intent: 'discount', code: ''}), ENABLED_ENV, deps);
+    assert.equal(cleared.headers.get('Location'), '/cart');
+    assert.deepEqual(sent[1], []);
+  });
+});

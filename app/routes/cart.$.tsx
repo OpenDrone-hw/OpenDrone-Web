@@ -174,6 +174,7 @@ type CartCheck = (typeof CART_CHECK)[keyof typeof CART_CHECK];
 /** The notice per reason the server sent a checkout back to the cart. Every
  *  reason has one: a checkout never lands here without a word. */
 const CHECK_NOTICES: Record<CartCheck, () => string> = {
+  [CART_CHECK.code]: () => t('check_code', 'That is not a wholesale code. Wholesale codes look like WS25-NAME.'),
   [CART_CHECK.paidBatch]: () => t('check_paid_batch', 'Not enough left. Lower the quantity where shown.'),
   [CART_CHECK.shipDate]: () => t('check_ship_date', 'A ship date changed. Check the dates below.'),
   [CART_CHECK.price]: () => t('check_price', 'A price changed. Check the total below.'),
@@ -653,6 +654,15 @@ function PopulatedCart({
               <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
             </p>
           ) : (
+            <>
+            <Form method="post" action="/api/shopify/cart" className="cart-code">
+              <input type="hidden" name="intent" value="discount" />
+              <label className="block text-[13px] text-[var(--color-text-muted)]">
+                {t('wholesale_code', 'Wholesale code')}
+                <input name="code" maxLength={24} autoComplete="off" spellCheck={false} placeholder="WS25-NAME" className="mt-1 block w-full rounded-[var(--r-xs)] border border-[var(--color-border)] bg-transparent px-3 py-2 text-[16px] uppercase text-[var(--color-text)]" />
+              </label>
+              <button type="submit" className="mt-2 text-[13px] underline underline-offset-4">{t('wholesale_code_apply', 'Apply code')}</button>
+            </Form>
             <Form
               id={CHECKOUT_FORM_ID}
               method="post"
@@ -678,6 +688,7 @@ function PopulatedCart({
                 {pending ? t('checkout_updating', 'Updating cart…') : <Txt id="cart.checkout_cta" />}
               </button>
             </Form>
+            </>
           )}
           <PaymentMarks methods={payments} />
           <Txt id="cart.note_terms" as="p" className="cart-summary-note cart-terms [&_a]:underline! [&_a]:underline-offset-4" />
