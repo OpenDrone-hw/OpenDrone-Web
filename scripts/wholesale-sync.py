@@ -10,7 +10,7 @@ Dry run by default: prints the planned writes. `--apply` writes, then runs the
 comparison again and exits non-zero if anything still differs. Idempotent, safe
 to run daily (operations/tools/jobs.json "wholesale-sync").
 """
-import argparse, sys
+import argparse, importlib.util, json, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -32,6 +32,69 @@ def retailers(env):
         if not d["pageInfo"]["hasNextPage"]:
             return found
         after = d["pageInfo"]["endCursor"]
+
+
+def all_codes(env):
+    """{code: {main, slot, id, customers, status}} for every wholesale code."""
+    found, after = {}, None
+    while True:
+        d = gql(env, "query($a:String){codeDiscountNodes(first:50,after:$a){pageInfo{hasNextPage endCursor} nodes{id codeDiscount{... on DiscountCodeBasic{status codes(first:1){nodes{code}} context{... on DiscountCustomers{customers{id}}}}}}}}", {"a": after})["codeDiscountNodes"]
+        for n in d["nodes"]:
+            cd = n["codeDiscount"] or {}
+            for c in cd.get("codes", {}).get("nodes", []):
+                m = CODE_RE.match(c["code"])
+                if m:
+                    found[c["code"]] = {"main": m.group(1), "slot": int(m.group(3) or 1), "id": n["id"],
+                                        "status": cd.get("status"), "customers": [x["id"] for x in (cd.get("context") or {}).get("customers", [])]}
+        if not d["pageInfo"]["hasNextPage"]:
+            return found
+        after = d["pageInfo"]["endCursor"]
+
+
+def tagged_customers(env):
+    out, after = {}, None
+    while True:
+        d = gql(env, 'query($a:String){customers(first:100,after:$a,query:"tag:wholesale"){pageInfo{hasNextPage endCursor} nodes{id tags}}}', {"a": after})["customers"]
+        for c in d["nodes"]:
+            out[c["id"]] = c["tags"]
+        if not d["pageInfo"]["hasNextPage"]:
+            return out
+        after = d["pageInfo"]["endCursor"]
+
+
+def health(env):
+    """Problems as [{kind, ref, detail}]; ids and codes only, never an email."""
+    problems = []
+    codes = all_codes(env)
+    mains = {c["main"] for c in codes.values()}
+    owners = {}
+    for code, c in codes.items():
+        if c["slot"] > 1 and c["main"] not in codes:
+            problems.append({"kind": "orphan-code", "ref": code, "detail": "group code without its main code"})
+        if c["status"] == "ACTIVE" and not c["customers"]:
+            problems.append({"kind": "orphan-code", "ref": code, "detail": "active code limited to no customer"})
+        for cid in c["customers"]:
+            owners.setdefault(cid, set()).add(c["main"])
+    tagged = tagged_customers(env)
+    for cid in tagged:
+        if cid not in owners:
+            problems.append({"kind": "customer-without-code", "ref": cid, "detail": "tagged wholesale but no wholesale code is limited to it"})
+    for cid in owners:
+        if cid not in tagged:
+            problems.append({"kind": "code-without-tag", "ref": cid, "detail": "has wholesale codes but no wholesale tag"})
+    drift = run(env, False)
+    if drift:
+        problems.append({"kind": "price-drift", "ref": "wholesale-sync", "detail": f"{drift} slot(s) differ from the live price groups; run wholesale-sync.py --apply"})
+    chk = importlib.util.spec_from_file_location("wholesale_check", Path(__file__).resolve().parent / "wholesale-check.py")
+    mod = importlib.util.module_from_spec(chk)
+    chk.loader.exec_module(mod)
+    for main in sorted(mains):
+        if env.get("SHOPIFY_STOREFRONT_TOKEN"):
+            for p in mod.check(env, main, float(CODE_RE.match(main).group(2))):
+                problems.append({"kind": "cart-check", "ref": main, "detail": p})
+        else:
+            problems.append({"kind": "cart-check", "ref": main, "detail": "SHOPIFY_STOREFRONT_TOKEN missing, cart not checked"})
+    return problems
 
 
 def run(env, apply_):
@@ -62,8 +125,15 @@ def run(env, apply_):
 def main():
     a = argparse.ArgumentParser(description=__doc__)
     a.add_argument("--apply", action="store_true", help="write to Shopify (default: dry run)")
+    a.add_argument("--health", action="store_true",
+                   help="read only: every wholesale customer has codes, codes match the price groups, no orphan codes, carts price at 75% of retail; prints HEALTH <json>, exit 1 on a problem")
     o = a.parse_args()
     env = load_env()
+    if o.health:
+        problems = health(env)
+        print("HEALTH " + json.dumps(problems, sort_keys=True))
+        print(f"wholesale health: {len(problems)} problem(s)")
+        sys.exit(1 if problems else 0)
     print(f"mode: {'APPLY' if o.apply else 'DRY RUN (no writes)'}")
     diffs = run(env, o.apply)
     if not diffs:

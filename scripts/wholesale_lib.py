@@ -8,12 +8,13 @@ to the variants of that group. Slot 1 is the code the retailer types
 (WS25-FPV24); slots 2 to 4 are WS25-FPV24-G2 .. -G4 and the cart sends all of
 them (app/lib/wholesale-codes.ts).
 """
-import json, os, re, urllib.request
+import json, os, re, time, urllib.request
 from pathlib import Path
 
 WHOLESALE_PERCENT = 25.0  # standard wholesale rate off retail (founder 2026-10-29); the one place to change it
 GROUPS = 4                # same number as WHOLESALE_GROUPS in app/lib/wholesale-codes.ts
-DECIMALS = 6
+DECIMALS = 4  # Shopify stores a discount percentage with 4 decimals (0.166667 reads back as 0.1667)
+PCT_TOLERANCE = 5e-5
 EXEMPTION = "EU_REVERSE_CHARGE_EXEMPTION_RULE"
 EU = set("AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE".split())
 CODE_RE = re.compile(r"^(WS(\d{1,2})-[A-Z0-9]{2,16})(?:-G([2-4]))?$")
@@ -38,7 +39,12 @@ def gql(env, query, variables=None):
     req = urllib.request.Request(
         url, json.dumps({"query": query, "variables": variables or {}}).encode(),
         {"X-Shopify-Access-Token": env["SHOPIFY_ADMIN_API_TOKEN"], "Content-Type": "application/json"})
-    out = json.loads(urllib.request.urlopen(req, timeout=60).read())
+    for attempt in range(6):  # a throttled READ is retried; a mutation is never retried here
+        out = json.loads(urllib.request.urlopen(req, timeout=60).read())
+        throttled = any((e.get("extensions") or {}).get("code") == "THROTTLED" for e in out.get("errors") or [])
+        if not throttled or query.lstrip().startswith("mutation") or attempt == 5:
+            break
+        time.sleep(2 + attempt * 2)
     if out.get("errors"):
         raise SystemExit(f"shopify error: {json.dumps(out['errors'])[:400]}")
     return out["data"]
@@ -82,16 +88,19 @@ def groups(variants, rate_percent):
 
 
 def rounding_check(group, rate_percent, max_qty=50):
-    """Worst deviation in cents of the final line total from rate x retail, after
-    Shopify rounds the discount of a line to cents (assumed: half up)."""
-    worst = 0.0
+    """(worst per unit, worst per line) deviation in cents of the final price from
+    rate x retail with the 4-decimal percentage, after Shopify rounds the
+    discount of a line to cents (assumed: half up). Per unit is what a single
+    unit costs more or less than 75% of retail; per line grows with quantity."""
+    unit = line_worst = 0.0
     for v in group["variants"]:
+        want_unit = v["retail"] * (1 - rate_percent / 100)
+        unit = max(unit, abs(v["price"] - round(v["price"] * group["pct"] + 1e-9, 2) - want_unit) * 100)
         for q in range(1, max_qty + 1):
             line = round(q * v["price"], 2)
             final = line - round(line * group["pct"] + 1e-9, 2)
-            want = q * v["retail"] * (1 - rate_percent / 100)
-            worst = max(worst, abs(final - want) * 100)
-    return worst
+            line_worst = max(line_worst, abs(final - q * want_unit) * 100)
+    return unit, line_worst
 
 
 def code_input(title, code, pct, variant_ids, customer_ids, starts_at):
@@ -130,7 +139,7 @@ def plan_slot(existing, want, customer_ids):
         return "create"
     same = (existing["status"] == "ACTIVE" and existing["customers"] == sorted(customer_ids)
             and existing["variants"] == sorted(v["id"] for v in want["variants"])
-            and existing["pct"] is not None and abs(existing["pct"] - want["pct"]) < 1e-6)
+            and existing["pct"] is not None and abs(existing["pct"] - want["pct"]) < PCT_TOLERANCE)
     return "none" if same else "update"
 
 

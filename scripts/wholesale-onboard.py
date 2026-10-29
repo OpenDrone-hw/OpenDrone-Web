@@ -55,6 +55,10 @@ def find_customer(env, email):
     return None
 
 
+def read_customer(env, cid):
+    return gql(env, 'query($id:ID!){customer(id:$id){id email tags taxExempt taxExemptions note}}', {"id": cid})["customer"]
+
+
 def main_code(percent, slug, company, email):
     """The mailed pattern: WS<percent>-<NAME>, e.g. WS25-FPV24."""
     name = re.sub(r"[^A-Z0-9]", "", (slug or company or email.split("@")[0]).upper())[:16] or "RETAIL"
@@ -92,7 +96,7 @@ def main():
     cust_input = {"email": email, "tags": tags, **({"taxExemptions": exemptions} if exempt else {})}
     old_note = ((cust or {}).get("note") or "").strip()
     lines = [old_note] if old_note else []
-    if exempt:
+    if exempt and f"VAT {vies['queried']} VIES valid" not in old_note:
         lines.append(f"{now[:10]} VAT {vies['queried']} VIES valid")
     if o.company and not cust:
         lines.append(f"Wholesale: {o.company}")
@@ -118,7 +122,7 @@ def main():
     for n, code, want, existing, action in slots:
         if want:
             skus = ",".join(v["sku"] for v in want["variants"])
-            print(f"  slot {n} {code}: {action} percentage={want['pct']} (rounding worst {rounding_check(want, o.percent):.1f} cent) variants={skus}")
+            print(f"  slot {n} {code}: {action} percentage={want['pct']} (worst {rounding_check(want, o.percent)[0]:.2f} cent per unit, {rounding_check(want, o.percent)[1]:.1f} cent per line up to 50) variants={skus}")
         else:
             print(f"  slot {n} {code}: {action} (no group)")
     if not o.apply:
@@ -137,7 +141,8 @@ def main():
         action = plan_slot(existing, want, [cid])
         apply_slot(env, action, existing, f"Wholesale {o.company or email} G{n}", code, want, [cid], now)
 
-    c = find_customer(env, email)
+    # By the id the write returned: the customer search index lags a new customer.
+    c = read_customer(env, cid)
     ok = bool(c and "wholesale" in c["tags"] and (EXEMPTION in c["taxExemptions"]) == exempt)
     for n, code, want, _, _ in slots:
         got = read_code(env, code)
