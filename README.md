@@ -233,20 +233,25 @@ plan. No customer or company record is created, nothing is mailed to the
 applicant, and no pricing, tax exemption, order or delivery commitment is made
 by an application.
 
-An approved retailer orders through the normal shop checkout with a personal
-code `WS<rate>-<NAME>` (for example `WS25-FPV24`): a Shopify percentage discount
-code limited to that one customer, 25% off by default
-(`WHOLESALE_PERCENT` in `scripts/wholesale-onboard.py`). A valid VIES VAT number
-outside Belgium also gets the customer tax exemption for EU reverse charge. Staff
-set both up with `python3 scripts/wholesale-onboard.py` (dry run by default,
-`--apply` writes and reads back). The full procedure, VAT per country, batch
-caps and refunds are in `docs/wholesale.md`. The storefront itself does nothing
-for wholesale: the cart carries no buyer identity, so the retailer signs in at
-Shopify checkout with the approved email for the exemption and the code to
-apply. The code takes its percentage off the live price, which sits under retail
-while a preorder price step runs, so during a campaign it stacks on the step
-(the script refuses `--apply` then without `--accept-stacking`). Public consumer
-checkout retains its existing behavior.
+An approved retailer orders in the normal shop and pays 75% of retail (25%
+off, `WHOLESALE_PERCENT` in `scripts/wholesale_lib.py`) whatever preorder price
+step a product is on. Retail is the Shopify compare-at price. The retailer
+types one personal code, `WS<rate>-<NAME>` (for example `WS25-FPV24`), in the
+cart's "Wholesale code" field (`intent=discount` in
+`app/lib/shopify-cart-action.ts`). The cart sends that code with its price-group
+companions `-G2` to `-G4` (`app/lib/wholesale-codes.ts`) through
+`cartDiscountCodesUpdate`. Each is a customer-limited Shopify percentage code
+scoped to the variants of one price group, because Shopify takes a percentage
+off the live price, not off compare-at. `scripts/wholesale-onboard.py` (VIES
+check, customer, tag `wholesale`, EU reverse charge exemption only for a valid
+VIES number outside BE, the codes) and `scripts/wholesale-sync.py` (re-points
+the groups after a price step; daily job `wholesale-sync` in the workspace) are
+dry run by default; `--apply` writes and reads back. The storefront passes no
+buyer identity to checkout (the sign-in drops Shopify's access token on
+purpose), so the retailer signs in at Shopify checkout with the approved email
+for the exemption and the customer-limited codes to apply. Procedure, VAT per
+country, batch caps, refunds and the test order: `docs/wholesale.md`. Public
+consumer checkout retains its existing behavior.
 
 The switch is `TRADE_MAIL_ENABLED=1` with `RESEND_API_KEY` set; without both
 the page shows the contact address instead of the form. A repeat application

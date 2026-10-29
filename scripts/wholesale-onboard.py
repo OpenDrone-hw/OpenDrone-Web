@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Onboard one approved wholesale retailer in Shopify (stdlib only).
 
-Checks the VAT number in VIES, finds or creates the Shopify customer, tags it
-`wholesale`, sets the EU reverse charge tax exemption only when VIES says the
-number is valid and the country is an EU member other than BE, and creates a
-discount code WS<rate>-<NAME> for that customer only (default 25% off,
-WHOLESALE_PERCENT).
+Checks the VAT number in VIES, finds or creates the Shopify customer by email,
+tags it `wholesale`, sets the EU reverse charge tax exemption only when VIES says
+the number is valid and the country is an EU member other than BE, and creates
+the retailer's personal codes: WS<rate>-<NAME> plus one companion per extra
+price group (see wholesale_lib.py), each limited to this customer.
 
 Dry run by default: reads Shopify and VIES, prints the planned writes, writes
 nothing. `--apply` writes, then reads everything back and checks it.
@@ -16,65 +16,38 @@ nothing. `--apply` writes, then reads everything back and checks it.
 
 Reads SHOPIFY_STORE_DOMAIN, SHOPIFY_ADMIN_API_TOKEN, SHOPIFY_ADMIN_API_VERSION
 from .env (or the environment). Needs read/write_customers and
-read/write_discounts. The token is never printed.
+read/write_discounts. The token is never printed. After a price step changes,
+`wholesale-sync.py` re-points the groups.
 """
-import argparse, json, os, re, sys, urllib.error, urllib.request
+import argparse, json, re, sys, urllib.error, urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-EU = set("AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE".split())
-WHOLESALE_PERCENT = 25.0  # standard wholesale rate off retail (founder 2026-10-29); the one place to change it
-EXEMPTION = "EU_REVERSE_CHARGE_EXEMPTION_RULE"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from wholesale_lib import (EU, EXEMPTION, GROUPS, WHOLESALE_PERCENT, apply_slot, gql, groups,  # noqa: E402
+                           live_variants, load_env, plan_slot, read_code, rounding_check, slot_code, user_errors)
+
 VIES = "https://ec.europa.eu/taxation_customs/vies/rest-api/ms/{cc}/vat/{num}"
-
-
-def load_env():
-    env = dict(os.environ)
-    p = Path(__file__).resolve().parent.parent / ".env"
-    if p.exists():
-        for line in p.read_text().splitlines():
-            if "=" in line and not line.lstrip().startswith("#"):
-                k, v = line.split("=", 1)
-                env.setdefault(k.strip(), v.strip().strip("'\""))
-    return env
-
-
-def gql(env, query, variables=None):
-    url = f"https://{env['SHOPIFY_STORE_DOMAIN']}/admin/api/{env.get('SHOPIFY_ADMIN_API_VERSION', '2026-01')}/graphql.json"
-    req = urllib.request.Request(
-        url, json.dumps({"query": query, "variables": variables or {}}).encode(),
-        {"X-Shopify-Access-Token": env["SHOPIFY_ADMIN_API_TOKEN"], "Content-Type": "application/json"})
-    out = json.loads(urllib.request.urlopen(req, timeout=30).read())
-    if out.get("errors"):
-        raise SystemExit(f"shopify error: {json.dumps(out['errors'])[:400]}")
-    return out["data"]
-
-
-def user_errors(payload):
-    errs = payload.get("userErrors") or []
-    if errs:
-        raise SystemExit(f"shopify userErrors: {json.dumps(errs)}")
 
 
 def vies_check(country, vat):
     """Return (valid, detail). Only a clear isValid=true counts as valid."""
     prefix = "EL" if country == "GR" else country
     num = re.sub(r"[\s.\-]", "", vat).upper()
-    if num.startswith(prefix):
-        num = num[len(prefix):]
-    elif num.startswith(country):
-        num = num[len(country):]
+    for p in (prefix, country):
+        if num.startswith(p):
+            num = num[len(p):]
+            break
     try:
-        raw = urllib.request.urlopen(urllib.request.Request(
-            VIES.format(cc=prefix, num=num), headers={"Accept": "application/json"}), timeout=30).read()
-        d = json.loads(raw)
+        d = json.loads(urllib.request.urlopen(urllib.request.Request(
+            VIES.format(cc=prefix, num=num), headers={"Accept": "application/json"}), timeout=30).read())
     except (urllib.error.URLError, ValueError, TimeoutError) as e:
         return False, {"error": f"VIES unreachable: {e}"}
     return d.get("isValid") is True, {k: d.get(k) for k in ("isValid", "userError", "name", "address", "requestDate")} | {"queried": f"{prefix}{num}"}
 
 
 def find_customer(env, email):
-    d = gql(env, 'query($q:String!){customers(first:5,query:$q){nodes{id email tags taxExempt taxExemptions note defaultAddress{company}}}}',
+    d = gql(env, 'query($q:String!){customers(first:5,query:$q){nodes{id email tags taxExempt taxExemptions note}}}',
             {"q": f'email:"{email}"'})
     for c in d["customers"]["nodes"]:
         if (c["email"] or "").lower() == email.lower():
@@ -82,27 +55,10 @@ def find_customer(env, email):
     return None
 
 
-def code_for(percent, slug, company, email):
+def main_code(percent, slug, company, email):
     """The mailed pattern: WS<percent>-<NAME>, e.g. WS25-FPV24."""
     name = re.sub(r"[^A-Z0-9]", "", (slug or company or email.split("@")[0]).upper())[:16] or "RETAIL"
-    pct = f"{percent:g}".replace(".", "")
-    return f"WS{pct}-{name}"
-
-
-def stacking(env, percent):
-    """Live price vs compare-at (retail). The code applies to the live price."""
-    d = gql(env, '{productVariants(first:100,query:"sku:OPEN*"){nodes{sku price compareAtPrice product{status}}}}')
-    rows, over = [], []
-    for v in d["productVariants"]["nodes"]:
-        if v["product"]["status"] != "ACTIVE" or not v["compareAtPrice"]:
-            continue
-        price, retail = float(v["price"]), float(v["compareAtPrice"])
-        final = price * (1 - percent / 100)
-        off = 1 - final / retail
-        rows.append((v["sku"], retail, price, final, off * 100))
-        if off * 100 > percent + 0.5:
-            over.append(v["sku"])
-    return rows, over
+    return f"WS{percent:g}".replace(".", "") + f"-{name}"
 
 
 def main():
@@ -112,68 +68,63 @@ def main():
     a.add_argument("--vat", default="", help="VAT ID as given in the application")
     a.add_argument("--company", default="")
     a.add_argument("--percent", type=float, default=WHOLESALE_PERCENT,
-                   help="rate off the live price (default %(default)g, WHOLESALE_PERCENT)")
+                   help="rate off retail (default %(default)g, WHOLESALE_PERCENT)")
     a.add_argument("--slug", default="", help="name part of the code, WS<percent>-<SLUG> (default: company)")
-    a.add_argument("--code", default="", help="exact code, to recreate one already mailed (e.g. WS25-FPV24)")
-    a.add_argument("--accept-stacking", action="store_true",
-                   help="allow --apply although the code would stack on preorder prices")
+    a.add_argument("--code", default="", help="exact main code, to recreate one already mailed (e.g. WS25-FPV24)")
     a.add_argument("--apply", action="store_true", help="write to Shopify (default: dry run)")
     o = a.parse_args()
     env = load_env()
-    for k in ("SHOPIFY_STORE_DOMAIN", "SHOPIFY_ADMIN_API_TOKEN"):
-        if not env.get(k):
-            raise SystemExit(f"missing {k}")
     email, cc = o.email.strip().lower(), o.country.strip().upper()
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    # 1. VIES and the exemption decision
     valid, vies = (False, None)
     if o.vat:
-        if cc in EU:
-            valid, vies = vies_check(cc, o.vat)
-        else:
-            vies = {"skipped": "non-EU country, VIES not applicable"}
+        valid, vies = vies_check(cc, o.vat) if cc in EU else (False, {"skipped": "non-EU country, VIES not applicable"})
     exempt = bool(valid and cc in EU and cc != "BE")
     why = ("VIES valid and EU country other than BE" if exempt else
            "BE: Belgian retailers pay 21% VAT" if cc == "BE" else
            "non-EU: export, no exemption needed" if cc not in EU else
            "no VAT number given" if not o.vat else "VIES did not confirm the number")
 
-    # 2. Shopify state
     cust = find_customer(env, email)
-    code = o.code.strip().upper() or code_for(o.percent, o.slug, o.company, email)
-    existing = gql(env, 'query($c:String!){codeDiscountNodeByCode(code:$c){id}}', {"c": code})["codeDiscountNodeByCode"]
-    rows, over = stacking(env, o.percent)
-
     tags = sorted(set((cust or {}).get("tags") or []) | {"wholesale"} | ({"reverse-charge"} if exempt else set()))
     exemptions = sorted(set((cust or {}).get("taxExemptions") or []) | ({EXEMPTION} if exempt else set()))
-    note_line = f"{now[:10]} VAT {vies['queried']} VIES valid" if exempt else None
     cust_input = {"email": email, "tags": tags, **({"taxExemptions": exemptions} if exempt else {})}
-    if note_line:
-        cust_input["note"] = ((cust or {}).get("note") or "").strip() + ("\n" if (cust or {}).get("note") else "") + note_line
+    old_note = ((cust or {}).get("note") or "").strip()
+    lines = [old_note] if old_note else []
+    if exempt:
+        lines.append(f"{now[:10]} VAT {vies['queried']} VIES valid")
     if o.company and not cust:
-        cust_input["note"] = (cust_input.get("note", "") + "\n" if cust_input.get("note") else "") + f"Wholesale: {o.company}"
+        lines.append(f"Wholesale: {o.company}")
+    if lines != ([old_note] if old_note else []):
+        cust_input["note"] = "\n".join(lines)
+
+    main = o.code.strip().upper() or main_code(o.percent, o.slug, o.company, email)
+    gs = groups(live_variants(env), o.percent)
+    cids = [cust["id"]] if cust else ["<new customer id>"]
+    slots = []
+    for n in range(1, GROUPS + 1):
+        code = slot_code(main, n)
+        want = gs[n - 1] if n <= len(gs) else None
+        existing = read_code(env, code)
+        slots.append((n, code, want, existing, plan_slot(existing, want, cids) if cust else ("create" if want else "none")))
 
     print(f"mode: {'APPLY' if o.apply else 'DRY RUN (no writes)'}")
     print(f"VIES: {json.dumps(vies)}")
     print(f"tax exemption: {'SET ' + EXEMPTION if exempt else 'NOT set'} ({why})")
-    print(f"customer: {'found ' + cust['id'] if cust else 'will be created'} (current tags {(cust or {}).get('tags')}, exemptions {(cust or {}).get('taxExemptions')})")
+    print(f"customer: {'found ' + cust['id'] if cust else 'will be created'} (tags {(cust or {}).get('tags')}, exemptions {(cust or {}).get('taxExemptions')})")
     print(f"planned write 1: {'customerUpdate' if cust else 'customerCreate'} {json.dumps(cust_input)}")
-    print(f"planned write 2: {'discount code ' + code + ' already exists (' + existing['id'] + '), skipped' if existing else 'discountCodeBasicCreate code=' + code + f' percentage={o.percent / 100} items=all customers=[this customer only] combinesWith=none appliesOncePerCustomer=false'}")
-    print(f"\nstacking check, code on live price (retail = compare-at):")
-    print(f"{'sku':20}{'retail':>8}{'live':>8}{'wholesale':>10}{'off retail':>11}")
-    for sku, retail, price, final, off in sorted(rows):
-        print(f"{sku:20}{retail:8.2f}{price:8.2f}{final:10.2f}{off:10.1f}%" + ("  OVER" if sku in over else ""))
-    if over:
-        print(f"\nWARNING: {len(over)} SKU(s) end below {100 - o.percent:.0f}% of retail because the preorder step stacks with the code.")
-
+    print(f"planned writes 2..: {o.percent:g}% off retail, {len(gs)} price group(s)")
+    for n, code, want, existing, action in slots:
+        if want:
+            skus = ",".join(v["sku"] for v in want["variants"])
+            print(f"  slot {n} {code}: {action} percentage={want['pct']} (rounding worst {rounding_check(want, o.percent):.1f} cent) variants={skus}")
+        else:
+            print(f"  slot {n} {code}: {action} (no group)")
     if not o.apply:
         print("\ndry run: nothing written. Re-run with --apply after the founder's go.")
         return
-    if over and not o.accept_stacking:
-        raise SystemExit("refusing --apply: stacking on preorder prices (see table). Add --accept-stacking only on the founder's go.")
 
-    # 3. Writes
     if cust:
         r = gql(env, 'mutation($i:CustomerInput!){customerUpdate(input:$i){customer{id} userErrors{field message}}}',
                 {"i": {"id": cust["id"], **{k: v for k, v in cust_input.items() if k != "email"}}})["customerUpdate"]
@@ -182,22 +133,18 @@ def main():
                 {"i": cust_input})["customerCreate"]
     user_errors(r)
     cid = r["customer"]["id"]
-    if not existing:
-        r = gql(env, 'mutation($i:DiscountCodeBasicInput!){discountCodeBasicCreate(basicCodeDiscount:$i){codeDiscountNode{id} userErrors{field message}}}', {"i": {
-            "title": f"Wholesale {o.company or email}", "code": code, "startsAt": now, "appliesOncePerCustomer": False,
-            "context": {"customers": {"add": [cid]}},
-            "customerGets": {"value": {"percentage": o.percent / 100}, "items": {"all": True}},
-            "combinesWith": {"productDiscounts": False, "orderDiscounts": False, "shippingDiscounts": True}}})["discountCodeBasicCreate"]
-        user_errors(r)
+    for n, code, want, existing, _ in slots:
+        action = plan_slot(existing, want, [cid])
+        apply_slot(env, action, existing, f"Wholesale {o.company or email} G{n}", code, want, [cid], now)
 
-    # 4. Read back
     c = find_customer(env, email)
-    d = gql(env, 'query($c:String!){codeDiscountNodeByCode(code:$c){id codeDiscount{... on DiscountCodeBasic{status context{... on DiscountCustomers{customers{id}}} customerGets{value{... on DiscountPercentage{percentage}}}}}}}', {"c": code})["codeDiscountNodeByCode"]["codeDiscount"]
-    ok = (c and "wholesale" in c["tags"] and (EXEMPTION in c["taxExemptions"]) == exempt
-          and d["status"] == "ACTIVE" and [x["id"] for x in d["context"]["customers"]] == [c["id"]]
-          and abs(d["customerGets"]["value"]["percentage"] - o.percent / 100) < 1e-9)
-    print(f"\nread back: customer {c['id']} tags={c['tags']} exemptions={c['taxExemptions']}; code {code} {d['status']} "
-          f"customers={[x['id'] for x in d['context']['customers']]} percentage={d['customerGets']['value']['percentage']}")
+    ok = bool(c and "wholesale" in c["tags"] and (EXEMPTION in c["taxExemptions"]) == exempt)
+    for n, code, want, _, _ in slots:
+        got = read_code(env, code)
+        good = (plan_slot(got, want, [c["id"]]) == "none") if got or want else True
+        print(f"read back slot {n} {code}: {'OK' if good else 'MISMATCH'}")
+        ok = ok and good
+    print(f"read back customer {c['id']} tags={c['tags']} exemptions={c['taxExemptions']}")
     print("read back OK" if ok else "READ BACK MISMATCH")
     sys.exit(0 if ok else 1)
 
