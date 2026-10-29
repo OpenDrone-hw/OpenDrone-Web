@@ -138,7 +138,7 @@ def main():
     a = argparse.ArgumentParser(description=__doc__)
     a.add_argument("--apply", action="store_true", help="write to Shopify (default: dry run)")
     a.add_argument("--health", action="store_true",
-                   help="read only: every wholesale customer has codes, codes match the price groups, no orphan codes, carts price at 75% of retail; prints HEALTH <json>, exit 1 on a problem")
+                   help="read only: every wholesale customer has codes, codes match the price groups, no orphan codes, carts price at 75%% of retail; prints HEALTH <json>, exit 1 on a problem")
     o = a.parse_args()
     env = load_env()
     if o.health:
