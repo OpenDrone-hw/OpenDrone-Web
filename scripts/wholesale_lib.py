@@ -8,7 +8,7 @@ to the variants of that group. Slot 1 is the code the retailer types
 (WS25-FPV24); slots 2 to 4 are WS25-FPV24-G2 .. -G4 and the cart sends all of
 them (app/lib/wholesale-codes.ts).
 """
-import json, os, re, urllib.request
+import json, os, re, time, urllib.request
 from pathlib import Path
 
 WHOLESALE_PERCENT = 25.0  # standard wholesale rate off retail (founder 2026-10-29); the one place to change it
@@ -39,7 +39,12 @@ def gql(env, query, variables=None):
     req = urllib.request.Request(
         url, json.dumps({"query": query, "variables": variables or {}}).encode(),
         {"X-Shopify-Access-Token": env["SHOPIFY_ADMIN_API_TOKEN"], "Content-Type": "application/json"})
-    out = json.loads(urllib.request.urlopen(req, timeout=60).read())
+    for attempt in range(6):  # a throttled READ is retried; a mutation is never retried here
+        out = json.loads(urllib.request.urlopen(req, timeout=60).read())
+        throttled = any((e.get("extensions") or {}).get("code") == "THROTTLED" for e in out.get("errors") or [])
+        if not throttled or query.lstrip().startswith("mutation") or attempt == 5:
+            break
+        time.sleep(2 + attempt * 2)
     if out.get("errors"):
         raise SystemExit(f"shopify error: {json.dumps(out['errors'])[:400]}")
     return out["data"]

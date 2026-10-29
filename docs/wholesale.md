@@ -42,9 +42,13 @@ It checks the VAT number in VIES, finds or plans the Shopify customer by email, 
 
 Needs `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN` (`read/write_customers`, `read/write_discounts`) in `.env`. Never print the token.
 
-## Keeping the groups right
+## Automation
 
-`python3 scripts/wholesale-sync.py` (dry run) lists the slots that differ from the live prices; `--apply` fixes them and checks again. Run it after every price step. The workspace job `wholesale-sync` runs `--apply` daily on the Mac mini.
+The workspace job `wholesale-intake` (operations repo, `tools/jobs/wholesale.py`) turns a form application into a founder card (Approve / Decline, VIES pre-checked, code proposed); an Approve runs `wholesale-onboard.py --apply` and saves the reply as a Gmail draft (EN or NL). Nothing is sent. The job `wholesale-sync` runs hourly: `wholesale-sync.py --apply` re-points the groups after a price step (no hook fires on a step, so the hourly pass bounds the gap), then `wholesale-sync.py --health` reports to the it-admin desk: a tagged customer without codes, codes without the tag, orphan group codes, price drift, and `wholesale-check.py` failures.
+
+By hand: `python3 scripts/wholesale-sync.py` (dry run, `--apply`, `--health`) and `python3 scripts/wholesale-check.py WS25-NAME`, which builds a throwaway Storefront cart with every live variant plus the code and its companions and asserts each line costs 75% of retail to the cent. Customer eligibility is enforced only at checkout, so the check proves the prices, not the customer limit.
+
+Percentages are stored with 4 decimals (0.1667). Every unit still lands on 75% of retail to the cent; a line of N units is up to about N x 0.18 cent cheaper (9 cents on 50 units) because 0.9 x (1 - 0.1667) is 0.74997.
 
 ## Login and checkout
 
@@ -65,7 +69,11 @@ The opendrone.be session is not passed to checkout: the cart is created without 
 
 The script sets the exemption only when VIES answers `isValid: true` and the country is not BE, so a typed VAT number alone gives nothing. The VIES answer is noted on the customer.
 
-Outside the EU the price in Shopify includes Belgian VAT; whether checkout strips it for a destination is not verified. Place one test order per destination type before promising a net price. Import duties and local taxes are the buyer's.
+What the shop charges (read from the paid orders of the Shopify store, 29 Oct 2026): EU consumers pay the VAT of their own country (OSS), for example DE 19%, NL 21%, IT 22%, HU would be 27%; Belgium 21%. So an EU shop without an accepted VAT number pays its destination VAT, not Belgian VAT. Non-EU orders (US, CH, NO, GB, CA, ...) carry no tax line and pay the same VAT-inclusive list price, so for a non-EU retailer the 25% comes off a price that still contains the Belgian VAT; the shop does not strip it. Import duties and local taxes are the buyer's. Whether Shopify strips VAT from a tax-inclusive price for a reverse-charge customer is still unverified: the test order checks it.
+
+## Shipping rate names
+
+The international zones name every weight-band rate "Preorder: ships by 31 Mar 2027, delivery by 30 Apr 2027", which is wrong for a batch-1 order. No code reads rate names (`app/lib/international-shipping.ts` reads price and weight; `release-batch.mjs`, the promise-mismatch logic and the company app use only prices and line properties), so renaming them to "Standard shipping (bpost)" is safe before, after or together with the batch-1 regions change; the date promise stays on the line properties and the order. `python3 scripts/shipping-rename.py` lists the 378 renames (dry run), `--apply` renames zone by zone and reads every rate back (name changed, price and weight conditions identical). Run it once, on the founder's go.
 
 ## Test order (before the first announcement)
 
