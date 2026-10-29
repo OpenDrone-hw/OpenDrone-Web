@@ -233,10 +233,20 @@ plan. No customer or company record is created, nothing is mailed to the
 applicant, and no pricing, tax exemption, order or delivery commitment is made
 by an application.
 
-Answer an application by replying to the mail. Check the shop and contact,
-collect billing/shipping addresses, VAT/EIN and shipment evidence when
-preparing the quote, and use a Shopify draft order for an accepted wholesale
-order. Public consumer checkout retains its existing behavior.
+An approved retailer orders through the normal shop checkout with a personal
+code `WS<rate>-<NAME>` (for example `WS25-FPV24`): a Shopify percentage discount
+code limited to that one customer, 25% off by default
+(`WHOLESALE_PERCENT` in `scripts/wholesale-onboard.py`). A valid VIES VAT number
+outside Belgium also gets the customer tax exemption for EU reverse charge. Staff
+set both up with `python3 scripts/wholesale-onboard.py` (dry run by default,
+`--apply` writes and reads back). The full procedure, VAT per country, batch
+caps and refunds are in `docs/wholesale.md`. The storefront itself does nothing
+for wholesale: the cart carries no buyer identity, so the retailer signs in at
+Shopify checkout with the approved email for the exemption and the code to
+apply. The code takes its percentage off the live price, which sits under retail
+while a preorder price step runs, so during a campaign it stacks on the step
+(the script refuses `--apply` then without `--accept-stacking`). Public consumer
+checkout retains its existing behavior.
 
 The switch is `TRADE_MAIL_ENABLED=1` with `RESEND_API_KEY` set; without both
 the page shows the contact address instead of the form. A repeat application
