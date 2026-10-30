@@ -53,7 +53,7 @@ export type ShopifyCartDependencies = {
   /** `cartAttributesUpdate`: the first-touch attribution an add carries. */
   setAttributes?: (cartId: string, attributes: Array<{key: string; value: string}>) => Promise<void>;
   /** `cartDiscountCodesUpdate`: a retailer's personal code and its price groups. */
-  setDiscountCodes?: (cartId: string, codes: string[]) => Promise<unknown>;
+  setDiscountCodes?: (cartId: string, codes: string[]) => Promise<Array<{code: string; applicable: boolean}> | void>;
   logError?: (message: string) => void;
 };
 
@@ -534,6 +534,10 @@ export function regionForDestination(destination: ShippingQuote | null): Region 
 export const CART_CHECK = {
   /** The typed wholesale code is not a wholesale code. */
   code: 'code',
+  /** Shopify did not take the wholesale code (unknown, inactive, or no line it covers). */
+  codeNotApplied: 'code-not-applied',
+  /** Shopify could not be reached to apply the wholesale code. */
+  codeFailed: 'code-failed',
   /** A paid-batch line asks for more units than the batch has left. */
   paidBatch: 'paid-batch',
   /** A preorder line's ship date changed since it was added. */
@@ -640,7 +644,17 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       const typed = String(form.get('code') ?? '');
       const main = wholesaleMainCode(typed);
       if (typed.trim() && !main) return redirect(`/cart?check=${CART_CHECK.code}`);
-      await dependencies.setDiscountCodes(existingId, main ? wholesaleCodes(main) : []);
+      // A failed apply returns to the cart with a notice, never the 503 page.
+      let applied: Array<{code: string; applicable: boolean}> | void;
+      try {
+        applied = await dependencies.setDiscountCodes(existingId, main ? wholesaleCodes(main) : []);
+      } catch (error) {
+        dependencies.logError?.(`wholesale code not applied: ${error instanceof Error ? error.message : 'unknown error'}`);
+        return redirect(`/cart?check=${CART_CHECK.codeFailed}`);
+      }
+      if (main && applied && !applied.some((c) => c.code.toUpperCase() === main && c.applicable)) {
+        return redirect(`/cart?check=${CART_CHECK.codeNotApplied}`);
+      }
       return redirect('/cart');
     }
 

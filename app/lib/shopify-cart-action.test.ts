@@ -1273,4 +1273,23 @@ describe('Shopify cart action: wholesale code', () => {
     assert.equal(cleared.headers.get('Location'), '/cart');
     assert.deepEqual(sent[1], []);
   });
+  it('returns to the cart with a notice when Shopify fails or does not take the code', async () => {
+    const base = {fetchCatalog: async () => CATALOG, getCartId: () => 'cart-a', ...MUST_NOT};
+    const failed = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
+      ...base, setDiscountCodes: async () => { throw new Error('shopify: cartDiscountCodesUpdate failed'); },
+    });
+    assert.equal(failed.headers.get('Location'), '/cart?check=code-failed');
+    const refused = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
+      ...base, setDiscountCodes: async (_id, codes) => codes.map((code) => ({code, applicable: false})),
+    });
+    assert.equal(refused.headers.get('Location'), '/cart?check=code-not-applied');
+    const taken = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
+      ...base, setDiscountCodes: async (_id, codes) => codes.map((code, i) => ({code, applicable: i === 0})),
+    });
+    assert.equal(taken.headers.get('Location'), '/cart');
+  });
+  it('declares every discount code list non-null, as the Storefront schema requires', async () => {
+    const {CART_DISCOUNT_CODES_UPDATE_MUTATION} = await import('./shopify-storefront.ts');
+    assert.match(CART_DISCOUNT_CODES_UPDATE_MUTATION, /\$discountCodes: \[String!\]!/);
+  });
 });
