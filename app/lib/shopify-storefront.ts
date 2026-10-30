@@ -279,6 +279,8 @@ export function storefrontEndpoint(env: StorefrontEnv): string {
   return `https://${host}/api/${version}/graphql.json`;
 }
 
+const STOREFRONT_TIMEOUT_MS = 10_000;
+
 export async function storefrontRequest<T>(
   env: StorefrontEnv,
   query: string,
@@ -298,6 +300,9 @@ export async function storefrontRequest<T>(
     // Workers supports follow/manual only. Manual plus the response status
     // check below preserves the fail-closed redirect policy.
     redirect: 'manual',
+    // A stalled Storefront read fails like any other, instead of holding the
+    // page or cart until the Worker's wall time ends (reads take 0.1-0.4 s).
+    signal: AbortSignal.timeout(STOREFRONT_TIMEOUT_MS),
   });
   if (!response.ok) {
     throw new Error(`shopify: Storefront API returned ${response.status}`);
