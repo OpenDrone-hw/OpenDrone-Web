@@ -903,9 +903,7 @@ html.anim-paused .board-sheet.is-active {
       transform: translateY(14px);
     }
   }
-  /* The pill itself, not the full-width header strip: on the homepage it
-     morphs between the top bar and the left bar (site-ui.css, hero-immersive). */
-  .site-header-main {
+  .site-header {
     view-transition-name: site-island;
   }
 }

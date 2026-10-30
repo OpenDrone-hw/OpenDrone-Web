@@ -1,6 +1,6 @@
 /**
  * The hero's 3D layer: the scroll-driven walkthrough and the copy panel that
- * follows it. Scroll drives it, a drag orbits it, and the side bar lists its parts.
+ * follows it. No on-screen controls: scroll drives it, a drag orbits it.
  *
  * This is an absolutely-positioned layer, not a section of its own - it fills
  * the hero's sticky pane so the wordmark, size selector and buy bubble sit over
@@ -12,7 +12,6 @@
  * Under `prefers-reduced-motion` the scene still loads but shows the exploded
  * pose statically (no intro, no travelling camera).
  */
-import {createPortal} from 'react-dom';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Link} from 'react-router';
 import type {
@@ -177,36 +176,8 @@ export function HeroDroneStage({
   const handleProgress = useCallback((f: number) => onProgress?.(f), [onProgress]);
 
   const card = !resting && shown ? shown : (beats[0] ?? null);
-  // The walkthrough as a list in the header's side bar (Header.tsx slot): where
-  // you are, and a click jumps there.
-  const [railSlot, setRailSlot] = useState<Element | null>(null);
-  useEffect(() => setRailSlot(document.querySelector('.site-header-rail-slot')), []);
-  const currentId = card?.id.split(':')[0];
   return (
     <div className="hp-stage">
-      {use3D && railSlot && beats.length
-        ? createPortal(
-            <nav className="hp-tour" aria-label="Inside the drone">
-              <span className="site-header-rail-label">Inside the drone</span>
-              <ol>
-                {beats.map((b, i) => (
-                  <li key={b.id}>
-                    <button
-                      type="button"
-                      className={b.id === currentId ? 'is-current' : undefined}
-                      aria-current={b.id === currentId ? 'step' : undefined}
-                      onClick={() => seek.current?.(i)}
-                    >
-                      <span className="hp-tour-n">{String(i).padStart(2, '0')}</span>
-                      {b.title}
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            </nav>,
-            railSlot,
-          )
-        : null}
       {Scene ? (
         <Scene
           model={folder}

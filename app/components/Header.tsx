@@ -145,9 +145,6 @@ export function Header({
   return (
     <header className="site-header">
       <div className="site-header-main">
-        {/* The pill's surface as its own layer, so a view transition can stretch it
-            between the top bar and the homepage's side bar (site-ui.css). */}
-        <span className="site-header-surface" aria-hidden="true" />
         {/* Left: brand slot - OpenDrone home link, or Incutec credit on the hero,
             where the mark links to the in-site Incutec company page. */}
         {isHero ? (
@@ -186,10 +183,6 @@ export function Header({
             own accented bubble as the route into the full catalogue. No
             dividers - the bubbles do the grouping. */}
         <FamilyNav familyProducts={familyProducts} commerceHandoff={commerceHandoff} />
-
-        {/* Filled by the homepage hero (HeroDroneStage) with its walkthrough, shown
-            only in the homepage's side bar. */}
-        <div className="site-header-rail-slot" />
 
         {/* Right: actions */}
         <HeaderCtas
@@ -469,9 +462,7 @@ function FamilyNav({
           to={cat.to}
           aria-expanded={open === cat.label}
         >
-          {/* The homepage's side bar has room for the full name (site-ui.css). */}
-          <span className="header-cat-short">{familyShort(cat.type, cat.label)}</span>
-          <span className="header-cat-long">{familyLong(cat.type, MOBILE_FAMILY_LABEL[cat.type] ?? cat.label)}</span>
+          {familyShort(cat.type, cat.label)}
         </NavLink>
         <div className="header-cat-pod-wrap">
           <AnimatePresence>
@@ -506,9 +497,6 @@ function FamilyNav({
       className="site-header-categories"
       aria-label={copyText('chrome.categories_aria') ?? 'Product categories'}
     >
-      <span className="site-header-rail-label" aria-hidden="true">
-        {copyText('chrome.rail_shop') ?? 'Shop'}
-      </span>
       {/* FC and ESC share one bubble (a stack is bought from their rows);
           RX, Motors and Frame are standalone families with their own bubbles. */}
       <span className="site-header-cat-group">
@@ -864,11 +852,7 @@ function HeaderCtas({
       <div className="site-header-utils">
         <LangToggle className="header-lang-toggle" />
         <RegionSwitch variant="menu" className="header-region-switch" />
-        <span className="site-header-rail-label site-header-rail-label--community" aria-hidden="true">
-          {copyText('chrome.rail_community') ?? 'Community'}
-        </span>
-        {/* The community: desktop only here, the phone drawer lists it. The
-            labels show only in the homepage's side bar. */}
+        {/* The community: desktop only here, the phone drawer lists it. */}
         <DiscordLink
           placement="header"
           className="site-header-icon site-header-discord"
@@ -876,23 +860,7 @@ function HeaderCtas({
           title={copyText('chrome.nav_discord') ?? 'Discord'}
         >
           <DiscordMark />
-          <span className="site-header-icon-label" aria-hidden="true">Discord</span>
         </DiscordLink>
-        {/* Shown only in the homepage's immersive side bar (site-ui.css), where
-            the socials sit together; the hero's own GitHub mark steps aside. */}
-        <a
-          href="https://github.com/OpenDrone-hw"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="site-header-icon site-header-github"
-          aria-label="GitHub"
-          title="GitHub"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-          </svg>
-          <span className="site-header-icon-label" aria-hidden="true">GitHub</span>
-        </a>
         {/* Account, orders and addresses live in Shopify customer accounts:
             an external link, not an in-app route. The signed-in state is
             Shopify's to know, so the label is always "Account". */}

@@ -3,7 +3,6 @@ import {Link} from '~/components/nav';
 import type {Route} from './+types/_index';
 import {
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
   useCallback,
@@ -287,20 +286,11 @@ function DesktopHome({
     rafId.current = 0;
   }, []);
 
-  // The desktop homepage is one immersive screen: the header is the left bar here
-  // (html.hero-immersive, app/styles/site-ui.css) and the top bar on every other
-  // page; the route view transition morphs one into the other. Exploring the drone
-  // only steps the side cards back (html.hero-exploring).
-  // Layout effect: on before first paint, and removed inside the route change's
-  // view transition so the bar morphs into the top pill instead of jumping.
-  useLayoutEffect(() => {
-    const root = document.documentElement;
-    root.classList.add('hero-immersive');
-    return () => root.classList.remove('hero-immersive', 'hero-exploring');
-  }, []);
+  // Exploring the drone steps the side cards back (html.hero-exploring, site-ui.css).
   const handleExploring = useCallback((on: boolean) => {
     document.documentElement.classList.toggle('hero-exploring', on);
   }, []);
+  useEffect(() => () => document.documentElement.classList.remove('hero-exploring'), []);
   // The explainer card stands on the kit card (site-ui.css .hp-copy): publish the
   // kit card's height so the stack holds as its rows load or change.
   const buyRef = useRef<HTMLDivElement | null>(null);
@@ -669,9 +659,8 @@ function DesktopHome({
             className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-auto"
             inert={!splashSettled}
             style={{
-              // Keep the size switch below the header, including repeat visits;
-              // exploring, the header leaves the top to it (html.hero-immersive).
-              top: !splashSettled ? '-3rem' : 'var(--hero-size-top, calc(var(--header-height) + 1.5rem))',
+              // Keep the size switch below the header, including repeat visits.
+              top: !splashSettled ? '-3rem' : 'calc(var(--header-height) + 1.5rem)',
               opacity: splashSettled ? 1 : 0,
               transition:
                 'top 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease',
