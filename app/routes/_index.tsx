@@ -193,14 +193,19 @@ function DesktopHome({
   // Which airframe the hero shows - 5-inch or 3-inch. Toggling swaps the
   // GLB trio loaded by HeroScene.
   const [heroSize, setHeroSize] = useState<string>(DEFAULT_HERO_SIZE);
-  const changeHeroSize = useCallback((next: string) => setHeroSize(next), []);
+  const [activePart, setActivePart] = useState<string | null>(null);
+  // The new size's scene starts at its intro and never reports "no beat", so
+  // the build card would keep the old size's highlighted part: clear it here.
+  const changeHeroSize = useCallback((next: string) => {
+    setHeroSize(next);
+    setActivePart(null);
+  }, []);
   const inspectPart = useRef<((id: string) => void) | null>(null);
   const [canInspect, setCanInspect] = useState(false);
   const handleSeeker = useCallback((seek: ((id: string) => void) | null) => {
     inspectPart.current = seek;
     setCanInspect(Boolean(seek));
   }, []);
-  const [activePart, setActivePart] = useState<string | null>(null);
   const handleBeat = useCallback((beat: {id: string} | null) => setActivePart(beat?.id.split(':')[0] ?? null), []);
   // Live drag fraction (0→1) while the size slider is dragged, else null. A ref
   // (not state) so dragging it 60×/s doesn't re-render the page - the render
