@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {createCart, fetchShopifyCatalog, getCart, productRating, storefrontEndpoint} from './shopify-storefront.ts';
+import {createCart, fetchShopifyCatalog, getCart, productRating, storefrontEndpoint, storefrontRequest} from './shopify-storefront.ts';
 
 const ENV = {
   SHOPIFY_STORE_DOMAIN: 'open-drone-test.myshopify.com',
@@ -281,3 +281,16 @@ describe('selected-country catalog prices', () => {
     assert.equal(result.prices_include_vat,false);
   });
 });
+
+describe('storefrontRequest timeout', () => {
+  it('sends every request with an abort signal, so a stalled read fails instead of hanging', async () => {
+    let signal: AbortSignal | null | undefined;
+    const fetcher = (async (_url: string, init?: RequestInit) => {
+      signal = init?.signal;
+      return Response.json({data: {ok: true}});
+    }) as typeof fetch;
+    await storefrontRequest(ENV, '{ shop { name } }', {}, fetcher);
+    assert.ok(signal instanceof AbortSignal);
+  });
+});
+

@@ -44,6 +44,8 @@ export async function appOp<T>(env: AppEnv, name: string, args: Record<string, u
         authorization: `Bearer ${env.APP_STOREFRONT_TOKEN ?? ''}`,
       },
       body: JSON.stringify({project: env.APP_PROJECT ?? '', ...args}),
+      // A stalled app counts as unreachable, so snapshot() serves its last copy.
+      signal: AbortSignal.timeout(10_000),
     });
   } catch {
     throw new AppUnavailable(`${name}: app unreachable`);

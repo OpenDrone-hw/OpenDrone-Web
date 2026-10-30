@@ -56,6 +56,7 @@ describe('app commerce source', () => {
     assert.equal(h.authorization, 'Bearer bearer');
     assert.equal(h['content-type'], 'application/json');
     assert.deepEqual(JSON.parse(String(seen[0].init.body)), {project: 'proj', country: 'BE'});
+    assert.ok(seen[0].init.signal instanceof AbortSignal, 'a stalled app must time out');
   });
 
   it('treats a login page or a network error as the app being unavailable', async () => {
