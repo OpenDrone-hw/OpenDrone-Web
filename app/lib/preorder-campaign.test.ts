@@ -512,6 +512,20 @@ describe('funding deadline (endsOn)', () => {
     assert.equal(strap.availability, 'preorder');
   });
 
+  it('keeps a funding target on sale past the deadline once it is reached', () => {
+    const single = {...CONFIG, skus: {'OPENFRAME-5': {batches: [{units: 250}]}}};
+    const retail = catalog('preorder');
+    retail.products[0].variants[0] = {...retail.products[0].variants[0], price: 99};
+    const [short] = applyCampaign(retail, single, {'OPENFRAME-5': 249}, AFTER).products[0].variants;
+    assert.equal(short.availability, 'sold_out');
+    for (const ordered of [250, 600]) {
+      const [met] = applyCampaign(retail, single, {'OPENFRAME-5': ordered}, AFTER).products[0].variants;
+      assert.equal(met.availability, 'preorder', `${ordered} ordered`);
+      assert.equal(met.campaign?.targetReached, true);
+      assert.equal(met.campaign?.batch, 1);
+    }
+  });
+
   it('keeps paid stock on sale after the deadline, and closes it once only a funding batch is left', () => {
     const early = catalog('preorder');
     // 12 paid units: 20% step, 79.20 on a 99 retail.

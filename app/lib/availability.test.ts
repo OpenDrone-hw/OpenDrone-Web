@@ -51,6 +51,30 @@ describe('availability block', () => {
     assert.deepEqual(rows.map((r) => [r.state, r.note]), [['sold_out', 'Sold out'], ['current', null]]);
   });
 
+  it('sends a buyer to the March batch exactly when batch 1 has no sellable unit left', () => {
+    const left = sellableUnits(REAL.skus['OPENESC-3030'].batches[0]);
+    assert.equal(state('OPENESC-3030', left - 1, 'EU').batch, 1);
+    const next = state('OPENESC-3030', left, 'EU');
+    assert.equal(next.batch, 2);
+    assert.equal(next.paidStock, false);
+    assert.equal(next.shipPromise, REAL.pendingShips);
+  });
+
+  it('keeps the batch current once its target is reached, unconditional and still selling', () => {
+    const sold = sellableUnits(REAL.skus['OPENESC-3030'].batches[0]);
+    for (const [sku, ordered] of [['OPENRX-LITE', 250], ['OPENRX-LITE', 900], ['OPENESC-3030', sold + 250], ['OPENESC-3030', sold + 700]] as const) {
+      const campaign = state(sku, ordered, 'EU');
+      assert.equal(campaign.targetReached, true, `${sku} ${ordered}`);
+      const rows = availabilityRows(campaign, DATES, 'EU', words);
+      const row = rows.find((r) => r.state === 'current')!;
+      assert.equal(row.label, 'March 2027 batch', `${sku} ${ordered}`);
+      assert.equal(row.detail, 'Ships by 31 Mar 2027', `${sku} ${ordered}`);
+      assert.equal(row.note, null);
+    }
+    const open = availabilityRows(state('OPENRX-LITE', 249, 'EU'), DATES, 'EU', words).find((r) => r.state === 'current')!;
+    assert.equal(open.detail, 'Target deadline 15 Dec 2026. Ships by 31 Mar 2027 if the target is reached');
+  });
+
   it('gives every other product one row: the March batch, International preorders', () => {
     for (const region of ['EU', 'US'] as const) {
       const rows = availabilityRows(state('OPENRX-LITE', 3, region), DATES, region, words);

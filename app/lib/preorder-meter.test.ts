@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {describe, it} from 'node:test';
 import {campaignState, priceLadder, type CampaignBatch} from './preorder-campaign.ts';
 import {barPercent, ladderText, reachableSteps, stepBarLabel, stepBarView, stepLayout} from './preorder-meter.ts';
@@ -44,6 +45,15 @@ describe('stepBarView', () => {
     }
     const run = stepBarView(campaignState([{units: 250}], 1300, PENDING, TIERS), ENDS);
     assert.deepEqual([run.funded, run.label], [true, '250 / 250']);
+  });
+
+  it('reads "Pre-order target reached" from the funded label with the bar full', () => {
+    const bar = stepBarView(campaignState([{units: 250}], 400, PENDING, TIERS), ENDS);
+    assert.deepEqual([bar.funded, bar.value, bar.max], [true, 250, 250]);
+    assert.equal(barPercent(bar), 100);
+    // The funded wording lives in content/copy/preorder.json `funded`.
+    const copy = JSON.parse(fs.readFileSync(new URL('../../content/copy/preorder.json', import.meta.url), 'utf8')) as {funded: string};
+    assert.equal(copy.funded, 'Pre-order target reached');
   });
 
   it('drops the ticks once the bar counts a later batch', () => {

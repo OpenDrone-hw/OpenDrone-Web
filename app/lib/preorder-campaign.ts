@@ -880,8 +880,10 @@ function pinnedBatchState(
  *
  * After the funding deadline (`endsOn`, end of day in Brussels) a variant
  * whose next unit would wait for a funding target closes as sold out: its
- * ship promise names a deadline that has passed. Paid stock, and a batch
- * with its own ship date (its supplier order is placed), keep selling.
+ * ship promise names a deadline that has passed. Paid stock, a batch
+ * with its own ship date (its supplier order is placed) and a funding
+ * target that was reached keep selling: the deadline only matters to a
+ * target still missing units.
  *
  * A SKU in `shipsWith` gets its lead's state at its own flat price
  * ({@link shipsWithState}) and closes on the same conditions, except the
@@ -925,7 +927,7 @@ export function applyCampaign(
             units[variant.sku] ?? 0,
             region,
           );
-          if (closed && state.shipsOnTarget) {
+          if (closed && state.shipsOnTarget && !state.targetReached) {
             return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
           }
           const dated: CampaignState = {
@@ -945,7 +947,7 @@ export function applyCampaign(
           variant.compare_price,
           region,
         );
-        if (closed && state.shipsOnTarget && !state.paidStock) {
+        if (closed && state.shipsOnTarget && !state.paidStock && !state.targetReached) {
           return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
         }
         // Shopify still charges under this SKU's step, so the step has not
