@@ -59,6 +59,7 @@ const CART_FIELDS = `#graphql
     totalQuantity
     attributes { key value }
     buyerIdentity { countryCode }
+    discountCodes { code applicable }
     cost {
       subtotalAmount { amount currencyCode }
       totalAmount { amount currencyCode }
@@ -215,6 +216,8 @@ export type ShopifyCart = {
   total: ShopifyMoney;
   /** The cart-level attributes (the first-touch attribution), when Shopify returned them. */
   attributes?: Array<{key: string; value: string}>;
+  /** The discount codes on the cart and whether each applies now. */
+  discountCodes?: Array<{code: string; applicable: boolean}>;
   /** The cart's `buyerIdentity.countryCode`: the market Shopify prices it
    *  in and checkout opens in. Absent or null when none was set. */
   country?: string | null;
@@ -519,6 +522,7 @@ type CartWire = {
   totalQuantity: number;
   buyerIdentity?: {countryCode?: string | null} | null;
   attributes?: Array<{key: string; value: string}>;
+  discountCodes?: Array<{code: string; applicable: boolean}>;
   cost: {subtotalAmount: ShopifyMoney; totalAmount: ShopifyMoney};
   lines: {
     pageInfo: {hasNextPage: boolean};
@@ -589,6 +593,7 @@ function validatedCart(
     total: cart.cost.totalAmount,
     ...(cart.buyerIdentity?.countryCode ? {country: cart.buyerIdentity.countryCode.toUpperCase()} : {}),
     ...(cart.attributes ? {attributes: cart.attributes} : {}),
+    ...(cart.discountCodes ? {discountCodes: cart.discountCodes} : {}),
     lines: cart.lines.nodes.map((line) => {
       // Non-EU lines record their region; absence remains the EU default.
       const shipRegion = line.attributes.find(({key}) => key === SHIP_REGION_ATTRIBUTE)?.value;
