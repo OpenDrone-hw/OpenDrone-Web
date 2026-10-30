@@ -657,8 +657,8 @@ function Chapter({
    *  table) needs no image. The grid tracks stay put, so the body column
    *  keeps the same width and left edge as every other chapter. */
   noMedia?: boolean;
-  /** Centre the heading and the body as one narrower block (the Specs
-   *  chapter's table). */
+  /** The body spans the chapter as one block (the Specs chapter's table),
+   *  on the same left edge as the other chapters. */
   centered?: boolean;
 }) {
   return (

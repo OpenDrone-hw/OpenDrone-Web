@@ -5137,20 +5137,16 @@ button.reset {
 th.is-active .spec-sheet-pick {
   cursor: default;
 }
-/* The Specs chapter: heading centred, the table one centred block with
-   the value columns centred under their variant names. */
+/* The Specs chapter: the table spans the chapter, heading and table on the
+   same left edge as every other chapter (founder 2026-10-30), the value
+   columns centred under their variant names. */
 section.chapter[data-centered] .chapter-body-col {
   grid-column: 1 / -1;
   width: 100%;
   max-width: 60rem;
-  margin-inline: auto;
-}
-.chapter[data-centered] .chapter-title {
-  text-align: center;
 }
 .chapter[data-centered] .spec-sheet {
   max-width: none;
-  margin-inline: auto;
 }
 .chapter[data-centered] .spec-sheet td,
 .chapter[data-centered] .spec-sheet thead th:not(:first-child) {
