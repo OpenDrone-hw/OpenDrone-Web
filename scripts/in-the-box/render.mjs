@@ -4,8 +4,8 @@
 // exports the composition; blender_render.py renders it in Blender Cycles.
 // Writes public/boxes/<handle>/<variant>.png (transparent, 1600 px) plus
 // -w528/-w800/-w1024/-w1280 WebPs, sets the product's inTheBoxImage (size,
-// hash, per-row boxes for the page's annotations) and puts dark and light
-// review composites in the review directory. Needs Blender (BLENDER or on
+// hash, per-row boxes for the page's annotations) and puts a dark
+// review composite in the review directory. Needs Blender (BLENDER or on
 // PATH, or /Applications/Blender.app), cwebp and ImageMagick.
 //
 //   node scripts/in-the-box/render.mjs --all
@@ -306,7 +306,7 @@ try {
     Object.assign(out, {width: result.width, height: result.height,
       boxes: mergeBoxes(result.boxes, result.width, result.height)});
     mkdirSync(opts.reviewDir, {recursive: true});
-    for (const [bg, name] of [['#0d0d10', 'dark'], ['#f7f6f3', 'light']]) {
+    for (const [bg, name] of [['#0d0d10', 'dark']]) {
       execFileSync('magick', [png, '-background', bg, '-flatten', join(opts.reviewDir, `${spec.handle}-${spec.variant}-${name}.png`)]);
     }
     if (opts.webp) webps(png);
