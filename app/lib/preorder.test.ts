@@ -1,6 +1,11 @@
 import {describe, it} from 'node:test';
 import assert from 'node:assert/strict';
-import {preorderNote, shipPromiseFor} from './preorder.ts';
+import {
+  preorderNote,
+  sharedPreorderNote,
+  shipPromiseFor,
+  variantPreorderNote,
+} from './preorder.ts';
 import {PRODUCT_CONTENT} from './product-content.ts';
 
 // Run with:
@@ -71,5 +76,28 @@ describe('shipPromiseFor', () => {
     assert.equal(shipPromiseFor(undefined, 'ships in about 10 weeks', false), null);
     assert.equal(shipPromiseFor(promise, undefined, true), promise);
     assert.equal(shipPromiseFor(promise), promise);
+  });
+});
+
+describe('per-variant pre-order note', () => {
+  const batch1 = {shipPromise: 'ships early November 2026'};
+  const march = {
+    shipPromise: 'ships by 31 March 2027 if the target is reached by 15 December 2026',
+  };
+
+  it('uses each variant own promise, not the first variant', () => {
+    assert.equal(variantPreorderNote('openfc-lite', batch1), batch1.shipPromise);
+    assert.equal(variantPreorderNote('openfc-lite', march), march.shipPromise);
+  });
+
+  it('has no shared note when variants sit on different batches', () => {
+    assert.equal(sharedPreorderNote('openfc-lite', [batch1, march]), null);
+  });
+
+  it('has a shared note when every variant agrees', () => {
+    assert.equal(
+      sharedPreorderNote('openfc-lite', [march, {...march}]),
+      march.shipPromise,
+    );
   });
 });

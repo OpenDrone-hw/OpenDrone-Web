@@ -32,6 +32,31 @@ export function preorderNote(
 }
 
 /**
+ * The pre-order note of each variant, from its own catalog promise: variants
+ * of one product can sit on different batches (OpenFC Lite 20x20 on batch 1,
+ * the sold-out 30x30 on the March batch), so a feed must not apply the first
+ * variant's promise to all of them.
+ */
+export function variantPreorderNote(
+  handle: string,
+  variant: {shipPromise?: string | null},
+): string {
+  return preorderNote(handle, variant.shipPromise);
+}
+
+/**
+ * The one note every variant shares, or null when the variants differ (the
+ * caller then states the promise per variant only).
+ */
+export function sharedPreorderNote(
+  handle: string,
+  variants: ReadonlyArray<{shipPromise?: string | null}>,
+): string | null {
+  const notes = new Set(variants.map((v) => variantPreorderNote(handle, v)));
+  return notes.size === 1 ? [...notes][0] : null;
+}
+
+/**
  * The ship promise the buy module prints, as opposed to the pre-order note
  * above: the catalog variant decides whenever it carries the key, INCLUDING
  * when it decides `null`, and only an absent key falls back to the content

@@ -14,7 +14,11 @@ import {
 
 // The pure pre-order helper lives in app/lib/preorder.ts (bundler-free, so
 // the node:test suites can load it); re-exported here for the app.
-export {preorderNote} from '~/lib/preorder';
+export {
+  preorderNote,
+  sharedPreorderNote,
+  variantPreorderNote,
+} from '~/lib/preorder';
 
 /**
  * Every product handle's resolved tri-state, for the root loader: the

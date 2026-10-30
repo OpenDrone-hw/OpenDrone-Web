@@ -5,7 +5,11 @@ import {
   isPurchasableStatus,
   resolveStatus,
 } from '~/lib/product-content';
-import {comingSoonFlag, preorderNote} from '~/lib/coming-soon';
+import {
+  comingSoonFlag,
+  sharedPreorderNote,
+  variantPreorderNote,
+} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {toCards} from '~/lib/catalog';
 import {shipCountryForRequest} from '~/lib/shipping-rates';
@@ -71,13 +75,11 @@ export async function loader({context, request}: Route.LoaderArgs) {
         ...(locked ? {coming_soon: true} : null),
         // Pre-order: charged in full now, ships on this promise (the same
         // string the PDP, the cart line and the order attribute carry).
-        ...(status === 'preorder'
-          ? {
-              preorder: preorderNote(
-                p.handle,
-                p.variants.nodes.find((v) => v.shipPromise)?.shipPromise,
-              ),
-            }
+        // Variants can ship with different batches: the product-level note
+        // appears only when they agree, each variant carries its own.
+        ...(status === 'preorder' &&
+        sharedPreorderNote(p.handle, p.variants.nodes)
+          ? {preorder: sharedPreorderNote(p.handle, p.variants.nodes)}
           : null),
         variants: p.variants.nodes.map((v) => ({
           sku: v.sku,
@@ -88,6 +90,9 @@ export async function loader({context, request}: Route.LoaderArgs) {
           available: locked ? false : v.availableForSale,
           price: locked ? null : v.price.amount,
           currency: locked ? null : v.price.currencyCode,
+          ...(status === 'preorder'
+            ? {preorder: variantPreorderNote(p.handle, v)}
+            : null),
         })),
       };
     });
