@@ -75,7 +75,7 @@
     "topojson-client": "^3.1.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.64.0",
+    "@cloudflare/vite-plugin": "^1.66.0",
     "@eslint/compat": "^1.2.5",
     "@eslint/eslintrc": "^3.3.7",
     "@eslint/js": "^9.39.5",
@@ -113,7 +113,7 @@
     "vite": "^6.4.5",
     "vite-tsconfig-paths": "^4.3.1",
     "world-atlas": "^2.0.2",
-    "wrangler": "^4.149.0"
+    "wrangler": "^4.154.0"
   },
   "engines": {
     "node": "^22 || ^24"
