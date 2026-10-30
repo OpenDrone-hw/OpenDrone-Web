@@ -10,7 +10,6 @@ import {
 } from 'react';
 import type {ProductCardFragment} from '~/lib/product-shapes';
 import {byHandle, toCard} from '~/lib/catalog';
-import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {HeroDroneStage} from '~/components/HeroDroneStage';
 import type {HeroLoadState} from '~/components/HeroDroneScene';
@@ -26,8 +25,7 @@ import {MobileHome} from '~/components/MobileHome';
 import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
-import {CommunitySection} from '~/components/Discord';
-import {fetchDiscordCounts, type DiscordCounts} from '~/lib/discord-community';
+import {fetchDiscordCounts} from '~/lib/discord-community';
 
 /**
  * The homepage's words live in `content/copy/home.json`, shared with
@@ -119,7 +117,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
     ? await home.then((h) => h.featured)
     : home.then((h) => h.featured);
 
-  // Live Discord size for the community section: streamed, never awaited,
+  // Live Discord size for the phone layout's community section: streamed, never awaited,
   // cached an hour, null (numbers hidden) when Discord does not answer.
   const discord = fetchDiscordCounts();
 
@@ -175,17 +173,15 @@ export default function Homepage() {
     return (
       <MobileHome featured={featured} heroBuilds={heroBuilds} stackOffer={stackOffer} discord={discord} />
     );
-  return <DesktopHome heroBuilds={heroBuilds} stackOffer={stackOffer} discord={discord} />;
+  return <DesktopHome heroBuilds={heroBuilds} stackOffer={stackOffer} />;
 }
 
 function DesktopHome({
   heroBuilds,
   stackOffer,
-  discord,
 }: {
   heroBuilds: HeroBuild[] | Promise<HeroBuild[]>;
   stackOffer: boolean;
-  discord: Promise<DiscordCounts | null>;
 }) {
   const scrollRef = useRef(0);
   const rafId = useRef(0);
@@ -242,6 +238,11 @@ function DesktopHome({
   const [displayedProgress, setDisplayedProgress] = useState(
     splashHasPlayedThisSession ? 1 : 0,
   );
+  // The wordmark leaves the centre as soon as its letters have drawn, not when
+  // the scene is ready: the drone assembling behind it is the loading screen,
+  // so the brand must not sit on top of it. The rest of the chrome still waits
+  // for splashSettled.
+  const brandSettled = splashSettled || (drawPhaseDone && minWaitElapsed);
   // Overflow UI - only shown if scene isn't ready within
   // EXPECTED_LOAD_BUDGET_MS. Hidden again as soon as it lands.
   const [showOverflow, setShowOverflow] = useState(false);
@@ -269,33 +270,10 @@ function DesktopHome({
     // hit 100% before the models are actually parsed.
     setProgress((prev) => Math.max(prev, Math.min(p, 0.95)));
   }, []);
-  // The splash's manifest board: every piece of the assembly in load order,
-  // ticked off as each file lands in the scene. Watching the drone's parts
-  // check in one by one is the progress indicator, and on a slow network it
-  // says exactly what is still arriving instead of a bare "loading".
-  const [loadPieces, setLoadPieces] = useState<
-    ReadonlyArray<{id: string; label: string}>
-  >([]);
-  const [loadDone, setLoadDone] = useState<ReadonlySet<string>>(new Set());
-  const [loadActive, setLoadActive] = useState<string | null>(null);
   const handleModelLoad = useCallback(
-    (s: HeroLoadState) => {
-      setLoadPieces((prev) => (prev.length ? prev : s.pieces));
-      setLoadActive(s.chunk);
-      if (s.done)
-        setLoadDone((prev) =>
-          prev.has(s.chunk) ? prev : new Set(prev).add(s.chunk),
-        );
-      handleSceneProgress(s.frac);
-    },
+    (s: HeroLoadState) => handleSceneProgress(s.frac),
     [handleSceneProgress],
   );
-  // "drag to rotate" hint - pops up a few seconds after the splash settles if
-  // the visitor hasn't touched anything yet, and dismisses on the first drag or
-  // scroll. The drone auto-rotates on its own, so this only nudges discovery of
-  // the drag-to-view interaction.
-  const [showDragHint, setShowDragHint] = useState(false);
-  const [interacted, setInteracted] = useState(false);
   // The top product header bar drops in a beat AFTER the rest of the islands
   // have splashed in - 2s after the splash settles - so the hero reads first
   // and the chrome arrives second. Starting to scroll brings it in early. On
@@ -306,6 +284,21 @@ function DesktopHome({
   const tick = useCallback(() => {
     heroVarRef.current?.style.setProperty('--hero-p', scrollRef.current.toFixed(4));
     rafId.current = 0;
+  }, []);
+
+  // The explainer card stands on the kit card (site-ui.css .hp-copy): publish the
+  // kit card's height so the stack holds as its rows load or change.
+  const buyRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = buyRef.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const ro = new ResizeObserver(() => root.style.setProperty('--hero-buy-h', `${el.offsetHeight}px`));
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty('--hero-buy-h');
+    };
   }, []);
 
   const handleWalkthroughProgress = useCallback(
@@ -442,33 +435,6 @@ function DesktopHome({
     document.documentElement.classList.add('splash-settled');
   }, [splashSettled]);
 
-  // Arm the drag hint ~4s after the splash settles, unless the visitor has
-  // already interacted (dragged or scrolled).
-  useEffect(() => {
-    if (!splashSettled || interacted) return;
-    const t = window.setTimeout(() => setShowDragHint(true), 4000);
-    return () => window.clearTimeout(t);
-  }, [splashSettled, interacted]);
-
-  // First drag (pointerdown anywhere) or first real scroll dismisses the hint
-  // for good.
-  useEffect(() => {
-    if (!splashSettled || interacted) return;
-    const done = () => {
-      setInteracted(true);
-      setShowDragHint(false);
-    };
-    const onScroll = () => {
-      if (window.scrollY > 4) done();
-    };
-    window.addEventListener('pointerdown', done, {once: true});
-    window.addEventListener('scroll', onScroll, {passive: true});
-    return () => {
-      window.removeEventListener('pointerdown', done);
-      window.removeEventListener('scroll', onScroll);
-    };
-  }, [splashSettled, interacted]);
-
   // Bring the top header bar in 1s after the splash settles, or immediately if
   // the visitor starts scrolling. Once in, it stays in (and the class persists
   // across SPA nav like splash-settled does, so it doesn't re-hide on return).
@@ -487,29 +453,6 @@ function DesktopHome({
 
   useEffect(() => {
     if (headerIn) document.documentElement.classList.add('hero-header-in');
-  }, [headerIn]);
-
-  // A beat after the header bar lands (3s), drop a small "Who's incutec?" hint
-  // out from under the Incutec mark, nudging discovery of the company page.
-  // Once the visitor has clicked through (flag in localStorage) the hint is
-  // retired - don't arm it, and clear any stale class from this session.
-  useEffect(() => {
-    if (!headerIn) return;
-    let seen = false;
-    try {
-      seen = localStorage.getItem(INCUTEC_HINT_SEEN_KEY) === '1';
-    } catch {
-      /* storage blocked - treat as not-yet-seen */
-    }
-    if (seen) {
-      document.documentElement.classList.remove('hero-incutec-hint');
-      return;
-    }
-    const t = window.setTimeout(
-      () => document.documentElement.classList.add('hero-incutec-hint'),
-      3000,
-    );
-    return () => window.clearTimeout(t);
   }, [headerIn]);
 
   // One screen, no spacer. The walkthrough consumes the wheel itself and hands
@@ -590,13 +533,6 @@ function DesktopHome({
                 onBeat={handleBeat}
               />
             </SceneErrorBoundary>
-            {/* Dim overlay - only covers the 3D scene, not the wordmark.
-                Fades out once the scene is ready AND the minimum splash
-                beat has elapsed. */}
-            <div
-              className={`scene-dim${splashSettled ? ' is-hidden' : ''}`}
-              aria-hidden="true"
-            />
           </div>
 
           {/* Single wordmark - starts centered + large, animates to
@@ -619,12 +555,12 @@ function DesktopHome({
             const splashScale = 1.95 - displayedProgress * 0.25;
             return (
               <h1
-                className={`hero-wordmark${splashSettled ? ' is-settled' : ''}`}
+                className={`hero-wordmark${brandSettled ? ' is-settled' : ''}`}
                 style={{
                   // Stays put bottom-left through the whole scroll now - the
                   // brand anchors the hero while the product cards reveal.
                   opacity: 1,
-                  ...(splashSettled
+                  ...(brandSettled
                     ? {}
                     : {
                         transform: `translate(calc(50vw - 2.5rem - 50%), calc(-50vh + 2.5rem + 50%)) scale(${splashScale.toFixed(3)})`,
@@ -641,31 +577,7 @@ function DesktopHome({
             );
           })()}
 
-          {/* The manifest board. The assembly streams smallest-file-first and
-              each piece gets its line: pending is dim, arriving pulses, landed
-              ticks off. Part of the splash and leaves with it; on a slow
-              network it stays up and names exactly what is still coming. */}
           <div className="hero-load-stack">
-          {!splashSettled && loadPieces.length ? (
-            <ul className="hero-load-manifest" aria-live="polite">
-              {loadPieces.map((p) => {
-                const state = loadDone.has(p.id)
-                  ? 'done'
-                  : p.id === loadActive
-                    ? 'active'
-                    : 'pending';
-                return (
-                  <li key={p.id} className={`hero-load-piece is-${state}`}>
-                    <span className="hero-load-piece__mark" aria-hidden="true">
-                      {state === 'done' ? '✓' : state === 'active' ? '▸' : '·'}
-                    </span>
-                    {p.label}
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
-
           {/* Overflow UI - only renders when the scene takes longer than
               the expected animation budget. Gives the user a way out so
               they aren't trapped behind the dim layer on slow networks. */}
@@ -720,6 +632,7 @@ function DesktopHome({
           </a>
 
           <div
+            ref={buyRef}
             className={`hero-buy hero-buy--guide${splashSettled ? ' is-visible' : ''}`}
             inert={!splashSettled}
             style={{opacity: splashSettled ? 1 : 0}}
@@ -755,56 +668,8 @@ function DesktopHome({
             />
           </div>
 
-          {/* Scroll hint - fade driven by --hero-p in CSS (see .hero-scroll-fade)
-            so it tracks every scroll frame without a React render. */}
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 hero-scroll-fade">
-            <div className="w-px h-5 bg-gradient-to-b from-[var(--color-text-muted)] to-transparent animate-pulse" />
-          </div>
-
-          {/* Drag-to-view hint - appears a few seconds in if the visitor hasn't
-            touched the drone yet, dismissed on first drag/scroll. */}
-          <div
-            className={`hero-drag-hint${showDragHint ? ' is-visible' : ''}`}
-            aria-hidden="true"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <polyline points="7 8 3 12 7 16" />
-              <polyline points="17 8 21 12 17 16" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-            </svg>
-            <Txt id="home.drag_hint" />
-          </div>
-
-          {/* Scroll-to-explore cue - anchored at the bottom of the hero, shares the
-            drag hint's lifecycle (fades in a few seconds in, dismissed on the
-            first drag/scroll). */}
-          <div
-            className={`hero-scroll-hint${showDragHint ? ' is-visible' : ''}`}
-            aria-hidden="true"
-          >
-            <Txt id="home.scroll_hint" />
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <polyline points="8 7 12 11 16 7" />
-              <polyline points="8 13 12 17 16 13" />
-            </svg>
-          </div>
         </div>
       </div>
-      <CommunitySection counts={discord} />
     </div>
   );
 }

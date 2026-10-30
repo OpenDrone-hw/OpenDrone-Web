@@ -281,27 +281,6 @@ html {
   overflow-x: clip;
 }
 
-/* Scene dim: sits on top of the 3D scene while models load. Sibling
-   of the Canvas (not the wordmark), so the wordmark always reads
-   bright. Fades out once the scene reports ready and the minimum
-   splash beat has elapsed. */
-/* Holds the scene back while the wordmark reads, then clears. Was 0.9 opaque,
-   which hid the whole load: the drone now assembles behind this as its six GLBs
-   land, and that is the progress indicator, so it has to be visible through it.
-   0.55 keeps the wordmark dominant and still shows the build-up. */
-.scene-dim {
-  position: absolute;
-  inset: 0;
-  background-color: rgba(13, 13, 16, 0.55);
-  pointer-events: none;
-  opacity: 1;
-  transition: opacity 0.7s ease-out 0.1s;
-}
-
-.scene-dim.is-hidden {
-  opacity: 0;
-}
-
 /* Airframe size toggle: segmented 5"/3" switch centered above the hero. */
 /* Airframe size slider: a draggable gold sled between 5″ and 3″. The thumb
    sits behind the two labels; the active label flips to on-accent ink as the
@@ -16402,83 +16381,6 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
      pops. */
   color: var(--color-gold-bright);
 }
-.hero-drag-hint {
-  position: absolute;
-  top: 60%;
-  left: 50%;
-  transform: translate(-50%, 0);
-  z-index: 20;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: var(--r-pill);
-  background: var(--pod-bg);
-  border: 1px solid var(--pod-border);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-.hero-drag-hint.is-visible {
-  opacity: 1;
-  transform: translate(-50%, -6px);
-  animation: hero-drag-bob 2.4s ease-in-out 0.5s infinite;
-}
-.hero-drag-hint svg {
-  color: var(--color-gold);
-}
-@keyframes hero-drag-bob {
-  0%, 100% { transform: translate(-50%, -6px); }
-  50% { transform: translate(-50%, -10px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-drag-hint.is-visible {
-    animation: none;
-  }
-}
-.hero-scroll-hint {
-  position: absolute;
-  /* Below the progress rail, which sits on the bottom strip's shared line. */
-  bottom: 0.75rem;
-  left: 50%;
-  transform: translate(-50%, 0);
-  z-index: 20;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-.hero-scroll-hint.is-visible {
-  opacity: 1;
-}
-.hero-scroll-hint svg {
-  color: var(--color-gold);
-}
-.hero-scroll-hint.is-visible svg {
-  animation: hero-scroll-bob 2.4s ease-in-out 0.5s infinite;
-}
-@keyframes hero-scroll-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(5px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-scroll-hint.is-visible svg {
-    animation: none;
-  }
-}
 .hero-scene-glow {
   background: radial-gradient(
     ellipse at 50% 45%,
@@ -16564,14 +16466,10 @@ html.hero-incutec-hint .incutec-hint {
   color: var(--color-on-accent);
 }
 html.anim-paused .site-wordmark-sheen,
-html.anim-paused .hero-drag-hint.is-visible,
-html.anim-paused .hero-scroll-hint.is-visible svg,
 html.anim-paused .latest-commit-dot,
 html.anim-paused .home-mobile-board-float--front,
 html.anim-paused .home-mobile-board-float--rear,
 html.perf-lite .site-wordmark-sheen,
-html.perf-lite .hero-drag-hint.is-visible,
-html.perf-lite .hero-scroll-hint.is-visible svg,
 html.perf-lite .latest-commit-dot,
 html.perf-lite .home-mobile-board-float--front,
 html.perf-lite .home-mobile-board-float--rear {
@@ -16914,72 +16812,6 @@ html.hero-header-in .homepage-layout .site-header {
   color: var(--color-text-dim);
   pointer-events: none;
 }
-.hp-rail {
-  position: absolute;
-  /* Width gives twice before position does: capped at 440px, then at 42vw,
-     then at the room actually left between the brand block (wordmark + GitHub
-     mark, --hero-brand-right) and the buy bubble's reserve on the right.
-     Centred while there is room; when the viewport narrows the centre is
-     pushed right just enough to clear the brand block instead of sliding
-     under it. */
-  /* 29.5rem right reserve = the buy bubble's ~24.5rem column + its 2.5rem
-     inset + breathing room, measured at rest. Rem, not px: the bubble's
-     width tracks the user's font size, so a px reserve under-reserves the
-     moment a visitor bumps their browser font scaling. */
-  --hp-rail-w: min(
-    27.5rem,
-    42vw,
-    calc(100vw - var(--hero-brand-right, 32rem) - 1.5rem - 29.5rem)
-  );
-  left: max(
-    50%,
-    calc(var(--hero-brand-right, 32rem) + 1.5rem + var(--hp-rail-w) / 2)
-  );
-  /* Centred on the bottom strip's shared line (the 2px track straddles it). */
-  bottom: calc(var(--hero-strip-mid, 93px) - 1px);
-  transform: translateX(-50%);
-  width: var(--hp-rail-w);
-  height: 2px;
-  background: color-mix(in srgb, var(--color-text-dim) 30%, transparent);
-  border-radius: 2px;
-  z-index: 22;
-}
-.hp-rail-fill {
-  position: absolute;
-  inset-block: 0;
-  left: 0;
-  width: 0;
-  height: 100%;
-  background: var(--color-accent);
-  border-radius: 2px;
-  transition: none;
-}
-.hp-dot {
-  position: absolute;
-  top: -6px;
-  margin-left: -7px;
-  width: 14px;
-  height: 14px;
-  border: 0;
-  border-radius: 0;
-  background: none;
-}
-/* A tick on the rail per part, not a dot. */
-.hp-dot::after {
-  content: '';
-  position: absolute;
-  left: 6px;
-  top: 2px;
-  width: 2px;
-  height: 10px;
-  background: color-mix(in srgb, var(--color-text-dim) 60%, transparent);
-  transition: background 0.25s ease, transform 0.25s ease;
-}
-.hp-dot.done::after { background: color-mix(in srgb, var(--color-accent) 45%, transparent); }
-.hp-dot.on::after {
-  background: var(--color-accent);
-  transform: scaleY(1.4);
-}
 .hp-copy {
   position: absolute;
   right: clamp(20px, 5vw, 96px);
@@ -17090,69 +16922,9 @@ html.hero-header-in .homepage-layout .site-header {
   padding: 6rem 1.25rem;
 }
 .hp-stage:not(:has(canvas:not([data-hero-snapshot]))) { height: auto; min-height: 60vh; }
-.hp-stage:not(:has(canvas:not([data-hero-snapshot]))) .hp-rail,
 .hp-stage:not(:has(canvas:not([data-hero-snapshot]))) .hp-copy { display: none; }
 .hp-fallback h3 { font-size: 1.15rem; margin: 0 0 0.3rem; color: var(--color-text); }
 .hp-fallback p { margin: 0; color: var(--color-text-muted); }
-.hp-dot { padding: 0; cursor: pointer; }
-.hp-dot:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
-@media (max-width: 65em) {
-  .hp-rail {
-    display: none;
-  }
-}
-.hero-load-manifest {
-  position: relative;
-  z-index: 26;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.28rem;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.62rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  pointer-events: none;
-  animation: hero-load-manifest-in 0.5s ease both;
-}
-@keyframes hero-load-manifest-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.hero-load-piece {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  color: color-mix(in srgb, var(--color-text-dim) 45%, transparent);
-  transition: color 0.3s ease;
-}
-.hero-load-piece__mark {
-  width: 1em;
-  text-align: center;
-}
-.hero-load-piece.is-active {
-  color: var(--color-text-muted);
-}
-.hero-load-piece.is-active .hero-load-piece__mark {
-  color: var(--color-accent);
-  animation: hero-load-piece-pulse 0.9s ease-in-out infinite;
-}
-.hero-load-piece.is-done {
-  color: var(--color-text-dim);
-}
-.hero-load-piece.is-done .hero-load-piece__mark {
-  color: var(--color-accent);
-}
-@keyframes hero-load-piece-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-load-manifest { animation: none; }
-  .hero-load-piece.is-active .hero-load-piece__mark { animation: none; }
-}
 
 /* Product page chapters, ported from 75548a4 (the approved chapter layout). */
 @media (max-width: 959px) {

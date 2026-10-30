@@ -22,7 +22,6 @@ import {EarlyBirdNote, retailFor} from '~/components/EarlyPriceCue';
 import {DiscordLink, DiscordMark} from '~/components/Discord';
 import {copyText} from '~/lib/copy';
 import {CART_UPDATED_EVENT} from '~/lib/cart-client';
-import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {
   useProductStatusResolver,
   useRoadmapStatusResolver,
@@ -40,17 +39,6 @@ import type {
   ProductCardFragment,
   ProductVariantFragment,
 } from '~/lib/product-shapes';
-
-/** Retire the hero "Who's incutec?" hint: persist the dismissal and pull the
- *  class so it can't flash on a same-session SPA return to the homepage. */
-function dismissIncutecHint() {
-  try {
-    localStorage.setItem(INCUTEC_HINT_SEEN_KEY, '1');
-  } catch {
-    /* storage blocked (private mode) - the nudge just isn't persisted */
-  }
-  document.documentElement.classList.remove('hero-incutec-hint');
-}
 
 /** A product as the header reads it: a catalog card. */
 export type HeaderFamilyVariant = ProductVariantFragment;
@@ -157,10 +145,8 @@ export function Header({
   return (
     <header className="site-header">
       <div className="site-header-main">
-        {/* Left: brand slot - OpenDrone home link, or Incutec credit on the hero.
-            On the hero the mark links to the in-site Incutec company page, and a
-            "Who's incutec?" hint drops out from under it a beat after the header
-            lands (gated on `html.hero-incutec-hint`, set by the homepage). */}
+        {/* Left: brand slot - OpenDrone home link, or Incutec credit on the hero,
+            where the mark links to the in-site Incutec company page. */}
         {isHero ? (
           <span className="site-header-incutec-slot">
             <NavLink
@@ -172,19 +158,8 @@ export function Header({
                 'Incutec, the company behind OpenDrone'
               }
               style={{viewTransitionName: 'site-logo'}}
-              onClick={dismissIncutecHint}
             >
               <IncutecWordmark className="site-header-incutec" />
-            </NavLink>
-            <NavLink
-              prefetch="intent"
-              to="/open-source"
-              className="incutec-hint"
-              tabIndex={-1}
-              aria-hidden="true"
-              onClick={dismissIncutecHint}
-            >
-              <Txt id="chrome.incutec_hint" />
             </NavLink>
           </span>
         ) : (

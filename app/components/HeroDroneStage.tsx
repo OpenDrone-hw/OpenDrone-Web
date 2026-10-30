@@ -1,15 +1,16 @@
 /**
- * The hero's 3D layer: the scroll-driven walkthrough, its progress rail, and the
- * copy panel that follows it.
+ * The hero's 3D layer: the scroll-driven walkthrough and the copy panel that
+ * follows it. No on-screen controls: scroll drives it, a drag orbits it.
  *
  * This is an absolutely-positioned layer, not a section of its own - it fills
  * the hero's sticky pane so the wordmark, size selector and buy bubble sit over
  * the same drone. The route owns the splash; this owns the drone.
  *
  * Rendering rules live here rather than in the scene: the 3D is skipped under
- * 768px or `prefers-reduced-motion`, matching the policy the rest of the
- * homepage uses, and in that case the fallback list becomes the actual content
- * instead of being visually hidden.
+ * 768px, matching the policy the rest of the homepage uses, and in that case the
+ * fallback list becomes the actual content instead of being visually hidden.
+ * Under `prefers-reduced-motion` the scene still loads but shows the exploded
+ * pose statically (no intro, no travelling camera).
  */
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Link} from 'react-router';
@@ -24,7 +25,6 @@ import {WHAT_IS_THIS_ID} from '~/lib/product-content';
 
 function shouldLoad3D() {
   if (typeof window === 'undefined') return false;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
   if (window.innerWidth < 768) return false;
   return true;
 }
@@ -52,6 +52,25 @@ function BeatLinkLabel({href}: {href: string}) {
   );
 }
 
+/** The stack beats, in signal order, and each size's board render folder (public/boards/). */
+const STACK_CHAIN = ['rx', 'fc', 'esc', 'motor'];
+/** Real renders per size: the boards' front renders, and the motor cropped out
+ *  of its box shot (site-ui.css .hp-chain-motor). */
+const STACK_IMAGES: Record<string, Record<string, string>> = {
+  od5: {
+    rx: '/boards/openrx-mono/front-w528.webp',
+    fc: '/boards/openfc-lite/front-w528.webp',
+    esc: '/boards/openesc-30x30/front-w528.webp',
+    motor: '/boxes/openmotor/2306-w528.webp',
+  },
+  od3: {
+    rx: '/boards/openrx-lite-ufl/front-w528.webp',
+    fc: '/boards/openfc-lite-mini/front-w528.webp',
+    esc: '/boards/openesc-20x20/front-w528.webp',
+    motor: '/boxes/openmotor/1604-w528.webp',
+  },
+};
+
 export function HeroDroneStage({
   model,
   size,
@@ -62,6 +81,7 @@ export function HeroDroneStage({
   onBeat,
   onBeats,
   onSeeker,
+  onExploring,
 }: {
   model?: string;
   size?: string;
@@ -77,6 +97,8 @@ export function HeroDroneStage({
   /** The whole beat list once known, in order. */
   onBeats?: (beats: HeroBeat[]) => void;
   onSeeker?: (seek: ((id: string) => void) | null) => void;
+  /** The reader has started exploring the drone (or come back to the start). */
+  onExploring?: (exploring: boolean) => void;
 }) {
   // The homepage drives this from its size selector. The scene falls back to
   // the 3 inch if the requested design has no assembly built yet, so adding
@@ -86,6 +108,12 @@ export function HeroDroneStage({
     ? requestedFolder
     : 'od3';
   const [use3D, setUse3D] = useState(false);
+  const [reduced, setReduced] = useState(false);
+  const [exploded, setExploded] = useState(true);
+  const explodeApi = useRef<{toggle: () => void; set: (on: boolean) => void} | null>(null);
+  const handleExplode = useCallback((api: {toggle: () => void; set: (on: boolean) => void} | null) => {
+    explodeApi.current = api;
+  }, []);
   const [Scene, setScene] = useState<React.ComponentType<HeroDroneSceneProps> | null>(
     null,
   );
@@ -96,6 +124,7 @@ export function HeroDroneStage({
       onReady?.();
       return;
     }
+    setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     setUse3D(true);
     scenePromise
       .then((m) => setScene(() => m.HeroDroneScene))
@@ -119,7 +148,6 @@ export function HeroDroneStage({
   // opening whole-drone hold reports too, carrying the beginner intro).
   const [resting, setResting] = useState(true);
   const seek = useRef<((i: number) => void) | null>(null);
-  const fillRef = useRef<HTMLDivElement>(null);
   const handleBuilding = useCallback((building: boolean) => {
     onBuilding?.(building);
     if (building) {
@@ -157,16 +185,9 @@ export function HeroDroneStage({
     } : null);
     return () => onSeeker?.(null);
   }, [beats, onSeeker, use3D]);
-  // Fires every frame, so it writes straight to the DOM rather than to state.
-  const handleProgress = useCallback(
-    (f: number) => {
-      if (fillRef.current)
-        fillRef.current.style.width = `${Math.max(0, Math.min(1, f)) * 100}%`;
-      onProgress?.(f);
-    },
-    [onProgress],
-  );
+  const handleProgress = useCallback((f: number) => onProgress?.(f), [onProgress]);
 
+  const card = !resting && shown ? shown : (beats[0] ?? null);
   return (
     <div className="hp-stage">
       {Scene ? (
@@ -180,6 +201,10 @@ export function HeroDroneStage({
           onReady={onReady}
           onBuilding={handleBuilding}
           onSeeker={handleSeeker}
+          reduced={reduced}
+          onExplode={handleExplode}
+          onExploded={setExploded}
+          onExploring={onExploring}
         />
       ) : null}
 
@@ -191,42 +216,36 @@ export function HeroDroneStage({
         </p>
       ) : null}
 
-      {use3D ? (
-        <nav
-          className="hp-rail"
-          aria-label={copyText('home.hero_rail_aria') ?? 'Drone parts'}
-        >
-          <div className="hp-rail-fill" ref={fillRef} />
-          {beats.map((b, i) => (
-            <button
-              key={b.id}
-              type="button"
-              className={`hp-dot${i === active ? ' on' : ''}${i < active ? ' done' : ''}`}
-              style={{left: `${(i / Math.max(1, beats.length - 1)) * 100}%`}}
-              aria-label={b.title}
-              aria-current={i === active ? 'true' : undefined}
-              onClick={() => seek.current?.(i)}
-            />
-          ))}
-        </nav>
-      ) : null}
-
       {/* The spotlight cuts as a part leaves; that is the cue for this.
-          During a rest the panel clears entirely: the whole drone is the
-          content, and a caption would race ahead of the next part. */}
-      {use3D && !resting && shown ? (
-        <div className="hp-copy" key={shown.id} aria-live="polite">
+          At rest it introduces the whole drone (the first beat's copy), so the
+          right side always carries the card. */}
+      {use3D && card ? (
+        <div className="hp-copy" key={card.id} aria-live="polite">
           {/* No step counter: the rail's dots already say where you are. */}
-          <h2 className="hp-title">{shown.title}</h2>
-          <p className="hp-note">{shown.note}</p>
+          <h2 className="hp-title">{card.title}</h2>
+          <p className="hp-note">{card.note}</p>
           {/* Beginner explainer: what the part does, one line of how it
               connects, and the product page when we sell it. Strings come
               from studio.json with the rest of the beat copy. */}
-          {shown.caption ? <p className="hp-explain">{shown.caption}</p> : null}
-          {shown.hint ? <p className="hp-connect">{shown.hint}</p> : null}
-          {shown.href ? (
-            <Link className="hp-copy-link" to={shown.href} prefetch="intent">
-              <BeatLinkLabel href={shown.href} />
+          {card.caption ? <p className="hp-explain">{card.caption}</p> : null}
+          {/* The stack beats show how the signal runs instead of saying it:
+              RX -> FC -> ESC -> motor as the real renders, this beat's one larger. */}
+          {STACK_CHAIN.includes(card.id.split(':')[0]) ? (
+            <ol className="hp-chain" aria-label="Signal path: receiver, flight controller, ESC, motors">
+              {STACK_CHAIN.map((id, i) => (
+                <li key={id} className={id === card.id.split(':')[0] ? 'is-current' : undefined}>
+                  {i > 0 ? <span className="hp-chain-arrow" aria-hidden="true">→</span> : null}
+                  <img className={`hp-chain-${id}`} src={(STACK_IMAGES[resolvedModel ?? requestedFolder] ?? STACK_IMAGES.od5)[id]} alt="" width={56} height={56} loading="lazy" decoding="async" />
+                  <span>{id.toUpperCase()}</span>
+                </li>
+              ))}
+            </ol>
+          ) : card.hint ? (
+            <p className="hp-connect">{card.hint}</p>
+          ) : null}
+          {card.href ? (
+            <Link className="hp-copy-link" to={card.href} prefetch="intent">
+              <BeatLinkLabel href={card.href} />
               <svg
                 width="14"
                 height="14"
