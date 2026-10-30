@@ -703,7 +703,7 @@ export async function updateCartAttributes(
 }
 
 export const CART_DISCOUNT_CODES_UPDATE_MUTATION = `#graphql
-  mutation OpenDroneCartDiscountCodesUpdate($cartId: ID!, $discountCodes: [String!]) {
+  mutation OpenDroneCartDiscountCodesUpdate($cartId: ID!, $discountCodes: [String!]!) {
     cartDiscountCodesUpdate(cartId: $cartId, discountCodes: $discountCodes) {
       cart { id discountCodes { code applicable } }
       userErrors { field message }

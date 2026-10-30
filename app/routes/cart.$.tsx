@@ -175,6 +175,8 @@ type CartCheck = (typeof CART_CHECK)[keyof typeof CART_CHECK];
  *  reason has one: a checkout never lands here without a word. */
 const CHECK_NOTICES: Record<CartCheck, () => string> = {
   [CART_CHECK.code]: () => t('check_code', 'That is not a wholesale code. Wholesale codes look like WS25-NAME.'),
+  [CART_CHECK.codeNotApplied]: () => t('check_code_not_applied', 'This code does not apply to your cart. Check the code, or mail contact@opendrone.be.'),
+  [CART_CHECK.codeFailed]: () => t('check_code_failed', 'Your code could not be applied just now. Try again in a minute, or mail contact@opendrone.be.'),
   [CART_CHECK.paidBatch]: () => t('check_paid_batch', 'Not enough left. Lower the quantity where shown.'),
   [CART_CHECK.shipDate]: () => t('check_ship_date', 'A ship date changed. Check the dates below.'),
   [CART_CHECK.price]: () => t('check_price', 'A price changed. Check the total below.'),

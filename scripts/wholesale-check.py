@@ -5,21 +5,31 @@
 
 Builds an anonymous Storefront cart with one of every live variant that has a
 retail (compare-at) price, applies the main code and its companions
-(WS25-X, -G2, -G3, -G4, as the storefront cart does), and asserts that every
+(WS25-X, -G2, -G3, -G4) with the site's own cartDiscountCodesUpdate mutation,
+read from app/lib/shopify-storefront.ts (so a mutation Shopify rejects fails here too), and asserts that every
 line costs 75% of retail to the cent (--net-country ES: 75% of retail net of 21% Spanish VAT, for a reverse-charge retailer). A cart is not store data and is never
 checked out. Exit 1 on any difference. Customer eligibility is enforced only
 at checkout, so this does not prove the customer limit.
 Reads SHOPIFY_STORE_DOMAIN, SHOPIFY_STOREFRONT_TOKEN, SHOPIFY_STOREFRONT_API_VERSION (+ the Admin token for prices).
 """
-import argparse, json, sys, urllib.request
+import argparse, json, re, sys, urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from wholesale_lib import GROUPS, WHOLESALE_PERCENT, divisor, live_variants, load_env, slot_code  # noqa: E402
 
-CART = """mutation($lines:[CartLineInput!]!,$codes:[String!]){cartCreate(input:{lines:$lines,discountCodes:$codes}){
-  cart{discountCodes{code applicable} lines(first:100){nodes{quantity merchandise{... on ProductVariant{sku}} cost{totalAmount{amount}}}}}
-  userErrors{message}}}"""
+CART = """mutation($lines:[CartLineInput!]!){cartCreate(input:{lines:$lines}){cart{id} userErrors{message}}}"""
+READ = """query($id:ID!){cart(id:$id){discountCodes{code applicable}
+  lines(first:100){nodes{quantity merchandise{... on ProductVariant{sku}} cost{totalAmount{amount}}}}}}"""
+SITE = Path(__file__).resolve().parent.parent / "app/lib/shopify-storefront.ts"
+
+
+def site_mutation():
+    """The storefront's cartDiscountCodesUpdate document, as the cart sends it."""
+    m = re.search(r"CART_DISCOUNT_CODES_UPDATE_MUTATION = `#graphql(.*?)`;", SITE.read_text(), re.S)
+    if not m:
+        raise SystemExit(f"CART_DISCOUNT_CODES_UPDATE_MUTATION not found in {SITE}")
+    return m.group(1)
 
 
 def check(env, code, percent=WHOLESALE_PERCENT, divisor_=1.0):
@@ -27,14 +37,20 @@ def check(env, code, percent=WHOLESALE_PERCENT, divisor_=1.0):
     variants = live_variants(env)
     ids = {v["sku"]: v for v in variants}
     url = f"https://{env['SHOPIFY_STORE_DOMAIN']}/api/{env.get('SHOPIFY_STOREFRONT_API_VERSION', '2026-07')}/graphql.json"
-    req = urllib.request.Request(url, json.dumps({"query": CART, "variables": {
-        "lines": [{"merchandiseId": v["id"], "quantity": 1} for v in variants],
-        "codes": [slot_code(code, n) for n in range(1, GROUPS + 1)]}}).encode(),
-        {"X-Shopify-Storefront-Access-Token": env["SHOPIFY_STOREFRONT_TOKEN"], "Content-Type": "application/json"})
-    out = json.loads(urllib.request.urlopen(req, timeout=60).read())
+
+    def sf(query, variables):
+        req = urllib.request.Request(url, json.dumps({"query": query, "variables": variables}).encode(),
+            {"X-Shopify-Storefront-Access-Token": env["SHOPIFY_STOREFRONT_TOKEN"], "Content-Type": "application/json"})
+        return json.loads(urllib.request.urlopen(req, timeout=60).read())
+
+    out = sf(CART, {"lines": [{"merchandiseId": v["id"], "quantity": 1} for v in variants]})
     if out.get("errors") or out["data"]["cartCreate"]["userErrors"]:
         return [f"cart error: {json.dumps(out.get('errors') or out['data']['cartCreate']['userErrors'])[:300]}"]
-    cart = out["data"]["cartCreate"]["cart"]
+    cart_id = out["data"]["cartCreate"]["cart"]["id"]
+    out = sf(site_mutation(), {"cartId": cart_id, "discountCodes": [slot_code(code, n) for n in range(1, GROUPS + 1)]})
+    if out.get("errors") or out["data"]["cartDiscountCodesUpdate"]["userErrors"]:
+        return [f"site code mutation rejected: {json.dumps(out.get('errors') or out['data']['cartDiscountCodesUpdate']['userErrors'])[:300]}"]
+    cart = sf(READ, {"id": cart_id})["data"]["cart"]
     problems = []
     if not any(c["code"].upper() == code.upper() and c["applicable"] for c in cart["discountCodes"]):
         problems.append(f"main code {code} not applicable")
