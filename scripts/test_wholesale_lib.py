@@ -49,5 +49,20 @@ class Maths(unittest.TestCase):
             self.assertLess(L.rounding_check(g, 25.0, 50, d)[0], 1.0)
 
 
+
+
+class LiveVariantsTest(unittest.TestCase):
+    def test_a_variant_at_the_retail_step_has_no_compare_at_and_keeps_its_price_as_retail(self):
+        nodes = [{"id": "a", "sku": "OPENFC-LITE-3030", "price": "39.00", "compareAtPrice": None, "product": {"status": "ACTIVE"}},
+                 {"id": "b", "sku": "OPENFC-LITE-2020", "price": "26.10", "compareAtPrice": "29.00", "product": {"status": "ACTIVE"}},
+                 {"id": "c", "sku": "OPENOLD", "price": "9.00", "compareAtPrice": None, "product": {"status": "ARCHIVED"}}]
+        real = L.gql
+        L.gql = lambda env, q, v=None: {"productVariants": {"nodes": nodes}}
+        try:
+            got = {v["sku"]: v["retail"] for v in L.live_variants({})}
+        finally:
+            L.gql = real
+        self.assertEqual(got, {"OPENFC-LITE-3030": 39.0, "OPENFC-LITE-2020": 29.0})
+
 if __name__ == "__main__":
     unittest.main()

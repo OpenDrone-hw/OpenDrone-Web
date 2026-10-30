@@ -69,12 +69,19 @@ def slot_code(main, slot):
 
 
 def live_variants(env):
-    """Active variants with a compare-at (retail) price: id, sku, price, retail."""
+    """Active variants: id, sku, price, retail.
+
+    Retail is the compare-at price while a preorder step is below it, else the price itself: at the retail step
+    app/lib/shopify-price-tier.ts clears the compare-at (same rule as its `retail`), and such a variant still gets
+    the wholesale rate."""
     d = gql(env, '{productVariants(first:100,query:"sku:OPEN*"){nodes{id sku price compareAtPrice product{status}}}}')
     out = []
     for v in d["productVariants"]["nodes"]:
-        if v["product"]["status"] == "ACTIVE" and v["compareAtPrice"]:
-            out.append({"id": v["id"], "sku": v["sku"], "price": float(v["price"]), "retail": float(v["compareAtPrice"])})
+        if v["product"]["status"] != "ACTIVE":
+            continue
+        price = float(v["price"])
+        compare = float(v["compareAtPrice"]) if v["compareAtPrice"] else None
+        out.append({"id": v["id"], "sku": v["sku"], "price": price, "retail": compare if compare and compare > price else price})
     return sorted(out, key=lambda v: v["sku"])
 
 
