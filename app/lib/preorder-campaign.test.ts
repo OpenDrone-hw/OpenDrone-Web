@@ -869,10 +869,10 @@ describe('reserved units on a paid batch', () => {
     const config = parseCampaignConfig(
       JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')),
     );
-    // 35 per SKU (commerce seed 80), less the units released to order #1504 (DroneFactory, founder 2026-10-30).
+    // 35 per SKU (commerce seed 80), less the units released to order #1507 (DroneFactory, founder 2026-10-30).
     const reserved: Record<string, number> = {
       'OPENFC-LITE-2020': 35,
-      'OPENFC-LITE-3030': 24,
+      'OPENFC-LITE-3030': 23,
       'OPENESC-2020': 35,
       'OPENESC-3030': 34,
     };

@@ -8,7 +8,7 @@
   "pendingShips": "ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait",
   "skus": {
     "OPENFC-LITE-2020": {"batches": [{"units": 250, "reserved": 35, "paid": true, "ships": "ships early November 2026", "deliveryBy": "2026-11-30", "regions": ["EU", "INT"]}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
-    "OPENFC-LITE-3030": {"batches": [{"units": 250, "reserved": 24, "paid": true, "ships": "ships early November 2026", "deliveryBy": "2026-11-30", "regions": ["EU", "INT"]}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
+    "OPENFC-LITE-3030": {"batches": [{"units": 250, "reserved": 23, "paid": true, "ships": "ships early November 2026", "deliveryBy": "2026-11-30", "regions": ["EU", "INT"]}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
     "OPENESC-2020": {"batches": [{"units": 250, "reserved": 35, "paid": true, "ships": "ships early November 2026", "deliveryBy": "2026-11-30", "regions": ["EU", "INT"]}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
     "OPENESC-3030": {"batches": [{"units": 250, "reserved": 34, "paid": true, "ships": "ships early November 2026", "deliveryBy": "2026-11-30", "regions": ["EU", "INT"]}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
     "OPENRX-LITE": {"batches": [{"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
