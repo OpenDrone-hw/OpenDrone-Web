@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import {describe, it} from 'node:test';
-import {cheapestRate, fetchShippingTable, parseZone, toGrams, type ShippingTable} from './international-shipping.ts';
+import {afterEach, describe, it} from 'node:test';
+import {cheapestRate, fetchShippingTable, parseZone, resetShippingTableMemo, shippingTable, toGrams, type ShippingTable} from './international-shipping.ts';
 
 /** A weight band as the Admin API returns it. */
 function band(amount: string, min: number | null, max: number | null, extra: object = {}) {
@@ -72,5 +72,73 @@ describe('international shipping from Shopify rates', () => {
       fetchShippingTable({SHOPIFY_STORE_DOMAIN: 'shop.myshopify.com', SHOPIFY_ADMIN_API_TOKEN: 't'}, fetcher),
       /single delivery profile/,
     );
+  });
+});
+
+describe('shippingTable Admin cost', () => {
+  const env = {SHOPIFY_STORE_DOMAIN: 'shop.myshopify.com', SHOPIFY_ADMIN_API_TOKEN: 't'};
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'caches');
+  const quiet = console.error;
+  afterEach(() => {
+    resetShippingTableMemo();
+    console.error = quiet;
+    if (original) Object.defineProperty(globalThis, 'caches', original);
+    else delete (globalThis as {caches?: unknown}).caches;
+  });
+
+  /** A Cache API stand-in shared by every "isolate" of the test. */
+  function fakeCaches() {
+    const store = new Map<string, string>();
+    Object.defineProperty(globalThis, 'caches', {
+      configurable: true,
+      value: {default: {
+        match: async (req: Request) => (store.has(req.url) ? new Response(store.get(req.url)) : undefined),
+        put: async (req: Request, res: Response) => { store.set(req.url, await res.text()); },
+      }},
+    });
+  }
+
+  /** An Admin API with an empty single-profile shop that counts its calls. */
+  function admin() {
+    const state = {calls: 0};
+    const fetcher = (async (_url: unknown, init?: RequestInit) => {
+      state.calls += 1;
+      const {query} = JSON.parse(String(init?.body)) as {query: string};
+      if (query.includes('deliveryProfiles')) return Response.json({data: {deliveryProfiles: {nodes: [{id: 'p', profileLocationGroups: [{locationGroup: {id: 'g'}}]}]}}});
+      if (query.includes('productVariants')) return Response.json({data: {productVariants: {pageInfo: {hasNextPage: false, endCursor: null}, nodes: []}}});
+      return Response.json({data: {deliveryProfile: {profileLocationGroups: [{locationGroupZones: {pageInfo: {hasNextPage: false, endCursor: null}, nodes: []}}]}}});
+    }) as typeof fetch;
+    return {state, fetcher};
+  }
+  const failing = (async () => { throw new Error('boom'); }) as unknown as typeof fetch;
+
+  it('a second isolate reads the location cache, not the Admin API', async () => {
+    fakeCaches();
+    const {state, fetcher} = admin();
+    assert.ok(await shippingTable(env, 1_000, fetcher));
+    const first = state.calls;
+    assert.ok(first > 0);
+    resetShippingTableMemo(); // a new isolate: empty memory, same location cache
+    assert.ok(await shippingTable(env, 2_000, fetcher));
+    assert.equal(state.calls, first);
+  });
+
+  it('serves the last good table for 15 minutes when the Admin API fails', async () => {
+    console.error = () => {};
+    const t0 = 1_000_000;
+    const first = await shippingTable(env, t0, admin().fetcher);
+    assert.ok(first);
+    assert.equal(await shippingTable(env, t0 + 6 * 60_000, failing), first);
+    assert.equal(await shippingTable(env, t0 + 20 * 60_000, failing), null);
+  });
+
+  it('does not retry a failing Admin API within the cooldown', async () => {
+    console.error = () => {};
+    let calls = 0;
+    const counting = (async () => { calls += 1; throw new Error('boom'); }) as unknown as typeof fetch;
+    assert.equal(await shippingTable(env, 1_000, counting), null);
+    const first = calls;
+    assert.equal(await shippingTable(env, 11_000, counting), null);
+    assert.equal(calls, first);
   });
 });

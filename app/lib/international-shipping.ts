@@ -241,26 +241,87 @@ export async function fetchShippingTable(env: AdminEnv, fetcher: typeof fetch = 
   return {zones, grams};
 }
 
-let memo: {table: ShippingTable | null; fetchedAt: number} | null = null;
+type MemoEntry = {table: ShippingTable; fetchedAt: number};
 
-/** {@link fetchShippingTable}, reused for five minutes per isolate. A failed
- *  read is remembered as null for the same time, so the cart never waits on
- *  a failing Admin API twice in a row. */
+const memo = new Map<string, MemoEntry>();
+const failedAt = new Map<string, number>();
+/** The oldest table a failed read may fall back to. Rates change by hand, rarely. */
+const STALE_MS = 15 * 60_000;
+/** After a failed read, this isolate does not ask the Admin API again for this long. */
+const FAILURE_COOLDOWN_MS = 30_000;
+const SHARED_CACHE_URL = 'https://shipping-table.opendrone.internal/v1';
+
+function sharedCache(): Cache | null {
+  const store = (globalThis as {caches?: {default?: Cache}}).caches;
+  return store?.default ?? null;
+}
+
+function sharedRequest(key: string): Request {
+  return new Request(`${SHARED_CACHE_URL}?k=${encodeURIComponent(key)}`);
+}
+
+/** The location's last good table, or null (no Cache API, a miss, an error). */
+async function readShared(key: string): Promise<MemoEntry | null> {
+  const cache = sharedCache();
+  if (!cache) return null;
+  try {
+    const hit = await cache.match(sharedRequest(key));
+    if (!hit) return null;
+    const entry = (await hit.json()) as MemoEntry;
+    return entry && typeof entry.fetchedAt === 'number' && entry.table?.zones ? entry : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeShared(key: string, entry: MemoEntry): Promise<void> {
+  const cache = sharedCache();
+  if (!cache) return;
+  try {
+    await cache.put(sharedRequest(key), new Response(JSON.stringify(entry), {
+      headers: {'Content-Type': 'application/json', 'Cache-Control': `max-age=${STALE_MS / 1000}`},
+    }));
+  } catch {
+    // Best effort: the isolate memo still holds the table.
+  }
+}
+
+/** {@link fetchShippingTable}, reused for five minutes per isolate and shared
+ *  across the isolates of a Cloudflare location through the Cache API: the
+ *  weights read costs about one Admin point per variant, so one read per
+ *  isolate kept the shared Admin cost bucket drained (2026-10-30). A failed
+ *  read keeps the isolate off the Admin API for 30 s and falls back to the
+ *  last good table up to 15 min old, else null so the cart never waits on a
+ *  failing Admin API twice in a row. */
 export async function shippingTable(env: AdminEnv, now = Date.now(), fetcher: typeof fetch = fetch): Promise<ShippingTable | null> {
   if (!env.SHOPIFY_ADMIN_API_TOKEN?.trim()) return null;
-  if (memo && now - memo.fetchedAt < TTL_MS) return memo.table;
-  let table: ShippingTable | null = null;
+  const key = env.SHOPIFY_STORE_DOMAIN ?? '';
+  const cached = memo.get(key);
+  if (cached && now - cached.fetchedAt < TTL_MS) return cached.table;
+  const shared = await readShared(key);
+  if (shared && (!cached || shared.fetchedAt > cached.fetchedAt)) memo.set(key, shared);
+  const best = memo.get(key);
+  if (best && now - best.fetchedAt < TTL_MS) return best.table;
+  const stale = () => (best && now - best.fetchedAt < STALE_MS ? best.table : null);
+  const failed = failedAt.get(key);
+  if (failed !== undefined && now - failed < FAILURE_COOLDOWN_MS) return stale();
   try {
-    table = await fetchShippingTable(env, fetcher);
+    const table = await fetchShippingTable(env, fetcher);
+    const entry = {table, fetchedAt: now};
+    memo.set(key, entry);
+    failedAt.delete(key);
+    await writeShared(key, entry);
+    return table;
   } catch (error) {
     console.error('[shipping-rates]', error instanceof Error ? error.message : 'unknown error');
+    failedAt.set(key, now);
+    return stale();
   }
-  memo = {table, fetchedAt: now};
-  return table;
 }
 
 export function resetShippingTableMemo(): void {
-  memo = null;
+  memo.clear();
+  failedAt.clear();
 }
 
 /** The international charge for this cart, or null to keep the
