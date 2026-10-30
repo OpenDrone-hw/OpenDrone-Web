@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {afterEach, describe, it} from 'node:test';
-import {PAID_ORDERS_QUERY, fetchPaidUnitRuns, fetchPaidUnits, paidUnits, resetPaidUnitsMemo} from './shopify-orders.ts';
+import {PAID_ORDERS_QUERY, fetchPaidUnitRuns, fetchPaidUnits, paidUnitRuns, paidUnits, resetPaidUnitsMemo} from './shopify-orders.ts';
 
 afterEach(resetPaidUnitsMemo);
 
@@ -144,6 +144,36 @@ describe('paidUnits', () => {
     await paidUnits(ENV, '2026-09-21', SKUS, fetcher);
     assert.deepEqual(a, b);
     assert.equal(calls, 2);
+  });
+});
+
+describe('paidUnitRuns after a failed read', () => {
+  const throttled = async () => Response.json({errors: [{message: 'Throttled', extensions: {code: 'THROTTLED'}}]});
+  it('serves the last good counts up to 15 minutes and stays off the Admin API for 30 seconds', async () => {
+    let clock = 0;
+    const now = () => clock;
+    let calls = 0;
+    const good = async () => { calls += 1; return page([{displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 3]]}]); };
+    const bad = async () => { calls += 1; return throttled(); };
+    const first = await paidUnitRuns(ENV, '2026-09-21', SKUS, good, now);
+    clock = 2 * 60_000;
+    assert.deepEqual(await paidUnitRuns(ENV, '2026-09-21', SKUS, bad, now), first);
+    const tried = calls;
+    clock += 10_000;
+    assert.deepEqual(await paidUnitRuns(ENV, '2026-09-21', SKUS, bad, now), first);
+    assert.equal(calls, tried, 'cooldown: no Admin call');
+    clock = 16 * 60_000;
+    await assert.rejects(paidUnitRuns(ENV, '2026-09-21', SKUS, bad, now), /rejected the query/);
+  });
+  it('throws without hitting the Admin API during the cooldown when nothing good is known', async () => {
+    let clock = 0;
+    let calls = 0;
+    const bad = async () => { calls += 1; return throttled(); };
+    await assert.rejects(paidUnitRuns(ENV, '2026-09-21', SKUS, bad, () => clock));
+    const after = calls;
+    clock = 5_000;
+    await assert.rejects(paidUnitRuns(ENV, '2026-09-21', SKUS, bad, () => clock), /failed recently/);
+    assert.equal(calls, after);
   });
 });
 
