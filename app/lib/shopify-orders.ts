@@ -21,16 +21,29 @@
  * runs longer than 60 days: without it Shopify only returns the last 60
  * days of orders and the counts would fall.
  *
- * One result per isolate per minute. Concurrent misses each fetch: a
+ * One result per isolate per minute, shared across the isolates of a
+ * Cloudflare location through the Cache API. Concurrent misses each fetch: a
  * Workers promise must never be shared across requests, or a request that
- * ends first leaves every later one waiting on it forever. Any
- * failure throws; the caller closes campaign SKUs rather than guessing.
+ * ends first leaves every later one waiting on it forever. A failed read
+ * keeps the isolate off the Admin API for FAILURE_COOLDOWN_MS and falls back
+ * to the last good result up to STALE_MS old: without both, every page view
+ * of every isolate retried a throttled read and kept the shared Admin cost
+ * bucket empty, so every campaign SKU stayed closed (2026-10-30). With no
+ * result that recent, it throws; the caller closes campaign SKUs rather than
+ * guessing.
  */
 
 import {regionOf, type UnitRuns} from './preorder-campaign.ts';
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
 const FRESH_MS = 60_000;
+/** The oldest counts a failed read may fall back to. A paid batch can oversell by
+ *  the units paid in this window, which the batch cap absorbs better than a
+ *  closed shop. */
+const STALE_MS = 15 * 60_000;
+/** After a failed read, this isolate does not ask the Admin API again for this long. */
+const FAILURE_COOLDOWN_MS = 30_000;
+const SHARED_CACHE_URL = 'https://paid-units.opendrone.internal/v1';
 const PAGE_SIZE = 250;
 const MAX_PAGES = 40;
 const THROTTLE_RETRIES = 2;
@@ -83,7 +96,9 @@ function isThrottled(errors: unknown[] | undefined): boolean {
   });
 }
 
-const memo = new Map<string, {units: Record<string, UnitRuns>; fetchedAt: number}>();
+type MemoEntry = {units: Record<string, UnitRuns>; fetchedAt: number};
+const memo = new Map<string, MemoEntry>();
+const failedAt = new Map<string, number>();
 
 function adminEndpoint(env: OrdersEnv): {url: string; token: string} {
   const domain = env.SHOPIFY_STORE_DOMAIN?.trim().toLowerCase()
@@ -205,23 +220,87 @@ export async function paidUnits(
   return sumRuns(await paidUnitRuns(env, countFrom, skus, fetcher));
 }
 
-/** {@link fetchPaidUnitRuns}, memoized per isolate for a minute. */
-export function paidUnitRuns(
+/** {@link fetchPaidUnitRuns}, memoized per isolate and per location for a
+ *  minute, with the failure cooldown and stale fallback described above. */
+export async function paidUnitRuns(
   env: OrdersEnv,
   countFrom: string,
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
+  now: () => number = Date.now,
 ): Promise<Record<string, UnitRuns>> {
   const key = `${env.SHOPIFY_STORE_DOMAIN ?? ''}|${countFrom}|${[...skus].sort().join(',')}`;
   const cached = memo.get(key);
-  if (cached && Date.now() - cached.fetchedAt < FRESH_MS) return Promise.resolve(cached.units);
-  return fetchPaidUnitRuns(env, countFrom, skus, fetcher).then((units) => {
-    memo.set(key, {units, fetchedAt: Date.now()});
+  if (cached && now() - cached.fetchedAt < FRESH_MS) return cached.units;
+  const shared = await readShared(key);
+  if (shared && (!cached || shared.fetchedAt > cached.fetchedAt)) memo.set(key, shared);
+  const best = memo.get(key);
+  if (best && now() - best.fetchedAt < FRESH_MS) return best.units;
+  const stale = () => {
+    if (best && now() - best.fetchedAt < STALE_MS) return best.units;
+    return null;
+  };
+  const failed = failedAt.get(key);
+  if (failed !== undefined && now() - failed < FAILURE_COOLDOWN_MS) {
+    const units = stale();
+    if (units) return units;
+    throw new Error('shopify orders: Admin API read failed recently, waiting before the next try');
+  }
+  try {
+    const units = await fetchPaidUnitRuns(env, countFrom, skus, fetcher);
+    const entry = {units, fetchedAt: now()};
+    memo.set(key, entry);
+    failedAt.delete(key);
+    await writeShared(key, entry);
     return units;
-  });
+  } catch (error) {
+    failedAt.set(key, now());
+    const units = stale();
+    if (units) {
+      console.error('[preorders] paid counts read failed, using counts from', new Date(best!.fetchedAt).toISOString(), error instanceof Error ? error.message : error);
+      return units;
+    }
+    throw error;
+  }
+}
+
+function sharedCache(): Cache | null {
+  const store = (globalThis as {caches?: {default?: Cache}}).caches;
+  return store?.default ?? null;
+}
+
+function sharedRequest(key: string): Request {
+  return new Request(`${SHARED_CACHE_URL}?k=${encodeURIComponent(key)}`);
+}
+
+/** The location's last good counts, or null (no Cache API, a miss, an error). */
+async function readShared(key: string): Promise<MemoEntry | null> {
+  const cache = sharedCache();
+  if (!cache) return null;
+  try {
+    const hit = await cache.match(sharedRequest(key));
+    if (!hit) return null;
+    const entry = (await hit.json()) as MemoEntry;
+    return entry && typeof entry.fetchedAt === 'number' && entry.units ? entry : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeShared(key: string, entry: MemoEntry): Promise<void> {
+  const cache = sharedCache();
+  if (!cache) return;
+  try {
+    await cache.put(sharedRequest(key), new Response(JSON.stringify(entry), {
+      headers: {'Content-Type': 'application/json', 'Cache-Control': `max-age=${STALE_MS / 1000}`},
+    }));
+  } catch {
+    // Best effort: the isolate memo still holds the result.
+  }
 }
 
 /** Test seam: drop the per-isolate memory. */
 export function resetPaidUnitsMemo(): void {
   memo.clear();
+  failedAt.clear();
 }
