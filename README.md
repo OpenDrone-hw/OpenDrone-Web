@@ -1260,8 +1260,10 @@ of `endsOn` (Europe/Brussels):
 ## Fulfil a batch
 
 Paid preorder orders stay on hold until their batch is released. Verify in
-the shipping integration that held orders cannot produce a label. When a
-batch arrives:
+the shipping integration that held orders cannot produce a label. The bpost
+Shopify plugin attempts a label when an order is created, before the preorder
+hold is applied; a failed attempt is mailed from `notify@bpost.be` to the
+store owner's address. When a batch arrives:
 
 1. `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU> --batch <N>`
    lists the held orders tagged `batch:<SKU>:<N>`: the ones that ship now, and
