@@ -1362,9 +1362,25 @@ a.hero-build-add { text-decoration: none; }
 .hero-build-sizes { display: flex; gap: 6px; margin-bottom: 12px; }
 .hero-build-sizes button { flex: 1; padding: 10px; border-radius: 999px; border: 1px solid var(--color-border); background: transparent; color: var(--color-text); font-size: 12px; cursor: pointer; }
 .hero-build-sizes button[aria-pressed="true"] { background: var(--color-gold-fill); color: var(--color-on-accent); border-color: var(--color-gold-fill); }
-.homepage:has(.hero-build-guide) .hp-copy { right: 24px; max-width: 370px; top: 135px; }
-.homepage:has(.hero-build-guide) .hp-title { font-size: 28px; }
-.homepage:has(.hero-build-guide) .hp-explain { font-size: 13px; line-height: 1.5; }
+/* The right side is the buying and explaining side: the beat's explainer is a
+   card in the top-right corner, the build kit card holds the bottom right. */
+.homepage:has(.hero-build-guide) .hp-copy {
+  right: 24px; left: auto; top: calc(var(--header-height) + 1.5rem); bottom: auto; width: 370px; max-width: calc(50vw - 48px);
+  padding: 16px 18px 18px; border: 1px solid var(--pod-border); border-radius: 16px;
+  background: var(--pod-bg-strong); box-shadow: var(--pod-shadow); pointer-events: auto;
+  transition: top 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease;
+}
+html.hero-immersive .homepage:has(.hero-build-guide) .hp-copy { top: 24px; }
+.homepage:has(.hero-build-guide) .hp-title { font-size: 17px; font-weight: 600; line-height: 1.3; margin: 0 0 2px; white-space: normal; }
+.homepage:has(.hero-build-guide) .hp-note { font-size: 12px; line-height: 1.45; }
+.homepage:has(.hero-build-guide) .hp-explain { font-size: 13px; line-height: 1.5; margin-top: 10px; color: var(--color-text); }
+.homepage:has(.hero-build-guide) .hp-connect { font-size: 11px; margin-top: 8px; }
+.homepage:has(.hero-build-guide) .hp-copy-link { margin-top: 12px; font-size: 12px; }
+/* Exploring: the side cards step back so the drone reads through them; full again under the pointer. */
+.homepage .hero-buy--guide { transition: opacity 0.45s ease; }
+html.hero-immersive .homepage .hp-copy, html.hero-immersive .homepage .hero-buy--guide.is-visible { opacity: 0.55 !important; }
+html.hero-immersive .homepage .hp-copy:hover, html.hero-immersive .homepage .hero-buy--guide.is-visible:hover,
+html.hero-immersive .homepage .hero-buy--guide.is-visible:focus-within { opacity: 1 !important; }
 .hp-model-note { position: absolute; top: calc(var(--header-height) + 5rem); left: 50%; transform: translateX(-50%); margin: 0; color: var(--color-text-muted); font-size: 11px; pointer-events: none; }
 @keyframes hero-build-in { from { opacity: 0; } to { opacity: 1; } }
 @media (max-height: 850px) and (min-width: 769px) {
@@ -2218,3 +2234,64 @@ body:has(.test-banner) .site-header {
 .co-changed ul, .co-parcels { margin: 0; padding: 0; list-style: none; }
 .co-parcels { display: grid; gap: 0.375rem; margin-top: 0.75rem; font-size: 0.8125rem; }
 .co-parcels li { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+
+/* Immersive hero (html.hero-immersive, set by the homepage once the reader starts
+   exploring the drone, desktop only): the header pill becomes a vertical pill on
+   the left (brand, categories, Discord, GitHub, cart, menu) and the top keeps only
+   the drone size selector, so the drone gets the screen. It is the same element
+   under one view-transition name on every route, so the pill morphs continuously:
+   top bar to left bar here, and left bar back to top bar when a click leaves the
+   homepage. The morph on this page is started in app/routes/_index.tsx. */
+.site-header-main .site-header-logo { view-transition-name: none !important; }
+.site-header-github { display: none; }
+.homepage .hero-github { transition: opacity 0.45s ease; }
+/* The homepage's own morph moves only the pill: the page (and the live 3D) stays put. */
+html.hero-vt::view-transition-old(root) { display: none; }
+html.hero-vt::view-transition-new(root) { animation: none; }
+@media (min-width: 1024px) {
+  html.hero-immersive .site-header { inset: 0 auto 0 0; padding: 0 0 0 24px; display: flex; align-items: center; }
+  html.hero-immersive .site-header-main {
+    display: flex; flex-direction: column; align-items: stretch; gap: 10px;
+    width: auto; margin: 0; padding: 14px 8px; border-radius: 22px;
+    /* Centred in the space above the OpenDrone wordmark. */
+    translate: 0 -40px;
+  }
+  html.hero-immersive .site-header-incutec-slot, html.hero-immersive .site-header-main > .site-header-logo { min-width: 0; justify-content: center; padding: 2px 6px 4px; }
+  html.hero-immersive .site-header-incutec { height: 0.95rem; }
+  html.hero-immersive .site-header-categories { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+  html.hero-immersive .site-header-cat-group { display: flex; flex-direction: column; align-items: stretch; height: auto; border-radius: 16px; }
+  html.hero-immersive .site-header-categories .header-cat { width: 100%; }
+  html.hero-immersive .site-header-categories .header-cat,
+  html.hero-immersive .site-header-categories .header-cat > a,
+  html.hero-immersive .site-header-cat-all { justify-content: center; }
+  html.hero-immersive .site-header-actions { flex-direction: column; justify-self: auto; gap: 8px; padding-top: 10px; border-top: 1px solid var(--pod-border); }
+  html.hero-immersive .site-header-utils { flex-direction: column; gap: 8px; }
+  html.hero-immersive .header-lang-toggle, html.hero-immersive .header-region-switch { display: none; }
+  html.hero-immersive .site-header-github { display: inline-flex; }
+  html.hero-immersive .homepage .hero-github { opacity: 0 !important; pointer-events: none; }
+  html.hero-immersive { --hero-size-top: 24px; }
+  /* Family dropdowns open beside the bar instead of under it. */
+  html.hero-immersive .site-header-categories .header-cat-pod-wrap { top: 0; left: calc(100% + 14px); translate: none; }
+}
+::view-transition-group(site-island) { animation-duration: 0.55s; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+/* The pill is two layers in the morph: its surface (a plain rounded box, which
+   can stretch from bar to bar without looking wrong) and its contents, which
+   cross-fade at their own size so the labels never stretch. */
+/* The surface carries the pill's look; the pill element itself is transparent. */
+.site-header-main { position: relative; isolation: isolate; background: none !important; border-color: transparent !important; box-shadow: none !important; }
+.site-header-surface { position: absolute; inset: -1px; z-index: -1; border-radius: inherit; background: var(--pod-bg-strong); border: 1px solid var(--pod-border); box-shadow: var(--pod-shadow); view-transition-name: site-island-surface; pointer-events: none; }
+.homepage-layout .site-header-surface { background: linear-gradient(var(--pod-bg-strong), var(--pod-bg-strong)), var(--color-bg); }
+::view-transition-group(site-island-surface) { animation-duration: 0.55s; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+::view-transition-old(site-island-surface), ::view-transition-new(site-island-surface) { width: 100%; height: 100%; object-fit: fill; }
+::view-transition-old(site-island), ::view-transition-new(site-island) { width: auto; height: auto; object-fit: none; }
+::view-transition-old(site-island) { animation-duration: 0.2s; }
+::view-transition-new(site-island) { animation-delay: 0.25s; animation-duration: 0.3s; }
+
+/* RX -> FC -> ESC signal chain on the stack beats (HeroDroneStage). */
+.hp-chain { display: flex; align-items: center; gap: 4px; margin: 12px 0 0; padding: 0; list-style: none; }
+.hp-chain li { display: flex; align-items: center; gap: 4px; opacity: 0.45; transition: opacity 0.3s ease; }
+.hp-chain li > span:last-child { display: none; }
+.hp-chain li.is-current { opacity: 1; }
+.hp-chain img { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5)); }
+.hp-chain li.is-current img { width: 72px; height: 72px; }
+.hp-chain-arrow { margin: 0 6px 0 2px; color: var(--color-text-dim); font-size: 14px; }

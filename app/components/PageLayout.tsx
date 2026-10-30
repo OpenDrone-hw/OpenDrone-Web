@@ -56,13 +56,14 @@ export function PageLayout({
           <main id="main-content" className="site-main">
             {children}
           </main>
-          {/* The home scene is one pinned viewport; the footer sits under it,
-              reached when the walkthrough hands the page back at its last
-              beat (desktop) or by plain scroll (phone). */}
-          <Footer
-            company={company}
-            turnstileSiteKey={turnstileSiteKey ?? null}
-          />
+          {/* No footer on the homepage: the hero is the whole page. Every other
+              route keeps it (legal links, company details). */}
+          {isHomepage ? null : (
+            <Footer
+              company={company}
+              turnstileSiteKey={turnstileSiteKey ?? null}
+            />
+          )}
         </div>
       </Aside.Provider>
     </MotionConfig>

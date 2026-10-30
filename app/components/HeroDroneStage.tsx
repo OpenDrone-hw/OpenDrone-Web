@@ -52,6 +52,13 @@ function BeatLinkLabel({href}: {href: string}) {
   );
 }
 
+/** The stack beats, in signal order, and each size's board render folder (public/boards/). */
+const STACK_CHAIN = ['rx', 'fc', 'esc'];
+const STACK_BOARDS: Record<string, Record<string, string>> = {
+  od5: {rx: 'openrx-mono', fc: 'openfc-lite', esc: 'openesc-30x30'},
+  od3: {rx: 'openrx-lite-ufl', fc: 'openfc-lite-mini', esc: 'openesc-20x20'},
+};
+
 export function HeroDroneStage({
   model,
   size,
@@ -62,6 +69,7 @@ export function HeroDroneStage({
   onBeat,
   onBeats,
   onSeeker,
+  onExploring,
 }: {
   model?: string;
   size?: string;
@@ -77,6 +85,8 @@ export function HeroDroneStage({
   /** The whole beat list once known, in order. */
   onBeats?: (beats: HeroBeat[]) => void;
   onSeeker?: (seek: ((id: string) => void) | null) => void;
+  /** The reader has started exploring the drone (or come back to the start). */
+  onExploring?: (exploring: boolean) => void;
 }) {
   // The homepage drives this from its size selector. The scene falls back to
   // the 3 inch if the requested design has no assembly built yet, so adding
@@ -181,6 +191,7 @@ export function HeroDroneStage({
           reduced={reduced}
           onExplode={handleExplode}
           onExploded={setExploded}
+          onExploring={onExploring}
         />
       ) : null}
 
@@ -204,7 +215,21 @@ export function HeroDroneStage({
               connects, and the product page when we sell it. Strings come
               from studio.json with the rest of the beat copy. */}
           {shown.caption ? <p className="hp-explain">{shown.caption}</p> : null}
-          {shown.hint ? <p className="hp-connect">{shown.hint}</p> : null}
+          {/* The stack beats show how the signal runs instead of saying it:
+              RX -> FC -> ESC as the real board renders, this beat's board lit. */}
+          {STACK_CHAIN.includes(shown.id.split(':')[0]) ? (
+            <ol className="hp-chain" aria-label="Signal path: receiver, flight controller, ESC">
+              {STACK_CHAIN.map((id, i) => (
+                <li key={id} className={id === shown.id.split(':')[0] ? 'is-current' : undefined}>
+                  {i > 0 ? <span className="hp-chain-arrow" aria-hidden="true">→</span> : null}
+                  <img src={`/boards/${STACK_BOARDS[resolvedModel ?? requestedFolder]?.[id] ?? STACK_BOARDS.od5[id]}/front-w528.webp`} alt="" width={56} height={56} loading="lazy" decoding="async" />
+                  <span>{id.toUpperCase()}</span>
+                </li>
+              ))}
+            </ol>
+          ) : shown.hint ? (
+            <p className="hp-connect">{shown.hint}</p>
+          ) : null}
           {shown.href ? (
             <Link className="hp-copy-link" to={shown.href} prefetch="intent">
               <BeatLinkLabel href={shown.href} />

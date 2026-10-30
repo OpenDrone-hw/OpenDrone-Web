@@ -23,7 +23,6 @@ import {EarlyBirdNote, retailFor} from '~/components/EarlyPriceCue';
 import {DiscordLink, DiscordMark} from '~/components/Discord';
 import {copyText} from '~/lib/copy';
 import {CART_UPDATED_EVENT} from '~/lib/cart-client';
-import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {
   useProductStatusResolver,
   useRoadmapStatusResolver,
@@ -41,17 +40,6 @@ import type {
   ProductCardFragment,
   ProductVariantFragment,
 } from '~/lib/product-shapes';
-
-/** Retire the hero "Who's incutec?" hint: persist the dismissal and pull the
- *  class so it can't flash on a same-session SPA return to the homepage. */
-function dismissIncutecHint() {
-  try {
-    localStorage.setItem(INCUTEC_HINT_SEEN_KEY, '1');
-  } catch {
-    /* storage blocked (private mode) - the nudge just isn't persisted */
-  }
-  document.documentElement.classList.remove('hero-incutec-hint');
-}
 
 /** A product as the header reads it: a catalog card. */
 export type HeaderFamilyVariant = ProductVariantFragment;
@@ -158,10 +146,11 @@ export function Header({
   return (
     <header className="site-header">
       <div className="site-header-main">
-        {/* Left: brand slot - OpenDrone home link, or Incutec credit on the hero.
-            On the hero the mark links to the in-site Incutec company page, and a
-            "Who's incutec?" hint drops out from under it a beat after the header
-            lands (gated on `html.hero-incutec-hint`, set by the homepage). */}
+        {/* The pill's surface as its own layer, so a view transition can stretch it
+            between the top bar and the homepage's side bar (site-ui.css). */}
+        <span className="site-header-surface" aria-hidden="true" />
+        {/* Left: brand slot - OpenDrone home link, or Incutec credit on the hero,
+            where the mark links to the in-site Incutec company page. */}
         {isHero ? (
           <span className="site-header-incutec-slot">
             <NavLink
@@ -173,19 +162,8 @@ export function Header({
                 'Incutec, the company behind OpenDrone'
               }
               style={{viewTransitionName: 'site-logo'}}
-              onClick={dismissIncutecHint}
             >
               <IncutecWordmark className="site-header-incutec" />
-            </NavLink>
-            <NavLink
-              prefetch="intent"
-              to="/open-source"
-              className="incutec-hint"
-              tabIndex={-1}
-              aria-hidden="true"
-              onClick={dismissIncutecHint}
-            >
-              <Txt id="chrome.incutec_hint" />
             </NavLink>
           </span>
         ) : (
@@ -888,6 +866,20 @@ function HeaderCtas({
         >
           <DiscordMark />
         </DiscordLink>
+        {/* Shown only in the homepage's immersive side bar (site-ui.css), where
+            the socials sit together; the hero's own GitHub mark steps aside. */}
+        <a
+          href="https://github.com/OpenDrone-hw"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="site-header-icon site-header-github"
+          aria-label="GitHub"
+          title="GitHub"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+          </svg>
+        </a>
         {/* Account, orders and addresses live in Shopify customer accounts:
             an external link, not an in-app route. The signed-in state is
             Shopify's to know, so the label is always "Account". */}

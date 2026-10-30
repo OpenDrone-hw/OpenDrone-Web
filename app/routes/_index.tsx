@@ -10,7 +10,6 @@ import {
 } from 'react';
 import type {ProductCardFragment} from '~/lib/product-shapes';
 import {byHandle, toCard} from '~/lib/catalog';
-import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {HeroDroneStage} from '~/components/HeroDroneStage';
 import type {HeroLoadState} from '~/components/HeroDroneScene';
@@ -159,6 +158,39 @@ let splashHasPlayedThisSession = false;
  * two trees are separate components so the desktop scroll/RAF/scroll-lock
  * hooks never mount on a phone.
  */
+/**
+ * Toggle the header between the top bar and the homepage's side bar as one pill:
+ * a view transition whose surface moves in an L (across first when it grows
+ * taller, down first when it grows wider), so it never balloons into a box over
+ * the drone. Only the pill moves; the page and the live 3D stay put (html.hero-vt).
+ */
+function morphHeaderPill(apply: () => void) {
+  const doc = document as Document & {startViewTransition?: (cb: () => void) => {ready: Promise<void>; finished: Promise<void>}};
+  const surface = document.querySelector('.site-header-surface');
+  if (!doc.startViewTransition || !surface || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return apply();
+  const root = document.documentElement;
+  const from = surface.getBoundingClientRect();
+  let to = from;
+  root.classList.add('hero-vt');
+  const vt = doc.startViewTransition(() => {
+    apply();
+    to = surface.getBoundingClientRect();
+  });
+  void vt.ready
+    .then(() => {
+      const box = (x: number, y: number, w: number, h: number) => ({transform: `translate(${x}px, ${y}px)`, width: `${w}px`, height: `${h}px`});
+      const acrossFirst = to.height > from.height;
+      const mid = acrossFirst ? box(to.left, from.top, to.width, from.height) : box(from.left, to.top, from.width, to.height);
+      root.animate([box(from.left, from.top, from.width, from.height), {...mid, offset: 0.45}, box(to.left, to.top, to.width, to.height)], {
+        duration: 600,
+        easing: 'cubic-bezier(0.65, 0, 0.35, 1)',
+        pseudoElement: '::view-transition-group(site-island-surface)',
+      });
+    })
+    .catch(() => {});
+  void vt.finished.finally(() => root.classList.remove('hero-vt'));
+}
+
 export default function Homepage() {
   const {isMobileHint, featured, heroBuilds, stackOffer, discord} =
     useLoaderData<typeof loader>();
@@ -284,6 +316,29 @@ function DesktopHome({
     heroVarRef.current?.style.setProperty('--hero-p', scrollRef.current.toFixed(4));
     rafId.current = 0;
   }, []);
+
+  // Exploring the drone: the header pill splits into two side rails and both side
+  // cards step back (html.hero-immersive, app/styles/site-ui.css). A view
+  // transition morphs the chrome; the 3D stage is excluded so it never freezes.
+  const exploring = useRef(false);
+  const syncImmersive = useCallback(() => {
+    const root = document.documentElement;
+    // Only while the hero fills the screen: scrolled on to the page below, the top bar returns.
+    const on = exploring.current && window.scrollY < 40;
+    if (root.classList.contains('hero-immersive') === on) return;
+    morphHeaderPill(() => root.classList.toggle('hero-immersive', on));
+  }, []);
+  const handleExploring = useCallback((on: boolean) => {
+    exploring.current = on;
+    syncImmersive();
+  }, [syncImmersive]);
+  useEffect(() => {
+    window.addEventListener('scroll', syncImmersive, {passive: true});
+    return () => {
+      window.removeEventListener('scroll', syncImmersive);
+      document.documentElement.classList.remove('hero-immersive');
+    };
+  }, [syncImmersive]);
 
   const handleWalkthroughProgress = useCallback(
     (f: number) => {
@@ -439,29 +494,6 @@ function DesktopHome({
     if (headerIn) document.documentElement.classList.add('hero-header-in');
   }, [headerIn]);
 
-  // A beat after the header bar lands (3s), drop a small "Who's incutec?" hint
-  // out from under the Incutec mark, nudging discovery of the company page.
-  // Once the visitor has clicked through (flag in localStorage) the hint is
-  // retired - don't arm it, and clear any stale class from this session.
-  useEffect(() => {
-    if (!headerIn) return;
-    let seen = false;
-    try {
-      seen = localStorage.getItem(INCUTEC_HINT_SEEN_KEY) === '1';
-    } catch {
-      /* storage blocked - treat as not-yet-seen */
-    }
-    if (seen) {
-      document.documentElement.classList.remove('hero-incutec-hint');
-      return;
-    }
-    const t = window.setTimeout(
-      () => document.documentElement.classList.add('hero-incutec-hint'),
-      3000,
-    );
-    return () => window.clearTimeout(t);
-  }, [headerIn]);
-
   // One screen, no spacer. The walkthrough consumes the wheel itself and hands
   // the page back at its last beat, so extra document height would only be dead
   // scroll the reader has to grind through after the drone is done.
@@ -538,6 +570,7 @@ function DesktopHome({
                 onProgress={handleWalkthroughProgress}
                 onSeeker={handleSeeker}
                 onBeat={handleBeat}
+                onExploring={handleExploring}
               />
             </SceneErrorBoundary>
           </div>
@@ -659,8 +692,9 @@ function DesktopHome({
             className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-auto"
             inert={!splashSettled}
             style={{
-              // Keep the size switch below the header, including repeat visits.
-              top: !splashSettled ? '-3rem' : 'calc(var(--header-height) + 1.5rem)',
+              // Keep the size switch below the header, including repeat visits;
+              // exploring, the header leaves the top to it (html.hero-immersive).
+              top: !splashSettled ? '-3rem' : 'var(--hero-size-top, calc(var(--header-height) + 1.5rem))',
               opacity: splashSettled ? 1 : 0,
               transition:
                 'top 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease',

@@ -85,6 +85,8 @@ export type HeroDroneSceneProps = {
   onExplode?: (api: {toggle: () => void; set: (exploded: boolean) => void} | null) => void;
   /** Fires when the build is told to explode (true) or collapse (false). */
   onExploded?: (exploded: boolean) => void;
+  /** True once the reader has left the opening stop (the page goes immersive), false back on it. */
+  onExploring?: (exploring: boolean) => void;
 };
 
 /* three.js mangles imported names three ways: it appends _1/_2 to duplicates,
@@ -172,6 +174,7 @@ export function HeroDroneScene({
   reduced = false,
   onExplode,
   onExploded,
+  onExploring,
 }: HeroDroneSceneProps) {
   const host = useRef<HTMLDivElement>(null);
   const snapshot = useRef<HTMLCanvasElement>(null);
@@ -477,7 +480,7 @@ export function HeroDroneScene({
        * the camera from exactly there: no cut.
        */
       type ExplodeMove = {v: [number, number, number]; t: number; dur: number};
-      type ExplodeUnit = {id: string; label: string; kind: string; moves: ExplodeMove[]};
+      type ExplodeUnit = {id: string; label: string; kind: string; moves: ExplodeMove[]; c?: number[]; axis?: number[] | null; anchor?: string | null};
       const exPromise = meta.explode.then((r) => {
         if (!r.ok) throw new Error(`explode.json ${r.status}`);
         return r.json() as Promise<{units: ExplodeUnit[]; groups: Record<string, string[]>}>;
@@ -510,7 +513,7 @@ export function HeroDroneScene({
       const COLD: Pace = {dur: 1.2, gap: 0.35};
       const WARM: Pace = {dur: 0.42, gap: 0.06};
       const WARM_MS = 120;
-      const TAIL_S = 0.9;
+      const TAIL_S = 1.4;
       let pace: Pace = COLD;
       type Build = {
         parts: Array<{node: THREE.Object3D; base: THREE.Vector3; moves: ExplodeMove[]}>;
@@ -555,9 +558,11 @@ export function HeroDroneScene({
       let firstPartMarked = false;
       const previewClock = new THREE.Clock();
       let previewNow = 0;
-      let previewAngle = 0.9;
-      // Set once everything has seated: the orbit then eases onto this yaw.
-      let previewGoal: number | null = null;
+      // No orbit while the parts land: the build-in is the motion. The camera
+      // settles a few degrees onto the walkthrough's opening yaw and stays there,
+      // so the hand-off to the walkthrough never swings round the drone.
+      const AZ: number = cfg.camera?.azimuth ?? 0.7;
+      let previewAngle = AZ + 0.18;
       const previewVel = {v: 0};
       const previewPitch = Math.atan(cfg.camera?.height ?? 0.5);
       // Camera distance in drone radii: `distance` frames the exploded drone,
@@ -573,6 +578,9 @@ export function HeroDroneScene({
       let shownRadius = 0;
       const shownCentre = new THREE.Vector3();
       const shownVel = [0, 1, 2, 3].map(() => ({v: 0}));
+      // Where the assembling camera looks and how far back it sits, last frame.
+      const previewFocus = new THREE.Vector3();
+      let previewBack = 0;
       const previewFit = () => {
         const b = new THREE.Box3().setFromObject(rig);
         if (b.isEmpty()) return;
@@ -597,22 +605,33 @@ export function HeroDroneScene({
           firstPartMarked = true;
           mark('first-part');
         }
-        if (previewGoal === null) previewAngle += dt * 0.24;
-        else previewAngle = smoothDamp(previewAngle, previewGoal, previewVel, 0.6, dt);
+        previewAngle = smoothDamp(previewAngle, AZ, previewVel, 0.9, dt);
         if (shownRadius) {
           shownRadius = smoothDamp(shownRadius, previewRadius, shownVel[0], 0.5, dt);
           shownCentre.x = smoothDamp(shownCentre.x, previewCentre.x, shownVel[1], 0.5, dt);
           shownCentre.y = smoothDamp(shownCentre.y, previewCentre.y, shownVel[2], 0.5, dt);
           shownCentre.z = smoothDamp(shownCentre.z, previewCentre.z, shownVel[3], 0.5, dt);
         }
-        const back = (shownRadius || 0.075) * DIST_ASSEMBLED;
+        // Same framing as the walkthrough's first stop (lift, and the shift that
+        // clears the copy panel), so the hand-off does not slide the drone.
+        const r = shownRadius || 0.075;
+        const back = r * DIST_ASSEMBLED;
+        const shift =
+          back * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect *
+          (cfg.camera?.stageShift ?? 0.2) * Math.min(1, camera.aspect / 1.4);
+        previewFocus.set(
+          shownCentre.x + Math.sin(AZ) * shift,
+          shownCentre.y - r * (cfg.camera?.lift ?? 0.1),
+          shownCentre.z - Math.cos(AZ) * shift,
+        );
+        previewBack = back;
         const off = new THREE.Vector3(
           Math.cos(previewPitch) * Math.cos(previewAngle) * back,
           Math.sin(previewPitch) * back,
           Math.cos(previewPitch) * Math.sin(previewAngle) * back,
         );
-        camera.position.copy(shownCentre.clone().add(off));
-        camera.lookAt(shownCentre);
+        camera.position.copy(previewFocus).add(off);
+        camera.lookAt(previewFocus);
         renderer.render(scene, camera);
       };
       renderer.setAnimationLoop(previewFrame);
@@ -770,7 +789,7 @@ export function HeroDroneScene({
       }
       if (!asm) throw new Error('no geometry loaded');
       // Let every chunk finish seating before the rig reads base positions, then
-      // swing the orbit onto the walkthrough's opening yaw (nearest turn).
+      // hand over to the walkthrough camera.
       // A hidden tab runs no frames, so it skips the show and seats everything.
       squeezeBuilds();
       while (!reduced && !disposed && !document.hidden && builds.some((b) => b.k < 1)) {
@@ -778,10 +797,6 @@ export function HeroDroneScene({
       }
       finishBuilds();
       if (disposed) return;
-      {
-        const az = cfg.camera?.azimuth ?? 0.7;
-        previewGoal = az + Math.ceil((previewAngle - az) / (Math.PI * 2)) * Math.PI * 2;
-      }
 
       const occRoot: THREE.Object3D = asm;
 
@@ -953,6 +968,145 @@ export function HeroDroneScene({
         };
       };
       onBeats?.(BEATS.map((b) => toHeroBeat(b)));
+
+      /* ------------------------------------------------------- frame swap
+       * The last beat (studio.json id "video") swaps frames the way a person
+       * does it, played in time once the reader arrives on it: the top screws
+       * back out, the top plate lifts off, the video system (mount, air unit,
+       * antennas, camera) tilts and slides out forward through the camera
+       * mount, the drone leaves sideways and a fresh one comes in from the
+       * other side, and it all goes back together. It ends on the assembled
+       * drone, the hero's exit shot. Parts are picked by kind, so both sizes
+       * play it. The camera holds still on the opening framing throughout. */
+      const SWAP_BEAT = BEATS.findIndex((b) => b.id === 'video');
+      const unitList = [...UNITS.values()];
+      const centreOf = (u: Unit) => new THREE.Vector3(...((u.c ?? [u.base.x, u.base.y, u.base.z]) as [number, number, number]));
+      const CARRIER_KINDS = new Set(['mount', 'air', 'antenna', 'camera', 'cammount']);
+      // Two moves: the air unit (with its mount and antennas) slides straight up its
+      // standoffs; the camera, cabled to it, works out of the camera mount at an angle.
+      const CAMERA_KINDS = new Set(['camera', 'cammount']);
+      // The top plate takes the battery pad with it, and the XT30 lead mount where it
+      // sits on top of the air unit's mount (the 3 inch), so the air unit can rise.
+      const swapPlate = unitList.filter((u) => ['top', 'pad', 'xtmount', 'xtconn'].includes(u.kind));
+      const plateZ = Math.min(...swapPlate.filter((u) => u.kind === 'top').map((u) => centreOf(u).z));
+      // Head-up screws at top-plate height: the ones that hold the top plate down.
+      const swapScrews = unitList.filter(
+        (u) => u.kind === 'screw' && (u.axis?.[2] ?? 0) > 0.5 && centreOf(u).z > plateZ - 0.006,
+      );
+      // The camera's own side screws (the 3 inch has them) leave with the camera.
+      const isCamScrew = (u: Unit) =>
+        u.kind === 'screw' && Math.abs(u.axis?.[2] ?? 1) < 0.5 && (u.anchor === 'camera' || Boolean(u.anchor?.startsWith('cammount')));
+      const swapCarrier = unitList.filter((u) => CARRIER_KINDS.has(u.kind) || isCamScrew(u));
+      const camSet = new Set(swapCarrier.filter((u) => CAMERA_KINDS.has(u.kind) || isCamScrew(u)));
+      const inSwap = new Set<Unit>([...swapPlate, ...swapScrews, ...swapCarrier]);
+      const swapBody = unitList.filter((u) => !inSwap.has(u));
+      const swapOn = SWAP_BEAT >= 0 && swapCarrier.length > 0 && swapPlate.length > 0;
+      // The carrier pivots on the camera (it leaves nose first through the camera mount).
+      const camUnit = swapCarrier.find((u) => u.kind === 'camera');
+      const carrierPivot = camUnit ? centreOf(camUnit) : new THREE.Vector3();
+      const baseQuat = new Map<Unit, THREE.Quaternion>();
+      for (const u of [...swapScrews, ...swapCarrier]) baseQuat.set(u, u.node.quaternion.clone());
+      // Screen-right at the opening yaw, in the parts' own space, per world unit.
+      const lateralLocal = (() => {
+        occRoot.updateWorldMatrix(true, false);
+        const a = occRoot.worldToLocal(F0.centre.clone());
+        const b = occRoot.worldToLocal(F0.centre.clone().add(new THREE.Vector3(Math.sin(AZ), 0, -Math.cos(AZ))));
+        return b.sub(a);
+      })();
+      // World up, in the parts' own space, per world unit.
+      const upLocal = (() => {
+        const a = occRoot.worldToLocal(F0.centre.clone());
+        return occRoot.worldToLocal(F0.centre.clone().add(new THREE.Vector3(0, 1, 0))).sub(a);
+      })();
+      // Seconds. Out, swap, back in; SWAP_LEN is where it ends assembled again.
+      // Out: screws, plate, carrier up off the standoffs, tilt, slide out over the
+      // bumper. Then the drones trade places and it all goes back in reverse order.
+      const SW = {
+        screwOut: [0, 0.9], plateOut: [0.9, 1.8], liftOut: [1.8, 2.3], tilt: [2.3, 2.8], slideOut: [2.8, 3.8],
+        bodyOut: [3.8, 5.0], bodyIn: [5.1, 6.4], slideIn: [6.5, 7.5], untilt: [7.5, 8.0], liftIn: [8.0, 8.5],
+        plateIn: [8.5, 9.3], screwIn: [9.3, 10.2],
+      } as const;
+      const SWAP_LEN = 10.2;
+      /** Test hook: freeze the swap at a time (seconds), or null to let it play. */
+      let swapHold: number | null = null;
+      const seg = (t: number, [a, b]: readonly [number, number]) => moveEase(clamp01((t - a) / (b - a)));
+      let swapT = 0;
+      /** World offset of the drone body along screen-right, for the contact shadow. */
+      let swapBodyWorld = 0;
+      const swapQ = new THREE.Quaternion();
+      const swapE = new THREE.Euler();
+      const swapAxis = new THREE.Vector3();
+      const swapV = new THREE.Vector3();
+      // The video system's way out, in metres and radians, in the parts' own space
+      // (Z up, nose at -Y). Phase one (liftOut): the air unit (mount, antennas) slides
+      // straight up its standoffs by `airRise`; the camera comes up out of its mount
+      // at an angle, not straight: up `camUp`, a little back `camBack`, tipped
+      // `camTilt` about its own centre. Phase two (tilt): both rise `upAll` more,
+      // clear of everything. Phase three (slide): together, forward off the nose
+      // (`slideY`) and slightly sideways. Tuned against the interference check
+      // (__hero.swap in ?herotest).
+      const SWP = {
+        airRise: 0.035, camUp: 0.04, camBack: 0.01, camTilt: 0.2, upAll: 0,
+        slideX: 0.02, slideY: 0.12, slideZ: 0.01,
+      };
+      // Runs after applyExplode (which leaves every part at its seated place here).
+      const applySwap = (t: number) => {
+        if (!swapOn) return;
+        const exitW = F0.radius * 4.2;
+        const screw = seg(t, SW.screwOut) - seg(t, SW.screwIn);
+        const plate = seg(t, SW.plateOut) - seg(t, SW.plateIn);
+        const tilt = seg(t, SW.tilt) - seg(t, SW.untilt);
+        const rise = seg(t, SW.liftOut) - seg(t, SW.liftIn);
+        const slide = seg(t, SW.slideOut) - seg(t, SW.slideIn);
+        // The video system waits off the nose (screen left) and the plate up at the
+        // rear, so both drones use the low right: the old one leaves level, the new
+        // one comes up from below.
+        const leaving = t < (SW.bodyOut[1] + SW.bodyIn[0]) / 2;
+        const away = leaving ? seg(t, SW.bodyOut) : 1 - seg(t, SW.bodyIn);
+        swapBodyWorld = exitW * away;
+        const lift = (leaving ? -0.1 : -0.6) * exitW * away;
+        for (const u of swapBody) u.node.position.addScaledVector(lateralLocal, swapBodyWorld).addScaledVector(upLocal, lift);
+        // The top plate (and the screws it carries) lifts clear first, then parks to
+        // the right: away from the video system (nose, left) and above the drones' path.
+        const plateOff = swapV
+          .set(0, 0, 0.085 * moveEase(clamp01(plate * 2)))
+          .addScaledVector(lateralLocal, F0.radius * 0.65 * moveEase(clamp01(plate * 2 - 1)));
+        for (const u of swapPlate) u.node.position.add(plateOff);
+        for (const u of swapScrews) {
+          const ax = u.axis ?? [0, 0, 1];
+          swapAxis.set(ax[0], ax[1], ax[2]).normalize();
+          // Backed out along its axis, turning as it goes: six turns per 14 mm.
+          u.node.position.addScaledVector(swapAxis, 0.014 * screw).add(plateOff);
+          swapQ.setFromAxisAngle(swapAxis, -screw * Math.PI * 12);
+          u.node.quaternion.copy(baseQuat.get(u)!).premultiply(swapQ);
+        }
+        // Crooked, not straight up: the rear lifts and it twists a little, then it
+        // slides out forward and slightly sideways through the camera mount.
+        // Camera: tipped about its own centre as it comes up out of the mount.
+        swapE.set(SWP.camTilt * rise, 0, 0);
+        swapQ.setFromEuler(swapE);
+        for (const u of swapCarrier) {
+          const pos = u.node.position;
+          const isCam = camSet.has(u);
+          if (isCam) pos.sub(carrierPivot).applyQuaternion(swapQ).add(carrierPivot);
+          pos.z += (isCam ? SWP.camUp : SWP.airRise) * rise + SWP.upAll * tilt + SWP.slideZ * slide;
+          pos.y += (isCam ? SWP.camBack * rise : 0) - SWP.slideY * slide;
+          pos.x += SWP.slideX * slide;
+          u.node.quaternion.copy(baseQuat.get(u)!);
+          if (isCam) u.node.quaternion.premultiply(swapQ);
+        }
+      };
+      /** What the spotlight shows at swap time t, and which caption stop goes with it. */
+      const swapStage = (t: number): {nodes: THREE.Object3D[]; stop: number} => {
+        const n = (us: Unit[]) => us.map((u) => u.node);
+        if (t <= 0 || t >= SWAP_LEN) return {nodes: [], stop: -1};
+        if (t < SW.screwOut[1]) return {nodes: n(swapScrews), stop: 0};
+        if (t < SW.plateOut[1]) return {nodes: n([...swapPlate, ...swapScrews]), stop: 1};
+        if (t < SW.slideOut[1]) return {nodes: n(swapCarrier), stop: 2};
+        if (t < SW.bodyIn[1]) return {nodes: n(swapBody), stop: 3};
+        if (t < SW.liftIn[1]) return {nodes: n(swapCarrier), stop: 4};
+        return {nodes: n([...swapPlate, ...swapScrews]), stop: 4};
+      };
       await yieldToMain();
       if (disposed) return;
 
@@ -1033,18 +1187,16 @@ export function HeroDroneScene({
       // Scripted camera state, smoothed: the point it orbits, distance, height.
       // Starts where the assembling view left the camera; the damping below
       // carries it onto the first beat's framing.
-      const camFocus = shownCentre.clone();
-      let camBack = (shownRadius || previewRadius) * DIST_ASSEMBLED;
+      const camFocus = previewBack ? previewFocus.clone() : shownCentre.clone();
+      let camBack = previewBack || (shownRadius || previewRadius) * DIST_ASSEMBLED;
       let camReady = !reduced;
       let wasTravelling = false;
       // Canvas rect, cached: read on pointer events, never per frame.
       let rect = el.getBoundingClientRect();
-      // Velocities for the damped camera: focus xyz, distance, height, swing.
+      // Velocities for the damped camera: focus xyz, distance, height.
       const camVel = [0, 1, 2, 3, 4, 5].map(() => ({v: 0}));
-      let swing = 0;
       let selectedPrev: Unit | null = null;
       let selT = 1;
-      let selDir = 1;
       const resizeRect = new ResizeObserver(() => {
         rect = el.getBoundingClientRect();
       });
@@ -1063,6 +1215,7 @@ export function HeroDroneScene({
       let manualP: number | null = null;
       let catchUp = false;
       let isExploded = reduced;
+      let isExploring = false;
       applyExplode(explodeP);
       const stepToward = (v: number, goal: number, s: number) =>
         v < goal ? Math.min(goal, v + s) : Math.max(goal, v - s);
@@ -1103,7 +1256,8 @@ export function HeroDroneScene({
       };
       // What the dim/spotlight/camera focus on right now, strongest source first.
       let focusAmt = 0;
-      let focusFade = S.darkenRest;
+      const FOCUS_FADE: number = Math.min(S.darkenRest ?? 0.65, 0.65);
+      let focusFade = FOCUS_FADE;
       let focusNodes: THREE.Object3D[] = [];
       let focusKey = '';
 
@@ -1128,7 +1282,15 @@ export function HeroDroneScene({
       for (let i = 0; i < BEATS.length; i++) STOPS.push({pos: stopForBeat(i), beat: i, part: true});
       const stopPos = (si: number) => STOPS[si].pos;
       const explodedAt = () => Math.max(1e-6, stopPos(Math.min(1, STOPS.length - 1)));
-      const desiredExplode = () => manualP ?? (reduced ? 1 : clamp01(pos / explodedAt()));
+      // Into the swap beat the drone goes back together: fully assembled for the last
+      // fifth of the way, so the swap starts from a still, seated drone.
+      const collapseAt = () => {
+        if (!swapOn || SWAP_BEAT < 1) return 0;
+        const a = stopForBeat(SWAP_BEAT - 1);
+        return clamp01((pos - a) / ((stopForBeat(SWAP_BEAT) - a) * 0.8));
+      };
+      const desiredExplode = () =>
+        manualP ?? (reduced ? (collapseAt() > 0.5 ? 0 : 1) : clamp01(pos / explodedAt()) * (1 - collapseAt()));
       const partStopIdx = (beat: number) => STOPS.findIndex((s) => s.part && s.beat === beat);
       // The next PART stop in a direction. One confident scroll is one item
       // of the walkthrough: the rest between two parts never costs its own
@@ -1349,8 +1511,8 @@ export function HeroDroneScene({
        */
       let pressed = false;
       let dragging = false;
-      // The assembling orbit may still be swinging onto the opening yaw.
-      let userYaw = previewGoal === null ? 0 : previewAngle - previewGoal;
+      // Whatever is left of the assembling camera's settle, eased out (reseeded at hand-off).
+      let userYaw = previewAngle - AZ;
       let userYawT = 0;
       let userPitch = 0;
       let userPitchT = 0;
@@ -1558,13 +1720,16 @@ export function HeroDroneScene({
         const now = performance.now();
         if (!TEST && !pressed && now - lastInteraction > 5000 &&
             Math.abs(target - pos) < dur() * 0.001 && Math.abs(vel) < dur() * 0.001 &&
-            !pressed && !catchUp && Math.abs(explodeP - desiredExplode()) < 0.002) {
+            !pressed && !catchUp && Math.abs(explodeP - desiredExplode()) < 0.002 &&
+            (swapT <= 0 || swapT >= SWAP_LEN)) {
           idlePaused = true;
           syncPlayback();
           return;
         }
         // High-refresh displays must not double the animation's GPU budget.
-        if (!TEST && now - lastRenderedAt < 1000 / 60 - 1) return;
+        // 12 ms, not 16: rAF jitter on a 60 Hz screen lands frames at ~15.5 ms,
+        // and skipping those reads as stutter. 120 Hz still renders every other frame.
+        if (!TEST && now - lastRenderedAt < 12) return;
         lastRenderedAt = now;
         resizeIfNeeded();
         const dt = testDt ?? Math.min(clock.getDelta(), 0.05);
@@ -1692,7 +1857,9 @@ export function HeroDroneScene({
           // wiring that used to be missing: `stops` was parsed and ignored, so
           // a caption tuned in the studio never showed on the site.
           let stopIdx = -1;
-          if (display >= 0 && b.stops?.length) {
+          if (display >= 0 && swapOn && beatIdx === SWAP_BEAT) {
+            stopIdx = Math.min(swapStage(swapT).stop, (b.stops?.length ?? 0) - 1);
+          } else if (display >= 0 && b.stops?.length) {
             const holdT = THREE.MathUtils.clamp((t - TRAVEL) / Math.max(HOLD, 1e-3), 0, 1);
             for (let i = 0; i < b.stops.length; i++) if (holdT >= b.stops[i].at) stopIdx = i;
           }
@@ -1711,12 +1878,27 @@ export function HeroDroneScene({
           explodeP = reduced ? desiredP : stepToward(explodeP, desiredP, dt * 2.5);
           if (Math.abs(explodeP - desiredP) < 0.002) catchUp = false;
         } else explodeP = desiredP;
+        const nowExploring = pos > stopPos(Math.min(1, STOPS.length - 1)) * 0.15;
+        if (nowExploring !== isExploring) {
+          isExploring = nowExploring;
+          onExploring?.(isExploring);
+        }
         const nowExploded = (manualP ?? desiredP) > 0.5;
         if (nowExploded !== isExploded) {
           isExploded = nowExploded;
           onExploded?.(isExploded);
         }
         applyExplode(explodeP);
+        // The swap plays in time once the reader is on its stop and the drone has
+        // seated; leaving mid-way plays it back quickly. Its end state is the
+        // seated drone, so a finished swap simply resets.
+        if (swapOn) {
+          const onSwap = Math.abs(pos - stopForBeat(SWAP_BEAT)) < dur() * 0.1 && explodeP < 0.02 && manualP === null;
+          if (swapHold !== null) swapT = swapHold;
+          else if (onSwap) swapT = reduced ? SWAP_LEN : Math.min(SWAP_LEN, swapT + dt);
+          else swapT = swapT >= SWAP_LEN || reduced ? 0 : Math.max(0, swapT - dt * 4);
+          applySwap(swapT);
+        }
         const ep = ease(clamp01(explodeP));
         // The camera frames the whole drone: the assembled size at first, easing
         // out to the exploded size as the parts fly apart.
@@ -1724,6 +1906,10 @@ export function HeroDroneScene({
         const centreNow = F0.centre.clone().lerp(F1.centre, ep);
         blob.position.set(centreNow.x, THREE.MathUtils.lerp(F0.floor, F1.floor, ep) - droneRadius * 0.04, centreNow.z);
         blob.scale.setScalar(droneRadius * (1.05 + 0.2 * ep));
+        if (swapBodyWorld) {
+          blob.position.x += Math.sin(AZ) * swapBodyWorld;
+          blob.position.z -= Math.cos(AZ) * swapBodyWorld;
+        }
         updateHeroMatrices(moving);
         scene.updateMatrixWorld();
 
@@ -1739,15 +1925,25 @@ export function HeroDroneScene({
         let amtTarget: number;
         let fade: number;
         let key: string;
+        // One dim level everywhere (beats, hover, select, swap): the rest of the drone
+        // steps back the same amount every time, so the lighting reads as constant.
         if (wantUnit) {
           nodes = [wantUnit.node];
           amtTarget = 1;
-          fade = hovered ? 0.55 : (cfg.explode?.selectFade ?? 0.7);
+          fade = FOCUS_FADE;
           key = wantUnit.id;
+        } else if (swapOn && beatIdx === SWAP_BEAT) {
+          const st = swapStage(swapT);
+          nodes = st.nodes;
+          amtTarget = st.nodes.length ? 1 : 0;
+          fade = FOCUS_FADE;
+          key = `swap:${st.stop}:${st.nodes.length}`;
         } else if (b.nodes.length) {
           nodes = b.nodes.map((n) => n.node);
-          amtTarget = k;
-          fade = b.fade ?? S.darkenRest;
+          // Held for the whole beat, not following its envelope: the drone does not
+          // brighten and dim again between every part.
+          amtTarget = k > 0.02 ? 1 : 0;
+          fade = FOCUS_FADE;
           key = `beat:${b.id}`;
         } else {
           nodes = [];
@@ -1799,11 +1995,18 @@ export function HeroDroneScene({
         const heightPart = cfg.camera?.heightOnPart ?? 0.62;
         const camStateOf = (bi: number, size0: number) => {
           const bb = BEATS[bi];
-          if (!bb.nodes.length) return {c: overviewFocus, back: baseBack, h: heightOv};
+          if (!bb.nodes.length || (swapOn && bi === SWAP_BEAT)) return {c: overviewFocus, back: baseBack, h: heightOv};
           const sp = sphereOf(bb.frameNodes);
           return {
             c: sp.center.clone(),
-            back: THREE.MathUtils.clamp(sp.radius / ((bb.partSize ?? size0) * halfTan), droneRadius * 0.28, baseBack),
+            // Framed as if the part were at least a fifth of the drone, at most 45% of the
+            // height: small parts (RX, motor) never pull the camera in among the other
+            // parts, and the neighbours stay in view around them.
+            back: THREE.MathUtils.clamp(
+              Math.max(sp.radius, droneRadius * 0.2) / (Math.min(bb.partSize ?? size0, 0.45) * halfTan),
+              droneRadius * 0.6,
+              baseBack,
+            ),
             h: heightPart,
           };
         };
@@ -1812,7 +2015,6 @@ export function HeroDroneScene({
         // Lateral axis of the current view, to tell which way a move goes.
         const rx = Math.sin(yawBase);
         const rz = -Math.cos(yawBase);
-        let swingGoal = 0;
         if (selected !== selectedPrev) {
           selectedPrev = selected;
           selT = 0;
@@ -1824,7 +2026,6 @@ export function HeroDroneScene({
             back: THREE.MathUtils.clamp(sp.radius / (0.34 * halfTan), droneRadius * 0.3, baseBack),
             h: heightPart,
           };
-          if (selT === 0) selDir = Math.sign((want.c.x - camFocus.x) * rx + (want.c.z - camFocus.z) * rz) || 1;
         } else {
           const f = (pos - stopForBeat(0)) / dur();
           const i0 = THREE.MathUtils.clamp(Math.floor(f), 0, Math.max(0, BEATS.length - 2));
@@ -1835,15 +2036,9 @@ export function HeroDroneScene({
           else {
             const Bs = camStateOf(i0 + 1, Q.partSize);
             want = {c: A.c.clone().lerp(Bs.c, u), back: THREE.MathUtils.lerp(A.back, Bs.back, u), h: THREE.MathUtils.lerp(A.h, Bs.h, u)};
-            // The camera sweeps round the model between two groups instead of cutting across.
-            const dirB = Math.sign((Bs.c.x - A.c.x) * rx + (Bs.c.z - A.c.z) * rz) || 1;
-            swingGoal = dirB * 0.42 * Math.sin(Math.PI * raw);
           }
         }
-        if (selT < 1) {
-          selT = Math.min(1, selT + dt);
-          if (selected) swingGoal = selDir * 0.4 * Math.sin(Math.PI * selT);
-        }
+        if (selT < 1) selT = Math.min(1, selT + dt);
         // The copy panel owns the right of the stage: slide the subject left of it.
         const shift = want.back * halfTan * camera.aspect * (cfg.camera?.stageShift ?? 0.2) * Math.min(1, camera.aspect / 1.4);
         want.c.x += rx * shift;
@@ -1852,15 +2047,13 @@ export function HeroDroneScene({
           camFocus.copy(want.c);
           camBack = want.back;
           camH = want.h;
-          swing = 0;
         } else if (!dragging) {
-          // ~1 s ease in and out, interruptible: the velocity carries across retargets.
-          camFocus.x = smoothDamp(camFocus.x, want.c.x, camVel[0], 0.45, dt);
-          camFocus.y = smoothDamp(camFocus.y, want.c.y, camVel[1], 0.45, dt);
-          camFocus.z = smoothDamp(camFocus.z, want.c.z, camVel[2], 0.45, dt);
-          camBack = smoothDamp(camBack, want.back, camVel[3], 0.45, dt);
-          camH = smoothDamp(camH, want.h, camVel[4], 0.45, dt);
-          swing = smoothDamp(swing, swingGoal, camVel[5], 0.25, dt);
+          // A slow glide, one fixed angle, no sweep: the velocity carries across retargets.
+          camFocus.x = smoothDamp(camFocus.x, want.c.x, camVel[0], 0.7, dt);
+          camFocus.y = smoothDamp(camFocus.y, want.c.y, camVel[1], 0.7, dt);
+          camFocus.z = smoothDamp(camFocus.z, want.c.z, camVel[2], 0.7, dt);
+          camBack = smoothDamp(camBack, want.back, camVel[3], 0.7, dt);
+          camH = smoothDamp(camH, want.h, camVel[4], 0.7, dt);
         }
         camReady = true;
         // The offset eases back to the beat's framing when the timeline moves.
@@ -1874,7 +2067,7 @@ export function HeroDroneScene({
         userYaw += (userYawT - userYaw) * orbitK;
         userPitch += (userPitchT - userPitch) * orbitK;
         const pitch = THREE.MathUtils.clamp(Math.atan(camH) + userPitch, 0.12, 1.3);
-        const yaw = (cfg.camera?.azimuth ?? 0.7) + userYaw + swing;
+        const yaw = (cfg.camera?.azimuth ?? 0.7) + userYaw;
         camera.position.set(
           camFocus.x + Math.cos(pitch) * Math.cos(yaw) * camBack,
           camFocus.y + Math.sin(pitch) * camBack,
@@ -1898,6 +2091,11 @@ export function HeroDroneScene({
         }
        }
       };
+      // Hand-off: start the walkthrough camera exactly where the assembling one is.
+      userYaw = previewAngle - AZ;
+      camFocus.copy(previewFocus);
+      camBack = previewBack || camBack;
+      clock.getDelta();
       previewOn = false;
       let playing: boolean | null = null;
       syncPlayback = () => {
@@ -1959,6 +2157,19 @@ export function HeroDroneScene({
           THREE,
           beats: BEATS.map((b) => b.id),
           dur: dur(),
+          swap: {
+            hold: (t: number | null) => {
+              swapHold = t;
+            },
+            len: SWAP_LEN,
+            groups: () => ({
+              carrier: swapCarrier.map((u) => u.id),
+              plate: [...swapPlate, ...swapScrews].map((u) => u.id),
+              body: swapBody.map((u) => u.id),
+            }),
+            node: (id: string) => UNITS.get(id)?.node ?? null,
+            params: SWP,
+          },
         };
       }
       // Capture one outgoing frame when changing size, then release its GPU
@@ -2009,7 +2220,7 @@ export function HeroDroneScene({
       // not leave a dead canvas stacked over the live one.
       for (const c of Array.from(el.querySelectorAll('canvas'))) c.remove();
     };
-  }, [model, reduced, onModel, onBeat, onBeats, onLoad, onProgress, onReady, onBuilding, onSeeker, onExplode, onExploded]);
+  }, [model, reduced, onModel, onBeat, onBeats, onLoad, onProgress, onReady, onBuilding, onSeeker, onExplode, onExploded, onExploring]);
 
   return (
     // Decorative: every beat's copy is in the DOM in .hp-fallback, and

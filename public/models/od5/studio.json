@@ -334,7 +334,36 @@
         "group": "video"
       },
       "fade": 0.8,
-      "partSize": 0.78
+      "partSize": 0.78,
+      "caption": "The whole video system moves between frames in one piece.",
+      "stops": [
+        {
+          "at": 0,
+          "title": "Camera + VTX",
+          "note": "Top screws out"
+        },
+        {
+          "at": 0,
+          "title": "Camera + VTX",
+          "note": "Top plate off"
+        },
+        {
+          "at": 0,
+          "title": "Camera + VTX",
+          "note": "Slide the video system out",
+          "caption": "Air unit, antennas and camera come out together, nose first through the camera mount."
+        },
+        {
+          "at": 0,
+          "title": "Camera + VTX",
+          "note": "Swap in a fresh frame"
+        },
+        {
+          "at": 0,
+          "title": "Camera + VTX",
+          "note": "Slide it back in, bolt it down"
+        }
+      ]
     }
   ],
   "camera": {
