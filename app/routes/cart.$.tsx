@@ -48,6 +48,7 @@ import {usSalesRate} from '~/lib/us-sales';
 import {ShipToSelect} from '~/components/ShipToSelect';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
+import {cartWholesaleCode} from '~/lib/wholesale-codes';
 import type {RootLoader} from '~/root';
 import {
   CartAddError,
@@ -538,6 +539,7 @@ function PopulatedCart({
   const onPending = useCallback((delta: number) => setInFlight((n) => Math.max(0, n + delta)), []);
   const pending = inFlight > 0 || revalidator.state !== 'idle';
   const anyEarly = useAnyEarlySku(cart.lines.map((line) => line.sku));
+  const wholesale = cartWholesaleCode(cart.discountCodes);
 
   // One parcel per order: when lines ship at different times, the early
   // ones wait for the last. Lines waiting for different funding targets do
@@ -657,6 +659,18 @@ function PopulatedCart({
             </p>
           ) : (
             <>
+            {wholesale ? (
+            <Form method="post" action="/api/shopify/cart" className="cart-code">
+              <input type="hidden" name="intent" value="discount" />
+              <input type="hidden" name="code" value="" />
+              <p className="text-[13px]" role="status">
+                {wholesale.applicable
+                  ? t('wholesale_code_applied', 'Code {code} applied.', {code: wholesale.code})
+                  : t('wholesale_code_inactive', 'Code {code} does not apply to this cart.', {code: wholesale.code})}
+              </p>
+              <button type="submit" className="mt-1 text-[13px] underline underline-offset-4">{t('wholesale_code_remove', 'Remove code')}</button>
+            </Form>
+            ) : (
             <Form method="post" action="/api/shopify/cart" className="cart-code">
               <input type="hidden" name="intent" value="discount" />
               <label className="block text-[13px] text-[var(--color-text-muted)]">
@@ -665,6 +679,7 @@ function PopulatedCart({
               </label>
               <button type="submit" className="mt-2 text-[13px] underline underline-offset-4">{t('wholesale_code_apply', 'Apply code')}</button>
             </Form>
+            )}
             <Form
               id={CHECKOUT_FORM_ID}
               method="post"
