@@ -119,7 +119,7 @@ describe('readCustomerAccount', () => {
     assert.equal(result?.newsletter, null);
     assert.equal(result?.orders.length, 1);
     assert.deepEqual(result?.orders[0].lines, [
-      {sku: 'OPENFC-LITE-2020', name: 'OPENFC-LITE-2020', variant: '30×30', quantity: 1},
+      {sku: 'OPENFC-LITE-2020', name: 'OPENFC-LITE-2020', variant: '30×30', quantity: 1, image: null},
     ]);
     assert.equal(result?.orders[0].isPreorder, false);
     assert.equal(result?.orders[0].promise, null);

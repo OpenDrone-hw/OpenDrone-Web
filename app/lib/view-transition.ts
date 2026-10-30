@@ -1,9 +1,9 @@
 /**
  * Resilient wrapper around the View Transitions API.
  *
- * Two independent things start view transitions on this document:
+ * Things that start view transitions on this document:
  *   1. React Router (every <Link viewTransition>/<NavLink viewTransition> nav).
- *   2. The ThemeToggle's circular theme reveal (a manual startViewTransition).
+ *   2. Any manual startViewTransition call.
  *
  * The browser only runs one transition at a time: starting a second one while
  * the first is live ABORTS the first. The aborted transition's `.ready` /
@@ -83,7 +83,7 @@ export function markTransition(vt: ViewTransitionLike | null | undefined): void 
  * `safeStartViewTransition` - is recorded in our in-flight flag and has its
  * abort/interrupt rejections swallowed.
  *
- * This is what lets a manual theme transition know a navigation transition is
+ * This is what lets a manual transition know a navigation transition is
  * already running (so it skips instead of aborting it, which is what produced
  * the half-rendered board), and it stops React Router's own transition from
  * ever surfacing `InvalidStateError` as an unhandled rejection when it gets

@@ -8,13 +8,14 @@ import {shipCountries} from '~/lib/commerce/app-account-manage';
 import {chatFpvConnected} from '~/lib/commerce/app-chatfpv';
 import {HISTORY_NOTICES, type HistoryNotice} from '~/lib/accounts/rights';
 import {clearSessionCookie, hasSessionCookie, readSession} from '~/lib/accounts/sessions';
-import {readCustomerAccount, type AccountShopifyData} from '~/lib/accounts/customer-shopify';
+import {readCustomerAccount, type AccountOrder, type AccountShopifyData} from '~/lib/accounts/customer-shopify';
 import {formatOrderDate, formatOrderMoney, orderItems, orderStatus} from '~/lib/accounts/order-display';
 import {subscribeWithShopify, unsubscribeWithShopify} from '~/lib/growth/shopify-newsletter';
 import {customerAccountUrl} from '~/lib/shop-links';
 import {pilotMapEnabled, readOwnPin} from '~/lib/pilot-map-data';
 import {supportHeaders} from '~/lib/support/server';
 import {CAMPAIGN} from '~/lib/catalog-client';
+import {Bird, ChevronRight, LifeBuoy, LogOut, Mail, MapPin, Package, Settings, type LucideIcon} from 'lucide-react';
 
 /**
  * GET /account with ACCOUNTS_ENABLED "1": the signed-in dashboard.
@@ -29,10 +30,11 @@ import {CAMPAIGN} from '~/lib/catalog-client';
  * numeric SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID the sign-in OIDC client already
  * uses (app/lib/shop-links.ts). The newsletter toggle (POST here) reuses
  * subscribeWithShopify/unsubscribeWithShopify (growth/shopify-newsletter.ts).
- * ChatFPV history export and delete post to /account/chatfpv-history and
- * live in the collapsed "Settings and data" section - ChatFPV is not a
- * primary account feature, so it gets no top-level card. Sign out posts to
- * /account/logout. Signed out, it starts sign-in. Flag off: the legacy
+ * The page is a side nav plus one open panel, picked with ?tab= (plain
+ * links, no client state); a ChatFPV or newsletter notice opens its own
+ * panel. ChatFPV history export and delete post to /account/chatfpv-history
+ * and live in the "Settings and data" panel - ChatFPV is not a primary
+ * account feature. Sign out posts to /account/logout. Signed out, it starts sign-in. Flag off: the legacy
  * Shopify redirect.
  *
  * In local dev (import.meta.env.DEV, folded to `false` and dropped by the
@@ -48,6 +50,10 @@ export const headers = supportHeaders;
 export const meta: Route.MetaFunction = () => [{title: 'Your account | OpenDrone'}, {name: 'robots', content: 'noindex, nofollow'}];
 
 const NEWSLETTER_NOTICES = ['ok', 'unavailable'] as const;
+
+/** The dashboard's panels, one open at a time, picked with ?tab= so every panel is a plain link. */
+const ACCOUNT_TABS = ['orders', 'newsletter', 'discord', 'pilot-map', 'support', 'data'] as const;
+type AccountTab = (typeof ACCOUNT_TABS)[number];
 type NewsletterNotice = (typeof NEWSLETTER_NOTICES)[number];
 
 function devMockAccount(shopifyGid: string): AccountShopifyData | null {
@@ -62,12 +68,12 @@ function devMockAccount(shopifyGid: string): AccountShopifyData | null {
           createdAt: '2026-09-29T09:00:00Z',
           statusPageUrl: 'https://opendrone-test.myshopify.com/orders/1/authenticate?key=mock',
           lines: [
-            {sku: 'OPENFRAME-5', name: 'OpenFrame', variant: '5" Freestyle', quantity: 1},
-            {sku: 'OPENMOTOR-2306', name: 'OpenMotor', variant: '2306', quantity: 4},
-            {sku: 'OPENRX-MONO', name: 'OpenRX', variant: 'Mono', quantity: 1},
-            {sku: 'PROP-HQ-5043', name: 'HQProp 5x4.3x3 V2S propeller set', variant: '5 inch', quantity: 1},
-            {sku: 'OPENESC-3030', name: 'OpenESC', variant: '30×30', quantity: 1},
-            {sku: 'OPENFC-LITE-3030', name: 'OpenFC Lite', variant: '30×30', quantity: 1},
+            {sku: 'OPENFRAME-5', name: 'OpenFrame', variant: '5" Freestyle', quantity: 1, image: null},
+            {sku: 'OPENMOTOR-2306', name: 'OpenMotor', variant: '2306', quantity: 4, image: null},
+            {sku: 'OPENRX-MONO', name: 'OpenRX', variant: 'Mono', quantity: 1, image: '/boards/openrx-mono/front-w528.webp'},
+            {sku: 'PROP-HQ-5043', name: 'HQProp 5x4.3x3 V2S propeller set', variant: '5 inch', quantity: 1, image: null},
+            {sku: 'OPENESC-3030', name: 'OpenESC', variant: '30×30', quantity: 1, image: '/boards/openesc-30x30/front-w528.webp'},
+            {sku: 'OPENFC-LITE-3030', name: 'OpenFC Lite', variant: '30×30', quantity: 1, image: '/boards/openfc-lite/front-w528.webp'},
           ],
           total: {amount: '612.40', currencyCode: 'EUR'},
           fulfillmentStatus: 'UNFULFILLED',
@@ -84,8 +90,8 @@ function devMockAccount(shopifyGid: string): AccountShopifyData | null {
           createdAt: '2026-09-14T09:00:00Z',
           statusPageUrl: 'https://opendrone-test.myshopify.com/orders/2/authenticate?key=mock',
           lines: [
-            {sku: 'ACC-STRAP-15X200', name: 'Battery strap 15x200', variant: null, quantity: 2},
-            {sku: 'ACC-XT60', name: 'XT60 pigtail', variant: '10 cm', quantity: 1},
+            {sku: 'ACC-STRAP-15X200', name: 'Battery strap 15x200', variant: null, quantity: 2, image: null},
+            {sku: 'ACC-XT60', name: 'XT60 pigtail', variant: '10 cm', quantity: 1, image: null},
           ],
           total: {amount: '18.50', currencyCode: 'EUR'},
           fulfillmentStatus: 'FULFILLED',
@@ -99,7 +105,7 @@ function devMockAccount(shopifyGid: string): AccountShopifyData | null {
           name: '#1024',
           createdAt: '2026-09-02T09:00:00Z',
           statusPageUrl: null,
-          lines: [{sku: 'OPENFC-LITE-2020', name: 'OpenFC Lite', variant: '20×20', quantity: 1}],
+          lines: [{sku: 'OPENFC-LITE-2020', name: 'OpenFC Lite', variant: '20×20', quantity: 1, image: '/boards/openfc-lite-mini/front-w528.webp'}],
           total: {amount: '89.00', currencyCode: 'EUR'},
           fulfillmentStatus: 'UNFULFILLED',
           financialStatus: 'PAID',
@@ -154,8 +160,17 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const shopify = import.meta.env.DEV ? devMockAccount(session.shopifyGid) : await readCustomerAccount(env, session.shopifyGid, CAMPAIGN);
   // The "Pilot map" card: shown while PILOT_MAP_ENABLED is on, says whether this customer is listed (README "Owners map").
   const pilot = pilotMapEnabled(env) ? {listed: Boolean(await readOwnPin(env.SUPPORT_DB!, session.shopifyGid))} : null;
+  // The open panel: ?tab= when it names one, else the panel a notice belongs to, else Orders.
+  const rawTab = url.searchParams.get('tab') ?? '';
+  const tab: AccountTab = (ACCOUNT_TABS as readonly string[]).includes(rawTab)
+    ? (rawTab as AccountTab)
+    : notice
+      ? 'data'
+      : newsletterNotice
+        ? 'newsletter'
+        : 'orders';
   return data(
-    {ordersUrl, since: new Date(session.createdAt).toISOString().slice(0, 10), notice, newsletterNotice, shopify, pilot},
+    {ordersUrl, since: new Date(session.createdAt).toISOString().slice(0, 10), notice, newsletterNotice, shopify, pilot, tab},
     {headers},
   );
 }
@@ -200,6 +215,83 @@ const NEWSLETTER_NOTICE_TEXT: Record<NewsletterNotice, string> = {
   unavailable: 'Could not update your newsletter preference. Try again later.',
 };
 
+const NAV: {tab: AccountTab; label: string; Icon: LucideIcon}[] = [
+  {tab: 'orders', label: 'Orders', Icon: Package},
+  {tab: 'newsletter', label: 'Newsletter', Icon: Mail},
+  {tab: 'discord', label: 'Early Bird role', Icon: Bird},
+  {tab: 'pilot-map', label: 'Pilot map', Icon: MapPin},
+  {tab: 'support', label: 'Support', Icon: LifeBuoy},
+  {tab: 'data', label: 'Settings and data', Icon: Settings},
+];
+
+/** Thumbnails drawn per order before the rest collapse into a "+N" tile. */
+const ORDER_THUMBS = 4;
+
+function OrderCard({order}: {order: AccountOrder}) {
+  const status = orderStatus(order);
+  const {shown, more} = orderItems(order.lines);
+  const total = formatOrderMoney(order.total);
+  const thumbs = order.lines.slice(0, ORDER_THUMBS);
+  const rest = order.lines.length - thumbs.length;
+  return (
+    <li className="account-hub-order">
+      <div className="account-hub-order-top">
+        <ul className="account-hub-thumbs" aria-label="Items">
+          {thumbs.map((line) => (
+            <li key={`${line.sku ?? line.name}|${line.variant ?? ''}`} className="account-hub-thumb" title={line.variant ? `${line.name}, ${line.variant}` : line.name}>
+              {line.image ? (
+                <img src={line.image} alt={line.name} loading="lazy" width={88} height={88} />
+              ) : (
+                <span className="account-hub-thumb-empty" aria-label={line.name}>
+                  <Package aria-hidden="true" size={22} strokeWidth={1.5} />
+                </span>
+              )}
+              {line.quantity > 1 ? <span className="account-hub-thumb-qty">{line.quantity}×</span> : null}
+            </li>
+          ))}
+          {rest > 0 ? (
+            <li className="account-hub-thumb account-hub-thumb-more" aria-label={`${rest} more`}>
+              +{rest}
+            </li>
+          ) : null}
+        </ul>
+        {order.statusPageUrl ? (
+          <a href={order.statusPageUrl} className="account-hub-btn">
+            View order
+          </a>
+        ) : null}
+      </div>
+      <dl className="account-hub-meta">
+        <div>
+          <dt>Order number</dt>
+          <dd>{order.name}</dd>
+        </div>
+        <div>
+          <dt>Order date</dt>
+          <dd>{formatOrderDate(order.createdAt)}</dd>
+        </div>
+        <div>
+          <dt>Total</dt>
+          <dd>{total ?? '-'}</dd>
+        </div>
+        <div>
+          <dt>Status</dt>
+          <dd className="account-hub-status" data-tone={status.tone}>
+            {status.label}
+          </dd>
+        </div>
+      </dl>
+      {shown.length > 0 ? (
+        <p className="account-hub-items">
+          {shown.map((item) => `${item.quantity}× ${item.name}${item.variant ? ` ${item.variant}` : ''}`).join(' · ')}
+          {more > 0 ? ` · +${more} more` : null}
+        </p>
+      ) : null}
+      {status.note ? <p className="account-hub-items">{status.note}</p> : null}
+    </li>
+  );
+}
+
 export default function AccountRoute() {
   const loaded = useLoaderData<typeof loader>();
   if ('appAccount' in loaded) {
@@ -210,231 +302,206 @@ export default function AccountRoute() {
     );
   }
   const {ordersUrl, since, notice, newsletterNotice, shopify, pilot} = loaded;
+  const nav = NAV.filter((item) => item.tab !== 'pilot-map' || pilot);
+  const tab = nav.some((item) => item.tab === loaded.tab) ? loaded.tab : 'orders';
+  const title = nav.find((item) => item.tab === tab)!.label;
 
   return (
-    <div className="page-shell sp-page">
-      <header className="page-header account-header">
-        <h1 className="page-title">Your account</h1>
-        <div className="account-identity">
-          <p className="page-description">
-            {shopify?.email ? <>{shopify.email} · </> : null}Signed in since {since}.
-          </p>
-          <form method="post" action="/account/logout" className="account-identity-signout">
-            <button type="submit" className="od-btn od-btn-secondary od-btn-sm">
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
-
-      <section className="account-orders-card" aria-labelledby="account-orders-title">
-        <h2 id="account-orders-title" className="account-dashboard-card-title">
-          Orders
-        </h2>
-        {shopify && shopify.orders.length > 0 ? (
-          <>
-            <ul className="account-orders-list">
-              {shopify.orders.map((order) => {
-                const status = orderStatus(order);
-                const {shown, more} = orderItems(order.lines);
-                const total = formatOrderMoney(order.total);
-                return (
-                  <li key={order.id} className="account-order">
-                    <div className="account-order-head">
-                      <p className="account-order-id">
-                        <span className="account-order-number">{order.name}</span>
-                        <span className="account-order-date">{formatOrderDate(order.createdAt)}</span>
-                      </p>
-                      {total ? <span className="account-order-total">{total}</span> : null}
-                    </div>
-                    <span className="account-order-chip" data-tone={status.tone}>
-                      {status.label}
-                    </span>
-                    {shown.length > 0 ? (
-                      <ul className="account-order-items">
-                        {shown.map((item) => (
-                          <li key={`${item.name}|${item.variant ?? ''}`}className="account-order-item">
-                            <span className="account-order-qty">{item.quantity}×</span>
-                            <span>
-                              {item.name}
-                              {item.variant ? <span className="account-order-variant">{item.variant}</span> : null}
-                            </span>
-                          </li>
-                        ))}
-                        {more > 0 ? <li className="account-order-more">+{more} more</li> : null}
-                      </ul>
-                    ) : (
-                      <p className="account-order-note">No items.</p>
-                    )}
-                    {status.note ? <p className="account-order-note">{status.note}</p> : null}
-                    {order.statusPageUrl ? (
-                      <a href={order.statusPageUrl} className="account-dashboard-card-link account-order-view">
-                        View order ›
-                      </a>
-                    ) : null}
-                  </li>
-                );
-              })}
+    <div className="page-shell sp-page account-hub">
+      <h1 className="page-title account-hub-title">My account</h1>
+      <div className="account-hub-layout">
+        <aside className="account-hub-side">
+          <div className="account-hub-welcome">
+            <p className="account-hub-welcome-title">Welcome back</p>
+            {shopify?.email ? <p className="account-hub-welcome-email">{shopify.email}</p> : null}
+            <p className="account-hub-welcome-since">Signed in since {since}</p>
+          </div>
+          <nav aria-label="Account">
+            <ul className="account-hub-nav">
+              {nav.map(({tab: id, label, Icon}) => (
+                <li key={id}>
+                  <Link
+                    to={id === 'orders' ? '/account' : `/account?tab=${id}`}
+                    className="account-hub-nav-link"
+                    aria-current={id === tab ? 'page' : undefined}
+                    // On a phone the nav is a scrolling chip row: keep the open panel's chip in view.
+                    ref={id === tab ? (el) => el?.scrollIntoView({block: 'nearest', inline: 'center'}) : undefined}
+                    preventScrollReset
+                  >
+                    <Icon aria-hidden="true" size={20} strokeWidth={1.5} />
+                    <span>{label}</span>
+                    <ChevronRight aria-hidden="true" size={16} className="account-hub-nav-chevron" />
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <form method="post" action="/account/logout">
+                  <button type="submit" className="account-hub-nav-link">
+                    <LogOut aria-hidden="true" size={20} strokeWidth={1.5} />
+                    <span>Sign out</span>
+                    <ChevronRight aria-hidden="true" size={16} className="account-hub-nav-chevron" />
+                  </button>
+                </form>
+              </li>
             </ul>
-            {ordersUrl ? (
-              <a href={ordersUrl} className="account-dashboard-card-link account-orders-all">
-                All orders and addresses ›
-              </a>
-            ) : null}
-          </>
-        ) : shopify ? (
-          <>
-            <p className="account-dashboard-card-lede">No orders yet.</p>
-            {ordersUrl ? (
-              <a href={ordersUrl} className="account-dashboard-card-link account-orders-all">
-                All orders and addresses ›
-              </a>
-            ) : null}
-          </>
-        ) : ordersUrl ? (
-          <>
-            <p className="account-dashboard-card-lede">We can&rsquo;t show your recent orders right now.</p>
-            <a href={ordersUrl} className="account-dashboard-cta">
-              Orders and addresses
-            </a>
-          </>
-        ) : (
-          <>
-            <p className="account-dashboard-card-lede">
-              We don&rsquo;t have a link for your orders and addresses right now. Check your order confirmation email, or reach support with your
-              order number.
-            </p>
-            <div className="account-dashboard-card-actions">
-              <Link to="/support?topic=order" className="account-dashboard-cta">
-                Open a support ticket
-              </Link>
-              <Link to="/support/find" className="account-dashboard-card-link">
-                Find an existing ticket
+          </nav>
+        </aside>
+
+        <section className="account-hub-panel" aria-labelledby="account-hub-panel-title">
+          <h2 id="account-hub-panel-title" className="account-hub-panel-title">
+            {title}
+          </h2>
+
+          {tab === 'orders' ? (
+            shopify && shopify.orders.length > 0 ? (
+              <>
+                <ul className="account-hub-orders">
+                  {shopify.orders.map((order) => (
+                    <OrderCard key={order.id} order={order} />
+                  ))}
+                </ul>
+                {ordersUrl ? (
+                  <a href={ordersUrl} className="account-dashboard-card-link account-hub-more">
+                    All orders and addresses ›
+                  </a>
+                ) : null}
+              </>
+            ) : shopify ? (
+              <>
+                <p className="account-dashboard-card-lede">No orders yet.</p>
+                {ordersUrl ? (
+                  <a href={ordersUrl} className="account-dashboard-card-link account-hub-more">
+                    All orders and addresses ›
+                  </a>
+                ) : null}
+              </>
+            ) : ordersUrl ? (
+              <>
+                <p className="account-dashboard-card-lede">We can&rsquo;t show your recent orders right now.</p>
+                <a href={ordersUrl} className="account-hub-btn">
+                  Orders and addresses
+                </a>
+              </>
+            ) : (
+              <>
+                <p className="account-dashboard-card-lede">
+                  We don&rsquo;t have a link for your orders and addresses right now. Check your order confirmation email, or reach support with your
+                  order number.
+                </p>
+                <div className="account-dashboard-card-actions">
+                  <Link to="/support?topic=order" className="account-hub-btn">
+                    Open a support ticket
+                  </Link>
+                  <Link to="/support/find" className="account-dashboard-card-link">
+                    Find an existing ticket
+                  </Link>
+                </div>
+              </>
+            )
+          ) : null}
+
+          {tab === 'newsletter' ? (
+            shopify ? (
+              <div className="account-hub-block">
+                <p className="account-dashboard-card-lede">
+                  {shopify.newsletter === 'SUBSCRIBED' ? 'Subscribed to Engineering Essentials.' : 'Not subscribed.'}
+                </p>
+                {newsletterNotice ? (
+                  <p className="account-chatfpv-notice" role="status">
+                    {NEWSLETTER_NOTICE_TEXT[newsletterNotice]}
+                  </p>
+                ) : null}
+                <form method="post">
+                  <input
+                    type="hidden"
+                    name="intent"
+                    value={shopify.newsletter === 'SUBSCRIBED' ? 'newsletter-unsubscribe' : 'newsletter-subscribe'}
+                  />
+                  <button type="submit" className="account-hub-btn">
+                    {shopify.newsletter === 'SUBSCRIBED' ? 'Unsubscribe' : 'Subscribe'}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <p className="account-dashboard-card-lede">Manage this from the newsletter signup in the footer.</p>
+            )
+          ) : null}
+
+          {tab === 'discord' ? (
+            <div className="account-hub-block">
+              <p className="account-dashboard-card-lede">A paid preorder unlocks the Early Bird role and #early-birds on the OpenDrone Discord.</p>
+              <Link to="/early-bird" className="account-hub-btn">
+                Claim on Discord
               </Link>
             </div>
-          </>
-        )}
-      </section>
+          ) : null}
 
-      <div className="account-dashboard-grid">
-        <section className="account-dashboard-card" aria-labelledby="account-newsletter-title">
-          <p className="account-dashboard-eyebrow-mono">Newsletter</p>
-          <h2 id="account-newsletter-title" className="account-dashboard-card-title">
-            Newsletter
-          </h2>
-          {shopify ? (
-            <>
+          {tab === 'pilot-map' && pilot ? (
+            <div className="account-hub-block">
               <p className="account-dashboard-card-lede">
-                {shopify.newsletter === 'SUBSCRIBED' ? 'Subscribed to Engineering Essentials.' : 'Not subscribed.'}
+                {pilot.listed
+                  ? 'You are on the pilot map. Other signed-in owners see your Discord username and an area of about 10 km. You can move or withdraw there.'
+                  : 'Find pilots near you. Optional: you choose whether to appear, and only signed-in owners can see the map.'}
               </p>
-              {newsletterNotice ? (
-                <p className="account-chatfpv-notice" role="status">
-                  {NEWSLETTER_NOTICE_TEXT[newsletterNotice]}
-                </p>
-              ) : null}
-              <form method="post" className="account-dashboard-card-actions">
-                <input
-                  type="hidden"
-                  name="intent"
-                  value={shopify.newsletter === 'SUBSCRIBED' ? 'newsletter-unsubscribe' : 'newsletter-subscribe'}
-                />
-                <button type="submit" className="account-dashboard-cta">
-                  {shopify.newsletter === 'SUBSCRIBED' ? 'Unsubscribe' : 'Subscribe'}
-                </button>
-              </form>
-            </>
-          ) : (
-            <p className="account-dashboard-card-lede">Manage this from the newsletter signup in the footer.</p>
-          )}
-        </section>
-
-        <section className="account-dashboard-card" aria-labelledby="account-discord-title">
-          <p className="account-dashboard-eyebrow-mono">Discord</p>
-          <h2 id="account-discord-title" className="account-dashboard-card-title">
-            Early Bird role
-          </h2>
-          <p className="account-dashboard-card-lede">A paid preorder unlocks the Early Bird role and #early-birds on the OpenDrone Discord.</p>
-          <div className="account-dashboard-card-actions">
-            <Link to="/early-bird" className="account-dashboard-cta">
-              Claim on Discord
-            </Link>
-          </div>
-        </section>
-
-        {pilot ? (
-          <section className="account-dashboard-card" aria-labelledby="account-pilot-title">
-            <p className="account-dashboard-eyebrow-mono">Community</p>
-            <h2 id="account-pilot-title" className="account-dashboard-card-title">
-              Pilot map
-            </h2>
-            <p className="account-dashboard-card-lede">
-              {pilot.listed
-                ? 'You are on the pilot map. Other signed-in owners see your Discord username and an area of about 10 km. You can move or withdraw there.'
-                : 'Find pilots near you. Optional: you choose whether to appear, and only signed-in owners can see the map.'}
-            </p>
-            <div className="account-dashboard-card-actions">
-              <Link to="/owners#pilots" className="account-dashboard-cta">
+              <Link to="/owners#pilots" className="account-hub-btn">
                 {pilot.listed ? 'Manage my entry' : 'Open the pilot map'}
               </Link>
             </div>
-          </section>
-        ) : null}
+          ) : null}
 
-        <section className="account-dashboard-card" aria-labelledby="account-support-title">
-          <p className="account-dashboard-eyebrow-mono">Support</p>
-          <h2 id="account-support-title" className="account-dashboard-card-title">
-            Support tickets
-          </h2>
-          <p className="account-dashboard-card-lede">Open a new ticket or look up one you already opened, no account needed to file it.</p>
-          <div className="account-dashboard-card-actions">
-            <Link to="/support" className="account-dashboard-cta">
-              Open a ticket
-            </Link>
-            <Link to="/support/find" className="account-dashboard-card-link">
-              Find my ticket
-            </Link>
-          </div>
+          {tab === 'support' ? (
+            <div className="account-hub-block">
+              <p className="account-dashboard-card-lede">Open a new ticket or look up one you already opened, no account needed to file it.</p>
+              <div className="account-dashboard-card-actions">
+                <Link to="/support" className="account-hub-btn">
+                  Open a ticket
+                </Link>
+                <Link to="/support/find" className="account-dashboard-card-link">
+                  Find my ticket
+                </Link>
+              </div>
+            </div>
+          ) : null}
+
+          {tab === 'data' ? (
+            <div className="account-hub-block">
+              <div className="account-chatfpv" aria-labelledby="account-chatfpv-title">
+                <h3 id="account-chatfpv-title" className="account-chatfpv-title">
+                  ChatFPV history
+                </h3>
+                <p>Your chatfpv.com conversations made while signed in (same sign-in as here). Export them as JSON, or delete them for good.</p>
+                {notice ? (
+                  <p className="account-chatfpv-notice" role="status">
+                    {NOTICE_TEXT[notice]}
+                  </p>
+                ) : null}
+                <form method="post" action="/account/chatfpv-history" className="account-chatfpv-export">
+                  <input type="hidden" name="intent" value="export" />
+                  <button type="submit" className="od-btn od-btn-secondary">
+                    Export ChatFPV history
+                  </button>
+                </form>
+                <form method="post" action="/account/chatfpv-history" className="account-chatfpv-delete">
+                  <input type="hidden" name="intent" value="delete" />
+                  <label>
+                    <input type="checkbox" name="confirm" value="yes" required /> Delete every ChatFPV conversation of this account
+                  </label>
+                  <button type="submit" className="od-btn od-btn-danger">
+                    Delete ChatFPV history
+                  </button>
+                </form>
+              </div>
+              <div className="account-settings-delete">
+                <h3 className="account-chatfpv-title">Delete your account</h3>
+                <p>To close your OpenDrone account, open a support ticket and we will process it.</p>
+                <Link to="/support?topic=other" className="account-dashboard-card-link">
+                  Contact support ›
+                </Link>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
-
-      <details className="details-toggle account-settings">
-        <summary className="details-toggle-summary">Settings and data</summary>
-        <div className="details-toggle-body">
-          <div className="account-chatfpv" aria-labelledby="account-chatfpv-title">
-            <h3 id="account-chatfpv-title" className="account-chatfpv-title">
-              ChatFPV history
-            </h3>
-            <p>Your chatfpv.com conversations made while signed in (same sign-in as here). Export them as JSON, or delete them for good.</p>
-            {notice ? (
-              <p className="account-chatfpv-notice" role="status">
-                {NOTICE_TEXT[notice]}
-              </p>
-            ) : null}
-            <form method="post" action="/account/chatfpv-history" className="account-chatfpv-export">
-              <input type="hidden" name="intent" value="export" />
-              <button type="submit" className="od-btn od-btn-secondary">
-                Export ChatFPV history
-              </button>
-            </form>
-            <form method="post" action="/account/chatfpv-history" className="account-chatfpv-delete">
-              <input type="hidden" name="intent" value="delete" />
-              <label>
-                <input type="checkbox" name="confirm" value="yes" required /> Delete every ChatFPV conversation of this account
-              </label>
-              <button type="submit" className="od-btn od-btn-danger">
-                Delete ChatFPV history
-              </button>
-            </form>
-          </div>
-          <div className="account-settings-delete">
-            <h3 className="account-chatfpv-title">Delete your account</h3>
-            <p>To close your OpenDrone account, open a support ticket and we will process it.</p>
-            <Link to="/support?topic=other" className="account-dashboard-card-link">
-              Contact support ›
-            </Link>
-          </div>
-        </div>
-      </details>
     </div>
   );
 }
