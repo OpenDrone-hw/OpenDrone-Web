@@ -301,6 +301,20 @@ function DesktopHome({
   const handleExploring = useCallback((on: boolean) => {
     document.documentElement.classList.toggle('hero-exploring', on);
   }, []);
+  // The explainer card stands on the kit card (site-ui.css .hp-copy): publish the
+  // kit card's height so the stack holds as its rows load or change.
+  const buyRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = buyRef.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const ro = new ResizeObserver(() => root.style.setProperty('--hero-buy-h', `${el.offsetHeight}px`));
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty('--hero-buy-h');
+    };
+  }, []);
 
   const handleWalkthroughProgress = useCallback(
     (f: number) => {
@@ -634,6 +648,7 @@ function DesktopHome({
           </a>
 
           <div
+            ref={buyRef}
             className={`hero-buy hero-buy--guide${splashSettled ? ' is-visible' : ''}`}
             inert={!splashSettled}
             style={{opacity: splashSettled ? 1 : 0}}

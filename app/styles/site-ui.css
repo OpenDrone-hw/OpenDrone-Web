@@ -1354,15 +1354,16 @@ a.hero-build-add { text-decoration: none; }
 .hero-build-sizes { display: flex; gap: 6px; margin-bottom: 12px; }
 .hero-build-sizes button { flex: 1; padding: 10px; border-radius: 999px; border: 1px solid var(--color-border); background: transparent; color: var(--color-text); font-size: 12px; cursor: pointer; }
 .hero-build-sizes button[aria-pressed="true"] { background: var(--color-gold-fill); color: var(--color-on-accent); border-color: var(--color-gold-fill); }
-/* The right side is the buying and explaining side: the beat's explainer is a
-   card in the top-right corner, the build kit card holds the bottom right. */
+/* The right side is the buying and explaining side, one column: the beat's
+   explainer card stands directly on the build kit card, same width, so the two
+   read as one stack. --hero-buy-h is the kit card's live height (_index.tsx). */
 .homepage:has(.hero-build-guide) .hp-copy {
-  right: 24px; left: auto; top: calc(var(--header-height) + 1.5rem); bottom: auto; width: 370px; max-width: calc(50vw - 48px);
+  right: 24px; left: auto; top: auto; bottom: calc(36px + var(--hero-buy-h, 320px) + 12px);
+  width: 370px; max-width: calc(50vw - 48px); box-sizing: border-box;
   padding: 16px 18px 18px; border: 1px solid var(--pod-border); border-radius: 16px;
   background: var(--pod-bg-strong); box-shadow: var(--pod-shadow); pointer-events: auto;
-  transition: top 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease;
+  transition: bottom 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease;
 }
-html.hero-immersive .homepage:has(.hero-build-guide) .hp-copy { top: 24px; }
 .homepage:has(.hero-build-guide) .hp-title { font-size: 17px; font-weight: 600; line-height: 1.3; margin: 0 0 2px; white-space: normal; }
 .homepage:has(.hero-build-guide) .hp-note { font-size: 12px; line-height: 1.45; }
 .homepage:has(.hero-build-guide) .hp-explain { font-size: 13px; line-height: 1.5; margin-top: 10px; color: var(--color-text); }
