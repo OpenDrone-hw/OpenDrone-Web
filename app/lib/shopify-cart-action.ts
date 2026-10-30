@@ -315,6 +315,52 @@ export function usSellable(variant: CatalogVariant): boolean {
   return variant.availability === 'preorder' && Boolean(variant.campaign);
 }
 
+/** How many times an add is retried when Shopify dropped lines from it. */
+const ADD_RETRIES = 2;
+
+/** The part of `wanted` the cart does not hold: `before` is what the cart held
+ *  of each variant ahead of the add. */
+function shortfall(cart: ShopifyCart, wanted: CartLineInput[], before: Map<string, number>): CartLineInput[] {
+  const have = new Map<string, number>();
+  for (const line of cart.lines) have.set(line.merchandiseId, (have.get(line.merchandiseId) ?? 0) + line.quantity);
+  const target = new Map(before);
+  for (const line of wanted) target.set(line.merchandiseId, (target.get(line.merchandiseId) ?? 0) + line.quantity);
+  const missing: CartLineInput[] = [];
+  for (const [merchandiseId, quantity] of target) {
+    const short = quantity - (have.get(merchandiseId) ?? 0);
+    if (short <= 0) continue;
+    const request = wanted.find((line) => line.merchandiseId === merchandiseId);
+    if (request) missing.push({...request, quantity: Math.min(short, request.quantity)});
+  }
+  return missing;
+}
+
+/**
+ * `cartLinesAdd` that proves the lines landed. Shopify does not serialise
+ * mutations on one cart: parallel adds overwrite each other and a lost line
+ * still answers success. Re-read the cart and add what is missing; a line
+ * that still does not land fails the request, never a silent 200.
+ */
+async function addLinesVerified(
+  cartId: string,
+  lines: CartLineInput[],
+  before: Map<string, number>,
+  dependencies: ShopifyCartDependencies,
+): Promise<ShopifyCart> {
+  if (!dependencies.addCartLines || !dependencies.getCart) throw new Error('shopify: cart session dependencies missing');
+  let cart = await dependencies.addCartLines(cartId, lines);
+  for (let attempt = 0; ; attempt++) {
+    if (!shortfall(cart, lines, before).length) return cart;
+    const fresh = await dependencies.getCart(cartId);
+    if (!fresh) throw new Error('shopify: cart unavailable after add');
+    cart = fresh;
+    const missing = shortfall(cart, lines, before);
+    if (!missing.length) return cart;
+    if (attempt >= ADD_RETRIES) throw new Error('shopify: cartLinesAdd lost lines');
+    cart = await dependencies.addCartLines(cartId, missing);
+  }
+}
+
 /** The catalog variant behind a cart line, if the shop still sells it. */
 export function sellableVariant(
   catalog: Catalog,
@@ -840,7 +886,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
           }
         }
         checkPaidBatches(catalog, lines, quantities);
-        const updated = await dependencies.addCartLines(existingId, lines);
+        const updated = await addLinesVerified(existingId, lines, quantities, dependencies);
         await recordAttribution(form, updated, dependencies);
         return wantsSummary
           ? Response.json(await withShippingFrom(cartSummary(updated, catalog), updated, destination, env), {headers: NO_STORE})
