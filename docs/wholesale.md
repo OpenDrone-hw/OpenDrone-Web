@@ -60,6 +60,8 @@ The opendrone.be session is not passed to checkout: the cart is created without 
 2. At Shopify checkout the retailer signs in with the approved email (Shopify mails a code). Shopify's help says exempt customers "need to check out using the same email address as the one listed on their customer account"; the customer-limited codes apply to a signed-in customer.
 3. Pay at checkout.
 
+Checkout re-checks the customer limit against the signed-in address. Shop Pay can sign the buyer in automatically with another Shop account (a personal address): checkout then drops the code without a message and charges full price (seen 30 Oct 2026: an anonymous cart at EUR 21.75 with a code became EUR 26.10 under a Shop Pay login of another address). A retailer who sees full price at checkout signs out of Shop Pay there and signs in with the approved address. The cart shows "Code WS25-NAME applied." once the code is in.
+
 ## VAT per case
 
 | Retailer | Tax exemption | What the buyer pays |
