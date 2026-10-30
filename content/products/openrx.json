@@ -7,20 +7,20 @@
     "line1": "",
     "line2Italic": "",
     "line3": "",
-    "lead": "It picks up the commands from your radio and passes them to the flight controller. All four versions work with a radio that has 2.4 GHz ExpressLRS. Not sure which to pick? Take Lite for a 3-inch build or Lite-UFL for a 5-inch. Take Mono or Gemini only if the radio also has a sub-GHz ExpressLRS module."
+    "lead": "It picks up the commands from your radio and passes them to the board that acts on them. On a drone that board is the flight controller. The same ExpressLRS link is used on cars, boats and other models. All four versions work with a radio that has 2.4 GHz ExpressLRS. Not sure which to pick? Take Lite for a 3-inch build or Lite-UFL for a 5-inch. Take Mono or Gemini only if the radio also has a sub-GHz ExpressLRS module."
   },
   "whatIsThis": {
-    "intro": "A receiver picks up the commands from your radio and passes them to the flight controller. OpenRX runs ExpressLRS, which uses LoRa, so it keeps a solid link even on the busy 2.4 GHz band. It connects to the flight controller with CRSF over one UART, runs on 5 V, and updates over Betaflight passthrough or UART. There are four versions, from the Lite with a ceramic antenna to the Gemini with two radios.",
+    "intro": "A receiver picks up the commands from your radio. OpenRX runs ExpressLRS, which uses LoRa, so it keeps a solid link even on the busy 2.4 GHz band. On a drone it connects to the flight controller with CRSF over one UART. It runs on 5 V and updates over Betaflight passthrough or UART. The same link is used on other radio-controlled models. There are four versions, from the Lite with a ceramic antenna to the Gemini with two radios.",
     "needs": [
       "A radio with an ExpressLRS transmitter, internal or module, on 2.4 GHz",
       "DJI remotes and motion controllers do not use ExpressLRS and cannot control this receiver. You need a radio with ExpressLRS built in, or a radio with a module bay and an ExpressLRS module.",
       "Binding pairs the receiver with your radio so it only listens to you. With ExpressLRS you either set the same binding phrase (a password) on the radio and the receiver, or put the receiver in bind mode and press Bind on the radio. The quick-start card in the box shows the steps.",
-      "A flight controller with a free UART and a 5 V pad",
-      "The rest of the drone"
+      "A controller with a free UART and a 5 V pad. On a drone that is the flight controller",
+      "On a drone, the rest of the build. On another model, the controller that reads CRSF"
     ],
-    "fit": "It is the link between your radio and the drone.",
+    "fit": "It is the radio link. On a drone it sits between your radio and the flight controller.",
     "chain": "rx",
-    "hero": "Picks up your radio. ExpressLRS, one UART to the FC."
+    "hero": "Picks up your radio. ExpressLRS, one UART to the board that acts on the commands."
   },
   "firmware": {
     "project": "ExpressLRS",
