@@ -1820,7 +1820,7 @@ function ProductPage() {
       <StepBar
         bar={stepBarState}
         prices={stepPrices}
-        fundedLabel={copyText('preorder.funded') ?? 'Target reached'}
+        fundedLabel={copyText('preorder.funded') ?? 'Pre-order target reached'}
         batch={
           currentBatch(campaign)
             ? batchPhrase(currentBatch(campaign)!, preorderWords)

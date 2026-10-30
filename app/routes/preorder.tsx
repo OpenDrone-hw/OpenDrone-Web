@@ -462,7 +462,7 @@ function Card({row, eta, eager = false, lead = false}: {row: Row; eta: string; e
   const cta = copyText('preorder.card_cta') ?? 'Pre-order';
   const currency = row.price.currencyCode;
   const bar = stepBarView(row.campaign, row.stepEnds);
-  const funded = `${copyText('preorder.funded') ?? 'Target reached'}, ${shipWord('eta', shortCampaignDate(row.campaign.latestShip) ?? shipMonth(row.shipPromise) ?? eta)}`;
+  const funded = `${copyText('preorder.funded') ?? 'Pre-order target reached'}, ${shipWord('eta', shortCampaignDate(row.campaign.latestShip) ?? shipMonth(row.shipPromise) ?? eta)}`;
   return (
     <li className="po-card">
       <Link
