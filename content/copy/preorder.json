@@ -50,7 +50,7 @@
   "lead_openfc": "OpenFC Lite",
   "lead_openframe": "OpenFrame",
   "intro": "What ships when, and what you pay.",
-  "channel_eu_text": "Orders to addresses outside the EU ship with the preorder batch, not from the stock in Belgium.",
+  "channel_eu_text": "FC and ESC stock in Belgium ships to EU and international addresses, not the US. US orders ship with the preorder batch.",
   "channel_us_cta": "Shops: request a wholesale quote",
   "channels_aria": "Retailers and launch news",
   "channel_interest": "Elsewhere? Get launch news",
@@ -85,7 +85,7 @@
   "not_in_international": "Not available in your country",
   "terms_summary_international": "Pay in full",
   "shipping_summary_international": "International orders",
-  "channel_international_text": "Orders to your country ship with the preorder batch if its target is reached. Shipping and any sales tax are confirmed at checkout. You may pay import duties, taxes and customs fees on delivery.",
+  "channel_international_text": "FC and ESC stock in Belgium ships to your country, not the US. Everything else ships with the preorder batch if its target is reached. Shipping and any sales tax are confirmed at checkout. You may pay import duties, taxes and customs fees on delivery.",
   "early_note": "Early bird preorder prices.",
   "early_price": "Early bird price.",
   "early_retail_short": "Retail {price}"
