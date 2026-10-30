@@ -1,7 +1,8 @@
 import {Fragment} from 'react';
 import type {ElementType, ReactNode} from 'react';
-import {Link} from 'react-router';
+import {Link, useRouteLoaderData} from 'react-router';
 import {copy, editAttrs} from '~/lib/copy';
+import type {CopyValue} from '~/lib/copy';
 import {isPlain, parseRich} from '~/lib/rich-text';
 
 /**
@@ -64,7 +65,12 @@ export function Txt({
   className?: string;
   fallback?: ReactNode;
 } & Record<string, unknown>) {
-  const value = copy(id);
+  // The site's own text (root loader `site.texts`, request scoped, empty for the bundled site) wins over the bundled
+  // string; with the Studio preview on (`previewOrigin`) every text carries data-edit.
+  const root = useRouteLoaderData('root') as {site?: {texts?: Record<string, string>}; previewOrigin?: string | null} | undefined;
+  const override = root?.site?.texts?.[id];
+  const value: CopyValue | undefined = typeof override === 'string' ? override : copy(id);
+  const edit = (key: string): Record<string, string> => (root?.previewOrigin ? {'data-edit': key} : editAttrs(key));
 
   // A bare `ElementType` makes TS resolve `children` to `never`, because it
   // intersects the props of every possible element. Narrowing to the two props
@@ -106,7 +112,7 @@ export function Txt({
             <Tag
               key={i}
               className={className}
-              {...editAttrs(`${id}.${i}`)}
+              {...edit(`${id}.${i}`)}
               {...rest}
             >
               <Rich value={text} />
@@ -118,7 +124,7 @@ export function Txt({
   }
 
   return (
-    <Tag className={className} {...editAttrs(id)} {...rest}>
+    <Tag className={className} {...edit(id)} {...rest}>
       <Rich value={value} />
     </Tag>
   );

@@ -1,13 +1,26 @@
 import type {Route} from './+types/$';
-import {redirect} from 'react-router';
+import {redirect, useLoaderData} from 'react-router';
 import {langCookieHeader, localeFromPathname, stripLocale} from '~/lib/i18n';
 import {shortLinkTarget} from '~/lib/short-links';
 import {legacyRedirect} from '~/lib/legacy-urls';
+import {buildSeoMeta} from '~/lib/seo';
+import {renderPageMarkdown} from '~/lib/site/markdown';
+import {resolvePage, resolveSite} from '~/lib/site/resolve';
 
-// No meta here: the thrown 404 bubbles to root's ErrorBoundary, and route
-// meta below the rendering boundary is discarded - the 404 title comes
-// from root.tsx's error-aware meta instead.
-export async function loader({request}: Route.LoaderArgs) {
+// A thrown 404 bubbles to root's ErrorBoundary, and route meta below the
+// rendering boundary is discarded - the 404 title comes from root.tsx's
+// error-aware meta. Meta only matters for a site page from the app.
+export const meta: Route.MetaFunction = ({data, matches}) => {
+  const site = (matches.find((m) => m?.id === 'root')?.data as {site?: Parameters<typeof buildSeoMeta>[0]['site']} | undefined)?.site;
+  return buildSeoMeta({
+    site,
+    title: data?.page?.seo_title || data?.page?.title,
+    description: data?.page?.description,
+    url: data?.url,
+  });
+};
+
+export async function loader({request, context}: Route.LoaderArgs) {
   const url = new URL(request.url);
   const short = shortLinkTarget(url.pathname, url.search);
   if (short) throw redirect(short, 301);
@@ -18,6 +31,12 @@ export async function loader({request}: Route.LoaderArgs) {
   // (their /nl/... and /fr/... routes are registered in app/routes.ts and
   // never reach this catch-all). A bare /nl or /fr opens the legal overview
   // in that language, and a locale-prefixed shop path opens the English page.
+  // SITE_SOURCE=app: a path the site's page index lists as a slug renders that page (registered last, after every route of
+  // the shop). Any other path keeps the 404 below. Off: resolveSite answers the bundled site, which has no pages.
+  const site = await resolveSite(request, context.env);
+  const slug = decodeURIComponent(url.pathname).replace(/^\/+|\/+$/g, '');
+  const page = site ? await resolvePage(site, url.hostname, slug, context.env) : null;
+  if (page) return {page: {title: page.title, seo_title: page.seo_title ?? null, description: page.description ?? null, html: renderPageMarkdown(page.body)}, url: request.url};
   const locale = localeFromPathname(url.pathname);
   if (locale) {
     const rest = stripLocale(url.pathname);
@@ -34,5 +53,14 @@ export async function loader({request}: Route.LoaderArgs) {
 }
 
 export default function CatchAllPage() {
-  return null;
+  const data = useLoaderData<typeof loader>();
+  if (!data?.page) return null;
+  return (
+    <article className="page-shell">
+      <div className="rn-post-page">
+        <h1 className="rn-post-title">{data.page.title}</h1>
+        <div className="rn-post-body" dangerouslySetInnerHTML={{__html: data.page.html}} />
+      </div>
+    </article>
+  );
 }

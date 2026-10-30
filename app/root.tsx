@@ -40,10 +40,13 @@ import {getCompanyIdentity} from '~/lib/company';
 import {localeFromPathname, seoLocaleTag} from '~/lib/i18n';
 import {buildOrgJsonLd, buildSeoMeta} from '~/lib/seo';
 import {THEME_COLORS, THEME_INIT_SCRIPT} from '~/lib/theme';
-import {themeOverrideCss} from '~/lib/theme-overrides';
+import {buildThemeCss, themeOverrideCss} from '~/lib/theme-overrides';
+import {navLinks, plausibleScript, themeOverrides} from '~/lib/site/config';
+import {resolveSite} from '~/lib/site/resolve';
+import {installPreviewBridge, previewOrigin} from '~/lib/site/preview-bridge';
 import {installViewTransitionGuard} from '~/lib/view-transition';
 import {captureAttribution} from '~/lib/growth/attribution';
-import {PLAUSIBLE_SCRIPT_SRC, PLAUSIBLE_SNIPPET, initPlausible, trackEvent} from '~/lib/growth/plausible';
+import {PLAUSIBLE_SNIPPET, initPlausible, trackEvent} from '~/lib/growth/plausible';
 
 export type RootLoader = typeof loader;
 
@@ -54,10 +57,12 @@ export type RootLoader = typeof loader;
  * page used to ship an empty <title>). Healthy routes with their own meta
  * export override this wholesale (meta v2 semantics).
  */
-export const meta: Route.MetaFunction = ({error}) => {
-  if (!error) return buildSeoMeta({});
+export const meta: Route.MetaFunction = ({error, data}) => {
+  const site = data?.site;
+  if (!error) return buildSeoMeta({site});
   const status = isRouteErrorResponse(error) ? error.status : 500;
   return buildSeoMeta({
+    site,
     title:
       status === 404
         ? (copyText('not-found.meta_title') ?? 'Signal lost')
@@ -141,6 +146,10 @@ export function links() {
 
 export async function loader(args: Route.LoaderArgs) {
   const {env} = args.context;
+  // SITE_SOURCE=app: the site is the one the app publishes on this hostname; a host the app does not know is a 404, never
+  // another site. Off (the default): the bundled opendrone.be, so nothing below changes.
+  const site = await resolveSite(args.request, env);
+  if (!site) throw new Response('Not found', {status: 404});
   // The catalog and the live roadmap flags are independent: fetch them
   // together instead of one after the other (up to 400 ms saved on a cold
   // status cache).
@@ -203,7 +212,30 @@ export async function loader(args: Route.LoaderArgs) {
     ...(usRate != null ? {usShippingRate: usRate} : {}),
     // Plausible counts the production site only: staging, previews and
     // local runs would otherwise add review crawls to the shop's numbers.
-    analytics: /^(www\.)?opendrone\.be$/i.test(new URL(args.request.url).hostname),
+    analytics: site.fromApp
+      ? Boolean(site.plausibleDomain)
+      : /^(www\.)?opendrone\.be$/i.test(new URL(args.request.url).hostname),
+    // What the chrome reads of the site (app/lib/site): name and SEO words, colour overrides, the Plausible domain and
+    // the menus (null: the bundled menu).
+    site: {
+      fromApp: site.fromApp,
+      name: site.name,
+      origin: site.origin,
+      locale: site.locale,
+      titleTemplate: site.titleTemplate,
+      description: site.description,
+      indexable: site.indexable,
+      colours: site.colours,
+      radius: site.radius,
+      favicon: site.favicon,
+      socialImage: site.socialImage,
+      plausibleDomain: site.plausibleDomain,
+      headerNav: navLinks(site.navigation.header, 'header'),
+      footerNav: navLinks(site.navigation.footer, 'footer'),
+      texts: site.texts,
+    },
+    // The Studio's preview bridge (app/lib/site/preview-bridge.ts): only with SITE_PREVIEW=1 and a STUDIO_ORIGIN.
+    previewOrigin: previewOrigin(env),
   };
 }
 
@@ -266,7 +298,8 @@ export function Layout({children}: {children?: React.ReactNode}) {
   const data = useRouteLoaderData<RootLoader>('root');
   const htmlLang = (data?.locale || 'en_US').split('_')[0] || 'en';
   const orgJsonLd = data?.company ? buildOrgJsonLd(data.company) : null;
-  const themeCss = themeOverrideCss();
+  const themeCss = themeOverrideCss() + buildThemeCss(themeOverrides(data?.site?.colours ?? {}, data?.site?.radius ?? null));
+  const plausible = plausibleScript({plausibleDomain: data?.site?.plausibleDomain ?? null});
 
   // Make every view transition resilient: route React Router's navigation
   // transitions (and the manual theme-toggle reveal) through one guard that
@@ -370,6 +403,8 @@ export function Layout({children}: {children?: React.ReactNode}) {
         ) : null}
         <Meta />
         <Links />
+        {/* The site's own favicon from the Studio, after the bundled one so browsers take it. */}
+        {data?.site?.favicon ? <link rel="icon" href={data.site.favicon} /> : null}
         {/* Plausible - cookieless analytics, no consent required. The
             inline stub (PLAUSIBLE_SNIPPET) queues events until the site
             script loads; initPlausible() runs after hydration, so the first
@@ -389,7 +424,8 @@ export function Layout({children}: {children?: React.ReactNode}) {
             />
             <script
               async
-              src={PLAUSIBLE_SCRIPT_SRC}
+              src={plausible.src}
+              data-domain={plausible.domain ?? undefined}
               nonce={nonce}
               suppressHydrationWarning
             />
@@ -426,6 +462,8 @@ export function Layout({children}: {children?: React.ReactNode}) {
 export default function App() {
   const data = useRouteLoaderData<RootLoader>('root');
   const {pathname} = useLocation();
+  const bridgeOrigin = data?.previewOrigin ?? null;
+  useEffect(() => (bridgeOrigin ? installPreviewBridge(window, bridgeOrigin) : undefined), [bridgeOrigin]);
 
   // The studio owns the whole viewport and must not be wrapped in the site's
   // header, footer or analytics: it is a tool, not a page. `import.meta.env.DEV`
