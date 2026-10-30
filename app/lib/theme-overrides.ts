@@ -76,13 +76,10 @@ export function buildThemeCss(overrides: Record<string, unknown>): string {
     )
     .map(([k, v]) => `${k}:${(v as string).trim()}`);
   if (!decls.length) return '';
-  // Both selectors, because `html.light` is a class and would otherwise
-  // out-specify a bare `:root` for the 18 tokens it redefines.
-  //
   // One rule per declaration, not one rule with many declarations: if a value
   // still manages to derail its own rule despite the checks above, it takes
   // only itself down instead of every other token.
-  return decls.map((d) => `:root,html.light,html.dark{${d}}`).join('');
+  return decls.map((d) => `:root{${d}}`).join('');
 }
 
 export function themeOverrideCss(): string {

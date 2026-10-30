@@ -1,5 +1,4 @@
 import {useCallback, useEffect, useRef} from 'react';
-import {getActiveTheme} from '~/lib/theme';
 
 /**
  * Cloudflare Turnstile widget for a form, shared by the newsletter signup
@@ -43,9 +42,7 @@ export function useTurnstile(siteKey: string | null, active: boolean) {
       if (!cf || !containerRef.current || widgetId.current) return;
       const id = cf.render(containerRef.current, {
         sitekey: key,
-        // Match the site theme so the widget is not a dark box on a light
-        // page, or the other way round.
-        theme: getActiveTheme(),
+        theme: 'dark',
         size: 'flexible',
         // Runs in the background; the box shows only when Cloudflare
         // needs the visitor to do something.

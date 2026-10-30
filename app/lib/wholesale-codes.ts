@@ -25,3 +25,11 @@ export function wholesaleCodes(main: string): string[] {
   for (let n = 2; n <= WHOLESALE_GROUPS; n += 1) codes.push(`${main}-G${n}`);
   return codes;
 }
+
+/** The retailer's main code among a cart's discount codes (companions
+ *  `-G2` to `-G4` are left out), with whether Shopify applies it. */
+export function cartWholesaleCode(
+  codes: ReadonlyArray<{code: string; applicable: boolean}> | undefined,
+): {code: string; applicable: boolean} | null {
+  return codes?.find((c) => wholesaleMainCode(c.code) === c.code.toUpperCase()) ?? null;
+}

@@ -49,8 +49,6 @@
   "region_switch_eu_note": "Ships to the EU, prices in euro",
   "region_switch_us_note": "Ships to the United States, prices in dollars",
   "region_switch_failed": "Could not change the region. Try again.",
-  "theme_to_light": "Switch to light mode",
-  "theme_to_dark": "Switch to dark mode",
   "nav_all_products": "All products",
   "nav_all_products_mobile": "All products",
   "nav_home": "Home",

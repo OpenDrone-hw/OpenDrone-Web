@@ -9,22 +9,19 @@
       "group": "derived",
       "derivedFrom": [
         "--od-color-neutral-surface-dark"
-      ],
-      "light": "var(--od-color-neutral-surface-light)"
+      ]
     },
     {
       "name": "--color-bg-card",
       "value": "#141417",
       "group": "colour",
-      "derivedFrom": [],
-      "light": "#ffffff"
+      "derivedFrom": []
     },
     {
       "name": "--color-bg-elevated",
       "value": "#1a1a1e",
       "group": "colour",
-      "derivedFrom": [],
-      "light": "#efece6"
+      "derivedFrom": []
     },
     {
       "name": "--color-text",
@@ -32,22 +29,19 @@
       "group": "derived",
       "derivedFrom": [
         "--od-color-neutral-paper"
-      ],
-      "light": "var(--od-color-neutral-ink)"
+      ]
     },
     {
       "name": "--color-text-muted",
       "value": "#9a9a9a",
       "group": "colour",
-      "derivedFrom": [],
-      "light": "#57575c"
+      "derivedFrom": []
     },
     {
       "name": "--color-text-dim",
       "value": "#8b8b91",
       "group": "colour",
-      "derivedFrom": [],
-      "light": "#6b6b70"
+      "derivedFrom": []
     },
     {
       "name": "--art-ink",
@@ -55,8 +49,7 @@
       "group": "other",
       "derivedFrom": [
         "--color-text"
-      ],
-      "light": "color-mix(in srgb, var(--color-text-muted) 45%, transparent)"
+      ]
     },
     {
       "name": "--art-logo-ink",
@@ -64,8 +57,7 @@
       "group": "other",
       "derivedFrom": [
         "--color-text"
-      ],
-      "light": "color-mix(in srgb, var(--color-text-muted) 14%, transparent)"
+      ]
     },
     {
       "name": "--color-gold",
@@ -73,8 +65,7 @@
       "group": "derived",
       "derivedFrom": [
         "--od-color-brand-gold"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--color-gold-hover",
@@ -82,8 +73,7 @@
       "group": "other",
       "derivedFrom": [
         "--color-gold"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--color-gold-text",
@@ -91,8 +81,7 @@
       "group": "derived",
       "derivedFrom": [
         "--color-gold"
-      ],
-      "light": "#7a5700"
+      ]
     },
     {
       "name": "--color-gold-text-hover",
@@ -100,8 +89,7 @@
       "group": "derived",
       "derivedFrom": [
         "--color-gold-hover"
-      ],
-      "light": "#5c4200"
+      ]
     },
     {
       "name": "--color-gold-soft",
@@ -109,8 +97,7 @@
       "group": "other",
       "derivedFrom": [
         "--color-gold"
-      ],
-      "light": "color-mix(in srgb, var(--color-gold) 14%, transparent)"
+      ]
     },
     {
       "name": "--color-gold-bright",
@@ -118,8 +105,7 @@
       "group": "derived",
       "derivedFrom": [
         "--color-gold"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--color-gold-fill",
@@ -127,8 +113,7 @@
       "group": "derived",
       "derivedFrom": [
         "--color-gold"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--color-gold-fill-hover",
@@ -136,15 +121,13 @@
       "group": "derived",
       "derivedFrom": [
         "--color-gold-hover"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--color-green",
       "value": "#4ea866",
       "group": "colour",
-      "derivedFrom": [],
-      "light": "#147A31"
+      "derivedFrom": []
     },
     {
       "name": "--color-green-deep",
@@ -152,8 +135,7 @@
       "group": "derived",
       "derivedFrom": [
         "--od-color-brand-green-deep"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--color-stock",
@@ -161,29 +143,25 @@
       "group": "derived",
       "derivedFrom": [
         "--color-green"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--color-error",
       "value": "#f87171",
       "group": "colour",
-      "derivedFrom": [],
-      "light": "#b42318"
+      "derivedFrom": []
     },
     {
       "name": "--color-border",
       "value": "#24242a",
       "group": "colour",
-      "derivedFrom": [],
-      "light": "#e4e0d8"
+      "derivedFrom": []
     },
     {
       "name": "--color-border-strong",
       "value": "#34343c",
       "group": "colour",
-      "derivedFrom": [],
-      "light": "#cfc9bd"
+      "derivedFrom": []
     },
     {
       "name": "--color-on-accent",
@@ -191,8 +169,7 @@
       "group": "derived",
       "derivedFrom": [
         "--od-color-neutral-surface-dark"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--color-focus",
@@ -200,8 +177,7 @@
       "group": "derived",
       "derivedFrom": [
         "--color-gold"
-      ],
-      "light": "var(--color-text)"
+      ]
     },
     {
       "name": "--color-accent",
@@ -209,8 +185,7 @@
       "group": "derived",
       "derivedFrom": [
         "--color-gold"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--color-accent-hover",
@@ -218,8 +193,7 @@
       "group": "derived",
       "derivedFrom": [
         "--color-gold-hover"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--color-accent-light",
@@ -227,8 +201,7 @@
       "group": "derived",
       "derivedFrom": [
         "--color-gold"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--color-gold-light",
@@ -236,218 +209,187 @@
       "group": "derived",
       "derivedFrom": [
         "--color-gold-hover"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--font-display",
       "value": "\"Inter\", \"Inter Fallback\", -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
       "group": "font",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--font-sans",
       "value": "\"Inter\", \"Inter Fallback\", -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
       "group": "font",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--font-mono",
       "value": "\"JetBrains Mono\", \"JetBrains Mono Fallback\", ui-monospace, Menlo, Monaco, \"SF Mono\", \"Cascadia Mono\", \"Segoe UI Mono\", Consolas, monospace",
       "group": "font",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--ls-label",
       "value": "0.06em",
       "group": "layout",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--fs-label",
       "value": "0.75rem",
       "group": "size",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--fs-xs",
       "value": "0.6875rem",
       "group": "size",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--fs-sm",
       "value": "0.8125rem",
       "group": "size",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--fs-base",
       "value": "0.9375rem",
       "group": "size",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--fs-md",
       "value": "1.0625rem",
       "group": "size",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--fs-lg",
       "value": "1.375rem",
       "group": "size",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--fs-xl",
       "value": "clamp(1.625rem, 2.4vw, 2rem)",
       "group": "derived",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--fs-2xl",
       "value": "clamp(2rem, 3.4vw, 2.75rem)",
       "group": "derived",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--fs-3xl",
       "value": "clamp(2.5rem, 4vw, 3.5rem)",
       "group": "derived",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--sp-1",
       "value": "0.25rem",
       "group": "spacing",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--sp-2",
       "value": "0.5rem",
       "group": "spacing",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--sp-3",
       "value": "0.75rem",
       "group": "spacing",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--sp-4",
       "value": "1rem",
       "group": "spacing",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--sp-5",
       "value": "1.5rem",
       "group": "spacing",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--sp-6",
       "value": "2rem",
       "group": "spacing",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--sp-7",
       "value": "3rem",
       "group": "spacing",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--sp-8",
       "value": "4.5rem",
       "group": "spacing",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--r-2xs",
       "value": "2px",
       "group": "radius",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--r-xs",
       "value": "4px",
       "group": "radius",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--r-sm",
       "value": "6px",
       "group": "radius",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--r-md",
       "value": "10px",
       "group": "radius",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--r-lg",
       "value": "14px",
       "group": "radius",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--r-pod",
       "value": "22px",
       "group": "radius",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--r-pill",
       "value": "999px",
       "group": "radius",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--pod-bg",
       "value": "rgba(13, 13, 16, 0.8)",
       "group": "colour",
-      "derivedFrom": [],
-      "light": "rgba(247, 246, 243, 0.82)"
+      "derivedFrom": []
     },
     {
       "name": "--pod-bg-strong",
       "value": "rgba(16, 16, 20, 0.94)",
       "group": "colour",
-      "derivedFrom": [],
-      "light": "rgba(255, 255, 255, 0.96)"
+      "derivedFrom": []
     },
     {
       "name": "--pod-border",
@@ -455,22 +397,19 @@
       "group": "derived",
       "derivedFrom": [
         "--color-border"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--pod-blur",
       "value": "14px",
       "group": "layout",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--pod-shadow",
       "value": "0 10px 34px -16px rgba(0, 0, 0, 0.55)",
       "group": "shadow",
-      "derivedFrom": [],
-      "light": "0 10px 30px -16px rgba(60, 50, 30, 0.3)"
+      "derivedFrom": []
     },
     {
       "name": "--pod-pad",
@@ -479,29 +418,25 @@
       "derivedFrom": [
         "--sp-3",
         "--sp-5"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--header-height",
       "value": "56px",
       "group": "layout",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--aside-width",
       "value": "400px",
       "group": "layout",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--rail-gutter",
       "value": "1.25rem",
       "group": "layout",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     },
     {
       "name": "--rail-width",
@@ -509,15 +444,13 @@
       "group": "derived",
       "derivedFrom": [
         "--rail-gutter"
-      ],
-      "light": null
+      ]
     },
     {
       "name": "--prose-width",
       "value": "680px",
       "group": "layout",
-      "derivedFrom": [],
-      "light": null
+      "derivedFrom": []
     }
   ]
 }

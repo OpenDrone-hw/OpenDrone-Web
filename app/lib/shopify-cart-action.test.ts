@@ -223,7 +223,13 @@ describe('Shopify cart action: add', () => {
         fetchCatalog: async () => two,
         getCartId: () => 'cart-a',
         getCart: async () => cart([line()], 'cart-a'),
-        addCartLines: async (_id, lines) => { added = lines; return cart([], 'cart-a'); },
+        addCartLines: async (_id, lines) => {
+          added = lines;
+          return cart([
+            line({quantity: 2}),
+            line({id: 'gid://shopify/CartLine/3', merchandiseId: 'gid://shopify/ProductVariant/esc', quantity: 2, sku: 'OPENESC-2020'}),
+          ], 'cart-a');
+        },
         ...MUST_NOT,
       },
     );
@@ -232,6 +238,44 @@ describe('Shopify cart action: add', () => {
       {merchandiseId: VARIANT_ID, quantity: 1, attributes: [{key: 'Preorder', value: 'preview promise'}]},
       {merchandiseId: 'gid://shopify/ProductVariant/esc', quantity: 2},
     ]);
+  });
+
+  it('re-adds a line Shopify dropped when adds to one cart ran in parallel', async () => {
+    const calls: unknown[] = [];
+    let held: ShopifyCartLine[] = [];
+    const response = await handleShopifyCartAction(
+      request({sku: 'OPENRX-LITE', qty: '2', response: 'summary'}), ENABLED_ENV, {
+        fetchCatalog: async () => CATALOG,
+        getCartId: () => 'cart-a',
+        getCart: async () => cart(held, 'cart-a'),
+        // The first add answers success but the line is gone (the lost write).
+        addCartLines: async (_id, lines) => {
+          calls.push(lines);
+          if (calls.length > 1) held = [line({quantity: lines[0].quantity})];
+          return cart(held, 'cart-a');
+        },
+        ...MUST_NOT,
+      },
+    );
+    assert.equal(response.status, 200);
+    assert.equal(calls.length, 2);
+    assert.equal(((await response.json()) as {totalQuantity: number}).totalQuantity, 2);
+  });
+
+  it('fails the add instead of answering 200 when a line never lands', async () => {
+    let adds = 0;
+    const response = await thrownResponse(handleShopifyCartAction(
+      request({sku: 'OPENRX-LITE', qty: '1', response: 'summary'}), ENABLED_ENV, {
+        fetchCatalog: async () => CATALOG,
+        getCartId: () => 'cart-a',
+        getCart: async () => cart([], 'cart-a'),
+        addCartLines: async () => { adds += 1; return cart([], 'cart-a'); },
+        logError: () => {},
+        ...MUST_NOT,
+      },
+    ));
+    assert.equal(response.status, 503);
+    assert.equal(adds, 3);
   });
 
   it('writes the first-touch attribution an add carries as cart attributes, best effort', async () => {
@@ -251,7 +295,7 @@ describe('Shopify cart action: add', () => {
         fetchCatalog: async () => CATALOG,
         getCartId: () => 'cart-a',
         getCart: async () => cart([], 'cart-a'),
-        addCartLines: async () => cart([], 'cart-a'),
+        addCartLines: async () => cart([line()], 'cart-a'),
         setAttributes: async () => { throw new Error('upstream'); },
         logError: (message) => logged.push(message),
         ...MUST_NOT,
@@ -278,7 +322,7 @@ describe('Shopify cart action: add', () => {
         fetchCatalog: async () => CATALOG,
         getCartId: () => 'cart-a',
         getCart: async () => cart([], 'cart-a'),
-        addCartLines: async () => ({...cart([], 'cart-a'), attributes: [{key: '_utm_source', value: 'youtube'}, {key: '_landing', value: '/x'}]}),
+        addCartLines: async () => ({...cart([line()], 'cart-a'), attributes: [{key: '_utm_source', value: 'youtube'}, {key: '_landing', value: '/x'}]}),
         setAttributes: async () => { calls += 1; },
         ...MUST_NOT,
       },
