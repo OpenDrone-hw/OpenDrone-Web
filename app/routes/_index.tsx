@@ -286,11 +286,6 @@ function DesktopHome({
     rafId.current = 0;
   }, []);
 
-  // Exploring the drone steps the side cards back (html.hero-exploring, site-ui.css).
-  const handleExploring = useCallback((on: boolean) => {
-    document.documentElement.classList.toggle('hero-exploring', on);
-  }, []);
-  useEffect(() => () => document.documentElement.classList.remove('hero-exploring'), []);
   // The explainer card stands on the kit card (site-ui.css .hp-copy): publish the
   // kit card's height so the stack holds as its rows load or change.
   const buyRef = useRef<HTMLDivElement | null>(null);
@@ -536,7 +531,6 @@ function DesktopHome({
                 onProgress={handleWalkthroughProgress}
                 onSeeker={handleSeeker}
                 onBeat={handleBeat}
-                onExploring={handleExploring}
               />
             </SceneErrorBoundary>
           </div>

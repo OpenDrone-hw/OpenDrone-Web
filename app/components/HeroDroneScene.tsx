@@ -984,10 +984,11 @@ export function HeroDroneScene({
       const SWAP_BEAT = BEATS.findIndex((b) => b.id === 'video');
       const unitList = [...UNITS.values()];
       const centreOf = (u: Unit) => new THREE.Vector3(...((u.c ?? [u.base.x, u.base.y, u.base.z]) as [number, number, number]));
-      const CARRIER_KINDS = new Set(['mount', 'air', 'antenna', 'camera', 'cammount']);
+      const CARRIER_KINDS = new Set(['mount', 'air', 'antenna', 'camera']);
       // Two moves: the air unit (with its mount and antennas) slides straight up its
       // standoffs; the camera, cabled to it, works out of the camera mount at an angle.
-      const CAMERA_KINDS = new Set(['camera', 'cammount']);
+      // The camera mounts sit in the side plates' windows, so they stay with the frame.
+      const CAMERA_KINDS = new Set(['camera']);
       // The top plate takes the battery pad with it, and the XT30 lead mount where it
       // sits on top of the air unit's mount (the 3 inch), so the air unit can rise.
       const swapPlate = unitList.filter((u) => ['top', 'pad', 'xtmount', 'xtconn'].includes(u.kind));
@@ -1024,14 +1025,20 @@ export function HeroDroneScene({
       // Seconds. Out, swap, back in; SWAP_LEN is where it ends assembled again.
       // Out: screws, plate, carrier up off the standoffs, tilt, slide out over the
       // bumper. Then the drones trade places and it all goes back in reverse order.
+      // Up to SWAP_PRE (screws out, plate off) it is not timed: it rides
+      // the frame -> video travel, so the drone never seats fully only to come apart
+      // again. The rest plays in time once the reader is on the stop.
       const SW = {
-        screwOut: [0, 0.9], plateOut: [0.9, 1.8], liftOut: [1.8, 2.3], tilt: [2.3, 2.8], slideOut: [2.8, 3.8],
-        bodyOut: [3.8, 5.0], bodyIn: [5.1, 6.4], slideIn: [6.5, 7.5], untilt: [7.5, 8.0], liftIn: [8.0, 8.5],
-        plateIn: [8.5, 9.3], screwIn: [9.3, 10.2],
+        screwOut: [0, 0.45], plateOut: [0.45, 0.9], liftOut: [0.9, 1.15], tilt: [1.15, 1.4], slideOut: [1.4, 1.9],
+        bodyOut: [1.9, 2.5], bodyIn: [2.55, 3.2], slideIn: [3.25, 3.75], untilt: [3.75, 4.0], liftIn: [4.0, 4.25],
+        plateIn: [4.25, 4.65], screwIn: [4.65, 5.1],
       } as const;
-      const SWAP_LEN = 10.2;
+      const SWAP_LEN = 5.1;
+      const SWAP_PRE = SW.plateOut[1];
       /** Swap time after which the camera returns to the plain overview framing. */
-      const SWAP_SETTLE = 8.6;
+      const SWAP_SETTLE = 4.3;
+      /** The swap ran to its end on this visit to the stop: leaving shows the seated drone. */
+      let swapDone = false;
       /** Test hook: freeze the swap at a time (seconds), or null to let it play. */
       let swapHold: number | null = null;
       const seg = (t: number, [a, b]: readonly [number, number]) => moveEase(clamp01((t - a) / (b - a)));
@@ -1287,8 +1294,8 @@ export function HeroDroneScene({
       for (let i = 0; i < BEATS.length; i++) STOPS.push({pos: stopForBeat(i), beat: i, part: true});
       const stopPos = (si: number) => STOPS[si].pos;
       const explodedAt = () => Math.max(1e-6, stopPos(Math.min(1, STOPS.length - 1)));
-      // Into the swap beat the drone goes back together: fully assembled for the last
-      // fifth of the way, so the swap starts from a still, seated drone.
+      // Into the swap beat the drone goes back together over the travel, while the
+      // swap's opening (screws out, plate off) plays alongside (SWAP_PRE).
       const collapseAt = () => {
         if (!swapOn || SWAP_BEAT < 1) return 0;
         const a = stopForBeat(SWAP_BEAT - 1);
@@ -1916,9 +1923,14 @@ export function HeroDroneScene({
         // seated drone, so a finished swap simply resets.
         if (swapOn) {
           const onSwap = Math.abs(pos - stopForBeat(SWAP_BEAT)) < dur() * 0.1 && explodeP < 0.02 && manualP === null;
+          const k = manualP === null ? collapseAt() : 0;
+          if (k === 0 && !onSwap) swapDone = false;
+          const pre = swapDone || reduced ? 0 : SWAP_PRE * k;
           if (swapHold !== null) swapT = swapHold;
-          else if (onSwap) swapT = reduced ? SWAP_LEN : Math.min(SWAP_LEN, swapT + dt);
-          else swapT = swapT >= SWAP_LEN || reduced ? 0 : Math.max(0, swapT - dt * 4);
+          else if (swapDone) swapT = onSwap ? SWAP_LEN : 0;
+          else if (onSwap) swapT = reduced ? SWAP_LEN : Math.max(pre, Math.min(SWAP_LEN, swapT + dt));
+          else swapT = swapT > pre ? Math.max(pre, swapT - dt * 4) : pre;
+          if (swapT >= SWAP_LEN) swapDone = true;
           applySwap(swapT);
         }
         const ep = ease(clamp01(explodeP));
@@ -1935,14 +1947,15 @@ export function HeroDroneScene({
         updateHeroMatrices(moving);
         scene.updateMatrixWorld();
 
-        // Hover (pointer ray, throttled, never while pressed), then what to focus:
-        // the part under the pointer, else the selected part, else the walkthrough's.
+        // Hover (pointer ray, throttled, never while pressed) only sets the cursor:
+        // the lighting never follows the pointer. Focus is the clicked part, else
+        // the walkthrough's.
         if (ptr.dirty && !pressed && now - lastRay > 45) {
           ptr.dirty = false;
           lastRay = now;
           hovered = pickUnit();
         }
-        const wantUnit = hovered ?? selected;
+        const wantUnit = selected;
         let nodes: THREE.Object3D[];
         let amtTarget: number;
         let fade: number;

@@ -53,10 +53,22 @@ function BeatLinkLabel({href}: {href: string}) {
 }
 
 /** The stack beats, in signal order, and each size's board render folder (public/boards/). */
-const STACK_CHAIN = ['rx', 'fc', 'esc'];
-const STACK_BOARDS: Record<string, Record<string, string>> = {
-  od5: {rx: 'openrx-mono', fc: 'openfc-lite', esc: 'openesc-30x30'},
-  od3: {rx: 'openrx-lite-ufl', fc: 'openfc-lite-mini', esc: 'openesc-20x20'},
+const STACK_CHAIN = ['rx', 'fc', 'esc', 'motor'];
+/** Real renders per size: the boards' front renders, and the motor cropped out
+ *  of its box shot (site-ui.css .hp-chain-motor). */
+const STACK_IMAGES: Record<string, Record<string, string>> = {
+  od5: {
+    rx: '/boards/openrx-mono/front-w528.webp',
+    fc: '/boards/openfc-lite/front-w528.webp',
+    esc: '/boards/openesc-30x30/front-w528.webp',
+    motor: '/boxes/openmotor/2306-w528.webp',
+  },
+  od3: {
+    rx: '/boards/openrx-lite-ufl/front-w528.webp',
+    fc: '/boards/openfc-lite-mini/front-w528.webp',
+    esc: '/boards/openesc-20x20/front-w528.webp',
+    motor: '/boxes/openmotor/1604-w528.webp',
+  },
 };
 
 export function HeroDroneStage({
@@ -217,13 +229,13 @@ export function HeroDroneStage({
               from studio.json with the rest of the beat copy. */}
           {card.caption ? <p className="hp-explain">{card.caption}</p> : null}
           {/* The stack beats show how the signal runs instead of saying it:
-              RX -> FC -> ESC as the real board renders, this beat's board lit. */}
+              RX -> FC -> ESC -> motor as the real renders, this beat's one larger. */}
           {STACK_CHAIN.includes(card.id.split(':')[0]) ? (
-            <ol className="hp-chain" aria-label="Signal path: receiver, flight controller, ESC">
+            <ol className="hp-chain" aria-label="Signal path: receiver, flight controller, ESC, motors">
               {STACK_CHAIN.map((id, i) => (
                 <li key={id} className={id === card.id.split(':')[0] ? 'is-current' : undefined}>
                   {i > 0 ? <span className="hp-chain-arrow" aria-hidden="true">→</span> : null}
-                  <img src={`/boards/${STACK_BOARDS[resolvedModel ?? requestedFolder]?.[id] ?? STACK_BOARDS.od5[id]}/front-w528.webp`} alt="" width={56} height={56} loading="lazy" decoding="async" />
+                  <img className={`hp-chain-${id}`} src={(STACK_IMAGES[resolvedModel ?? requestedFolder] ?? STACK_IMAGES.od5)[id]} alt="" width={56} height={56} loading="lazy" decoding="async" />
                   <span>{id.toUpperCase()}</span>
                 </li>
               ))}

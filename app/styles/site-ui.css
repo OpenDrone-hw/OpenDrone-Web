@@ -1369,11 +1369,6 @@ a.hero-build-add { text-decoration: none; }
 .homepage:has(.hero-build-guide) .hp-explain { font-size: 13px; line-height: 1.5; margin-top: 10px; color: var(--color-text); }
 .homepage:has(.hero-build-guide) .hp-connect { font-size: 11px; margin-top: 8px; }
 .homepage:has(.hero-build-guide) .hp-copy-link { margin-top: 12px; font-size: 12px; }
-/* Exploring: the side cards step back so the drone reads through them; full again under the pointer. */
-.homepage .hero-buy--guide { transition: opacity 0.45s ease; }
-html.hero-exploring .homepage .hp-copy, html.hero-exploring .homepage .hero-buy--guide.is-visible { opacity: 0.55 !important; }
-html.hero-exploring .homepage .hp-copy:hover, html.hero-exploring .homepage .hero-buy--guide.is-visible:hover,
-html.hero-exploring .homepage .hero-buy--guide.is-visible:focus-within { opacity: 1 !important; }
 .hp-model-note { position: absolute; top: calc(var(--header-height) + 5rem); left: 50%; transform: translateX(-50%); margin: 0; color: var(--color-text-muted); font-size: 11px; pointer-events: none; }
 @keyframes hero-build-in { from { opacity: 0; } to { opacity: 1; } }
 @media (max-height: 850px) and (min-width: 769px) {
@@ -2223,9 +2218,9 @@ body:has(.test-banner) .site-header {
 
 /* RX -> FC -> ESC signal chain on the stack beats (HeroDroneStage). */
 .hp-chain { display: flex; align-items: center; gap: 4px; margin: 12px 0 0; padding: 0; list-style: none; }
-.hp-chain li { display: flex; align-items: center; gap: 4px; opacity: 0.45; transition: opacity 0.3s ease; }
+.hp-chain li { display: flex; align-items: center; gap: 4px; }
 .hp-chain li > span:last-child { display: none; }
-.hp-chain li.is-current { opacity: 1; }
 .hp-chain img { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5)); }
 .hp-chain li.is-current img { width: 72px; height: 72px; }
+.hp-chain img.hp-chain-motor { object-fit: cover; object-position: 0 50%; }
 .hp-chain-arrow { margin: 0 6px 0 2px; color: var(--color-text-dim); font-size: 14px; }
