@@ -191,6 +191,7 @@ export function instanceHeroDraws(
         dim.material.color.copy(dimSource.color);
         dim.material.envMapIntensity = dimSource.envMapIntensity;
         dim.material.metalness = dimSource.metalness;
+        dim.material.roughness = dimSource.roughness;
         normal.count = dim.count = 0;
         let normalChanged = false;
         let dimChanged = false;
