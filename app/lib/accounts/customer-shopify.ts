@@ -44,6 +44,8 @@ export type AccountOrderLine = {
   /** Variant title ("5\" Freestyle", "30×30"); null for a single-variant product. */
   variant: string | null;
   quantity: number;
+  /** Shopify's product or variant image, a small square thumbnail; null when the product has none. */
+  image: string | null;
 };
 
 export type OrderMoney = {amount: string; currencyCode: string};
@@ -106,7 +108,7 @@ const CUSTOMER_QUERY = `#graphql
           displayFinancialStatus
           currentTotalPriceSet { presentmentMoney { amount currencyCode } }
           lineItems(first: 20) {
-            nodes { sku title variantTitle currentQuantity }
+            nodes { sku title variantTitle currentQuantity image { url(transform: {maxWidth: 192, maxHeight: 192}) } }
           }
         }
       }
@@ -114,7 +116,7 @@ const CUSTOMER_QUERY = `#graphql
   }
 `;
 
-type RawLine = {sku: string | null; title: string; variantTitle: string | null; currentQuantity: number};
+type RawLine = {sku: string | null; title: string; variantTitle: string | null; currentQuantity: number; image?: {url: string} | null};
 type RawOrder = {
   id: string;
   name: string;
@@ -231,6 +233,7 @@ export async function readCustomerAccount(
             name: l.title,
             variant: l.variantTitle && l.variantTitle !== 'Default Title' ? l.variantTitle : null,
             quantity: l.currentQuantity,
+            image: l.image?.url ?? null,
           })),
         total: o.currentTotalPriceSet?.presentmentMoney ?? null,
         fulfillmentStatus: o.displayFulfillmentStatus,

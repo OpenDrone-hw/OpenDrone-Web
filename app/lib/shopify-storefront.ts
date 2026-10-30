@@ -59,6 +59,7 @@ const CART_FIELDS = `#graphql
     totalQuantity
     attributes { key value }
     buyerIdentity { countryCode }
+    discountCodes { code applicable }
     cost {
       subtotalAmount { amount currencyCode }
       totalAmount { amount currencyCode }
@@ -215,6 +216,8 @@ export type ShopifyCart = {
   total: ShopifyMoney;
   /** The cart-level attributes (the first-touch attribution), when Shopify returned them. */
   attributes?: Array<{key: string; value: string}>;
+  /** The discount codes on the cart and whether each applies now. */
+  discountCodes?: Array<{code: string; applicable: boolean}>;
   /** The cart's `buyerIdentity.countryCode`: the market Shopify prices it
    *  in and checkout opens in. Absent or null when none was set. */
   country?: string | null;
@@ -276,6 +279,8 @@ export function storefrontEndpoint(env: StorefrontEnv): string {
   return `https://${host}/api/${version}/graphql.json`;
 }
 
+const STOREFRONT_TIMEOUT_MS = 10_000;
+
 export async function storefrontRequest<T>(
   env: StorefrontEnv,
   query: string,
@@ -295,6 +300,9 @@ export async function storefrontRequest<T>(
     // Workers supports follow/manual only. Manual plus the response status
     // check below preserves the fail-closed redirect policy.
     redirect: 'manual',
+    // A stalled Storefront read fails like any other, instead of holding the
+    // page or cart until the Worker's wall time ends (reads take 0.1-0.4 s).
+    signal: AbortSignal.timeout(STOREFRONT_TIMEOUT_MS),
   });
   if (!response.ok) {
     throw new Error(`shopify: Storefront API returned ${response.status}`);
@@ -519,6 +527,7 @@ type CartWire = {
   totalQuantity: number;
   buyerIdentity?: {countryCode?: string | null} | null;
   attributes?: Array<{key: string; value: string}>;
+  discountCodes?: Array<{code: string; applicable: boolean}>;
   cost: {subtotalAmount: ShopifyMoney; totalAmount: ShopifyMoney};
   lines: {
     pageInfo: {hasNextPage: boolean};
@@ -589,6 +598,7 @@ function validatedCart(
     total: cart.cost.totalAmount,
     ...(cart.buyerIdentity?.countryCode ? {country: cart.buyerIdentity.countryCode.toUpperCase()} : {}),
     ...(cart.attributes ? {attributes: cart.attributes} : {}),
+    ...(cart.discountCodes ? {discountCodes: cart.discountCodes} : {}),
     lines: cart.lines.nodes.map((line) => {
       // Non-EU lines record their region; absence remains the EU default.
       const shipRegion = line.attributes.find(({key}) => key === SHIP_REGION_ATTRIBUTE)?.value;
@@ -700,6 +710,37 @@ export async function updateCartAttributes(
   if (payload.userErrors.length || !payload.cart || payload.cart.id !== cartId) {
     throw new Error('shopify: cartAttributesUpdate failed');
   }
+}
+
+export const CART_DISCOUNT_CODES_UPDATE_MUTATION = `#graphql
+  mutation OpenDroneCartDiscountCodesUpdate($cartId: ID!, $discountCodes: [String!]!) {
+    cartDiscountCodesUpdate(cartId: $cartId, discountCodes: $discountCodes) {
+      cart { id discountCodes { code applicable } }
+      userErrors { field message }
+      warnings { message }
+    }
+  }
+`;
+
+/** Replace the cart's discount codes (an empty list removes them). Returns
+ *  each code with whether Shopify says it applies to the cart now. */
+export async function updateCartDiscountCodes(
+  env: StorefrontEnv,
+  cartId: string,
+  codes: string[],
+  fetcher: typeof fetch = fetch,
+): Promise<Array<{code: string; applicable: boolean}>> {
+  const data = await storefrontRequest<{
+    cartDiscountCodesUpdate: {
+      cart: {id: string; discountCodes: Array<{code: string; applicable: boolean}>} | null;
+      userErrors: Array<{message: string}>;
+    };
+  }>(env, CART_DISCOUNT_CODES_UPDATE_MUTATION, {cartId, discountCodes: codes}, fetcher);
+  const payload = data.cartDiscountCodesUpdate;
+  if (payload.userErrors.length || !payload.cart || payload.cart.id !== cartId) {
+    throw new Error('shopify: cartDiscountCodesUpdate failed');
+  }
+  return payload.cart.discountCodes;
 }
 
 const PAYMENT_SETTINGS_QUERY = `#graphql

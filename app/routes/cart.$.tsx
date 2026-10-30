@@ -48,6 +48,7 @@ import {usSalesRate} from '~/lib/us-sales';
 import {ShipToSelect} from '~/components/ShipToSelect';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
+import {cartWholesaleCode} from '~/lib/wholesale-codes';
 import type {RootLoader} from '~/root';
 import {
   CartAddError,
@@ -174,6 +175,9 @@ type CartCheck = (typeof CART_CHECK)[keyof typeof CART_CHECK];
 /** The notice per reason the server sent a checkout back to the cart. Every
  *  reason has one: a checkout never lands here without a word. */
 const CHECK_NOTICES: Record<CartCheck, () => string> = {
+  [CART_CHECK.code]: () => t('check_code', 'That is not a wholesale code. Wholesale codes look like WS25-NAME.'),
+  [CART_CHECK.codeNotApplied]: () => t('check_code_not_applied', 'This code does not apply to your cart. Check the code, or mail contact@opendrone.be.'),
+  [CART_CHECK.codeFailed]: () => t('check_code_failed', 'Your code could not be applied just now. Try again in a minute, or mail contact@opendrone.be.'),
   [CART_CHECK.paidBatch]: () => t('check_paid_batch', 'Not enough left. Lower the quantity where shown.'),
   [CART_CHECK.shipDate]: () => t('check_ship_date', 'A ship date changed. Check the dates below.'),
   [CART_CHECK.price]: () => t('check_price', 'A price changed. Check the total below.'),
@@ -535,6 +539,7 @@ function PopulatedCart({
   const onPending = useCallback((delta: number) => setInFlight((n) => Math.max(0, n + delta)), []);
   const pending = inFlight > 0 || revalidator.state !== 'idle';
   const anyEarly = useAnyEarlySku(cart.lines.map((line) => line.sku));
+  const wholesale = cartWholesaleCode(cart.discountCodes);
 
   // One parcel per order: when lines ship at different times, the early
   // ones wait for the last. Lines waiting for different funding targets do
@@ -653,6 +658,28 @@ function PopulatedCart({
               <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
             </p>
           ) : (
+            <>
+            {wholesale ? (
+            <Form method="post" action="/api/shopify/cart" className="cart-code">
+              <input type="hidden" name="intent" value="discount" />
+              <input type="hidden" name="code" value="" />
+              <p className="text-[13px]" role="status">
+                {wholesale.applicable
+                  ? t('wholesale_code_applied', 'Code {code} applied.', {code: wholesale.code})
+                  : t('wholesale_code_inactive', 'Code {code} does not apply to this cart.', {code: wholesale.code})}
+              </p>
+              <button type="submit" className="mt-1 text-[13px] underline underline-offset-4">{t('wholesale_code_remove', 'Remove code')}</button>
+            </Form>
+            ) : (
+            <Form method="post" action="/api/shopify/cart" className="cart-code">
+              <input type="hidden" name="intent" value="discount" />
+              <label className="block text-[13px] text-[var(--color-text-muted)]">
+                {t('wholesale_code', 'Wholesale code')}
+                <input name="code" maxLength={24} autoComplete="off" spellCheck={false} placeholder="WS25-NAME" className="mt-1 block w-full rounded-[var(--r-xs)] border border-[var(--color-border)] bg-transparent px-3 py-2 text-[16px] uppercase text-[var(--color-text)]" />
+              </label>
+              <button type="submit" className="mt-2 text-[13px] underline underline-offset-4">{t('wholesale_code_apply', 'Apply code')}</button>
+            </Form>
+            )}
             <Form
               id={CHECKOUT_FORM_ID}
               method="post"
@@ -678,6 +705,7 @@ function PopulatedCart({
                 {pending ? t('checkout_updating', 'Updating cart…') : <Txt id="cart.checkout_cta" />}
               </button>
             </Form>
+            </>
           )}
           <PaymentMarks methods={payments} />
           <Txt id="cart.note_terms" as="p" className="cart-summary-note cart-terms [&_a]:underline! [&_a]:underline-offset-4" />

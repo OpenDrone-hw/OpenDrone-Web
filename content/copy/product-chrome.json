@@ -602,7 +602,7 @@
   "buy_soon_wholesale_lead": "Ordering for a shop?",
   "buy_soon_wholesale_link": "Request a wholesale quote",
   "buy_us_price_note": "Duties included",
-  "buy_us_eu_only": "Ships from stock in Belgium to EU addresses only",
+  "buy_us_eu_only": "Ships from stock in Belgium, not to the US",
   "buy_shops_only_us": "Consumer checkout unavailable for this destination",
   "buy_international_price_note": "Shipping and any sales tax confirmed at checkout. You may pay import charges on delivery.",
   "discord_row": "Questions about the {product}?",

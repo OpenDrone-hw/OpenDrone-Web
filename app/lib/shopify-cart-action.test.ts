@@ -223,7 +223,13 @@ describe('Shopify cart action: add', () => {
         fetchCatalog: async () => two,
         getCartId: () => 'cart-a',
         getCart: async () => cart([line()], 'cart-a'),
-        addCartLines: async (_id, lines) => { added = lines; return cart([], 'cart-a'); },
+        addCartLines: async (_id, lines) => {
+          added = lines;
+          return cart([
+            line({quantity: 2}),
+            line({id: 'gid://shopify/CartLine/3', merchandiseId: 'gid://shopify/ProductVariant/esc', quantity: 2, sku: 'OPENESC-2020'}),
+          ], 'cart-a');
+        },
         ...MUST_NOT,
       },
     );
@@ -232,6 +238,44 @@ describe('Shopify cart action: add', () => {
       {merchandiseId: VARIANT_ID, quantity: 1, attributes: [{key: 'Preorder', value: 'preview promise'}]},
       {merchandiseId: 'gid://shopify/ProductVariant/esc', quantity: 2},
     ]);
+  });
+
+  it('re-adds a line Shopify dropped when adds to one cart ran in parallel', async () => {
+    const calls: unknown[] = [];
+    let held: ShopifyCartLine[] = [];
+    const response = await handleShopifyCartAction(
+      request({sku: 'OPENRX-LITE', qty: '2', response: 'summary'}), ENABLED_ENV, {
+        fetchCatalog: async () => CATALOG,
+        getCartId: () => 'cart-a',
+        getCart: async () => cart(held, 'cart-a'),
+        // The first add answers success but the line is gone (the lost write).
+        addCartLines: async (_id, lines) => {
+          calls.push(lines);
+          if (calls.length > 1) held = [line({quantity: lines[0].quantity})];
+          return cart(held, 'cart-a');
+        },
+        ...MUST_NOT,
+      },
+    );
+    assert.equal(response.status, 200);
+    assert.equal(calls.length, 2);
+    assert.equal(((await response.json()) as {totalQuantity: number}).totalQuantity, 2);
+  });
+
+  it('fails the add instead of answering 200 when a line never lands', async () => {
+    let adds = 0;
+    const response = await thrownResponse(handleShopifyCartAction(
+      request({sku: 'OPENRX-LITE', qty: '1', response: 'summary'}), ENABLED_ENV, {
+        fetchCatalog: async () => CATALOG,
+        getCartId: () => 'cart-a',
+        getCart: async () => cart([], 'cart-a'),
+        addCartLines: async () => { adds += 1; return cart([], 'cart-a'); },
+        logError: () => {},
+        ...MUST_NOT,
+      },
+    ));
+    assert.equal(response.status, 503);
+    assert.equal(adds, 3);
   });
 
   it('writes the first-touch attribution an add carries as cart attributes, best effort', async () => {
@@ -251,7 +295,7 @@ describe('Shopify cart action: add', () => {
         fetchCatalog: async () => CATALOG,
         getCartId: () => 'cart-a',
         getCart: async () => cart([], 'cart-a'),
-        addCartLines: async () => cart([], 'cart-a'),
+        addCartLines: async () => cart([line()], 'cart-a'),
         setAttributes: async () => { throw new Error('upstream'); },
         logError: (message) => logged.push(message),
         ...MUST_NOT,
@@ -278,7 +322,7 @@ describe('Shopify cart action: add', () => {
         fetchCatalog: async () => CATALOG,
         getCartId: () => 'cart-a',
         getCart: async () => cart([], 'cart-a'),
-        addCartLines: async () => ({...cart([], 'cart-a'), attributes: [{key: '_utm_source', value: 'youtube'}, {key: '_landing', value: '/x'}]}),
+        addCartLines: async () => ({...cart([line()], 'cart-a'), attributes: [{key: '_utm_source', value: 'youtube'}, {key: '_landing', value: '/x'}]}),
         setAttributes: async () => { calls += 1; },
         ...MUST_NOT,
       },
@@ -1251,5 +1295,45 @@ describe('international cart destination handoffs', () => {
       getCartId:()=>reviewed.id,getCart:async()=>reviewed,fetchCatalog:async()=>international,...MUST_NOT,
     });
     assert.equal(result.headers.get('Location'),CHECKOUT);
+  });
+});
+
+describe('Shopify cart action: wholesale code', () => {
+  it('sends the main code with its price-group companions, refuses other codes, clears on empty', async () => {
+    const sent: string[][] = [];
+    const deps: ShopifyCartDependencies = {
+      fetchCatalog: async () => CATALOG,
+      getCartId: () => 'cart-a',
+      setDiscountCodes: async (_id, codes) => { sent.push(codes); },
+      ...MUST_NOT,
+    };
+    const ok = await handleShopifyCartAction(request({intent: 'discount', code: ' ws25-fpv24 '}), ENABLED_ENV, deps);
+    assert.equal(ok.headers.get('Location'), '/cart');
+    assert.deepEqual(sent[0], ['WS25-FPV24', 'WS25-FPV24-G2', 'WS25-FPV24-G3', 'WS25-FPV24-G4']);
+    const bad = await handleShopifyCartAction(request({intent: 'discount', code: 'SUMMER10'}), ENABLED_ENV, deps);
+    assert.equal(bad.headers.get('Location'), '/cart?check=code');
+    assert.equal(sent.length, 1);
+    const cleared = await handleShopifyCartAction(request({intent: 'discount', code: ''}), ENABLED_ENV, deps);
+    assert.equal(cleared.headers.get('Location'), '/cart');
+    assert.deepEqual(sent[1], []);
+  });
+  it('returns to the cart with a notice when Shopify fails or does not take the code', async () => {
+    const base = {fetchCatalog: async () => CATALOG, getCartId: () => 'cart-a', ...MUST_NOT};
+    const failed = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
+      ...base, setDiscountCodes: async () => { throw new Error('shopify: cartDiscountCodesUpdate failed'); },
+    });
+    assert.equal(failed.headers.get('Location'), '/cart?check=code-failed');
+    const refused = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
+      ...base, setDiscountCodes: async (_id, codes) => codes.map((code) => ({code, applicable: false})),
+    });
+    assert.equal(refused.headers.get('Location'), '/cart?check=code-not-applied');
+    const taken = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
+      ...base, setDiscountCodes: async (_id, codes) => codes.map((code, i) => ({code, applicable: i === 0})),
+    });
+    assert.equal(taken.headers.get('Location'), '/cart');
+  });
+  it('declares every discount code list non-null, as the Storefront schema requires', async () => {
+    const {CART_DISCOUNT_CODES_UPDATE_MUTATION} = await import('./shopify-storefront.ts');
+    assert.match(CART_DISCOUNT_CODES_UPDATE_MUTATION, /\$discountCodes: \[String!\]!/);
   });
 });

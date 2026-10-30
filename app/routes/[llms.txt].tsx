@@ -7,7 +7,7 @@ import {
 } from '~/lib/product-content';
 import {
   comingSoonFlag,
-  preorderNote,
+  variantPreorderNote,
 } from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {toCards} from '~/lib/catalog';
@@ -78,16 +78,13 @@ export async function loader({context, request}: Route.LoaderArgs) {
         p.variants.nodes[0]?.availability,
       );
       const locked = !isPurchasableStatus(status);
-      const stockWord = (available: boolean) =>
-        !available
+      // Each variant's own promise: variants of one product can ship with
+      // different batches.
+      const stockWord = (v: (typeof p.variants.nodes)[number]) =>
+        !v.availableForSale
           ? 'out of stock'
           : status === 'preorder'
-            ? `pre-order, ${regionScoped(
-                preorderNote(
-                  p.handle,
-                  p.variants.nodes.find((v) => v.shipPromise)?.shipPromise,
-                ),
-              )}`
+            ? `pre-order, ${regionScoped(variantPreorderNote(p.handle, v))}`
             : 'in stock';
       const lines = p.variants.nodes
         .map((v) => {
@@ -100,7 +97,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
             (locked
               ? ' - coming soon, not yet orderable'
               : ` - €${Number(v.price.amount).toFixed(2)}` +
-                ` - ${stockWord(v.availableForSale)}` +
+                ` - ${stockWord(v)}` +
                 ' - ordering is not available to agents')
           );
         })

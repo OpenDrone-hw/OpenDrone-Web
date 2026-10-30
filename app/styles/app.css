@@ -97,8 +97,7 @@
      there is nothing to keep in sync. Hover LIFTS toward white because the
      base is already at the chroma ceiling and cannot go brighter. */
   --color-gold-hover: color-mix(in oklab, var(--color-gold) 82%, white);
-  /* Gold used as TEXT. Same as --color-gold on dark; html.light swaps in a
-     deep gold (6.1:1 on the light background) so labels stay legible. */
+  /* Gold used as TEXT. Same as --color-gold. */
   --color-gold-text: var(--color-gold);
   --color-gold-text-hover: var(--color-gold-hover);
   --color-gold-soft: color-mix(in srgb, var(--color-gold) 12%, transparent);
@@ -109,17 +108,14 @@
      dark ink on top. Same gold as text now, so these are plain aliases. */
   --color-gold-fill: var(--color-gold);
   --color-gold-fill-hover: var(--color-gold-hover);
-  /* The "Drone" half of the OpenDrone wordmark and its ambient sheen.
-     html.light swaps in a deeper gold: the brand gold is 1.6:1 on the
-     cream background and the logo half vanished. */
+  /* The "Drone" half of the OpenDrone wordmark and its ambient sheen. */
   --color-wordmark-gold: var(--color-gold-fill);
   --color-wordmark-sheen: color-mix(in srgb, var(--color-gold-fill) 55%, white);
 
   /* Brand / PCB green. --color-green is the emerald brand green: a
      physical product color (#147A31, used on the motors). Rendered
-     lighter on dark for legibility (#4ea866); the true #147A31 takes over
-     on light (AA 5.4:1 on white, see html.light). --color-green-deep is
-     the dark solder-mask PCB green for fills/borders (same in both modes).
+     lighter for legibility on dark (#4ea866). --color-green-deep is
+     the dark solder-mask PCB green for fills/borders (same everywhere).
      --color-stock aliases the brand green, so stock/success re-theme with
      it automatically. */
   --color-green: #4ea866;
@@ -131,13 +127,11 @@
   --color-border-strong: #34343c;
 
   /* Text/icon color that sits ON the gold accent (filled buttons, badges,
-     active toggles). Dark in both themes: gold reads best with dark ink.
-     Decoupled from --color-bg so light mode can flip the page background
-     without dragging on-accent text light with it. */
+     active toggles). Dark ink: gold reads best with it. */
   --color-on-accent: var(--od-color-neutral-surface-dark);
   /* Focus ring. WCAG 1.4.11 wants 3:1 for focus indicators and, unlike a
      logo, a focus ring gets no exemption. Gold is 11.11:1 here on dark so
-     it stays; html.light swaps it for ink, where gold would be 1.62:1. */
+     it stays. */
   --color-focus: var(--color-gold);
 
   /* Legacy alias map: collapses the old dual gold/green CTA system
@@ -235,84 +229,6 @@
   }
 }
 
-/* ============================================================
-   LIGHT MODE
-   The @theme block above is the dark default. `html.light`
-   overrides the semantic color tokens; every var(--color-*)
-   consumer re-themes for free. Below the token swap are the
-   handful of spots that hardcoded a dark value (load overlay,
-   header backdrop, floating controls) and need a light twin.
-   The init script in root.tsx puts .light/.dark on <html>
-   before first paint.
-   ============================================================ */
-html.light {
-  --color-bg: var(--od-color-neutral-surface-light); /* warm off-white, not clinical #fff */
-  --color-bg-card: #ffffff;
-  --color-bg-elevated: #efece6; /* recessed/raised neutral surface */
-  --color-text: var(--od-color-neutral-ink);
-  --color-text-muted: #57575c;
-  --color-text-dim: #6b6b70;
-  /* Pencil on paper: dark ink at low opacity already reads on the warm
-     off-white, so light keeps the softer muted grey. */
-  --art-ink: color-mix(in srgb, var(--color-text-muted) 45%, transparent);
-  --art-logo-ink: color-mix(in srgb, var(--color-text-muted) 14%, transparent);
-  /* Light-mode gold (maintainer 2026-08-14): there is no light-mode gold any
-     more. The 2026-07-12 pass unified the two themes on #c89d2e and accepted
-     ~2.6:1 for gold text on white; this pass keeps that decision and fixes the
-     colour it was made with. Every gold token now inherits from @theme
-     unchanged, so nothing is overridden here: deleting these overrides IS the
-     change. Gold as text goes through --color-gold-text, which swaps to a
-     deep gold here (6.1:1); fills, borders and rules keep the brand gold.
-     Focus rings use --color-focus. */
-  --color-gold-soft: color-mix(in srgb, var(--color-gold) 14%, transparent);
-  --color-focus: var(--color-text);
-  --color-gold-text: #7a5700;
-  --color-gold-text-hover: #5c4200;
-  /* Emerald PCB/brand green, AA 5.4:1 on white. --color-green-deep and
-     --color-stock (= var(--color-green)) inherit from @theme and re-theme
-     through this value automatically. */
-  --color-green: #147A31;
-  /* Error red deep enough for light: 6.08:1 on #f7f6f3, 6.57:1 on #fff (AA).
-     The dark-mode #f87171 only hits 2.56:1 here. */
-  --color-error: #b42318;
-  --color-border: #e4e0d8;
-  --color-border-strong: #cfc9bd;
-  /* --color-on-accent stays the dark default from @theme: bright gold fill
-     + dark ink is exactly the dark-mode combination, now shared by both
-     themes. (The old white-on-deep-gold pairing is what forced the fill
-     brown in the first place.) */
-
-  /* Pod surface, light twin. */
-  --pod-bg: rgba(247, 246, 243, 0.82);
-  --pod-bg-strong: rgba(255, 255, 255, 0.96);
-  --pod-shadow: 0 10px 30px -16px rgba(60, 50, 30, 0.3);
-}
-
-/* Mode-specific surfaces that bypassed the token system. */
-/* header pill + frame slider now use --pod-bg, which has its own light twin -
-   no per-surface light override needed. */
-html.light .product-gallery-controls {
-  background: rgba(255, 255, 255, 0.7);
-}
-/* Schematic sheets are black-on-white KiCad exports. Dark mode inverts them
-   to white blueprint lines; light mode drops the invert so they read as dark
-   ink on a white sheet of paper. */
-html.light .schematic-sheet {
-  filter: contrast(1.15);
-}
-
-/* ── Gold tags: REMOVED (maintainer 2026-07-12) ──────────────────────────────
-   The old "gold text is always on a near-black chip" rule lived here: in
-   light mode every gold label/eyebrow/badge got a --color-tag-bg chip so
-   gold never touched white. It scattered black boxes across light pages
-   and read as broken, so the whole block is gone. Gold text now sits
-   directly on the light background as a ~2.6:1 brand accent (see the
-   light-mode --color-gold note above). The `.gold-tag` JSX class is now
-   inert: safe to leave in markup, no styling attached. If you need gold
-   on a genuinely dark surface within a light page, set the text to
-   var(--color-gold-bright) and give the element its own dark background;
-   don't reintroduce a blanket chip rule. */
-
 /* Default price treatment. Display sans, tabular figures. Specialised
    per-context by .product-buy-price overrides. */
 .product-price {
@@ -348,6 +264,7 @@ html.light .schematic-sheet {
    defines its own --font-sans default which would otherwise win
    against our @theme override at the html selector. */
 html {
+  color-scheme: dark;
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: "Inter", "Inter Fallback", -apple-system, BlinkMacSystemFont, ui-sans-serif,
@@ -513,9 +430,7 @@ html {
 /* Thin-line scroll hint under the hero - fades out over the first ~13% of
    scroll. Driven by --hero-p so it needs no per-frame React render. */
 /* Hero scene glow: a soft warm radial behind the drone so the stage isn't a
-   flat slab of background. Dark mode lifts the centre with a gold-tinted glow;
-   light mode (twin below) tints the centre warm and feathers a faint vignette
-   to the edges so it reads as a gradient instead of one flat colour. */
+   flat slab of background. The centre lifts with a gold-tinted glow. */
 
 body {
   min-height: 100vh;
@@ -881,23 +796,6 @@ html.anim-paused .board-sheet.is-active {
   }
 }
 
-/* Theme toggle: same muted-icon treatment as the search/cart actions. */
-.theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.15s ease;
-}
-
-.theme-toggle:hover {
-  color: var(--color-text);
-}
-
 /* Region switch (EUR | USD): the lang-toggle pill, one side pressed. Sits in
    the header on desktop; on phones the drawer carries the full-size copy. */
 .region-switch {
@@ -981,27 +879,7 @@ html.anim-paused .board-sheet.is-active {
   padding: 0.5rem 1.1rem;
 }
 
-/* Circular theme reveal: the new theme wipes in as a circle expanding from
-   the toggle click point (set on --vt-x/--vt-y in ThemeToggle). Old stays put,
-   new clips open over it. Only active while .theme-vt is on <html>, so it
-   never affects any other view transition. JS skips this under reduced-motion
-   and where unsupported. */
 @supports (view-transition-name: root) {
-  html.theme-vt::view-transition-old(root) {
-    animation: none;
-  }
-  html.theme-vt::view-transition-new(root) {
-    animation: theme-circle-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-  @keyframes theme-circle-in {
-    from {
-      clip-path: circle(0% at var(--vt-x, 100%) var(--vt-y, 0%));
-    }
-    to {
-      clip-path: circle(150% at var(--vt-x, 100%) var(--vt-y, 0%));
-    }
-  }
-
   /* Navigation View Transitions: viewTransition-enabled links cross-fade the
      page instead of swapping flat, so moving between products / sections feels
      continuous (no "refresh"). The floating header/island gets its own
@@ -1570,8 +1448,7 @@ html.anim-paused .board-sheet.is-active {
 }
 /* The chip rules (.site-header-categories a / .site-header-cat-group a) also
    match the pod's product links: they bled gold colour, UPPERCASE tracking and
-   a 0.7 opacity onto the whole dropdown row, which washed the text out (worst in
-   light mode). Reset the row to full contrast, pin a concentric radius, then
+   a 0.7 opacity onto the whole dropdown row, which washed the text out Reset the row to full contrast, pin a concentric radius, then
    style each line explicitly: the SKU title gold, family + price neutral. */
 .site-header-categories .header-cat-pod .product-pod {
   border-radius: var(--r-lg);
@@ -1579,9 +1456,6 @@ html.anim-paused .board-sheet.is-active {
   padding: var(--sp-2);
   text-transform: none;
   letter-spacing: normal;
-}
-html.light .header-cat-pod {
-  background: var(--pod-bg-strong);
 }
 /* Bigger, clearer product imagery in the header dropdowns (50% up from the
    3rem shared default; the hero showcase keeps its own sizing). */
@@ -1627,12 +1501,11 @@ html.light .header-cat-pod {
   transition: opacity 0.15s ease, color 0.15s ease, font-weight 0.15s ease;
 }
 
-/* Dark keeps the quiet 0.7 resting state; on the light header the deep
-   gold at reduced opacity drops below readable contrast. */
-html:not(.light) .site-header-categories a:not(:hover):not(.active):not([aria-current='page']) {
+/* Quiet 0.7 resting state for the category links. */
+html:root .site-header-categories a:not(:hover):not(.active):not([aria-current='page']) {
   opacity: 0.7;
 }
-html:not(.light) .site-header-categories .site-header-cat-group a:not(:hover):not(.active):not([aria-current='page']) {
+html:root .site-header-categories .site-header-cat-group a:not(:hover):not(.active):not([aria-current='page']) {
   opacity: 0.72;
 }
 
@@ -4773,15 +4646,6 @@ button.reset {
   }
 }
 
-/* Light mode: a near-black slab reads far too heavy (maintainer, 2026-08-12), so
-   drop the tile and invert the white-on-transparent mark to near-black on
-   the page, mirroring how a multi-colour mark sits transparent. filter
-   would invert a background/border too, hence transparent and none. */
-html.light .firmware-logo--tile {
-  background: transparent;
-  border: none;
-  filter: invert(1);
-}
 /* First-reveal entrance: each layer flies in from the left to its resting fan
    position, staggered by --depth. The layers keep their FULL resting look
    (filters/glow) throughout: only `translate` animates, ending at 0: so the
@@ -5254,20 +5118,16 @@ html.light .firmware-logo--tile {
 th.is-active .spec-sheet-pick {
   cursor: default;
 }
-/* The Specs chapter: heading centred, the table one centred block with
-   the value columns centred under their variant names. */
+/* The Specs chapter: the table spans the chapter, heading and table on the
+   same left edge as every other chapter (founder 2026-10-30), the value
+   columns centred under their variant names. */
 section.chapter[data-centered] .chapter-body-col {
   grid-column: 1 / -1;
   width: 100%;
   max-width: 60rem;
-  margin-inline: auto;
-}
-.chapter[data-centered] .chapter-title {
-  text-align: center;
 }
 .chapter[data-centered] .spec-sheet {
   max-width: none;
-  margin-inline: auto;
 }
 .chapter[data-centered] .spec-sheet td,
 .chapter[data-centered] .spec-sheet thead th:not(:first-child) {
@@ -5323,7 +5183,7 @@ section.chapter[data-centered] .chapter-body-col {
 
 /* Related cards - spec-forward tiles (board render, catalog-file eyebrow,
    one-line spec, mono price) with a pointer-following gold spotlight on
-   hover. All tokens, so light mode comes for free. */
+   hover. All tokens. */
 .related-grid {
   /* Same rhythm as .products-grid so the strip reads as one catalog. */
   display: grid;
@@ -9505,15 +9365,6 @@ a.what-chain-chip:hover {
   margin: 0.25rem 0 0;
 }
 
-.account-dashboard-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  /* Stretch (the default) so every card in a row matches the tallest one;
-     .account-dashboard-cta's margin-top: auto then pins each card's action
-     to the same bottom edge instead of trailing the shortest card's text. */
-}
-
 .account-dashboard-card {
   position: relative;
   display: flex;
@@ -9543,15 +9394,6 @@ a.what-chain-chip:hover {
   justify-content: space-between;
   align-items: baseline;
   gap: 1rem;
-}
-
-.account-dashboard-eyebrow-mono {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-gold-text);
-  margin: 0;
 }
 
 .account-dashboard-card-link {
@@ -9721,45 +9563,11 @@ a.what-chain-chip:hover {
 }
 
 /* ============================================
-   polish/account: /account header row, the full-width Orders card,
-   the Newsletter/Support grid, the collapsed Settings-and-data section,
-   and the /account/login CTA - shares the generic .details-toggle with it.
-   Reuses .account-dashboard-* above for the card grid.
+   polish/account: the /early-bird order list and the /account/login CTA.
+   /account itself is .account-hub-* at the end of this file.
    ============================================ */
 
-/* The identity line under the title: the live Shopify email (or a plain
-   "Signed in" fallback) on the left, Sign out on the right of the same
-   full-width row as the cards below; stacked on a phone. .page-header caps
-   itself at 44rem, which pinned Sign out mid-page, so the account header
-   spans the content width instead. */
-.account-header {
-  max-width: none;
-}
-.account-identity {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-.account-identity .page-description {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.account-identity-signout {
-  flex: 0 0 auto;
-}
-@media (min-width: 640px) {
-  .account-identity {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-  }
-}
-
-/* Orders: a full-width card above the Newsletter/Support grid. Each order
-   is its own bordered row: number and date, total, a status chip, a compact
-   item list, and one "View order" link that stretches over the whole row. */
+/* /early-bird order list: a card holding one bordered row per order. */
 .account-orders-card {
   display: grid;
   gap: 0.75rem;
@@ -9817,87 +9625,6 @@ a.what-chain-chip:hover {
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
-.account-order-total {
-  font-family: var(--font-mono);
-  font-size: 0.95rem;
-  color: var(--color-text);
-}
-.account-order-chip {
-  justify-self: start;
-  max-width: 100%;
-  padding: 0.2em 0.75em;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
-.account-order-chip[data-tone='preorder'] {
-  color: var(--color-gold-text);
-  border-color: color-mix(in srgb, var(--color-gold) 45%, transparent);
-  background: var(--color-gold-soft);
-}
-.account-order-chip[data-tone='shipped'] {
-  color: var(--color-green);
-  border-color: color-mix(in srgb, var(--color-green) 45%, transparent);
-  background: color-mix(in srgb, var(--color-green) 10%, transparent);
-}
-.account-order-chip[data-tone='processing'] {
-  color: var(--color-text);
-}
-.account-order-items {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.15rem;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  color: var(--color-text);
-}
-.account-order-item {
-  display: grid;
-  grid-template-columns: 2.25rem minmax(0, 1fr);
-  align-items: baseline;
-  gap: 0.25rem;
-}
-.account-order-qty {
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  line-height: 1.4;
-  color: var(--color-text-muted);
-  align-self: baseline;
-}
-.account-order-variant {
-  margin-left: 0.5rem;
-  color: var(--color-text-muted);
-  font-size: 0.85em;
-}
-.account-order-more {
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-}
-.account-order-note {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-.account-order-view {
-  justify-self: start;
-}
-.account-order-view::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-}
-.account-orders-all {
-  justify-self: start;
-}
-
 .account-login-cta {
   margin-bottom: 1.25rem;
 }
@@ -10552,9 +10279,6 @@ a.what-chain-chip:hover {
     rgb(0 0 0 / 0.3) 64%,
     rgb(0 0 0 / 1) 82%
   );
-}
-html.light .editorial-watermark {
-  opacity: 0.026;
 }
 
 /* Margin art: one stroke-only drawing per section, floated into the free
@@ -11295,13 +11019,6 @@ html.light .editorial-watermark {
   --map-line: #26262c;
   --map-line-strong: #32323a;
 }
-html.light {
-  --map-land: #e6e3dc;
-  --map-water: #d6e4ec;
-  --map-water-line: #bcd3df;
-  --map-line: #dcd8cf;
-  --map-line-strong: #cdc8bd;
-}
 
 /* Map of the Vaartkom behind /visit (scripts/gen-visit-map.py). The canvas
    is the SVG at one pixel per metre, offset so the lab sits on --pin-x /
@@ -11342,9 +11059,6 @@ html.light {
   background: var(--map-land) url('/makerspace/map-dark.svg') 0 0 / 100% 100% no-repeat;
 }
 
-html.light .visit-map-canvas {
-  background-image: url('/makerspace/map-light.svg');
-}
 
 .visit-map-pin {
   position: absolute;
@@ -11636,8 +11350,7 @@ html.light .visit-map-canvas {
   color: var(--color-gold-text-hover);
 }
 
-/* Roadmap (/roadmap): hairline rows, mono status chips. Tokens only,
-   so light mode themes itself. */
+/* Roadmap (/roadmap): hairline rows, mono status chips. Tokens only. */
 /* ── Status kanban (roadmap page) ──────────────────────────────────────
    The working board, drawn with hairlines and the three-state dot
    vocabulary: buyable states filled (beta additionally ringed), alpha a
@@ -12796,7 +12509,7 @@ html.light .visit-map-canvas {
 .rn-archive-head .rn-eyebrow .rn-rss {
   display: inline-flex;
   gap: 6px;
-  /* Gold as text: the token that deepens in light theme (1.4:1 before). */
+  /* Gold as text. */
   color: var(--color-gold-text);
   text-decoration: none;
 }
@@ -14633,12 +14346,6 @@ html.light .visit-map-canvas {
 .step-bar[data-funded] .step-bar-label {
   color: var(--color-stock);
 }
-/* Light theme: gold text is a brand accent only there (see html.light), so
-   the preorder words go to ink and the gold stays on dots and bars. */
-html.light .cart-sheet-item .cart-line-preorder {
-  color: var(--color-text);
-}
-
 /* The desktop thumbnail strip sits below the square media frame, which
    clips it to a sliver; the arrow pill and counter already navigate. */
 @media (min-width: 1024px) {
@@ -14787,9 +14494,6 @@ html.light .cart-sheet-item .cart-line-preorder {
   object-fit: contain;
   border-radius: var(--r-sm);
   background: var(--color-bg-elevated);
-}
-html.light .cart-added-line img {
-  mix-blend-mode: multiply;
 }
 .cart-added-line-name {
   display: block;
@@ -15042,9 +14746,6 @@ a.cart-added-suggestion-name:hover {
   object-fit: contain;
   border-radius: var(--r-sm);
   background: var(--color-bg-elevated);
-}
-html.light .cart-added-suggestion img {
-  mix-blend-mode: multiply;
 }
 .cart-added-suggestion-name {
   display: block;
@@ -15545,8 +15246,7 @@ button[data-waiting] {
    a green dot for a dated batch. Same look as the PDP .ship-line. */
 .ship-chip,
 .cart-sheet-item .ship-chip,
-.cart-added .ship-chip,
-html.light .cart-sheet-item .ship-chip {
+.cart-added .ship-chip {
   display: flex;
   align-items: flex-start;
   gap: 0.4rem;
@@ -15562,10 +15262,6 @@ html.light .cart-sheet-item .ship-chip {
 .ship-chip-label {
   color: var(--color-gold-text);
   font-weight: 500;
-}
-html.light .ship-chip-label {
-  color: var(--color-text);
-  font-weight: 600;
 }
 
 /* Cart: the site gutter on phones, a stepper that stays visible when
@@ -15604,7 +15300,7 @@ body:has(main.cart) footer .footer-note--newsletter {
 
 /* OSHWA chip: the mark is an <img>, so its currentColor paths render
    black; a small light plate keeps it readable in the dark theme. */
-html:not(.light) .trust-chip-oshwa-mark {
+html:root .trust-chip-oshwa-mark {
   box-sizing: content-box;
   padding: 0.12em 0.2em;
   border-radius: 3px;
@@ -16684,11 +16380,8 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   /* On the dark reveal card, use full-brightness brand gold so the badge
-     pops; light mode swaps back to --color-gold (the card goes near-white). */
+     pops. */
   color: var(--color-gold-bright);
-}
-html.light .hero-reveal-soon {
-  color: var(--color-gold);
 }
 .hero-scene-glow {
   background: radial-gradient(
@@ -16696,20 +16389,6 @@ html.light .hero-reveal-soon {
     rgba(80, 65, 20, 0.3) 0%,
     transparent 60%
   );
-}
-html.light .hero-scene-glow {
-  background:
-    radial-gradient(
-      ellipse at 50% 45%,
-      rgba(199, 154, 50, 0.18) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse at 50% 42%,
-      transparent 15%,
-      rgba(38, 36, 40, 0.28) 70%,
-      rgba(28, 26, 32, 0.45) 100%
-    );
 }
 @media (max-width: 640px) {
   .hero-wordmark {
@@ -17406,10 +17085,6 @@ html.hero-header-in .homepage-layout .site-header {
   --pin-motor: var(--color-green);
   --pin-nc: var(--color-text-dim);
   margin-top: var(--sp-6);
-}
-html.light .plugs {
-  --ink-line: color-mix(in srgb, var(--color-gold-text) 35%, transparent);
-  --pin-signal: #1f5fbf;
 }
 .plugs-top {
   display: flex;
@@ -18732,9 +18407,6 @@ summary,
   padding-top: 14px;
   border-top: 1px solid var(--color-border);
 }
-html.light .testing-card {
-  color-scheme: light;
-}
 /* The chapter grid leaves an empty row between the heading and the card: close it. */
 @media (min-width: 880px) {
   .chapter-wide:has(> .testing-card) {
@@ -18822,5 +18494,312 @@ html.light .testing-card {
   }
   .testing-card-svg-narrow {
     display: block;
+  }
+}
+
+/* /account (Shopify accounts): side nav with one open panel, order cards with
+   product thumbnails and a four-column meta row. */
+.account-hub-title {
+  margin-bottom: 1.5rem;
+}
+.account-hub-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+.account-hub-side,
+.account-hub-panel {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+}
+.account-hub-side {
+  padding: 1.5rem 1.25rem 1rem;
+  position: sticky;
+  top: 6rem;
+}
+.account-hub-welcome {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0 0.5rem 1.25rem;
+}
+.account-hub-welcome-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.account-hub-welcome-email {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.account-hub-welcome-since {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.account-hub-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.account-hub-nav > li + li {
+  border-top: 1px solid var(--color-border);
+}
+.account-hub-nav form {
+  margin: 0;
+}
+.account-hub-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 0.95rem 0.75rem;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.account-hub-nav-link > span {
+  flex: 1;
+}
+.account-hub-nav-link:hover {
+  background: var(--color-bg-elevated);
+}
+.account-hub-nav-link[aria-current='page'] {
+  background: var(--color-bg-elevated);
+}
+.account-hub-nav-link[aria-current='page'] > svg:first-child {
+  color: var(--color-gold-text);
+}
+.account-hub-nav-chevron {
+  color: var(--color-text-muted);
+}
+.account-hub-panel {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.5rem 1.75rem 1.75rem;
+  min-width: 0;
+}
+.account-hub-panel-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+.account-hub-block {
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+}
+.account-hub-block .account-chatfpv,
+.account-hub-block .account-settings-delete {
+  justify-self: stretch;
+}
+.account-hub-orders {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+.account-hub-order {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+}
+.account-hub-order-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.account-hub-thumbs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.account-hub-thumb {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: var(--r-sm);
+  background: var(--color-bg-elevated);
+  overflow: hidden;
+}
+.account-hub-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 6px;
+}
+.account-hub-thumb-empty {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text-muted);
+}
+.account-hub-thumb-qty {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 0 0.35em;
+  border-radius: var(--r-xs);
+  background: var(--color-bg-card);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text);
+}
+.account-hub-thumb-more {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+}
+.account-hub-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 10rem;
+  padding: 0.7rem 1.25rem;
+  border: 1px solid var(--color-text);
+  border-radius: var(--r-xs);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+.account-hub-btn:hover {
+  background: var(--color-text);
+  color: var(--color-bg-card);
+}
+.account-hub-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, auto));
+  justify-content: start;
+  margin: 0;
+}
+.account-hub-meta > div {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0 1.75rem;
+  border-left: 1px solid var(--color-border);
+}
+.account-hub-meta > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.account-hub-meta dt {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.account-hub-meta dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+.account-hub-status[data-tone='shipped'] {
+  color: var(--color-green);
+}
+.account-hub-status[data-tone='preorder'] {
+  color: var(--color-gold-text);
+}
+.account-hub-status[data-tone='processing'] {
+  color: var(--color-text);
+}
+.account-hub-items {
+  margin: -0.5rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.account-hub-more {
+  justify-self: start;
+}
+@media (max-width: 860px) {
+  .account-hub-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .account-hub-side {
+    position: static;
+    padding: 1rem;
+  }
+  .account-hub-welcome {
+    padding-bottom: 0.75rem;
+  }
+  /* Narrow: the nav is one scrolling row of chips, so the panel stays above the fold. */
+  .account-hub-nav {
+    display: flex;
+    gap: 0.4rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .account-hub-nav > li + li {
+    border-top: 0;
+  }
+  .account-hub-nav-link {
+    padding: 0.55rem 0.8rem;
+    white-space: nowrap;
+    border: 1px solid var(--color-border);
+    border-radius: var(--r-pill);
+    gap: 0.5rem;
+  }
+  .account-hub-nav-chevron {
+    display: none;
+  }
+  .account-hub-panel {
+    padding: 1.25rem 1rem;
+  }
+  .account-hub-order {
+    padding: 1rem;
+  }
+  .account-hub-thumb {
+    width: 64px;
+    height: 64px;
+  }
+  .account-hub-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 0;
+  }
+  .account-hub-meta > div:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .account-hub-meta > div {
+    padding: 0 0 0 1rem;
+  }
+  .account-hub-order-top .account-hub-btn {
+    width: 100%;
   }
 }

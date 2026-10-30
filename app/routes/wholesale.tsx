@@ -169,6 +169,12 @@ export default function WholesaleRoute() {
           <h1 className="page-title">{t('title')}</h1>
           <p className="wholesale-lead max-w-md text-[var(--color-text-muted)]">{t('lead')}</p>
         </header>
+        <section aria-labelledby="how-title" className="mb-10">
+          <h2 id="how-title" className="m-0 text-base font-medium">{t('how_title')}</h2>
+          <ol className="mt-3 grid list-decimal gap-2 pl-5 text-[14px] leading-relaxed text-[var(--color-text-muted)]">
+            {['how_1', 'how_2', 'how_3', 'how_4', 'how_5', 'how_6'].map(key => <li key={key}>{t(key)}</li>)}
+          </ol>
+        </section>
         <ApplicationForm />
         <p className="wholesale-contact text-[var(--color-text-muted)]">{t('contact_lead')} <a href={`mailto:${email}`} className="text-[var(--color-text)] underline underline-offset-4">{email}</a></p>
       </div>

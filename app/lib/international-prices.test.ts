@@ -19,7 +19,7 @@ const base: Catalog = {
   }],
 };
 
-test('international destinations never consume Belgian paid stock or its accessory inventory', () => {
+test('international destinations take batch 1 FC stock, never the Belgian accessory inventory', () => {
   for (const country of ['GB', 'CH', 'NO', 'CA', 'AU', 'JP']) assert.equal(regionOf(country), 'INT');
   assert.equal(regionOf('BE'), 'EU');
   assert.equal(regionOf('US'), 'US');
@@ -27,16 +27,23 @@ test('international destinations never consume Belgian paid stock or its accesso
   const campaign = applyCampaign(base, config, {}, new Date('2026-10-01'), 'INT');
   for (const variant of campaign.products[0].variants) {
     assert.equal(variant.availability, 'preorder', variant.sku);
-    assert.equal(variant.campaign?.batch, 2, variant.sku);
-    assert.equal(variant.campaign?.paidStock, false, variant.sku);
-    assert.equal(variant.campaign?.deliveryByDay, '2027-04-30', variant.sku);
-    assert.match(variant.ship_promise ?? '', /31 March 2027/);
-    assert.doesNotMatch(variant.ship_promise ?? '', /early November|15 April|30 April/);
+    const fc = variant.sku === 'OPENFC-LITE-2020';
+    assert.equal(variant.campaign?.batch, fc ? 1 : 2, variant.sku);
+    assert.equal(variant.campaign?.paidStock, fc, variant.sku);
+    // Batch 1 has no international arrival date, so none is named for it.
+    assert.equal(variant.campaign?.deliveryByDay, fc ? null : '2027-04-30', variant.sku);
+    if (fc) {
+      assert.match(variant.ship_promise ?? '', /early November/);
+    } else {
+      assert.match(variant.ship_promise ?? '', /31 March 2027/);
+      assert.doesNotMatch(variant.ship_promise ?? '', /early November|15 April|30 April/);
+    }
   }
+  // International and EU units fill batch 1 together; a US unit never does.
   const eu = campaignState(config.skus['OPENFC-LITE-2020'].batches, [{region:'INT', units:3}, {region:'US', units:2}], config.pendingShips, [], null, 'EU');
   assert.equal(eu.batch, 1);
-  assert.equal(eu.paidLeft, 225);
-  assert.equal(eu.targetOrdered, 5);
+  assert.equal(eu.paidLeft, 212);
+  assert.equal(eu.targetOrdered, 2); // only the US units reach the funding target; INT units sit in paid batch 1
 });
 
 test('country prices are copied exactly, without US uplift or an inferred local ladder', () => {
@@ -52,7 +59,7 @@ test('country prices are copied exactly, without US uplift or an inferred local 
       assert.equal(variant.campaign?.nextPrice, null);
       assert.equal(variant.campaign?.usLadder, undefined);
       assert.equal(variant.campaign?.internationalPrice, true);
-      assert.equal(variant.campaign?.batch, 2);
+      assert.equal(variant.campaign?.batch, variant.sku === 'OPENFC-LITE-2020' ? 1 : 2);
     }
   }
 });
@@ -73,7 +80,8 @@ test('an international arrival date must be supplied separately from existing EU
 
 test('checkout states distinct paid-stock, EU funding and international arrival deadlines without changing dispatch promises', () => {
   const priced = {...base,products:base.products.map(p=>({...p,variants:p.variants.map(v=>({...v,price:25,availability:v.sku==='OPENFC-LITE-2020' ? 'preorder' as const : v.availability}))}))};
-  for (const [region, units, date] of [['EU',0,'30 November 2026'],['EU',250,'15 April 2027'],['INT',0,'30 April 2027']] as const) {
+  // Batch 1 names no international arrival date; once it is full an international unit takes the March date.
+  for (const [region, units, date] of [['EU',0,'30 November 2026'],['EU',250,'15 April 2027'],['INT',0,undefined],['INT',250,'30 April 2027']] as const) {
     const catalog=applyCampaign(priced,config,{'OPENFC-LITE-2020':units},new Date('2026-10-01'),region);
     const variant=catalog.products.flatMap(p=>p.variants).find(v=>v.sku==='OPENFC-LITE-2020')!;
     const attributes=lineAttributes(variant,region)!;

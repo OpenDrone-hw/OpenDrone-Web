@@ -233,10 +233,26 @@ plan. No customer or company record is created, nothing is mailed to the
 applicant, and no pricing, tax exemption, order or delivery commitment is made
 by an application.
 
-Answer an application by replying to the mail. Check the shop and contact,
-collect billing/shipping addresses, VAT/EIN and shipment evidence when
-preparing the quote, and use a Shopify draft order for an accepted wholesale
-order. Public consumer checkout retains its existing behavior.
+An approved retailer orders in the normal shop and pays 75% of retail (for a
+reverse-charge customer 75% of net retail, see `docs/wholesale.md`; 25%
+off, `WHOLESALE_PERCENT` in `scripts/wholesale_lib.py`) whatever preorder price
+step a product is on. Retail is the Shopify compare-at price. The retailer
+types one personal code, `WS<rate>-<NAME>` (for example `WS25-FPV24`), in the
+cart's "Wholesale code" field (`intent=discount` in
+`app/lib/shopify-cart-action.ts`). The cart sends that code with its price-group
+companions `-G2` to `-G4` (`app/lib/wholesale-codes.ts`) through
+`cartDiscountCodesUpdate`. Each is a customer-limited Shopify percentage code
+scoped to the variants of one price group, because Shopify takes a percentage
+off the live price, not off compare-at. `scripts/wholesale-onboard.py` (VIES
+check, customer, tag `wholesale`, EU reverse charge exemption only for a valid
+VIES number outside BE, the codes) and `scripts/wholesale-sync.py` (re-points
+the groups after a price step; daily job `wholesale-sync` in the workspace) are
+dry run by default; `--apply` writes and reads back. The storefront passes no
+buyer identity to checkout (the sign-in drops Shopify's access token on
+purpose), so the retailer signs in at Shopify checkout with the approved email
+for the exemption and the customer-limited codes to apply. Procedure, VAT per
+country, batch caps, refunds and the test order: `docs/wholesale.md`. Public
+consumer checkout retains its existing behavior.
 
 The switch is `TRADE_MAIL_ENABLED=1` with `RESEND_API_KEY` set; without both
 the page shows the contact address instead of the form. A repeat application
@@ -986,11 +1002,12 @@ KiCad and the hero model from Onshape.
 
 ## Theming and i18n
 
-Light and dark through CSS custom properties. Every colour is a semantic token
-(`--color-bg`, `--color-text`, `--color-gold`, ...); dark is the default in the
-Tailwind `@theme` block, light overrides the same names under `html.light`, and
-an inline head script resolves the theme before first paint. Never hardcode a
-hex that changes between themes. Brand assets and the one gold literal:
+The site is dark only (founder 2026-10-24): no light palette, no theme toggle,
+no theme cookie or localStorage key. Colour goes through CSS custom properties:
+every colour is a semantic token (`--color-bg`, `--color-text`, `--color-gold`,
+...) in the Tailwind `@theme` block of `app/styles/app.css`. `<html>` carries the
+`dark` class and `color-scheme: dark`; `app/lib/dark-only.test.ts` fails if a
+light selector comes back. Brand assets and the one gold literal:
 `brand/README.md`. `resolveLegalLoader` in `app/lib/i18n.ts` picks the legal
 Markdown by URL prefix and each legal route emits hreflang for en, nl, fr.
 
@@ -1097,7 +1114,7 @@ page renders as before. Open:
 | Destination | `shippingQuote` zone `us`, rate from `us-sales.json` | unchanged |
 | Prices | the US catalog's USD list price: duties included, no sales tax. The price steps list shows USD too (see "US prices" below) | EUR incl. VAT |
 | Counter | "0 / 250 ordered for the March 2027 batch": same sentence and bar as the EU, counting the highlighted batch | "1 / 250 ordered for batch 1" |
-| Batches | one row per batch in batch order in both regions (`app/lib/availability.ts`, `app/components/Availability.tsx`): batch 1 "EU only" first, the March 2027 batch "EU and US" second; the buyer's batch is highlighted (US: March 2027, with batch 1 tagged "Not available in the US"; EU: batch 1 while units remain); other products one March row | batch 1 highlighted, March 2027 batch below |
+| Batches | one row per batch in batch order in both regions (`app/lib/availability.ts`, `app/components/Availability.tsx`): batch 1 "EU and international, not the US" first, the March 2027 batch "EU, US and more" second; the buyer's batch is highlighted (US: March 2027, with batch 1 tagged "Not available in the US"; EU: batch 1 while units remain); other products one March row | batch 1 highlighted, March 2027 batch below |
 | Refund line | "If we cannot deliver to you, you get a full refund." (terms 7ter.5, US only) | none |
 | Sells | everything for sale: campaign SKUs from their first US-serving batch, every other SKU (in stock, accessories) as a preorder of `usStock` in `content/preorders.json` (March 2027 batch). Sold out stays sold out | everything for sale |
 | Batch | first batch with room whose `regions` include US | first with room whose `regions` include EU |
@@ -1116,8 +1133,8 @@ batch tag.
 hand.
 
 The cart line and the checkout line property `Availability` carry the same
-words as the product page ("Batch 1 · EU only", "March 2027 batch · EU and
-US"; `batchText` in `app/lib/availability.ts`, words from
+words as the product page ("Batch 1 · EU and international, not the US", "March 2027 batch · EU, US and
+more"; `batchText` in `app/lib/availability.ts`, words from
 `content/copy/preorder.json`). Product pages are English only; the legal terms
 (art. 7bis) are unchanged.
 
@@ -1153,9 +1170,14 @@ rate, and HS codes and country of origin on every variant.
 
 ### International preorders
 
-Other permitted destinations use allocation region `INT`. EU-only paid stock
-stays in the EU; international products and accessories use the March batch,
-including the existing `usStock` rule for otherwise unlisted accessories.
+Other permitted destinations use allocation region `INT`. Batch-1 paid stock
+of FC and ESC serves the EU and `INT` but not the US (founder 2026-10-29), with
+the early November promise and no international delivery date; international
+products, accessories and a full batch 1 use the March batch, including the
+existing `usStock` rule for otherwise unlisted accessories. The Shopify
+shipping rates of the international zones are still named for the March ship
+date: add a batch-1 rate per zone, with the same price and the November ship
+date, before this reaches production (`docs/batch1-shipping-rates.md`).
 The selected country supplies Shopify's catalog prices, cart market and currency.
 A null shipping preview means the charge is confirmed at checkout, never free.
 Before checkout, the cart and the added-to-cart drawer show "from X, confirmed
@@ -1206,10 +1228,10 @@ order, then set that batch's `ships`. An accessory with `stock` sells that
 many units with its dated `batch`, then ships with the lead's `after`
 batch; set `stock` from InvenTree stock on hand. The storefront keeps dispatch promises separate from arrival deadlines.
 `deliveryBy`, `deliveryByUS` and `deliveryByINT` supply the visible `Delivery by`
-checkout property, cart and confirmation, and order the lines of a combined cart. A batch with `regions` (`["EU"]` for paid stock in Belgium) takes
+checkout property, cart and confirmation, and order the lines of a combined cart. A batch with `regions` (`["EU", "INT"]` for paid stock in Belgium) takes
 only units shipping there: each paid unit takes the first batch with room
-that serves its order's shipping region (EU, US or INT), so a non-EU unit skips an
-EU-only batch. Funding targets count every region. A price step counts what
+that serves its order's shipping region (EU, US or INT), so a US unit skips a
+batch that does not serve the US. Funding targets count every region. A price step counts what
 the product page step bar shows an EU buyer (`tierUnits` in
 `app/lib/preorder-campaign.ts`): the batches the EU buyer has seen sell out
 plus the units in their current batch, so units in a batch the EU buyer cannot

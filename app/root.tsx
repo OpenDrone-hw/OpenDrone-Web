@@ -39,7 +39,6 @@ import {copyText} from '~/lib/copy';
 import {getCompanyIdentity} from '~/lib/company';
 import {localeFromPathname, seoLocaleTag} from '~/lib/i18n';
 import {buildOrgJsonLd, buildSeoMeta} from '~/lib/seo';
-import {THEME_COLORS, THEME_INIT_SCRIPT} from '~/lib/theme';
 import {themeOverrideCss} from '~/lib/theme-overrides';
 import {installViewTransitionGuard} from '~/lib/view-transition';
 import {captureAttribution} from '~/lib/growth/attribution';
@@ -269,7 +268,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
   const themeCss = themeOverrideCss();
 
   // Make every view transition resilient: route React Router's navigation
-  // transitions (and the manual theme-toggle reveal) through one guard that
+  // transitions through one guard that
   // tracks the in-flight transition and swallows AbortError/InvalidStateError
   // when one is skipped/interrupted. Without this, overlapping transitions
   // threw `InvalidStateError: Transition was aborted because of invalid state`
@@ -298,15 +297,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
           name="viewport"
           content="width=device-width,initial-scale=1,viewport-fit=cover"
         />
-        <meta name="theme-color" content={THEME_COLORS.dark} />
-        {/* Resolve + apply the theme before first paint so a light-mode
-            visitor never sees a dark flash. Must run before the stylesheet
-            and before hydration; nonce satisfies CSP. */}
-        <script
-          nonce={nonce}
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{__html: THEME_INIT_SCRIPT}}
-        />
+        <meta name="theme-color" content="#0d0d10" />
         {/* Pre-paint blanket for the reading cascade: injected BY script,
             so its very existence is the js-gate - a no-JS reader never gets
             it and sees the whole page. Hides everything below the first

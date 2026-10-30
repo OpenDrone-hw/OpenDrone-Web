@@ -26,7 +26,7 @@ describe('availability block', () => {
   it('lists both FC/ESC batches for an EU buyer, batch 1 highlighted with its units left', () => {
     const rows = availabilityRows(state('OPENESC-3030', 1, 'EU'), DATES, 'EU', words);
     assert.deepEqual(rows.map((r) => [r.label, r.scope, r.state, r.note]), [
-      ['From Belgium', 'EU addresses only', 'current', '224 left'],
+      ['From Belgium', 'EU and international, not the US', 'current', '214 left'],
       ['March 2027 batch', 'EU, US and more', 'next', null],
     ]);
     assert.equal(rows[0].detail, 'Ships early Nov 2026');
@@ -68,7 +68,7 @@ describe('availability block', () => {
   });
 
   it('names the batch on the product page and leaves it off the checkout line properties', () => {
-    assert.equal(batchText(state('OPENESC-3030', 1, 'EU'), words), 'From Belgium, EU addresses only');
+    assert.equal(batchText(state('OPENESC-3030', 1, 'EU'), words), 'From Belgium, EU and international, not the US');
     assert.equal(batchText(state('OPENESC-3030', 1, 'US'), words), 'March 2027 batch, EU, US and more');
     const variant = (campaign: ReturnType<typeof state>): CatalogVariant => ({
       sku: 'OPENESC-3030', title: 'x', model: null, options: {}, price: 47.2, compare_price: 59, currency: 'EUR',
@@ -90,7 +90,7 @@ function accessory(sku: string, region: 'EU' | 'US', own = 0) {
 }
 
 describe('one name for the November batch (G1)', () => {
-  const NAME = 'From Belgium, EU addresses only';
+  const NAME = 'From Belgium, EU and international, not the US';
 
   it('names the FC/ESC batch and the accessories that ship with it the same', () => {
     assert.equal(batchText(state('OPENESC-3030', 1, 'EU'), words), NAME);
@@ -119,9 +119,9 @@ describe('one name for the November batch (G1)', () => {
     }
   });
 
-  it('gives the accessory the same rows and "EU only" as the FC, with Batch 1 first, then the March batch, for a US buyer', () => {
+  it('gives the accessory the same rows and scope as the FC, with Batch 1 first, then the March batch, for a US buyer', () => {
     const eu = availabilityRows(accessory('ACC-STRAP-20X220', 'EU'), DATES, 'EU', words);
-    assert.deepEqual(eu.map((r) => [r.label, r.scope, r.state]), [['From Belgium', 'EU addresses only', 'current']]);
+    assert.deepEqual(eu.map((r) => [r.label, r.scope, r.state]), [['From Belgium', 'EU and international, not the US', 'current']]);
     assert.equal(eu[0].detail, 'Ships early Nov 2026');
     for (const sku of ['ACC-STRAP-20X220', 'ACC-ANT-T', 'ACC-CAP-470UF-35V']) {
       const us = availabilityRows(accessory(sku, 'US'), DATES, 'US', words);
@@ -168,7 +168,7 @@ describe('a batch name never carries a date (G6, G8)', () => {
         if (!REAL.shipsWith?.[sku]) continue;
         const current = currentBatch(campaign)!;
         const text = batchText(campaign, words)!;
-        if (current.paid) assert.equal(text, 'From Belgium, EU addresses only', `${sku} ${region}`);
+        if (current.paid) assert.equal(text, 'From Belgium, EU and international, not the US', `${sku} ${region}`);
         else assert.match(text, /^Ships with the (OpenFC Lite|OpenFrame) March 2027 batch, EU, US and more$/, `${sku} ${region}`);
       }
     }
