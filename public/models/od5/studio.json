@@ -256,6 +256,7 @@
       "id": "whole",
       "title": "OpenDrone 5\"",
       "note": "5\" freestyle build",
+      "caption": "Scroll to take it apart, one part at a time.",
       "select": {
         "none": true
       }

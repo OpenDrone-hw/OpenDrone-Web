@@ -1370,9 +1370,9 @@ html.hero-immersive .homepage:has(.hero-build-guide) .hp-copy { top: 24px; }
 .homepage:has(.hero-build-guide) .hp-copy-link { margin-top: 12px; font-size: 12px; }
 /* Exploring: the side cards step back so the drone reads through them; full again under the pointer. */
 .homepage .hero-buy--guide { transition: opacity 0.45s ease; }
-html.hero-immersive .homepage .hp-copy, html.hero-immersive .homepage .hero-buy--guide.is-visible { opacity: 0.55 !important; }
-html.hero-immersive .homepage .hp-copy:hover, html.hero-immersive .homepage .hero-buy--guide.is-visible:hover,
-html.hero-immersive .homepage .hero-buy--guide.is-visible:focus-within { opacity: 1 !important; }
+html.hero-exploring .homepage .hp-copy, html.hero-exploring .homepage .hero-buy--guide.is-visible { opacity: 0.55 !important; }
+html.hero-exploring .homepage .hp-copy:hover, html.hero-exploring .homepage .hero-buy--guide.is-visible:hover,
+html.hero-exploring .homepage .hero-buy--guide.is-visible:focus-within { opacity: 1 !important; }
 .hp-model-note { position: absolute; top: calc(var(--header-height) + 5rem); left: 50%; transform: translateX(-50%); margin: 0; color: var(--color-text-muted); font-size: 11px; pointer-events: none; }
 @keyframes hero-build-in { from { opacity: 0; } to { opacity: 1; } }
 @media (max-height: 850px) and (min-width: 769px) {
@@ -2226,37 +2226,107 @@ body:has(.test-banner) .site-header {
    the drone size selector, so the drone gets the screen. It is the same element
    under one view-transition name on every route, so the pill morphs continuously:
    top bar to left bar here, and left bar back to top bar when a click leaves the
-   homepage. The morph on this page is started in app/routes/_index.tsx. */
+   homepage: the route change's view transition (app/components/nav.tsx). */
 .site-header-main .site-header-logo { view-transition-name: none !important; }
+/* GitHub sits in the homepage's side bar only. */
 .site-header-github { display: none; }
+@media (min-width: 1024px) { html.hero-immersive .site-header-github { display: flex; } }
 .homepage .hero-github { transition: opacity 0.45s ease; }
-/* The homepage's own morph moves only the pill: the page (and the live 3D) stays put. */
-html.hero-vt::view-transition-old(root) { display: none; }
-html.hero-vt::view-transition-new(root) { animation: none; }
+/* Side-bar-only pieces stay out of the top bar. */
+.site-header-rail-label, .header-cat-long, .site-header-icon-label { display: none; }
+.site-header-rail-slot { display: none; }
 @media (min-width: 1024px) {
-  html.hero-immersive .site-header { inset: 0 auto 0 0; padding: 0 0 0 24px; display: flex; align-items: center; }
-  html.hero-immersive .site-header-main {
-    display: flex; flex-direction: column; align-items: stretch; gap: 10px;
-    width: auto; margin: 0; padding: 14px 8px; border-radius: 22px;
-    /* Centred in the space above the OpenDrone wordmark. */
-    translate: 0 -40px;
+  /* The bar is the OpenDrone wordmark's width, on its left edge, and runs from the
+     top of the screen down to just above it (wordmark: app.css .hero-wordmark). */
+  html.hero-immersive {
+    --hero-size-top: 24px;
+    --rail-mark-h: clamp(2.5rem, 5vw, 4.5rem);
+    --rail-w: calc(var(--rail-mark-h) * 5.29);
   }
-  html.hero-immersive .site-header-incutec-slot, html.hero-immersive .site-header-main > .site-header-logo { min-width: 0; justify-content: center; padding: 2px 6px 4px; }
-  html.hero-immersive .site-header-incutec { height: 0.95rem; }
-  html.hero-immersive .site-header-categories { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
-  html.hero-immersive .site-header-cat-group { display: flex; flex-direction: column; align-items: stretch; height: auto; border-radius: 16px; }
+  html.hero-immersive .site-header {
+    inset: 2.5rem auto calc(2.5rem + var(--rail-mark-h) + 1.75rem) 2.5rem;
+    width: var(--rail-w); padding: 0; display: block;
+  }
+  html.hero-immersive .site-header-main {
+    display: grid; grid-template-columns: 1fr repeat(3, auto); grid-template-rows: auto auto 1fr;
+    align-content: stretch; align-items: center; column-gap: 2px; row-gap: 0;
+    width: 100%; height: 100%; max-width: none; margin: 0; padding: 14px 12px 12px; border-radius: 22px;
+  }
+  /* Actions and utilities dissolve into the bar's grid: cart and menu sit on the
+     brand row, the community block at the foot. */
+  html.hero-immersive .site-header-actions, html.hero-immersive .site-header-utils { display: contents; }
+  html.hero-immersive .site-header-incutec-slot, html.hero-immersive .site-header-main > .site-header-logo {
+    grid-row: 1; grid-column: 1; min-width: 0; justify-content: flex-start; padding: 0 0 0 8px;
+  }
+  html.hero-immersive .site-header-incutec { height: 1rem; }
+  html.hero-immersive .site-header-cart, html.hero-immersive .header-more, html.hero-immersive .site-header-account,
+  html.hero-immersive .header-account-menu { grid-row: 1; }
+  html.hero-immersive .site-header-menu-toggle, html.hero-immersive .header-lang-toggle,
+  html.hero-immersive .header-region-switch { display: none; }
+
+  html.hero-immersive .site-header-rail-label {
+    display: block; grid-column: 1 / -1; padding: 0 10px 6px;
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--color-text-dim);
+  }
+  /* Shop: one list, full names, the families in their usual order. */
+  html.hero-immersive .site-header-categories {
+    grid-row: 2; grid-column: 1 / -1; display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+    margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--pod-border);
+  }
+  html.hero-immersive .site-header-cat-group {
+    display: flex; flex-direction: column; align-items: stretch; gap: 2px; height: auto;
+    padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
+  }
   html.hero-immersive .site-header-categories .header-cat { width: 100%; }
-  html.hero-immersive .site-header-categories .header-cat,
   html.hero-immersive .site-header-categories .header-cat > a,
-  html.hero-immersive .site-header-cat-all { justify-content: center; }
-  html.hero-immersive .site-header-actions { flex-direction: column; justify-self: auto; gap: 8px; padding-top: 10px; border-top: 1px solid var(--pod-border); }
-  html.hero-immersive .site-header-utils { flex-direction: column; gap: 8px; }
-  html.hero-immersive .header-lang-toggle, html.hero-immersive .header-region-switch { display: none; }
-  html.hero-immersive .site-header-github { display: inline-flex; }
+  html.hero-immersive .site-header-cat-all,
+  html.hero-immersive .site-header-discord, html.hero-immersive .site-header-github {
+    display: flex; align-items: center; justify-content: flex-start; gap: 10px;
+    width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 10px; background: none;
+    font-family: var(--font-sans); font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none;
+    color: var(--color-text); transition: background 0.15s ease, color 0.15s ease;
+  }
+  html.hero-immersive .site-header-categories .header-cat > a::after,
+  html.hero-immersive .site-header-cat-all::after {
+    content: '\203A'; margin-left: auto; font-size: 18px; line-height: 1; color: var(--color-text-dim);
+  }
+  html.hero-immersive .site-header-categories .header-cat > a:hover,
+  html.hero-immersive .site-header-categories .header-cat > a[aria-expanded='true'],
+  html.hero-immersive .site-header-cat-all:hover,
+  html.hero-immersive .site-header-discord:hover, html.hero-immersive .site-header-github:hover {
+    background: var(--color-bg-elevated);
+  }
+  html.hero-immersive .site-header-cat-all { margin-top: 6px; color: var(--color-gold-text); }
+  html.hero-immersive .header-cat-short { display: none; }
+  html.hero-immersive .header-cat-long { display: inline; }
+
+  /* Inside the drone: the walkthrough's parts, filled by HeroDroneStage. */
+  html.hero-immersive .site-header-rail-slot {
+    display: block; grid-row: 3; grid-column: 1 / -1; align-self: start; min-height: 0;
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--pod-border);
+  }
+  .hp-tour ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+  .hp-tour button {
+    display: flex; align-items: center; gap: 10px; width: 100%; height: 32px; padding: 0 10px;
+    border: 0; border-radius: 10px; background: none; cursor: pointer; text-align: left;
+    font-size: 13px; color: var(--color-text-muted); transition: background 0.15s ease, color 0.15s ease;
+  }
+  .hp-tour button:hover { background: var(--color-bg-elevated); color: var(--color-text); }
+  .hp-tour button.is-current { background: var(--color-bg-elevated); color: var(--color-text); }
+  .hp-tour-n { font-family: var(--font-mono); font-size: 10.5px; color: var(--color-text-dim); }
+  .hp-tour button.is-current .hp-tour-n { color: var(--color-gold-text); }
+  /* Community: at the foot of the bar, icon and name per row. */
+  html.hero-immersive .site-header-rail-label--community {
+    grid-row: 4; align-self: end; margin-top: 12px; padding-top: 14px; border-top: 1px solid var(--pod-border);
+  }
+  html.hero-immersive .site-header-discord { grid-row: 5; grid-column: 1 / -1; }
+  html.hero-immersive .site-header-github { grid-row: 6; grid-column: 1 / -1; }
+  html.hero-immersive .site-header-discord svg, html.hero-immersive .site-header-github svg { width: 18px; height: 18px; color: var(--color-text-muted); }
+  html.hero-immersive .site-header-icon-label { display: inline; }
   html.hero-immersive .homepage .hero-github { opacity: 0 !important; pointer-events: none; }
-  html.hero-immersive { --hero-size-top: 24px; }
   /* Family dropdowns open beside the bar instead of under it. */
-  html.hero-immersive .site-header-categories .header-cat-pod-wrap { top: 0; left: calc(100% + 14px); translate: none; }
+  html.hero-immersive .site-header-categories .header-cat-pod-wrap { top: 0; left: calc(100% + 18px); translate: none; }
 }
 ::view-transition-group(site-island) { animation-duration: 0.55s; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
 /* The pill is two layers in the morph: its surface (a plain rounded box, which

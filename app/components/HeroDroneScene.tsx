@@ -568,10 +568,6 @@ export function HeroDroneScene({
       // Camera distance in drone radii: `distance` frames the exploded drone,
       // `distanceAssembled` the assembled one (the opening view and the build-in).
       const DIST_EXPLODED: number = cfg.camera?.distance ?? 2.15;
-      /** How far a part beat leans the camera toward the part (0 overview, 1 centred on it). */
-      const PART_LEAN = 0.35;
-      /** A part beat's distance as a share of the overview's. */
-      const PART_PUSH = 0.8;
       /** The swap beat's distance as a share of the overview's, and how far it lifts the view (drone radii). */
       const SWAP_BACK = 1.3;
       const SWAP_RAISE = 0.22;
@@ -1265,7 +1261,7 @@ export function HeroDroneScene({
       };
       // What the dim/spotlight/camera focus on right now, strongest source first.
       let focusAmt = 0;
-      const FOCUS_FADE: number = S.darkenRest ?? 0.85;
+      const FOCUS_FADE: number = Math.min(S.darkenRest ?? 0.65, 0.65);
       let focusFade = FOCUS_FADE;
       let focusNodes: THREE.Object3D[] = [];
       let focusKey = '';
@@ -1997,19 +1993,13 @@ export function HeroDroneScene({
           if (bright === lastBrightness && m.userData.brightness === bright) continue;
           const u = (m as any).userData;
           if (!u?.baseColor) continue;
-          // Colour is linear: squared so the step reads on screen as `bright`, not
-          // the ~40% a linear 0.15 shows as after sRGB.
-          m.color.copy(u.baseColor).multiplyScalar(bright * bright);
-          m.envMapIntensity = u.baseEnv * bright * bright;
+          m.color.copy(u.baseColor).multiplyScalar(bright);
+          m.envMapIntensity = u.baseEnv * bright;
           // Albedo alone is not enough: a metal with a black base colour still
           // returns a full specular highlight, so a spotlit part blew the
           // backgrounded drone out to white. Fade metalness out with it.
           if (u.baseMetal === undefined) u.baseMetal = m.metalness;
           m.metalness = u.baseMetal * bright;
-          // A glossy plastic (the yellow side plates) keeps its direct highlight at
-          // any albedo, so it read as lit on every beat: go matte as it dims.
-          if (u.baseRough === undefined) u.baseRough = m.roughness;
-          m.roughness = u.baseRough + (1 - u.baseRough) * (1 - bright);
           u.brightness = bright;
         }
         lastBrightness = bright;
@@ -2030,20 +2020,19 @@ export function HeroDroneScene({
           // The swap parks the top plate above and the video system beside the drone:
           // step back and up so both stay in frame, and settle back in on the
           // reassembled drone once the plate is going back on.
-          if (swapOn && bi === SWAP_BEAT && swapT > 0 && swapT < SWAP_SETTLE) {
+          if (swapOn && bi === SWAP_BEAT) {
+            if (!(swapT > 0 && swapT < SWAP_SETTLE)) return {c: overviewFocus, back: baseBack, h: heightOv};
             const c = overviewFocus.clone();
             c.y += droneRadius * SWAP_RAISE;
             return {c, back: baseBack * SWAP_BACK, h: heightOv};
           }
           if (!bb.nodes.length) return {c: overviewFocus, back: baseBack, h: heightOv};
+          // Flies in to the part: framed to fill `partSize` of the view.
           const sp = sphereOf(bb.frameNodes);
-          // The whole exploded drone stays in frame on every beat: the camera only
-          // leans toward the part and steps in a little, it never dives in among
-          // the parts. The highlight, not the zoom, says which part this is.
           return {
-            c: overviewFocus.clone().lerp(sp.center, PART_LEAN),
-            back: baseBack * PART_PUSH,
-            h: heightOv,
+            c: sp.center.clone(),
+            back: THREE.MathUtils.clamp(sp.radius / ((bb.partSize ?? Q.partSize) * halfTan), droneRadius * 0.28, baseBack),
+            h: heightPart,
           };
         };
         let want: {c: THREE.Vector3; back: number; h: number};
@@ -2085,11 +2074,11 @@ export function HeroDroneScene({
           camH = want.h;
         } else if (!dragging) {
           // A slow glide, one fixed angle, no sweep: the velocity carries across retargets.
-          camFocus.x = smoothDamp(camFocus.x, want.c.x, camVel[0], 0.7, dt);
-          camFocus.y = smoothDamp(camFocus.y, want.c.y, camVel[1], 0.7, dt);
-          camFocus.z = smoothDamp(camFocus.z, want.c.z, camVel[2], 0.7, dt);
-          camBack = smoothDamp(camBack, want.back, camVel[3], 0.7, dt);
-          camH = smoothDamp(camH, want.h, camVel[4], 0.7, dt);
+          camFocus.x = smoothDamp(camFocus.x, want.c.x, camVel[0], 0.5, dt);
+          camFocus.y = smoothDamp(camFocus.y, want.c.y, camVel[1], 0.5, dt);
+          camFocus.z = smoothDamp(camFocus.z, want.c.z, camVel[2], 0.5, dt);
+          camBack = smoothDamp(camBack, want.back, camVel[3], 0.5, dt);
+          camH = smoothDamp(camH, want.h, camVel[4], 0.5, dt);
         }
         camReady = true;
         // The offset eases back to the beat's framing when the timeline moves.

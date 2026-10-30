@@ -3,6 +3,7 @@ import {Link} from '~/components/nav';
 import type {Route} from './+types/_index';
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useCallback,
@@ -25,8 +26,7 @@ import {MobileHome} from '~/components/MobileHome';
 import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
-import {CommunitySection} from '~/components/Discord';
-import {fetchDiscordCounts, type DiscordCounts} from '~/lib/discord-community';
+import {fetchDiscordCounts} from '~/lib/discord-community';
 
 /**
  * The homepage's words live in `content/copy/home.json`, shared with
@@ -118,7 +118,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
     ? await home.then((h) => h.featured)
     : home.then((h) => h.featured);
 
-  // Live Discord size for the community section: streamed, never awaited,
+  // Live Discord size for the phone layout's community section: streamed, never awaited,
   // cached an hour, null (numbers hidden) when Discord does not answer.
   const discord = fetchDiscordCounts();
 
@@ -158,39 +158,6 @@ let splashHasPlayedThisSession = false;
  * two trees are separate components so the desktop scroll/RAF/scroll-lock
  * hooks never mount on a phone.
  */
-/**
- * Toggle the header between the top bar and the homepage's side bar as one pill:
- * a view transition whose surface moves in an L (across first when it grows
- * taller, down first when it grows wider), so it never balloons into a box over
- * the drone. Only the pill moves; the page and the live 3D stay put (html.hero-vt).
- */
-function morphHeaderPill(apply: () => void) {
-  const doc = document as Document & {startViewTransition?: (cb: () => void) => {ready: Promise<void>; finished: Promise<void>}};
-  const surface = document.querySelector('.site-header-surface');
-  if (!doc.startViewTransition || !surface || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return apply();
-  const root = document.documentElement;
-  const from = surface.getBoundingClientRect();
-  let to = from;
-  root.classList.add('hero-vt');
-  const vt = doc.startViewTransition(() => {
-    apply();
-    to = surface.getBoundingClientRect();
-  });
-  void vt.ready
-    .then(() => {
-      const box = (x: number, y: number, w: number, h: number) => ({transform: `translate(${x}px, ${y}px)`, width: `${w}px`, height: `${h}px`});
-      const acrossFirst = to.height > from.height;
-      const mid = acrossFirst ? box(to.left, from.top, to.width, from.height) : box(from.left, to.top, from.width, to.height);
-      root.animate([box(from.left, from.top, from.width, from.height), {...mid, offset: 0.45}, box(to.left, to.top, to.width, to.height)], {
-        duration: 600,
-        easing: 'cubic-bezier(0.65, 0, 0.35, 1)',
-        pseudoElement: '::view-transition-group(site-island-surface)',
-      });
-    })
-    .catch(() => {});
-  void vt.finished.finally(() => root.classList.remove('hero-vt'));
-}
-
 export default function Homepage() {
   const {isMobileHint, featured, heroBuilds, stackOffer, discord} =
     useLoaderData<typeof loader>();
@@ -207,17 +174,15 @@ export default function Homepage() {
     return (
       <MobileHome featured={featured} heroBuilds={heroBuilds} stackOffer={stackOffer} discord={discord} />
     );
-  return <DesktopHome heroBuilds={heroBuilds} stackOffer={stackOffer} discord={discord} />;
+  return <DesktopHome heroBuilds={heroBuilds} stackOffer={stackOffer} />;
 }
 
 function DesktopHome({
   heroBuilds,
   stackOffer,
-  discord,
 }: {
   heroBuilds: HeroBuild[] | Promise<HeroBuild[]>;
   stackOffer: boolean;
-  discord: Promise<DiscordCounts | null>;
 }) {
   const scrollRef = useRef(0);
   const rafId = useRef(0);
@@ -322,28 +287,20 @@ function DesktopHome({
     rafId.current = 0;
   }, []);
 
-  // Exploring the drone: the header pill splits into two side rails and both side
-  // cards step back (html.hero-immersive, app/styles/site-ui.css). A view
-  // transition morphs the chrome; the 3D stage is excluded so it never freezes.
-  const exploring = useRef(false);
-  const syncImmersive = useCallback(() => {
+  // The desktop homepage is one immersive screen: the header is the left bar here
+  // (html.hero-immersive, app/styles/site-ui.css) and the top bar on every other
+  // page; the route view transition morphs one into the other. Exploring the drone
+  // only steps the side cards back (html.hero-exploring).
+  // Layout effect: on before first paint, and removed inside the route change's
+  // view transition so the bar morphs into the top pill instead of jumping.
+  useLayoutEffect(() => {
     const root = document.documentElement;
-    // Only while the hero fills the screen: scrolled on to the page below, the top bar returns.
-    const on = exploring.current && window.scrollY < 40;
-    if (root.classList.contains('hero-immersive') === on) return;
-    morphHeaderPill(() => root.classList.toggle('hero-immersive', on));
+    root.classList.add('hero-immersive');
+    return () => root.classList.remove('hero-immersive', 'hero-exploring');
   }, []);
   const handleExploring = useCallback((on: boolean) => {
-    exploring.current = on;
-    syncImmersive();
-  }, [syncImmersive]);
-  useEffect(() => {
-    window.addEventListener('scroll', syncImmersive, {passive: true});
-    return () => {
-      window.removeEventListener('scroll', syncImmersive);
-      document.documentElement.classList.remove('hero-immersive');
-    };
-  }, [syncImmersive]);
+    document.documentElement.classList.toggle('hero-exploring', on);
+  }, []);
 
   const handleWalkthroughProgress = useCallback(
     (f: number) => {
@@ -715,7 +672,6 @@ function DesktopHome({
 
         </div>
       </div>
-      <CommunitySection counts={discord} />
     </div>
   );
 }
