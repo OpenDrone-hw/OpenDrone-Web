@@ -9,7 +9,7 @@ import {
   currentBatch,
   targetDates,
 } from './availability.ts';
-import {campaignState, parseCampaignConfig, shipsWithState, tiersFor} from './preorder-campaign.ts';
+import {campaignState, parseCampaignConfig, sellableUnits, shipsWithState, tiersFor} from './preorder-campaign.ts';
 import {serverPreorderWords as words} from './preorder-words.ts';
 import {lineAttributes} from './shopify-cart-action.ts';
 import type {CatalogVariant} from './catalog.ts';
@@ -26,7 +26,7 @@ describe('availability block', () => {
   it('lists both FC/ESC batches for an EU buyer, batch 1 highlighted with its units left', () => {
     const rows = availabilityRows(state('OPENESC-3030', 1, 'EU'), DATES, 'EU', words);
     assert.deepEqual(rows.map((r) => [r.label, r.scope, r.state, r.note]), [
-      ['From Belgium', 'EU and international, not the US', 'current', '214 left'],
+      ['From Belgium', 'EU and international, not the US', 'current', `${sellableUnits(REAL.skus['OPENESC-3030'].batches[0]) - 1} left`],
       ['March 2027 batch', 'EU, US and more', 'next', null],
     ]);
     assert.equal(rows[0].detail, 'Ships early Nov 2026');

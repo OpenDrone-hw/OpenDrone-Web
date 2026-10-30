@@ -865,16 +865,23 @@ describe('reserved units on a paid batch', () => {
     {units: 250},
   ];
 
-  it('keeps the purchase order quantity and reserves 35 review units of each FC and ESC batch 1', () => {
+  it('keeps the purchase order quantity and reserves the review units of each FC and ESC batch 1', () => {
     const config = parseCampaignConfig(
       JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')),
     );
-    for (const sku of ['OPENFC-LITE-2020', 'OPENFC-LITE-3030', 'OPENESC-2020', 'OPENESC-3030']) {
+    // 35 per SKU (commerce seed 80); OPENESC-3030 holds 5 more for order #1504 until it is paid.
+    const reserved: Record<string, number> = {
+      'OPENFC-LITE-2020': 35,
+      'OPENFC-LITE-3030': 35,
+      'OPENESC-2020': 35,
+      'OPENESC-3030': 40,
+    };
+    for (const [sku, held] of Object.entries(reserved)) {
       const [paid, funding] = config.skus[sku].batches;
       assert.equal(paid.paid, true, sku);
       assert.equal(paid.units, 250, sku);
-      assert.equal(paid.reserved, 35, sku);
-      assert.equal(sellableUnits(paid), 215, sku);
+      assert.equal(paid.reserved, held, sku);
+      assert.equal(sellableUnits(paid), 250 - held, sku);
       assert.equal(funding.reserved, undefined, sku);
       assert.equal(sellableUnits(funding), 250, sku);
     }
