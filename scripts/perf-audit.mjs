@@ -289,37 +289,25 @@ const scenarios = {
     }
   },
 
-  /** Static/content pages incl. theme toggle cost. */
+  /** Static/content pages. */
   async content(page, report) {
     await page.goto(BASE + '/blogs/news', {waitUntil: 'domcontentloaded'});
     await page.evaluate(HARNESS);
     await idle(page, 600);
     report.nav = await page.evaluate(() => window.__pa.nav());
     report.steps = [];
-    const toggle = page.locator('button.theme-toggle:visible').first();
-    if (await toggle.count()) {
-      report.steps.push(await measure(page, 'theme-toggle', () => toggle.click().catch(() => {}), 1800));
-      await idle(page, 400);
-      report.steps.push(await measure(page, 'theme-toggle-back', () => toggle.click().catch(() => {}), 1800));
-    }
     report.steps.push(
       await measure(page, 'scroll', () => page.evaluate(() => window.__pa.sweep(Math.min(1200, document.documentElement.scrollHeight - innerHeight), 1500)), 1700),
     );
   },
 
-  /** Cart drawer open/close from a product page. */
+  /** Product page load: navigation timings only. */
   async drawer(page, report) {
     await page.goto(BASE + '/products/openesc', {waitUntil: 'domcontentloaded'});
     await page.evaluate(HARNESS);
     await idle(page, 1000);
     report.nav = await page.evaluate(() => window.__pa.nav());
     report.steps = [];
-    const themeBtn = page.locator('button.theme-toggle:visible').first();
-    if (await themeBtn.count()) {
-      report.steps.push(await measure(page, 'theme-toggle', () => themeBtn.click(), 1500));
-      await idle(page, 400);
-      report.steps.push(await measure(page, 'theme-toggle-back', () => themeBtn.click(), 1500));
-    }
   },
 
   /** Mobile viewport: MobileHome + touch-first surfaces. Under --device the

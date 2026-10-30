@@ -44,7 +44,7 @@ def load_env():
 
 
 def gql(env, query, variables=None):
-    url = f"https://{env['SHOPIFY_STORE_DOMAIN']}/admin/api/{env.get('SHOPIFY_ADMIN_API_VERSION', '2026-01')}/graphql.json"
+    url = f"https://{env['SHOPIFY_STORE_DOMAIN']}/admin/api/{env.get('SHOPIFY_ADMIN_API_VERSION', '2026-07')}/graphql.json"
     req = urllib.request.Request(
         url, json.dumps({"query": query, "variables": variables or {}}).encode(),
         {"X-Shopify-Access-Token": env["SHOPIFY_ADMIN_API_TOKEN"], "Content-Type": "application/json"})
