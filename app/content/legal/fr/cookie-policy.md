@@ -14,21 +14,18 @@ Les cookies sont de petits fichiers texte placés sur votre appareil par un site
 
 #### Cookies d’opendrone.be et du checkout (pas de consentement requis)
 
-Ce site (opendrone.be) place lui-même les cookies ci-dessous. Le paiement se déroule sur Shopify, qui place ses propres cookies sur les pages de paiement.
+Ce site (opendrone.be) place lui-même les cookies ci-dessous. Le paiement fait partie de ce site : vous passez la commande ici et vous payez sur la page du prestataire de paiement que vous choisissez, qui peut y placer ses propres cookies.
 
 | Cookie | Finalité | Conservation |
 |--------|---------|-----------|
-| `session` (opendrone.be) | Conserve, dès que vous ajoutez un produit à votre panier, la référence de votre panier Shopify | Session |
+| `od_app_cart` (opendrone.be) | Conserve les produits de votre panier (la variante et la quantité de chaque ligne, signées pour ne pas pouvoir être modifiées) ; placé lorsque vous ajoutez un produit à votre panier (strictement nécessaire au service que vous demandez) | 14 jours |
+| `od_app_cart_options` (opendrone.be) | Conserve avec votre panier le code de réduction saisi, votre choix du retrait et la source de campagne de votre visite (paramètres utm, code créateur, site référent et première page) ; signé ; placé lorsque vous ajoutez un produit depuis un lien de campagne, appliquez un code ou choisissez le retrait (strictement nécessaire au service que vous demandez) | 14 jours |
+| `od_app_order` (opendrone.be) | Conserve le numéro et le jeton de suivi de votre dernière commande, afin que la page de suivi s’ouvre sur cet appareil sans connexion ; placé lorsque vous passez une commande (strictement nécessaire au service que vous demandez) | 30 jours |
 | `opendrone_lang` (opendrone.be) | Mémorise la langue que vous choisissez pour les pages juridiques | 1 an |
 | `od_ship_country` (opendrone.be) | Mémorise le pays de livraison que vous choisissez dans le sélecteur de région, dans le champ « Ship to » du panier ou via un lien comportant un pays, afin que les prix, l’expédition, les dates d’expédition et la disponibilité soient affichés pour ce pays ; placé uniquement lorsque vous choisissez un pays (strictement nécessaire au service que vous demandez) | 1 an |
 | `od_support` (opendrone.be) | Retient les tickets de support que ce navigateur peut ouvrir ; placé uniquement lorsque vous ouvrez ou retrouvez un ticket | 180 jours |
-| `__Host-od_sid` (opendrone.be) | Vous garde connecté à votre compte OpenDrone, aussi pour la connexion à chatfpv.com ; placé uniquement lorsque vous vous connectez (strictement nécessaire) | 30 jours après votre dernière visite, ou jusqu’à votre déconnexion |
-| `__Host-od_oauth` (opendrone.be) | Protège une connexion en cours contre la falsification ; placé lorsque vous cliquez sur Se connecter (strictement nécessaire) | 10 minutes |
-| `__Host-od_logout` (opendrone.be) | Termine une déconnexion commencée sur chatfpv.com ; placé uniquement pendant cette déconnexion (strictement nécessaire) | 5 minutes |
-| Cookies du checkout Shopify | Maintiennent votre panier, le paiement et votre connexion au compte client, et préviennent la fraude au paiement ; placés par Shopify sur les pages de paiement, pas sur opendrone.be. Liste des cookies de Shopify : https://www.shopify.com/legal/cookies | Session à 1 an, selon le cookie |
-| Cookies Stripe (`m`, `__stripe_mid`, `__stripe_sid`) | Prévention de la fraude au paiement : placés par Stripe, qui traite Shopify Payments, sur les pages de paiement pendant le paiement, pas sur opendrone.be (strictement nécessaire au service expressément demandé ; art. 10/2 de la loi du 30 juillet 2018 (inséré par la loi du 21 décembre 2021) ; Directive ePrivacy 2002/58/CE) | Session à 1 an, selon le cookie |
-
-Lorsque chatfpv.com vérifie si vous êtes déjà connecté avec votre compte OpenDrone (connexion silencieuse), opendrone.be ne place aucun cookie pour un visiteur non connecté.
+| `od_app_acct` (opendrone.be) | Vous garde connecté à votre compte OpenDrone (un jeton de connexion aléatoire, signé) ; placé uniquement lorsque vous vous connectez avec le code ou le lien que nous vous envoyons par e-mail (strictement nécessaire) | 30 jours après votre connexion, ou jusqu’à votre déconnexion |
+| Cookies du prestataire de paiement (Mollie, Stripe ou PayPal, selon le moyen de paiement choisi) | Paiement et prévention de la fraude : placés par le prestataire sur sa propre page lorsque nous vous y envoyons pour payer, pas sur opendrone.be ; voir l’avis sur les cookies du prestataire (strictement nécessaire au service expressément demandé ; art. 10/2 de la loi du 30 juillet 2018 (inséré par la loi du 21 décembre 2021) ; Directive ePrivacy 2002/58/CE). Un virement ne vous envoie chez aucun prestataire. | Selon le prestataire |
 
 #### Stockage dans votre navigateur
 
@@ -39,12 +36,16 @@ Outre les cookies, opendrone.be conserve quelques données dans le stockage de v
 | `od-theme` | localStorage | Mémorise si vous avez choisi l’affichage clair ou sombre | Jusqu’à ce que vous effaciez les données du navigateur |
 | `od-incutec-seen` | localStorage | Mémorise que vous avez déjà ouvert la page Incutec, afin que le renvoi vers celle-ci disparaisse de la page d’accueil | Jusqu’à ce que vous effaciez les données du navigateur |
 | `opendrone:split-order` | localStorage | Mémorise les articles que vous avez retirés de votre panier pour une seconde commande, afin que vous puissiez les rajouter après le paiement | 30 jours |
-| `od-attribution`, `od-attribution-sent` | sessionStorage | Source de campagne de votre visite (par ex. un paramètre utm) et première page visitée ; utilisées pour des statistiques agrégées et, lorsque vous ajoutez un produit à votre panier, transmises comme attribut de la commande dans Shopify | Session |
+| `od-attribution`, `od-attribution-sent` | sessionStorage | Source de campagne de votre visite (par ex. un paramètre utm) et première page visitée ; utilisées pour des statistiques agrégées et, lorsque vous ajoutez un produit à votre panier, conservées avec votre panier (`od_app_cart_options`) et transmises avec votre commande comme attribut de la commande | Session |
 | `od-support-draft:…` | sessionStorage | Conserve ce que vous avez saisi dans un formulaire de support dans cet onglet, pour ne rien perdre si l’envoi échoue ; effacé dès que le message est envoyé | Session |
 
 #### Statistiques du site web
 
-Nous utilisons **Plausible Analytics** (Plausible Insights OÜ, Estonie ; hébergé dans l’UE) sur opendrone.be et sur la page de confirmation de commande de checkout.opendrone.be. Sur cette page, votre navigateur envoie à Plausible un événement d’achat par commande avec le montant de la commande, la devise et la source de campagne de votre visite, y compris le code créateur si vous êtes arrivé par un lien de créateur, sous une adresse de page fixe qui ne contient aucun détail de commande. Plausible ne place aucun cookie, ne stocke rien dans votre navigateur et ne conserve aucune adresse IP : il utilise votre adresse IP et votre navigateur uniquement pour calculer un code visiteur qui change chaque jour, et ne conserve que des statistiques agrégées. Nous traitons ces statistiques sur la base de notre intérêt légitime (art. 6.1.f RGPD) afin d’améliorer le site web et de mesurer quels canaux et quels créateurs conduisent à des commandes.
+Nous utilisons **Plausible Analytics** (Plausible Insights OÜ, Estonie ; hébergé dans l’UE) sur opendrone.be. Lorsque votre commande est payée, notre système de commandes envoie à Plausible, depuis notre serveur, un événement d’achat par commande avec le montant de la commande, la devise et la source de campagne de votre visite, y compris le code créateur si vous êtes arrivé par un lien de créateur, la campagne, le pays de livraison et les produits commandés (SKU), sous une adresse de page fixe qui ne contient aucun détail de commande. Pour que Plausible accepte l’événement, il contient l’adresse IP et le navigateur (User-Agent) que votre navigateur avait lorsque vous avez passé la commande ; notre système ne les conserve que jusqu’à l’envoi de l’événement, puis les efface. Plausible ne place aucun cookie, ne stocke rien dans votre navigateur et ne conserve aucune adresse IP : il utilise votre adresse IP et votre navigateur uniquement pour calculer un code visiteur qui change chaque jour, et ne conserve que des statistiques agrégées. Nous traitons ces statistiques sur la base de notre intérêt légitime (art. 6.1.f RGPD) afin d’améliorer le site web et de mesurer quels canaux et quels créateurs conduisent à des commandes.
+
+#### Suggestions d’adresse
+
+Lorsque vous saisissez au moins trois caractères de votre rue dans l’adresse de livraison lors du paiement, le texte saisi et le pays passent par notre propre serveur vers **Geoapify** (Allemagne), qui renvoie jusqu’à cinq adresses correspondantes. Votre adresse IP et vos cookies ne sont pas transmis et Geoapify ne place aucun cookie sur opendrone.be. Le formulaire fonctionne aussi sans les suggestions.
 
 #### Cookies marketing
 
