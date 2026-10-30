@@ -9,7 +9,7 @@ function order(partial: Partial<AccountOrder> = {}): AccountOrder {
     name: '#1001',
     createdAt: '2026-09-29T09:00:00Z',
     statusPageUrl: null,
-    lines: [{sku: 'A', name: 'OpenFC Lite', variant: '30×30', quantity: 1}],
+    lines: [{sku: 'A', name: 'OpenFC Lite', variant: '30×30', quantity: 1, image: null}],
     total: {amount: '89.00', currencyCode: 'EUR'},
     fulfillmentStatus: 'UNFULFILLED',
     financialStatus: 'PAID',
@@ -30,8 +30,8 @@ describe('orderStatus', () => {
 
   it('shows the latest promise for a preorder, with no extra note', () => {
     const lines = [
-      {sku: 'A', name: 'OpenFrame', variant: null, quantity: 1},
-      {sku: 'B', name: 'OpenMotor', variant: '2306', quantity: 4},
+      {sku: 'A', name: 'OpenFrame', variant: null, quantity: 1, image: null},
+      {sku: 'B', name: 'OpenMotor', variant: '2306', quantity: 4, image: null},
     ];
     const s = orderStatus(order({isPreorder: true, promise: TARGET, lines}));
     assert.equal(s.tone, 'preorder');
@@ -70,7 +70,7 @@ describe('orderStatus', () => {
 });
 
 describe('orderItems', () => {
-  const lines = Array.from({length: 6}, (_, i) => ({sku: `S${i}`, name: `Item ${i}`, variant: i % 2 ? `V${i}` : null, quantity: i + 1}));
+  const lines = Array.from({length: 6}, (_, i) => ({sku: `S${i}`, name: `Item ${i}`, variant: i % 2 ? `V${i}` : null, quantity: i + 1, image: null}));
 
   it('keeps quantity, name and variant apart, never "Name - Variant"', () => {
     const {shown} = orderItems(lines);
