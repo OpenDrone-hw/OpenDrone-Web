@@ -964,15 +964,12 @@ function CartToggle({cartUrl, hasCart}: {cartUrl: string | null; hasCart: boolea
   }, []);
   if (!cartUrl) {
     return (
-      <span
-        className="site-header-icon site-header-cart"
-        aria-label={
-          copyText('chrome.cart_unavailable_aria') ??
-          'Cart unavailable in checkout preview'
-        }
-        aria-disabled="true"
-      >
+      <span className="site-header-icon site-header-cart">
         <CartIcon />
+        <span className="sr-only">
+          {copyText('chrome.cart_unavailable_aria') ??
+            'Cart unavailable in checkout preview'}
+        </span>
       </span>
     );
   }
