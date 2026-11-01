@@ -6,7 +6,7 @@
 /* Wholesale controls override the legacy unlayered form reset. */
 .wholesale-page :where(input, select, textarea) {
   margin: 8px 0 0;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-field-border);
   border-radius: var(--r-xs);
   padding: 10px 12px;
   font-size: 16px;
@@ -2008,7 +2008,7 @@ body:has(.test-banner) .site-header {
 .app-shop-form { display: grid; gap: 1.25rem; padding: 1.25rem; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: 12px; }
 .app-shop-field { display: grid; gap: 0.5rem; border: 0; padding: 0; margin: 0; }
 .app-shop-field > span, .app-shop-field > legend { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-muted); padding: 0; }
-.app-shop-field input[type="email"] { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: 8px; padding: 0.75rem 0.875rem; font: inherit; }
+.app-shop-field input[type="email"] { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-field-border); border-radius: 8px; padding: 0.75rem 0.875rem; font: inherit; }
 .app-shop-field input[type="email"]:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .app-shop-rail { display: flex; align-items: center; gap: 0.625rem; padding: 0.625rem 0.75rem; border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer; }
 .app-shop-rail:has(input:checked) { border-color: var(--color-gold); background: var(--color-gold-soft); }
@@ -2043,7 +2043,7 @@ body:has(.test-banner) .site-header {
 .co-field > span em { font-style: normal; color: var(--color-text-dim); }
 .co-field input, .co-field select {
   width: 100%; box-sizing: border-box; min-height: 3rem; padding: 0 0.875rem; font: inherit; font-size: 1rem;
-  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--r-md);
+  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-field-border); border-radius: var(--r-md);
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 .co-field select { appearance: none; padding-right: 2.5rem; cursor: pointer;
@@ -2125,7 +2125,7 @@ body:has(.test-banner) .site-header {
 .co-combo { position: relative; }
 .co-combo > label > span { font-size: 0.8125rem; color: var(--color-text-muted); }
 .co-combo input { width: 100%; box-sizing: border-box; min-height: 3rem; padding: 0 0.875rem; font: inherit; font-size: 1rem;
-  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--r-md); }
+  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-field-border); border-radius: var(--r-md); }
 .co-combo input:focus-visible { outline: none; border-color: var(--color-gold); box-shadow: 0 0 0 3px var(--color-gold-soft); }
 .co-suggest { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin: 0.25rem 0 0; padding: 0.25rem; list-style: none; max-height: 18rem; overflow-y: auto;
   background: var(--color-bg-card); border: 1px solid var(--color-border-strong); border-radius: var(--r-md); box-shadow: 0 8px 24px rgb(0 0 0 / 0.25); }

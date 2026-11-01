@@ -332,7 +332,7 @@ export function NewsletterSignup({
             aria-describedby={message ? statusId : undefined}
             aria-invalid={messageTone === 'error' || undefined}
             className={[
-              'flex-1 bg-[var(--color-bg)] border border-[var(--color-border)]',
+              'flex-1 bg-[var(--color-bg)] border border-[var(--color-field-border)]',
               'text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]',
               'font-mono text-sm px-3 py-2.5 min-h-[44px] rounded-sm',
               'focus:outline-none focus:border-[var(--color-gold)]',

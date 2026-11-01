@@ -9,7 +9,7 @@
 .co-code-label { grid-column: 1 / -1; font-size: 0.8125rem; color: var(--color-text-muted); }
 .co-code-form input, .co-note textarea {
   width: 100%; box-sizing: border-box; min-height: 2.75rem; padding: 0 0.75rem; font: inherit; font-size: 1rem;
-  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--r-md); }
+  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-field-border); border-radius: var(--r-md); }
 .co-note textarea { padding: 0.625rem 0.75rem; resize: vertical; }
 .co-code-form input:focus-visible, .co-note textarea:focus-visible { outline: none; border-color: var(--color-gold); box-shadow: 0 0 0 3px var(--color-gold-soft); }
 .co-code-form button { min-height: 2.75rem; padding: 0 1rem; font: inherit; font-weight: 600; cursor: pointer; border-radius: var(--r-md);

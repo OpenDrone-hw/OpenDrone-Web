@@ -675,7 +675,7 @@ function PopulatedCart({
               <input type="hidden" name="intent" value="discount" />
               <label className="block text-[13px] text-[var(--color-text-muted)]">
                 {t('wholesale_code', 'Wholesale code')}
-                <input name="code" maxLength={24} autoComplete="off" spellCheck={false} placeholder="WS25-NAME" className="mt-1 block w-full rounded-[var(--r-xs)] border border-[var(--color-border)] bg-transparent px-3 py-2 text-[16px] uppercase text-[var(--color-text)]" />
+                <input name="code" maxLength={24} autoComplete="off" spellCheck={false} placeholder="WS25-NAME" className="mt-1 block w-full rounded-[var(--r-xs)] border border-[var(--color-field-border)] bg-transparent px-3 py-2 text-[16px] uppercase text-[var(--color-text)]" />
               </label>
               <button type="submit" className="mt-2 text-[13px] underline underline-offset-4">{t('wholesale_code_apply', 'Apply code')}</button>
             </Form>
