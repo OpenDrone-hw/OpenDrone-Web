@@ -87,7 +87,7 @@ function shopify(country: string | null, lines: ShopifyCartLine[]) {
   };
 }
 
-const euLine = () => cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [{key: 'Preorder', value: EU_PROMISE}, {key:'Delivery by',value:'4 December 2026'}]);
+const euLine = () => cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [{key: 'Preorder', value: EU_PROMISE}, {key:'Delivery by',value:'30 November 2026'}]);
 
 function switchRequest(country: string): Request {
   return new Request('https://opendrone.be/api/shopify/cart-country', {
@@ -400,7 +400,7 @@ describe('international cart country switches', () => {
       assert.match(fake.state.lines[1].shipPromise??'',/31 March 2027/);
       await handleCartCountry(switchRequest('BE'),ENV,dependencies);
       assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
-      assert.equal(fake.state.lines[0].deliveryBy,'4 December 2026');
+      assert.equal(fake.state.lines[0].deliveryBy,'30 November 2026');
       assert.equal(fake.state.lines[1].shipPromise,null);
       assert.ok(fake.state.lines.every(line=>line.shipRegion===undefined));
     }

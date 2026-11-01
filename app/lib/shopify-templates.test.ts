@@ -109,7 +109,7 @@ describe('Shopify notification templates', async () => {
     assert.match(output, /Delivery address review/);
     assert.match(output, /this email does not extend them/);
     assert.match(output, /Ships late November 2026/);
-    assert.match(output, /Delivery by 4 December 2026/);
+    assert.match(output, /Delivery by 30 November 2026/);
   });
 });
 

@@ -829,7 +829,7 @@ describe('committed dates derive from content/preorders.json', () => {
     assert.equal(config.shipsBy, '2027-03-31');
     assert.equal(funded.deliveryBy, '2027-04-15');
     assert.equal(funded.deliveryByUS, '2027-04-30');
-    assert.equal(early.deliveryBy, '2026-12-04');
+    assert.equal(early.deliveryBy, '2026-11-30');
     assert.deepEqual(early.regions, ['EU', 'INT']);
     assert.equal(early.ships, 'ships late November 2026');
   });
@@ -862,7 +862,7 @@ describe('committed dates derive from content/preorders.json', () => {
     }
     assert.deepEqual(
       [early.deliveryBy, funded.deliveryBy, funded.deliveryByUS, funded.deliveryByINT],
-      ['2026-12-04', '2027-04-15', '2027-04-30', '2027-04-30'],
+      ['2026-11-30', '2027-04-15', '2027-04-30', '2027-04-30'],
     );
   });
 
