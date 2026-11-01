@@ -445,7 +445,7 @@ export function SchematicViewer({
             <div
               className="schematic-rail"
               role="group"
-              aria-label={copyText('product-chrome.schematic_sheet_aria')}
+              aria-label={copyText('product-chrome.schematic_sheet_aria') ?? 'Schematic sheet'}
               tabIndex={0}
               onKeyDown={(e) => {
                 if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
@@ -568,7 +568,7 @@ export function SchematicViewer({
           <div className="schematic-deck">
             <div
               className="board-deck-dots"
-              aria-label={copyText('product-chrome.schematic_sheet_aria')}
+              aria-label={copyText('product-chrome.schematic_sheet_aria') ?? 'Schematic sheet'}
             >
               {sheets.map((s, i) => (
                 <button

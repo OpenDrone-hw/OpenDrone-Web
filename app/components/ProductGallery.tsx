@@ -154,7 +154,7 @@ export function ProductGallery({
       <div
         className="product-gallery-main"
         role="group"
-        aria-label={copyText('product-chrome.gallery_aria')}
+        aria-label={copyText('product-chrome.gallery_aria') ?? 'Product images'}
         tabIndex={images.length > 1 ? 0 : undefined}
         onTouchStart={(e) => {
           armNeighbours();
@@ -202,10 +202,10 @@ export function ProductGallery({
             <button
               type="button"
               onClick={prev}
-              aria-label={copyText('product-chrome.gallery_prev')}
+              aria-label={copyText('product-chrome.gallery_prev') ?? 'Previous image'}
               className="product-gallery-arrow"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" focusable="false">
                 <polyline points="15 18 9 12 15 6" />
               </svg>
             </button>
@@ -215,10 +215,10 @@ export function ProductGallery({
             <button
               type="button"
               onClick={next}
-              aria-label={copyText('product-chrome.gallery_next')}
+              aria-label={copyText('product-chrome.gallery_next') ?? 'Next image'}
               className="product-gallery-arrow"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" focusable="false">
                 <polyline points="9 18 15 12 9 6" />
               </svg>
             </button>
