@@ -125,6 +125,10 @@
   --color-error: #f87171;
   --color-border: #24242a;
   --color-border-strong: #34343c;
+  /* Form field edges (WCAG 1.4.11, 3:1). Alias of --color-text-dim: 5.73:1 on
+     --color-bg, 5.43:1 on --color-bg-card, 5.12:1 on --color-bg-elevated.
+     Closest existing palette shade that passes; do not use for dividers. */
+  --color-field-border: var(--color-text-dim);
 
   /* Text/icon color that sits ON the gold accent (filled buttons, badges,
      active toggles). Dark ink: gold reads best with it. */
@@ -2392,7 +2396,7 @@ button.reset {
 
 .predictive-search input {
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-field-border);
   border-radius: var(--r-xs);
   color: var(--color-text);
   padding: 0.5rem 1rem;
@@ -3178,7 +3182,7 @@ button.reset {
 .collection-sort select {
   appearance: none;
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-field-border);
   color: var(--color-text);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -8989,7 +8993,7 @@ a.what-chain-chip:hover {
 .account-form input:not([type="checkbox"]) {
   width: 100%;
   background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-field-border);
   border-radius: var(--r-md);
   color: var(--color-text);
   padding: 0.8rem 0.95rem;
@@ -12312,7 +12316,7 @@ a.what-chain-chip:hover {
   width: 100%;
   background: var(--od-bg);
   color: var(--od-ink);
-  border: 1.5px solid var(--od-line-strong);
+  border: 1.5px solid var(--color-field-border);
   border-radius: var(--r-xs);
   padding: 10px 12px;
   font-family: var(--font-mono);
@@ -17718,7 +17722,7 @@ html.hero-header-in .homepage-layout .site-header {
   width: 100%;
   margin: 0;
   padding: 0.65rem 0.75rem;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-field-border);
   border-radius: var(--r-xs);
   background: var(--color-bg);
   color: var(--color-text);
@@ -17930,7 +17934,7 @@ html.hero-header-in .homepage-layout .site-header {
   flex: 1 1 auto;
   min-width: 0;
   padding: 0.5rem 0.6rem;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-field-border);
   border-radius: var(--r-xs);
   background: var(--color-bg);
   color: var(--color-text-muted);
@@ -18238,7 +18242,7 @@ html.hero-header-in .homepage-layout .site-header {
   flex: 1 1 12rem;
   min-width: 0;
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-field-border);
   color: var(--color-text);
   font-family: var(--font-sans, inherit);
   font-size: var(--fs-sm);
