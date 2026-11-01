@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {afterEach, describe, it} from 'node:test';
+import {parseCampaignConfig} from './preorder-campaign.ts';
 import {PAID_ORDERS_QUERY, fetchPaidUnitRuns, fetchPaidUnits, paidUnitRuns, paidUnits, resetPaidUnitsMemo} from './shopify-orders.ts';
 
 afterEach(resetPaidUnitsMemo);
@@ -191,5 +192,41 @@ describe('fetchPaidUnitRuns', () => {
       ]),
     );
     assert.deepEqual(runs, {'OPENESC-2020': [{region: 'EU', units: 4}, {region: 'US', units: 2}, {region:'INT', units:4}, {region: 'EU', units: 1}]});
+  });
+});
+
+describe('fetchPaidUnitRuns with the campaign rule', () => {
+  const config = parseCampaignConfig({
+    countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-11',
+    priceTiers: [{upTo: 100, off: 0.2}],
+    pendingShips: 'ships about 10 weeks after its target is reached',
+    skus: {
+      'OPENESC-2020': {batches: [{units: 250, paid: true, ships: 'ships early November 2026'}, {units: 250}]},
+      'OPENFRAME-5': {batches: [{units: 250}]},
+    },
+  });
+
+  it('flags units of an order with a line outside paid stock as march', async () => {
+    const runs = await fetchPaidUnitRuns(ENV, '2026-09-21', SKUS, async () =>
+      page([
+        {displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 2]]},
+        {displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 3], ['OPENFRAME-5', 1]]},
+        {displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 1], ['ACC-PROP-5-HQ-J37', 1]]},
+        {displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 4]]},
+      ]), config);
+    assert.deepEqual(runs, {
+      'OPENESC-2020': [
+        {region: 'EU', units: 2},
+        {region: 'EU', units: 4, march: true},
+        {region: 'EU', units: 4},
+      ],
+      'OPENFRAME-5': [{region: 'EU', units: 1, march: true}],
+    });
+  });
+
+  it('keeps the plain counts without the campaign config', async () => {
+    const runs = await fetchPaidUnitRuns(ENV, '2026-09-21', SKUS, async () =>
+      page([{displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 3], ['OPENFRAME-5', 1]]}]));
+    assert.deepEqual(runs['OPENESC-2020'], [{region: 'EU', units: 3}]);
   });
 });

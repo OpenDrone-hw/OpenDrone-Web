@@ -1231,7 +1231,7 @@ batch; set `stock` from InvenTree stock on hand. The storefront keeps dispatch p
 checkout property, cart and confirmation, and order the lines of a combined cart. A batch with `regions` (`["EU", "INT"]` for paid stock in Belgium) takes
 only units shipping there: each paid unit takes the first batch with room
 that serves its order's shipping region (EU, US or INT), so a US unit skips a
-batch that does not serve the US. Funding targets count every region. A price step counts what
+batch that does not serve the US. Paid stock goes only to orders whose every line ships with it (founder 2026-11-01): an order that also holds a motor, frame, receiver, prop or any other March item belongs entirely to the first funding batch, boards included (`shipsOnlyWithPaid`, the `march` flag on `UnitRuns`). Funding targets count every region and every paid unit, so a mixed order's boards count toward the funding batch at once, and the price step keeps counting one ladder of all paid units. A price step counts what
 the product page step bar shows an EU buyer (`tierUnits` in
 `app/lib/preorder-campaign.ts`): the batches the EU buyer has seen sell out
 plus the units in their current batch, so units in a batch the EU buyer cannot

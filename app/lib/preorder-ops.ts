@@ -62,7 +62,7 @@ export async function reconcilePreorders(
   if (priceTierWritesEnabled(env)) {
     let units: Record<string, UnitRuns> | null = null;
     try {
-      units = await fetchPaidUnitRuns(env, config.countFrom, new Set(Object.keys(config.skus)), fetcher);
+      units = await fetchPaidUnitRuns(env, config.countFrom, new Set(Object.keys(config.skus)), fetcher, config);
       recordOps('paidCounts');
     } catch (error) {
       recordOps('paidCounts', {error});

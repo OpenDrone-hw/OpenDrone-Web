@@ -808,7 +808,12 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       }
       // More units than the paid batch has left: the extra units would carry
       // a ship date they cannot meet. Back to the cart, which says how many.
-      for (const {variant, quantity} of totals.values()) {
+      // A cart with a line outside paid stock ships whole in March and takes
+      // no paid-batch units (founder 2026-11-01), so the cap applies only to
+      // a cart whose every line ships with paid stock. The add and cart
+      // limits stay: the buyer may split the cart into a paid-stock order.
+      const takesPaid = [...totals.values()].every(({variant}) => Boolean(variant.campaign?.paidStock));
+      for (const {variant, quantity} of takesPaid ? totals.values() : []) {
         const left = paidBatchLeft(variant);
         if (left !== null && quantity > left) return redirect(`/cart?check=${CART_CHECK.paidBatch}`);
       }

@@ -17,6 +17,10 @@
  * (`regionOf`: EU, US or INT), in order: `paidUnitRuns` returns those runs, for
  * batches that serve one region only. `paidUnits` sums them per SKU.
  *
+ * With the campaign `config`, a unit of an order that also holds a line not
+ * shipping with paid stock carries `march` (`shipsOnlyWithPaid`): it skips
+ * paid batches, so paid stock is consumed only by orders that ship with it.
+ *
  * The Admin token needs `read_orders`, and `read_all_orders` once a campaign
  * runs longer than 60 days: without it Shopify only returns the last 60
  * days of orders and the counts would fall.
@@ -33,7 +37,7 @@
  * guessing.
  */
 
-import {regionOf, type UnitRuns} from './preorder-campaign.ts';
+import {regionOf, shipsOnlyWithPaid, type CampaignConfig, type UnitRuns} from './preorder-campaign.ts';
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
 const FRESH_MS = 60_000;
@@ -135,8 +139,9 @@ export async function fetchPaidUnits(
   countFrom: string,
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
+  config?: Pick<CampaignConfig, 'skus' | 'shipsWith'>,
 ): Promise<Record<string, number>> {
-  return sumRuns(await fetchPaidUnitRuns(env, countFrom, skus, fetcher));
+  return sumRuns(await fetchPaidUnitRuns(env, countFrom, skus, fetcher, config));
 }
 
 /** Paid units for `skus` since `countFrom`, oldest order first, as runs of
@@ -146,12 +151,15 @@ export async function fetchPaidUnitRuns(
   countFrom: string,
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
+  config?: Pick<CampaignConfig, 'skus' | 'shipsWith'>,
 ): Promise<Record<string, UnitRuns>> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(countFrom)) {
     throw new Error('shopify orders: countFrom must be YYYY-MM-DD');
   }
   const {url, token} = adminEndpoint(env);
   const units: Record<string, UnitRuns> = {};
+  /** Units each stocked SKU has taken from stock, by orders shipping with it. */
+  const stockUsed: Record<string, number> = {};
   let after: string | null = null;
   for (let page = 0; page < MAX_PAGES; page += 1) {
     let result: {data?: OrdersPage; errors?: unknown[]} = {};
@@ -191,6 +199,16 @@ export async function fetchPaidUnitRuns(
         throw new Error('shopify orders: an order exceeds 250 lines');
       }
       const region = regionOf(order.shippingAddress?.countryCodeV2);
+      const lines = order.lineItems.nodes.map((l) => ({sku: l.sku, quantity: l.currentQuantity}));
+      const march = config ? !shipsOnlyWithPaid(config, lines, stockUsed) : false;
+      if (config && !march) {
+        for (const l of lines) {
+          const sku = l.sku?.trim();
+          if (sku && config.shipsWith?.[sku]?.stock !== undefined && l.quantity > 0) {
+            stockUsed[sku] = (stockUsed[sku] ?? 0) + l.quantity;
+          }
+        }
+      }
       for (const line of order.lineItems.nodes) {
         const sku = line.sku?.trim();
         if (!sku || !skus.has(sku)) continue;
@@ -199,8 +217,8 @@ export async function fetchPaidUnitRuns(
         }
         const runs = (units[sku] ??= []);
         const last = runs[runs.length - 1];
-        if (last && last.region === region) last.units += line.currentQuantity;
-        else runs.push({region, units: line.currentQuantity});
+        if (last && last.region === region && Boolean(last.march) === march) last.units += line.currentQuantity;
+        else runs.push(march ? {region, units: line.currentQuantity, march} : {region, units: line.currentQuantity});
       }
     }
     if (!result.data.orders.pageInfo.hasNextPage) return units;
@@ -216,8 +234,9 @@ export async function paidUnits(
   countFrom: string,
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
+  config?: Pick<CampaignConfig, 'skus' | 'shipsWith'>,
 ): Promise<Record<string, number>> {
-  return sumRuns(await paidUnitRuns(env, countFrom, skus, fetcher));
+  return sumRuns(await paidUnitRuns(env, countFrom, skus, fetcher, Date.now, config));
 }
 
 /** {@link fetchPaidUnitRuns}, memoized per isolate and per location for a
@@ -228,8 +247,10 @@ export async function paidUnitRuns(
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
   now: () => number = Date.now,
+  config?: Pick<CampaignConfig, 'skus' | 'shipsWith'>,
 ): Promise<Record<string, UnitRuns>> {
-  const key = `${env.SHOPIFY_STORE_DOMAIN ?? ''}|${countFrom}|${[...skus].sort().join(',')}`;
+  // The key names the rule, so a result counted before it never serves a read that applies it.
+  const key = `${env.SHOPIFY_STORE_DOMAIN ?? ''}|${countFrom}|${[...skus].sort().join(',')}|${config ? 'b1only' : 'plain'}`;
   const cached = memo.get(key);
   if (cached && now() - cached.fetchedAt < FRESH_MS) return cached.units;
   const shared = await readShared(key);
@@ -247,7 +268,7 @@ export async function paidUnitRuns(
     throw new Error('shopify orders: Admin API read failed recently, waiting before the next try');
   }
   try {
-    const units = await fetchPaidUnitRuns(env, countFrom, skus, fetcher);
+    const units = await fetchPaidUnitRuns(env, countFrom, skus, fetcher, config);
     const entry = {units, fetchedAt: now()};
     memo.set(key, entry);
     failedAt.delete(key);

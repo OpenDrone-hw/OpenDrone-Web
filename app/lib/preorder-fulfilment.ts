@@ -62,6 +62,7 @@ import {
   regionOf,
   sellableUnits,
   servesRegion,
+  shipsOnlyWithPaid,
   shipsWithBatch,
   usStockRule,
   type CampaignConfig,
@@ -355,11 +356,15 @@ export function parseBatchAttribute(value: string | null | undefined): {sku: str
  * without it (added before the attribute existed) is compared by its own
  * promise text against each batch's promise, as the order was sold
  * (`configSoldUnder`): a mismatch only when the text names another batch of
- * the lead SKU, never when it names none.
+ * the lead SKU, never when it names none. An order that also holds a line
+ * outside paid stock ships whole in March (`shipsOnlyWithPaid`): a line
+ * promised a paid batch is not a mismatch when the rule moved it, since the
+ * cart showed the whole parcel's March date.
  */
 export function batchPromiseMismatch(order: PreorderOrder, orderBatches: LineBatch[], config: CampaignConfig): boolean {
   const sold = configSoldUnder(config, order.createdAt);
   const textOf = (sku: string, batch: number) => sold.skus[sku]?.batches[batch - 1]?.ships?.trim() || sold.pendingShips;
+  const march = !shipsOnlyWithPaid(config, order.lineItems.nodes.map((l) => ({sku: l.sku, quantity: l.currentQuantity})));
   return order.lineItems.nodes.some((line) => {
     if (!(line.currentQuantity > 0) || !hasPromise(line)) return false;
     const sku = line.sku?.trim();
@@ -367,9 +372,11 @@ export function batchPromiseMismatch(order: PreorderOrder, orderBatches: LineBat
     const mine = orderBatches.filter((b) => (b.item ?? b.sku) === sku);
     if (!mine.length) return false;
     const promised = parseBatchAttribute(lineAttribute(line, BATCH_LINE_ATTRIBUTE));
+    if (promised && march && sold.skus[promised.sku]?.batches[promised.batch - 1]?.paid) return false;
     if (promised) return mine.some((b) => b.sku !== promised.sku || b.batch !== promised.batch);
     const own = lineAttribute(line, PREORDER_OWN_LINE_ATTRIBUTE) ?? lineAttribute(line, PREORDER_LINE_ATTRIBUTE);
     if (mine.every((b) => textOf(b.sku, b.batch) === own)) return false;
+    if (march && mine.some((b) => (sold.skus[b.sku]?.batches ?? []).some((e, i) => e.paid && textOf(b.sku, i + 1) === own))) return false;
     return mine.some((b) => (sold.skus[b.sku]?.batches ?? []).some((_, i) => textOf(b.sku, i + 1) === own));
   });
 }
@@ -436,6 +443,13 @@ export function assignBatches(
     if (!isCountedOrder(order)) continue;
     const region = orderRegion(order);
     const found: LineBatch[] = [];
+    // An order with a line that does not ship with paid stock ships whole in
+    // March: none of its units takes a paid batch or stock on hand.
+    const march = !shipsOnlyWithPaid(
+      config,
+      order.lineItems.nodes.map((l) => ({sku: l.sku, quantity: l.currentQuantity})),
+      euStock,
+    );
     // The lead counts as the storefront showed them when the order was placed.
     const before: Record<string, number[]> = Object.fromEntries(
       Object.entries(fills).map(([sku, fill]) => [sku, [...fill]]),
@@ -458,8 +472,13 @@ export function assignBatches(
           else found.push({sku: rule.sku, batch, units, shipPromise: ships, item: sku});
         };
         // The batch the lead's next unit for this region fell into.
-        const leadNext = () => nextBatchFromFill(lead, before[rule.sku], region);
-        if (region === 'EU' && rule.stock !== undefined && rule.batch && rule.after) {
+        const leadNext = () => nextBatchFromFill(lead, before[rule.sku], region, march);
+        if (march) {
+          // Pinned to paid stock or not, the parcel ships with the March batch.
+          const pinned = rule.batch ? lead[rule.batch - 1] : undefined;
+          const batch = pinned && !pinned.paid && servesRegion(pinned, region) ? rule.batch : undefined;
+          add(batch ?? leadNext(), line.currentQuantity);
+        } else if (region === 'EU' && rule.stock !== undefined && rule.batch && rule.after) {
           // Units on hand ship with the pinned batch, later ones with `after`.
           const start = euStock[sku] ?? 0;
           const fromStock = Math.max(0, Math.min(line.currentQuantity, rule.stock - start));
@@ -476,7 +495,7 @@ export function assignBatches(
       if (!sku || !entry || !(line.currentQuantity > 0)) continue;
       const fill = (fills[sku] ??= []);
       for (let unit = 0; unit < line.currentQuantity; unit += 1) {
-        const {batch, entry: batchEntry} = allocateUnit(entry.batches, fill, region);
+        const {batch, entry: batchEntry} = allocateUnit(entry.batches, fill, region, march);
         const existing = found.find((b) => b.sku === sku && b.batch === batch && !b.item);
         if (existing) existing.units += 1;
         else {
@@ -491,8 +510,8 @@ export function assignBatches(
 
 /** The 1-based batch the next unit for `region` takes, given a SKU's
  *  batch fill so far (none yet: every batch empty). */
-function nextBatchFromFill(batches: CampaignConfig['skus'][string]['batches'], fill: number[] | undefined, region: Region): number {
-  return allocateUnit(batches, [...(fill ?? [])], region).batch;
+function nextBatchFromFill(batches: CampaignConfig['skus'][string]['batches'], fill: number[] | undefined, region: Region, march = false): number {
+  return allocateUnit(batches, [...(fill ?? [])], region, march).batch;
 }
 
 /** The hold note: which batch the order waits for, in plain words. */

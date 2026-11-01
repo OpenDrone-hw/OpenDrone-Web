@@ -157,7 +157,7 @@ async function main() {
 
   console.log(opts.apply ? 'APPLY: setting inventory policy DENY.' : 'DRY RUN: nothing is changed.');
   if (!ended) console.log(`The run is still open until the end of ${config.endsOn}; this is what would close now.`);
-  const units = await orders.fetchPaidUnitRuns(env, config.countFrom, campaign.countedSkus(config));
+  const units = await orders.fetchPaidUnitRuns(env, config.countFrom, campaign.countedSkus(config), fetch, config);
   const {close, keep} = planClose(campaign, config, units);
   const skus = [...close];
   const variants = [];

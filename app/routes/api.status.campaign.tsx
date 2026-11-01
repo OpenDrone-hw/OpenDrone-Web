@@ -120,7 +120,7 @@ async function campaignStatus(context: Route.LoaderArgs['context']) {
   let units: Record<string, number> | null = null;
   let countsError: string | null = null;
   try {
-    runs = await paidUnitRuns(env, CAMPAIGN.countFrom, new Set(skus));
+    runs = await paidUnitRuns(env, CAMPAIGN.countFrom, new Set(skus), fetch, Date.now, CAMPAIGN);
     units = sumRuns(runs);
   } catch (error) {
     countsError = message(error);
