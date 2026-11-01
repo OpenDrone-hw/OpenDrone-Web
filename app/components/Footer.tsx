@@ -170,7 +170,7 @@ function FooterNavLink({
       reloadDocument={to === '/guides/flash'}
       to={to}
       className={({isActive}) =>
-        `footer-link text-xs transition-colors flex items-center min-h-[36px] md:min-h-0 ${
+        `footer-link text-xs transition-colors flex items-center min-h-[36px] md:min-h-6 ${
           isActive
             ? 'text-[var(--color-text)]'
             : 'text-[var(--color-text-muted)]'
@@ -388,7 +388,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
               />
               <div className="footer-parts-grid">
                 <FooterGroup id="chrome.heading_shop" open>
-                  <nav aria-label={copyText('chrome.heading_shop') ?? 'Shop'} className="flex flex-col gap-1.5">
+                  <nav aria-label={copyText('chrome.heading_shop') ?? 'Shop'} className="flex flex-col gap-1.5 md:gap-0">
                     {SHOP_LINKS.map((link) => (
                       <FooterNavLink
                         key={link.to}
@@ -402,7 +402,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                 </FooterGroup>
 
                 <FooterGroup id="chrome.heading_help" open>
-                  <nav aria-label={copyText('chrome.heading_help') ?? 'Customer service'} className="flex flex-col gap-1.5">
+                  <nav aria-label={copyText('chrome.heading_help') ?? 'Customer service'} className="flex flex-col gap-1.5 md:gap-0">
                     {HELP_LINKS.map((link) => (
                       <FooterNavLink
                         key={link.to}
@@ -416,7 +416,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                 </FooterGroup>
 
                 <FooterGroup id="chrome.heading_open_source">
-                  <nav aria-label={copyText('chrome.heading_open_source') ?? 'Community'} className="flex flex-col gap-1.5">
+                  <nav aria-label={copyText('chrome.heading_open_source') ?? 'Community'} className="flex flex-col gap-1.5 md:gap-0">
                     {/* The newsletter archive, first in Community; the signup
                         form is Detail A above. */}
                     <FooterNavLink to="/newsletter" refNo={nextRef()}>
@@ -431,7 +431,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                         href={link.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="footer-link text-xs text-[var(--color-text-muted)] transition-colors flex items-center min-h-[36px] md:min-h-0"
+                        className="footer-link text-xs text-[var(--color-text-muted)] transition-colors flex items-center min-h-[36px] md:min-h-6"
                       >
                         <RefTag n={nextRef()} />
                         <Txt id={`chrome.${link.copy}`} />
@@ -441,7 +441,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                 </FooterGroup>
 
                 <FooterGroup id="chrome.heading_company">
-                  <nav aria-label={copyText('chrome.heading_company') ?? 'Company'} className="flex flex-col gap-1.5">
+                  <nav aria-label={copyText('chrome.heading_company') ?? 'Company'} className="flex flex-col gap-1.5 md:gap-0">
                     {COMPANY_LINKS.map((link) => (
                       <FooterNavLink
                         key={link.to}
@@ -456,7 +456,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
 
                 <div>
                   <FooterGroup id="chrome.heading_legal">
-                    <nav aria-label={copyText('chrome.heading_legal') ?? 'Legal'} className="footer-legal-nav flex flex-col gap-1.5">
+                    <nav aria-label={copyText('chrome.heading_legal') ?? 'Legal'} className="footer-legal-nav flex flex-col gap-1.5 md:gap-0">
                       {LEGAL_LINKS.map((link) => (
                         <FooterNavLink
                           key={link.to}
