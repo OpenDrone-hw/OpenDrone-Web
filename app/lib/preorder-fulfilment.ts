@@ -163,6 +163,14 @@ export const TAGS_ADD_MUTATION = `#graphql
   }
 `;
 
+export const TAGS_REMOVE_MUTATION = `#graphql
+  mutation OpenDronePreorderTagsRemove($id: ID!, $tags: [String!]!) {
+    tagsRemove(id: $id, tags: $tags) {
+      userErrors { field message }
+    }
+  }
+`;
+
 export type PreorderOrder = {
   id: string;
   name: string;
@@ -512,6 +520,37 @@ export function assignBatches(
  *  batch fill so far (none yet: every batch empty). */
 function nextBatchFromFill(batches: CampaignConfig['skus'][string]['batches'], fill: number[] | undefined, region: Region, march = false): number {
   return allocateUnit(batches, [...(fill ?? [])], region, march).batch;
+}
+
+/** One order whose paid-batch tags the batch-1-only rule (`shipsOnlyWithPaid`) moves. */
+export type RetagPlan = {orderId: string; orderName: string; remove: string[]; add: string[]};
+
+/**
+ * The tag rewrites the batch-1-only rule needs on orders already tagged: an
+ * order that also holds a line outside paid stock carries `batch:SKU:N` for a
+ * paid batch it no longer takes, and the funding batch tag instead. Only
+ * `preorder` orders whose fulfillment order is still on hold are planned (a
+ * released or shipped order keeps its tags), and only paid-batch tags are
+ * removed. Tags are written once by `syncPreorderHolds`, which never rewrites
+ * them, so this is the one place existing orders move from :1 to :2.
+ */
+export function planRetag(orders: PreorderOrder[], config: CampaignConfig): RetagPlan[] {
+  const assigned = assignBatches(orders, config);
+  const plans: RetagPlan[] = [];
+  for (const order of orders) {
+    if (!order.tags.includes(PREORDER_TAG) || !assigned.has(order.id)) continue;
+    if (!order.fulfillmentOrders.nodes.some((fo) => fo.status === 'ON_HOLD')) continue;
+    const wanted = new Set((assigned.get(order.id) ?? []).map((b) => batchTag(b.sku, b.batch)));
+    const have = order.tags.filter((t) => parseBatchTag(t));
+    const remove = have.filter((tag) => {
+      const parsed = parseBatchTag(tag)!;
+      return !wanted.has(tag) && Boolean(config.skus[parsed.sku]?.batches[parsed.batch - 1]?.paid);
+    });
+    if (!remove.length) continue;
+    const add = [...wanted].filter((tag) => !order.tags.includes(tag));
+    plans.push({orderId: order.id, orderName: order.name, remove, add});
+  }
+  return plans;
 }
 
 /** The hold note: which batch the order waits for, in plain words. */
