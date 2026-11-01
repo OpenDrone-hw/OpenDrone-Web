@@ -4547,6 +4547,11 @@ button.reset {
   letter-spacing: 0.04em;
   color: var(--color-text-dim);
 }
+/* On the gold-tinted selected card --color-text-dim is 4.42:1 (< 4.5:1, WCAG
+   1.4.3); the existing muted token is 5.32:1. */
+.variant-tier.is-selected .variant-tier-flag {
+  color: var(--color-text-muted);
+}
 
 .product-buy-civilian a {
   color: var(--color-text-muted);
