@@ -19,6 +19,7 @@ import {
   overfullBatches,
   planPreorderHolds,
   planRelease,
+  planRetag,
   syncPreorderHolds,
   type PreorderOrder,
 } from './preorder-fulfilment.ts';
@@ -746,5 +747,21 @@ describe('international allocation and checkout address changes', () => {
     }
     const canadian=order({country:'CA',intPromise:true,lines:[['OPENFC-LITE-2020',1]]});
     assert.ok(!planPreorderHolds([canadian],config)[0].tags.includes(UK_VAT_REVIEW_TAG));
+  });
+});
+
+describe('planRetag', () => {
+  it('moves a held mixed order off the paid batch tag and leaves the rest alone', () => {
+    const hold = [{id: 'h1', handle: PREORDER_HOLD_HANDLE}];
+    const boards = order({lines: [['OPENFC-LITE-2020', 2]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1'], foStatus: 'ON_HOLD', holds: hold});
+    const mixed = order({
+      lines: [['OPENFC-LITE-2020', 3], ['OPENRX-LITE', 1]],
+      tags: ['preorder', 'batch:OPENFC-LITE-2020:1', 'batch:OPENRX-LITE:1'], foStatus: 'ON_HOLD', holds: hold,
+    });
+    const shipped = order({lines: [['OPENFC-LITE-2020', 1], ['OPENRX-LITE', 1]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1', 'batch:OPENRX-LITE:1']});
+    const plans = planRetag([boards, mixed, shipped], CONFIG);
+    assert.deepEqual(plans.map((p) => [p.orderName, p.remove, p.add]), [
+      [mixed.name, ['batch:OPENFC-LITE-2020:1'], ['batch:OPENFC-LITE-2020:2']],
+    ]);
   });
 });
