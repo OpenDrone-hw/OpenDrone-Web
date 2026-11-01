@@ -3,7 +3,7 @@ import type {KeyboardEvent} from 'react';
 import {Form, useLocation, useRouteLoaderData} from 'react-router';
 import {Link, NavLink} from '~/components/nav';
 import {AnimatePresence} from 'motion/react';
-import {useAside} from '~/components/Aside';
+import {MOBILE_DRAWER_ID, useAside} from '~/components/Aside';
 import {LangToggle} from '~/components/LangToggle';
 import {useHeaderPopover} from '~/components/header-popover';
 import {RegionSwitch} from '~/components/RegionSwitch';
@@ -913,11 +913,14 @@ function HeaderCtas({
 }
 
 function HeaderMenuMobileToggle() {
-  const {open} = useAside();
+  const {open, type} = useAside();
   return (
     <button
       className="site-header-icon site-header-menu-toggle text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
       onClick={() => open('mobile')}
+      aria-expanded={type === 'mobile'}
+      aria-controls={MOBILE_DRAWER_ID}
+      aria-haspopup="dialog"
       aria-label={copyText('chrome.menu_toggle_aria') ?? 'Menu'}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" focusable="false">
