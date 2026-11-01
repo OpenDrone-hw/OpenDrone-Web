@@ -29,7 +29,7 @@ describe('availability block', () => {
       ['From Belgium', 'EU and international, not the US', 'current', `${sellableUnits(REAL.skus['OPENESC-3030'].batches[0]) - 1} left`],
       ['March 2027 batch', 'EU, US and more', 'next', null],
     ]);
-    assert.equal(rows[0].detail, 'Ships early Nov 2026');
+    assert.equal(rows[0].detail, 'Ships late Nov 2026');
     assert.equal(
       rows[1].detail,
       'Target deadline 15 Dec 2026. Ships by 31 Mar 2027 if the target is reached',
@@ -146,7 +146,7 @@ describe('one name for the November batch (G1)', () => {
   it('gives the accessory the same rows and scope as the FC, with Batch 1 first, then the March batch, for a US buyer', () => {
     const eu = availabilityRows(accessory('ACC-STRAP-20X220', 'EU'), DATES, 'EU', words);
     assert.deepEqual(eu.map((r) => [r.label, r.scope, r.state]), [['From Belgium', 'EU and international, not the US', 'current']]);
-    assert.equal(eu[0].detail, 'Ships early Nov 2026');
+    assert.equal(eu[0].detail, 'Ships late Nov 2026');
     for (const sku of ['ACC-STRAP-20X220', 'ACC-ANT-T', 'ACC-CAP-470UF-35V']) {
       const us = availabilityRows(accessory(sku, 'US'), DATES, 'US', words);
       // G7: the accessory has no target of its own, so it names the lead's.
@@ -210,6 +210,6 @@ describe('a batch name never carries a date (G6, G8)', () => {
     // The date lives in `Preorder` only.
     assert.equal(nov.Availability, undefined);
     assert.equal(march.Availability, undefined);
-    assert.match(nov.Preorder, /early November 2026/);
+    assert.match(nov.Preorder, /late November 2026/);
   });
 });

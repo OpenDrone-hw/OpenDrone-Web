@@ -1,7 +1,7 @@
 {
   "_scenario": {
     "title": "Batch 1 FC and ESC plus preorder-run receiver, Belgium",
-    "description": "EU-only batch 1 lines (early November) with a preorder-run receiver line in one order.",
+    "description": "EU-only batch 1 lines (late November) with a preorder-run receiver line in one order.",
     "templates": [
       "order-confirmation",
       "staff-new-order",
@@ -26,7 +26,7 @@
         "title": "OpenFC Lite"
       },
       "properties": {
-        "Preorder": "ships early November 2026"
+        "Preorder": "ships late November 2026"
       }
     },
     {
@@ -43,7 +43,7 @@
         "title": "OpenESC"
       },
       "properties": {
-        "Preorder": "ships early November 2026"
+        "Preorder": "ships late November 2026"
       }
     },
     {
@@ -94,7 +94,7 @@
             "title": "OpenFC Lite"
           },
           "properties": {
-            "Preorder": "ships early November 2026"
+            "Preorder": "ships late November 2026"
           }
         },
         "quantity": 1
@@ -114,7 +114,7 @@
             "title": "OpenESC"
           },
           "properties": {
-            "Preorder": "ships early November 2026"
+            "Preorder": "ships late November 2026"
           }
         },
         "quantity": 1

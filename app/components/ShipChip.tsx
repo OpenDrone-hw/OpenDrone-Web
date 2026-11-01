@@ -15,8 +15,8 @@ const CAMPAIGN = parseCampaignConfig(preorders);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * A dated promise as the one short line every surface shows: "Ships early Nov
- * 2026" for "ships early November 2026" (PDP, /products, cart, dialog). It
+ * A dated promise as the one short line every surface shows: "Ships late Nov
+ * 2026" for "ships late November 2026" (PDP, /products, cart, dialog). It
  * drops words of the checkout line text, never the month or its qualifier.
  * Null when the promise names no month and year.
  */
@@ -27,7 +27,7 @@ export function datedShipText(promise: string | null | undefined): string | null
 }
 
 /**
- * The ship chip text for a line: "Ships early Nov 2026" for a dated batch,
+ * The ship chip text for a line: "Ships late Nov 2026" for a dated batch,
  * "Ships by 31 Mar 2027" for a funding target, "Ships by 31 Mar 2027 if the target is reached" with
  * `ifFunded` while the target is not met.
  */
@@ -110,7 +110,7 @@ export function ShipChip({
 
 /**
  * The ship words every surface uses, from `content/copy/preorder.json`:
- * `Ships early Nov 2026` for a dated batch, `Ships by 31 Mar 2027` for a funding
+ * `Ships late Nov 2026` for a dated batch, `Ships by 31 Mar 2027` for a funding
  * target, `Deadline 15 Dec 2026` for its deadline. Dates come in short.
  */
 export function shipWord(kind: 'ships' | 'eta' | 'deadline', date: string): string {
@@ -123,7 +123,7 @@ export function shipWord(kind: 'ships' | 'eta' | 'deadline', date: string): stri
 }
 
 /**
- * The ship line under a Pre-order button. A dated batch reads "Ships early
+ * The ship line under a Pre-order button. A dated batch reads "Ships late
  * Nov 2026"; a funding target "Deadline 15 Dec 2026. Ships by 31 Mar 2027 if
  * funded", and "Ships by 31 Mar 2027" once it is funded.
  */

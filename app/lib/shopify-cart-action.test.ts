@@ -1013,11 +1013,11 @@ describe('Shopify cart action: one promise for a mixed order', () => {
   const STRAP = 'gid://shopify/ProductVariant/strap';
   const FC_LINE = 'gid://shopify/CartLine/fc?cart=a';
   const RX_LINE = 'gid://shopify/CartLine/rx?cart=a';
-  const OWN_EARLY = 'ships early November 2026';
+  const OWN_EARLY = 'ships late November 2026';
   const OWN_LATE =
     'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait';
   const REWRITE = 'ships with the rest of this order by 31 March 2027';
-  const own = (value: string) => [{key: 'Preorder', value}, {key:'Delivery by',value:'30 November 2026'}, {key: '_batch', value: 'OPENFC-LITE-3030:1'}];
+  const own = (value: string) => [{key: 'Preorder', value}, {key:'Delivery by',value:'4 December 2026'}, {key: '_batch', value: 'OPENFC-LITE-3030:1'}];
 
   function base(sku: string, handle: string, id: string, preorder: boolean) {
     return {
@@ -1042,7 +1042,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
   const US = applyCampaign(RAW, REAL, {}, NOW, 'US');
 
   const fcLine = (overrides: Partial<ShopifyCartLine> = {}) =>
-    line({id: FC_LINE, merchandiseId: FC, sku: 'OPENFC-LITE-3030', handle: 'openfc-lite', shipPromise: OWN_EARLY, deliveryBy:'30 November 2026', ...(overrides.orderPromise ? {orderDeliveryBy:'15 April 2027'} : {}), ...overrides});
+    line({id: FC_LINE, merchandiseId: FC, sku: 'OPENFC-LITE-3030', handle: 'openfc-lite', shipPromise: OWN_EARLY, deliveryBy:'4 December 2026', ...(overrides.orderPromise ? {orderDeliveryBy:'15 April 2027'} : {}), ...overrides});
   const rxLine = (overrides: Partial<ShopifyCartLine> = {}) =>
     line({id: RX_LINE, merchandiseId: RX, sku: 'OPENRX-LITE', handle: 'openrx', shipPromise: OWN_LATE, deliveryBy:'15 April 2027', ...overrides});
   const strapLine = () =>
@@ -1084,7 +1084,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
     assert.deepEqual(updates, [[{
       id: FC_LINE,
       quantity: 1,
-      attributes: [{key: 'Preorder', value: REWRITE}, {key: '_batch', value: 'OPENFC-LITE-3030:1'}, {key:'Delivery by',value:'15 April 2027'}, {key:'_delivery_by_own',value:'30 November 2026'}, {key: '_preorder_own', value: OWN_EARLY}],
+      attributes: [{key: 'Preorder', value: REWRITE}, {key: '_batch', value: 'OPENFC-LITE-3030:1'}, {key:'Delivery by',value:'15 April 2027'}, {key:'_delivery_by_own',value:'4 December 2026'}, {key: '_preorder_own', value: OWN_EARLY}],
     }]]);
   });
 
@@ -1127,7 +1127,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
     const c = cart([fcLine({orderPromise: REWRITE}), rxLine()]);
     const info = cartLineInfo(c, EU);
     assert.equal(info[FC_LINE].group, `date:${OWN_EARLY}`);
-    assert.equal(info[FC_LINE].shipLabel, 'Ships early Nov 2026');
+    assert.equal(info[FC_LINE].shipLabel, 'Ships late Nov 2026');
     assert.deepEqual(splitPlan(c, info), {keep: [FC_LINE], later: [RX_LINE]});
   });
 

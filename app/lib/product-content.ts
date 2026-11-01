@@ -1021,7 +1021,7 @@ export function specSheet(
  * funding-target promise (`pendingShips` in `content/preorders.json`,
  * "ships by <shipsBy> if the target is reached by <endsOn>, otherwise ...")
  * becomes a label plus "ships by <shipsBy> if reached", both dates taken
- * from the promise itself; a dated promise ("ships early November 2026")
+ * from the promise itself; a dated promise ("ships late November 2026")
  * keeps its words.
  */
 export type ShortShipPromise = {kind: 'target' | 'date'; label: string | null; text: string};
@@ -1040,7 +1040,7 @@ export function shortShipPromise(promise: string | null | undefined): ShortShipP
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 /**
- * The month and year of a dated ship promise, short: "ships early November
+ * The month and year of a dated ship promise, short: "ships late November
  * 2026" gives "Nov 2026". Null when the promise names no month and year.
  */
 export function shipMonth(promise: string | null | undefined): string | null {

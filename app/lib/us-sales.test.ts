@@ -102,12 +102,12 @@ describe('batch regions', () => {
       const batches = REAL.skus[sku].batches;
       assert.deepEqual(batches[0].regions, ['EU', 'INT'], `${sku} batch 1 serves the EU and international, not the US`);
       assert.equal(batches[0].paid, true);
-      assert.equal(batches[0].ships, 'ships early November 2026');
+      assert.equal(batches[0].ships, 'ships late November 2026');
       for (const ordered of [0, 1, 249, 250, 400]) {
         const us = campaignState(batches, [{region: 'US', units: ordered}], REAL.pendingShips, [], null, 'US');
         assert.notEqual(us.batch, 1, `${sku}: a US unit never lands in batch 1 (${ordered} US units ordered)`);
         assert.equal(us.paidStock, false);
-        assert.ok(!/November 2026/.test(us.shipPromise), 'a US promise never names the early-November batch');
+        assert.ok(!/November 2026/.test(us.shipPromise), 'a US promise never names the batch-1 date');
       }
       // US units do not use up batch-1 stock; international units do.
       assert.deepEqual(batchFill(batches, [{region: 'US', units: 100}]), [0, 100]);

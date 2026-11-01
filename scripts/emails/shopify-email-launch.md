@@ -7,7 +7,7 @@ Create it as a DRAFT in Shopify admin, Marketing, Create campaign, Shopify Email
 ## Version for a list of unknown region (default)
 
 Subject line: Preorders are open
-Preview text: FC and ESC batch 1 ships early November in the EU. The preorder run closes 15 December 2026.
+Preview text: FC and ESC batch 1 ships late November in the EU. The preorder run closes 15 December 2026.
 
 Hero image: https://opendrone.be/og-image.png (alt text: OpenDrone flight controller, ESC and receiver boards)
 
@@ -16,9 +16,9 @@ Hero image: https://opendrone.be/og-image.png (alt text: OpenDrone flight contro
 You asked to hear when OpenDrone launches. It is live at opendrone.be.
 
 ### First batch, EU only
-**OpenFC Lite and OpenESC ship early November**
+**OpenFC Lite and OpenESC ship late November**
 
-Early November 2026, from Belgium to EU addresses.
+Late November 2026, from Belgium to EU addresses.
 
 ### Preorder run, closes 15 December 2026
 **Receiver, frame, motors, and more FCs and ESCs**
@@ -37,7 +37,7 @@ Button: See the hardware -> https://opendrone.be/products?utm_source=shopify-ema
 ## EU-only version
 
 Subject line: Preorders are open
-Preview text: FC and ESC batch 1 ships early November in the EU. The preorder run closes 15 December 2026.
+Preview text: FC and ESC batch 1 ships late November in the EU. The preorder run closes 15 December 2026.
 
 Hero image: https://opendrone.be/og-image.png (alt text: OpenDrone flight controller, ESC and receiver boards)
 
@@ -46,9 +46,9 @@ Hero image: https://opendrone.be/og-image.png (alt text: OpenDrone flight contro
 You asked to hear when OpenDrone launches. It is live at opendrone.be.
 
 ### First batch, EU only
-**OpenFC Lite and OpenESC ship early November**
+**OpenFC Lite and OpenESC ship late November**
 
-Early November 2026, from Belgium to EU addresses.
+Late November 2026, from Belgium to EU addresses.
 
 ### Preorder run, closes 15 December 2026
 **Receiver, frame, motors, and more FCs and ESCs**

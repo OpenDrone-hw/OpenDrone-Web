@@ -16,7 +16,7 @@ export function whenPhrase(promise: string | null | undefined, ifFunded = false)
   return when ? `in ${when}` : null;
 }
 
-/** A dated promise's own month, "early Nov 2026", for "Ready ...". */
+/** A dated promise's own month, "late Nov 2026", for "Ready ...". */
 function readyWhen(promise: string | null | undefined): string | null {
   return shipChipText(promise, false)?.kind === 'date' ? (datedShipParts(promise)?.when ?? null) : null;
 }

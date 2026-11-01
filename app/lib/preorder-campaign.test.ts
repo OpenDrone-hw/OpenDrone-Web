@@ -619,6 +619,13 @@ describe('shipLabel', () => {
     assert.equal(shipLabelFromPromise('  ', 'long'), null);
   });
 
+  it('reads a late-month promise as a month, never a day or a funding target', () => {
+    assert.equal(shipLabelFromPromise('ships late November 2026', 'short'), 'Ships late Nov 2026');
+    assert.equal(shipLabelFromPromise('ships late November 2026', 'long'), 'Ships late November 2026.');
+    assert.equal(shortCampaignDate('late November 2026'), null);
+    assert.equal(cartShipNote(['ships late November 2026', null]), null);
+  });
+
   it('matches the configured promise in content/preorders.json', () => {
     const config = parseCampaignConfig(
       JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')),
@@ -822,9 +829,9 @@ describe('committed dates derive from content/preorders.json', () => {
     assert.equal(config.shipsBy, '2027-03-31');
     assert.equal(funded.deliveryBy, '2027-04-15');
     assert.equal(funded.deliveryByUS, '2027-04-30');
-    assert.equal(early.deliveryBy, '2026-11-30');
+    assert.equal(early.deliveryBy, '2026-12-04');
     assert.deepEqual(early.regions, ['EU', 'INT']);
-    assert.equal(early.ships, 'ships early November 2026');
+    assert.equal(early.ships, 'ships late November 2026');
   });
 
   it('keeps every product note in step with the campaign', () => {
@@ -855,7 +862,7 @@ describe('committed dates derive from content/preorders.json', () => {
     }
     assert.deepEqual(
       [early.deliveryBy, funded.deliveryBy, funded.deliveryByUS, funded.deliveryByINT],
-      ['2026-11-30', '2027-04-15', '2027-04-30', '2027-04-30'],
+      ['2026-12-04', '2027-04-15', '2027-04-30', '2027-04-30'],
     );
   });
 

@@ -33,10 +33,10 @@ test('international destinations take batch 1 FC stock, never the Belgian access
     // Batch 1 has no international arrival date, so none is named for it.
     assert.equal(variant.campaign?.deliveryByDay, fc ? null : '2027-04-30', variant.sku);
     if (fc) {
-      assert.match(variant.ship_promise ?? '', /early November/);
+      assert.match(variant.ship_promise ?? '', /late November/);
     } else {
       assert.match(variant.ship_promise ?? '', /31 March 2027/);
-      assert.doesNotMatch(variant.ship_promise ?? '', /early November|15 April|30 April/);
+      assert.doesNotMatch(variant.ship_promise ?? '', /late November|15 April|30 April/);
     }
   }
   // International and EU units fill batch 1 together; a US unit never does.
@@ -81,7 +81,7 @@ test('an international arrival date must be supplied separately from existing EU
 test('checkout states distinct paid-stock, EU funding and international arrival deadlines without changing dispatch promises', () => {
   const priced = {...base,products:base.products.map(p=>({...p,variants:p.variants.map(v=>({...v,price:25,availability:v.sku==='OPENFC-LITE-2020' ? 'preorder' as const : v.availability}))}))};
   // Batch 1 names no international arrival date; once it is full an international unit takes the March date.
-  for (const [region, units, date] of [['EU',0,'30 November 2026'],['EU',250,'15 April 2027'],['INT',0,undefined],['INT',250,'30 April 2027']] as const) {
+  for (const [region, units, date] of [['EU',0,'4 December 2026'],['EU',250,'15 April 2027'],['INT',0,undefined],['INT',250,'30 April 2027']] as const) {
     const catalog=applyCampaign(priced,config,{'OPENFC-LITE-2020':units},new Date('2026-10-01'),region);
     const variant=catalog.products.flatMap(p=>p.variants).find(v=>v.sku==='OPENFC-LITE-2020')!;
     const attributes=lineAttributes(variant,region)!;

@@ -56,7 +56,7 @@ export type OrderPromise = {
   kind: 'target' | 'date';
   /** Sortable day, YYYY-MM-DD; "late" or no qualifier resolves to the month end. */
   day: string;
-  /** "ships by 31 Mar 2027" or "ships early Nov 2026". */
+  /** "ships by 31 Mar 2027" or "ships late Nov 2026". */
   text: string;
 };
 

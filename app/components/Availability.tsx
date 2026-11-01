@@ -19,7 +19,7 @@ export const preorderWords: Words = (key, fallback, vars = {}) =>
 
 /**
  * Which batches a buyer can choose between and which one is theirs: one row
- * per batch, "Batch 1, EU only, Ships early Nov 2026" and "March 2027 batch,
+ * per batch, "Batch 1, EU only, Ships late Nov 2026" and "March 2027 batch,
  * EU and US, Deadline 15 Dec 2026. Ships by 31 Mar 2027 if the target is
  * reached". The buyer's batch is highlighted; one their region cannot
  * get stays listed and says so. A SKU with a single batch gets a single row.
