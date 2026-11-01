@@ -167,7 +167,7 @@ function FooterNavLink({
       prefetch="intent"
       to={to}
       className={({isActive}) =>
-        `footer-link text-xs transition-colors flex items-center min-h-[36px] md:min-h-6 ${
+        `footer-link text-xs transition-colors flex items-center min-h-[36px] md:min-h-[24px] ${
           isActive
             ? 'text-[var(--color-text)]'
             : 'text-[var(--color-text-muted)]'
@@ -424,7 +424,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                         href={link.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="footer-link text-xs text-[var(--color-text-muted)] transition-colors flex items-center min-h-[36px] md:min-h-6"
+                        className="footer-link text-xs text-[var(--color-text-muted)] transition-colors flex items-center min-h-[36px] md:min-h-[24px]"
                       >
                         <RefTag n={nextRef()} />
                         <Txt id={`chrome.${link.copy}`} />
