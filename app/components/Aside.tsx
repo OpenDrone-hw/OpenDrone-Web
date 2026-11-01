@@ -216,7 +216,7 @@ export function Aside({
       aria-modal={modal || undefined}
       aria-hidden={expanded ? undefined : true}
       className={`overlay ${expanded ? 'expanded' : ''}`}
-      id={`site-${type}-drawer`}
+      id={type === 'mobile' ? MOBILE_DRAWER_ID : undefined}
       role="dialog"
       aria-labelledby={id}
       ref={dialogRef}
