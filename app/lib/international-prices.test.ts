@@ -33,10 +33,10 @@ test('international destinations take batch 1 FC stock, never the Belgian access
     // Batch 1 has no international arrival date, so none is named for it.
     assert.equal(variant.campaign?.deliveryByDay, fc ? null : '2027-04-30', variant.sku);
     if (fc) {
-      assert.match(variant.ship_promise ?? '', /early November/);
+      assert.match(variant.ship_promise ?? '', /late November/);
     } else {
       assert.match(variant.ship_promise ?? '', /31 March 2027/);
-      assert.doesNotMatch(variant.ship_promise ?? '', /early November|15 April|30 April/);
+      assert.doesNotMatch(variant.ship_promise ?? '', /late November|15 April|30 April/);
     }
   }
   // International and EU units fill batch 1 together; a US unit never does.

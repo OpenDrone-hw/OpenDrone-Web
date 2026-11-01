@@ -97,7 +97,7 @@ function variantUrl(handle: string, options: SelectedOption[]): string {
 
 const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 
-/** "ships early November 2026" as a day for the timeline: early 5th, mid
+/** "ships late November 2026" as a day for the timeline: early 5th, mid
  *  15th, late 25th. Null when the promise names no month. */
 function promiseDay(promise: string | null): string | null {
   const m = /\b(early|mid|late)?\s*([A-Za-z]+) (\d{4})\b/i.exec(promise ?? '');

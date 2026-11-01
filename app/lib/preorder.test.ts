@@ -13,7 +13,7 @@ import {PRODUCT_CONTENT} from './product-content.ts';
 
 describe('preorderNote', () => {
   it("is the product's own statusNote when the content file carries one", () => {
-    assert.equal(preorderNote('openesc'), 'ships early November 2026');
+    assert.equal(preorderNote('openesc'), 'ships late November 2026');
     assert.equal(preorderNote('openrx'), 'ships by 31 March 2027 if the target is reached by 15 December 2026');
   });
 
@@ -42,8 +42,8 @@ describe("the catalog ship promise", () => {
   });
 
   it('falls through when the catalog carries none', () => {
-    assert.equal(preorderNote('openesc', null), 'ships early November 2026');
-    assert.equal(preorderNote('openesc', ''), 'ships early November 2026');
+    assert.equal(preorderNote('openesc', null), 'ships late November 2026');
+    assert.equal(preorderNote('openesc', ''), 'ships late November 2026');
   });
 });
 

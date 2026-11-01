@@ -17,7 +17,7 @@ const REGISTRATIONS = {BE: {saleApproved: true}, DE: {saleApproved: true}};
 const CHECKOUT = 'https://checkout.opendrone.be/checkouts/cn/ok';
 const FC = 'gid://shopify/ProductVariant/OPENFC-LITE-2020';
 const RX = 'gid://shopify/ProductVariant/OPENRX-LITE';
-const EU_PROMISE = 'ships early November 2026';
+const EU_PROMISE = 'ships late November 2026';
 
 function variant(sku: string, extra: Partial<CatalogVariant> = {}): CatalogVariant {
   return {
@@ -309,9 +309,9 @@ describe('add to cart forwards the resolved country', () => {
 
 describe('one ship line everywhere', () => {
   it('names the month qualifier and delivery date of the BE FC/ESC promise', () => {
-    assert.deepEqual(datedShipParts(EU_PROMISE), {when: 'early Nov 2026'});
-    assert.equal(shipLabelFromPromise(EU_PROMISE, 'short'), 'Ships early Nov 2026');
-    assert.equal(shipLabelFromPromise('ships early November 2026', 'short'), 'Ships early Nov 2026');
+    assert.deepEqual(datedShipParts(EU_PROMISE), {when: 'late Nov 2026'});
+    assert.equal(shipLabelFromPromise(EU_PROMISE, 'short'), 'Ships late Nov 2026');
+    assert.equal(shipLabelFromPromise('ships late November 2026', 'short'), 'Ships late Nov 2026');
     assert.equal(shipLabelFromPromise('ships October 2026', 'short'), 'Ships Oct 2026');
     assert.equal(datedShipParts('ships once funded'), null);
   });

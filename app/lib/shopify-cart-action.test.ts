@@ -1013,7 +1013,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
   const STRAP = 'gid://shopify/ProductVariant/strap';
   const FC_LINE = 'gid://shopify/CartLine/fc?cart=a';
   const RX_LINE = 'gid://shopify/CartLine/rx?cart=a';
-  const OWN_EARLY = 'ships early November 2026';
+  const OWN_EARLY = 'ships late November 2026';
   const OWN_LATE =
     'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait';
   const REWRITE = 'ships with the rest of this order by 31 March 2027';
@@ -1127,7 +1127,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
     const c = cart([fcLine({orderPromise: REWRITE}), rxLine()]);
     const info = cartLineInfo(c, EU);
     assert.equal(info[FC_LINE].group, `date:${OWN_EARLY}`);
-    assert.equal(info[FC_LINE].shipLabel, 'Ships early Nov 2026');
+    assert.equal(info[FC_LINE].shipLabel, 'Ships late Nov 2026');
     assert.deepEqual(splitPlan(c, info), {keep: [FC_LINE], later: [RX_LINE]});
   });
 

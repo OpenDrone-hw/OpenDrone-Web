@@ -1172,7 +1172,7 @@ rate, and HS codes and country of origin on every variant.
 
 Other permitted destinations use allocation region `INT`. Batch-1 paid stock
 of FC and ESC serves the EU and `INT` but not the US (founder 2026-10-29), with
-the early November promise and no international delivery date; international
+the late November promise and no international delivery date; international
 products, accessories and a full batch 1 use the March batch, including the
 existing `usStock` rule for otherwise unlisted accessories. The Shopify
 shipping rates of the international zones are still named for the March ship
