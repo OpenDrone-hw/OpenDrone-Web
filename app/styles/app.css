@@ -13690,6 +13690,13 @@ a.what-chain-chip:hover {
     font-size: 14px;
     letter-spacing: 0.04em;
   }
+  /* Same ring as the global :focus-visible baseline (the input reset above
+     removes the outline; the pill's gold border alone was not a focus ring). */
+  .site-mobile-nav-search input:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--r-pill);
+  }
   .site-mobile-nav-search input::placeholder {
     color: var(--color-text-muted);
   }
