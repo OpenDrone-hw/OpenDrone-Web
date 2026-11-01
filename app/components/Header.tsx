@@ -560,7 +560,11 @@ export function HeaderMenu({
           ? 'site-mobile-nav flex flex-col gap-1 px-1'
           : 'hidden md:flex items-center gap-8 ml-10'
       }
-      role="navigation"
+      aria-label={
+        isMobile
+          ? (copyText('chrome.menu_toggle_aria') ?? 'Menu')
+          : (copyText('chrome.main_nav_aria') ?? 'Main')
+      }
     >
       {/* Mobile drawer only: surface Search + the product families + Home up
           top. The desktop header carries these in its own bar / FamilyNav,
@@ -924,7 +928,7 @@ function HeaderMenuMobileToggle() {
       onClick={() => open('mobile')}
       aria-label={copyText('chrome.menu_toggle_aria') ?? 'Menu'}
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" focusable="false">
         <line x1="4" y1="7" x2="20" y2="7" />
         <line x1="4" y1="12" x2="20" y2="12" />
         <line x1="4" y1="17" x2="20" y2="17" />
