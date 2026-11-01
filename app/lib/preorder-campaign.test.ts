@@ -20,6 +20,7 @@ import {
   cartShipNote,
   sellableUnits,
   shipGroupKey,
+  shipsOnlyWithPaid,
   shipsWithState,
   shipLabel,
   shipLabelFromPromise,
@@ -962,5 +963,74 @@ describe('reserved units on a paid batch', () => {
       );
     }
     assert.doesNotThrow(() => parseCampaignConfig({...base, skus: {A: {batches: [{...paid, reserved: 0}, {units: 250}]}}}));
+  });
+});
+
+describe('batch-1-only orders (founder 2026-11-01)', () => {
+  const MARCH = {region: 'EU' as const, units: 30, march: true};
+  const ONLY = {region: 'EU' as const, units: 50};
+
+  it('sends units of a mixed order past paid batches to the first funding batch', () => {
+    assert.deepEqual(batchFill(STACK, [ONLY, MARCH]), [50, 30]);
+    assert.deepEqual(batchFill(STACK, [MARCH, ONLY]), [50, 30]);
+    // Without the flag the same 80 units fill paid stock, as before.
+    assert.deepEqual(batchFill(STACK, [ONLY, {region: 'EU', units: 30}]), [80, 0]);
+    const fill = [0, 0];
+    assert.equal(allocateUnit(STACK, fill, 'EU', true).batch, 2);
+    assert.deepEqual(fill, [0, 1]);
+  });
+
+  it('counts only batch-1-only units in the paid batch counter', () => {
+    const state = campaignState(STACK, [ONLY, MARCH], PENDING, TIERS);
+    assert.equal(state.batch, 1);
+    assert.equal(state.paidLeft, 200);
+    assert.equal(state.batches[0].ordered, 50);
+    assert.equal(state.ordered, 80);
+  });
+
+  it('keeps the price steps and the units total on every paid unit', () => {
+    for (const march of [0, 30, 90, 240]) {
+      const rule = campaignState(STACK, [ONLY, {region: 'EU', units: march, march: true}], PENDING, TIERS, 100);
+      const legacy = campaignState(STACK, 50 + march, PENDING, TIERS, 100);
+      assert.equal(rule.ordered, legacy.ordered);
+      assert.equal(rule.tierOff, legacy.tierOff, `march ${march}`);
+      assert.equal(rule.tierLeft, legacy.tierLeft, `march ${march}`);
+      assert.equal(rule.price, legacy.price, `march ${march}`);
+    }
+  });
+
+  it('adds march units to the funding target count at once', () => {
+    assert.equal(campaignState(STACK, [ONLY, MARCH], PENDING, TIERS).targetOrdered, 30);
+    assert.equal(campaignState(STACK, 80, PENDING, TIERS).targetOrdered, 0);
+  });
+
+  const CONFIG = parseCampaignConfig({
+    countFrom: '2026-09-21',
+    endsOn: '2026-12-31', shipsBy: '2027-03-11',
+    priceTiers: TIERS,
+    pendingShips: 'ships about 10 weeks after its target is reached',
+    skus: {
+      'OPENFC-LITE-2020': {batches: STACK},
+      'OPENRX-LITE': {batches: FRAME},
+    },
+    shipsWith: {
+      'ACC-STRAP-20X220': {sku: 'OPENFC-LITE-2020', batch: 1},
+      'ACC-PROP': {sku: 'OPENFC-LITE-2020', batch: 2},
+      'ACC-ANT-T': {sku: 'OPENFC-LITE-2020', batch: 1, stock: 4, after: 2},
+    },
+  });
+
+  it('names an order that ships with paid stock only', () => {
+    const only = (lines: Array<[string | null, number]>, used = {}) =>
+      shipsOnlyWithPaid(CONFIG, lines.map(([sku, quantity]) => ({sku, quantity})), used);
+    assert.equal(only([['OPENFC-LITE-2020', 2], ['ACC-STRAP-20X220', 1]]), true);
+    assert.equal(only([['OPENFC-LITE-2020', 2], ['OPENRX-LITE', 1]]), false);
+    assert.equal(only([['OPENFC-LITE-2020', 2], ['ACC-PROP', 1]]), false);
+    assert.equal(only([['OPENFC-LITE-2020', 2], ['SOMETHING-ELSE', 1]]), false);
+    assert.equal(only([['OPENFC-LITE-2020', 2], [null, 1]]), false);
+    // A refunded line (0 units) does not count.
+    assert.equal(only([['OPENFC-LITE-2020', 2], ['OPENRX-LITE', 0]]), true);
+    assert.equal(only([['ACC-ANT-T', 4]]), true);
+    assert.equal(only([['ACC-ANT-T', 2]], {'ACC-ANT-T': 3}), false);
   });
 });

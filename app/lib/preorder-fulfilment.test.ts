@@ -181,7 +181,7 @@ describe('preorder fulfilment', () => {
   it('assigns batches in creation order and splits a line over a boundary', () => {
     const first = order({lines: [['OPENFC-LITE-2020', 248]]});
     const refunded = order({lines: [['OPENFC-LITE-2020', 50]], status: 'REFUNDED'});
-    const second = order({lines: [['OPENFC-LITE-2020', 5], ['OPENRX-LITE', 1]]});
+    const second = order({lines: [['OPENFC-LITE-2020', 5]]});
     // Listed out of order: creation time decides.
     const result = assignBatches([second, refunded, first], CONFIG);
     assert.deepEqual(result.get(first.id), [
@@ -190,8 +190,30 @@ describe('preorder fulfilment', () => {
     assert.equal(result.has(refunded.id), false);
     assert.deepEqual(
       result.get(second.id)?.map((b) => [b.sku, b.batch, b.units]),
-      [['OPENFC-LITE-2020', 1, 2], ['OPENFC-LITE-2020', 2, 3], ['OPENRX-LITE', 1, 1]],
+      [['OPENFC-LITE-2020', 1, 2], ['OPENFC-LITE-2020', 2, 3]],
     );
+  });
+
+  it('gives paid stock only to orders whose every line ships with it (founder 2026-11-01)', () => {
+    const boardsOnly = order({lines: [['OPENFC-LITE-2020', 2]]});
+    // Boards plus a March item: the whole parcel ships in March, boards included.
+    const mixed = order({lines: [['OPENFC-LITE-2020', 3], ['OPENRX-LITE', 1]]});
+    // A non-campaign line is a line beyond batch 1 too.
+    const withOther = order({lines: [['OPENFC-LITE-2020', 1], ['ACC-STRAP', 1, false]]});
+    const later = order({lines: [['OPENFC-LITE-2020', 4]]});
+    const result = assignBatches([boardsOnly, mixed, withOther, later], CONFIG);
+    const view = (o: PreorderOrder) => result.get(o.id)?.map((b) => [b.sku, b.batch, b.units]);
+    assert.deepEqual(view(boardsOnly), [['OPENFC-LITE-2020', 1, 2]]);
+    assert.deepEqual(view(mixed), [['OPENFC-LITE-2020', 2, 3], ['OPENRX-LITE', 1, 1]]);
+    assert.deepEqual(view(withOther), [['OPENFC-LITE-2020', 2, 1]]);
+    assert.deepEqual(view(later), [['OPENFC-LITE-2020', 1, 4]]);
+  });
+
+  it('still splits a boards-only line over the paid batch boundary', () => {
+    const first = order({lines: [['OPENFC-LITE-2020', 248]]});
+    const second = order({lines: [['OPENFC-LITE-2020', 5]]});
+    const result = assignBatches([first, second], CONFIG);
+    assert.deepEqual(result.get(second.id)?.map((b) => [b.batch, b.units]), [[1, 2], [2, 3]]);
   });
 
   it('plans a hold and batch tags only for paid preorder orders not yet tagged', () => {
@@ -518,12 +540,14 @@ describe('SKUs that ship with a campaign SKU', () => {
       shipsWith: {'ACC-ANT-T': {sku: 'OPENFC-LITE-2020', batch: 1, stock: 4, after: 2}},
     });
     const first = order({lines: [['ACC-ANT-T', 3]]});
-    const second = order({lines: [['ACC-ANT-T', 3]]});
-    const assigned = assignBatches([first, second], stocked);
+    const second = order({lines: [['ACC-ANT-T', 1]]});
+    // Past the stock the order ships in March whole: it takes no stock units.
+    const third = order({lines: [['ACC-ANT-T', 3]]});
+    const assigned = assignBatches([first, second, third], stocked);
     assert.deepEqual(assigned.get(first.id)?.map((b) => [b.batch, b.units]), [[1, 3]]);
-    assert.deepEqual(assigned.get(second.id)?.map((b) => [b.batch, b.units, b.shipPromise]), [
-      [1, 1, 'ships early November 2026'],
-      [2, 2, CONFIG.pendingShips],
+    assert.deepEqual(assigned.get(second.id)?.map((b) => [b.batch, b.units]), [[1, 1]]);
+    assert.deepEqual(assigned.get(third.id)?.map((b) => [b.batch, b.units, b.shipPromise]), [
+      [2, 3, CONFIG.pendingShips],
     ]);
   });
 
@@ -572,8 +596,9 @@ describe('US and EU orders in one campaign', () => {
     assert.deepEqual(view(eu1), ['OPENFC-LITE-2020:1:2']);
     // US: no Belgian stock for the accessory, the lead's next US batch.
     assert.deepEqual(view(us2), ['OPENFC-LITE-2020:2:1', 'ACC-ANT-T:2:1']);
-    // EU: the last paid unit, then batch 2; one antenna from stock, one after.
-    assert.deepEqual(view(eu2), ['OPENFC-LITE-2020:1:1', 'OPENFC-LITE-2020:2:1', 'ACC-ANT-T:1:1', 'ACC-ANT-T:2:1']);
+    // EU: boards plus antennas.
+    // The antennas outrun the stock, so the whole order ships with batch 2.
+    assert.deepEqual(view(eu2), ['OPENFC-LITE-2020:2:2', 'ACC-ANT-T:2:2']);
   });
 
   it('holds and tags us-review a US order with a line no US batch carries, preorder or not', () => {

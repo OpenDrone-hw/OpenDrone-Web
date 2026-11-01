@@ -39,8 +39,11 @@ export function regionOf(country: string | null | undefined): Region {
 
 /** Paid units of one SKU in order, oldest first, as runs of one region:
  *  what the batch allocation needs, since a batch may serve one region
- *  only. A plain number is that many EU units. */
-export type UnitRuns = Array<{region: Region; units: number}>;
+ *  only. A plain number is that many EU units. A run with `march` comes
+ *  from an order that also holds a line not shipping with paid stock: it
+ *  ships as one parcel with that line, so its units skip paid batches
+ *  ({@link shipsOnlyWithPaid}, founder 2026-11-01). */
+export type UnitRuns = Array<{region: Region; units: number; march?: boolean}>;
 
 /** A SKU's paid units: a count (all EU) or its runs by region. */
 export type PaidUnitsOf = number | UnitRuns;
@@ -577,25 +580,55 @@ function toRuns(ordered: PaidUnitsOf): UnitRuns {
   return units ? [{region: 'EU', units}] : [];
 }
 
+/**
+ * Whether an order ships with paid stock only (founder 2026-11-01): every
+ * line with units is a campaign SKU that has a paid batch, or a `shipsWith`
+ * SKU pinned to a paid batch (a stocked one only while its units fit the
+ * stock). Any other line, a motor, frame, receiver or prop, makes the whole
+ * order ship in March, boards included, so its units skip paid batches.
+ * `stockUsed` is the units each stocked SKU has already taken from stock.
+ */
+export function shipsOnlyWithPaid(
+  config: Pick<CampaignConfig, 'skus' | 'shipsWith'>,
+  lines: Array<{sku: string | null | undefined; quantity: number}>,
+  stockUsed: Record<string, number> = {},
+): boolean {
+  for (const line of lines) {
+    if (!(line.quantity > 0)) continue;
+    const sku = line.sku?.trim();
+    if (!sku) return false;
+    const rule = config.shipsWith?.[sku];
+    if (rule) {
+      const lead = config.skus[rule.sku]?.batches ?? [];
+      if (rule.stock !== undefined) {
+        if (!lead[(rule.batch ?? 0) - 1]?.paid || (stockUsed[sku] ?? 0) + line.quantity > rule.stock) return false;
+      } else if (!lead[(rule.batch ?? 0) - 1]?.paid) return false;
+    } else if (!config.skus[sku]?.batches.some((b) => b.paid)) return false;
+  }
+  return true;
+}
+
 /** Every paid unit of a SKU, whatever its region: the count the price
  *  steps and the funding target read. */
 export function totalUnits(ordered: PaidUnitsOf): number {
   return toRuns(ordered).reduce((sum, run) => sum + Math.max(0, Math.floor(run.units) || 0), 0);
 }
 
-/** The paid units of one region. */
+/** The paid units of one region that ship with paid stock: `march` units
+ *  leave the stock on hand untouched. */
 export function regionUnits(ordered: PaidUnitsOf, region: Region): number {
   return toRuns(ordered)
-    .filter((run) => run.region === region)
+    .filter((run) => run.region === region && !run.march)
     .reduce((sum, run) => sum + Math.max(0, Math.floor(run.units) || 0), 0);
 }
 
 /** 0-based index of the batch the next unit for `region` falls into: the
  *  first batch that serves the region and still has room (the open last
  *  batch always has room). `fill` is the units already in each batch. */
-function nextIndex(list: CampaignBatch[], fill: number[], region: Region): number {
+function nextIndex(list: CampaignBatch[], fill: number[], region: Region, march = false): number {
   for (let i = 0; i < list.length; i += 1) {
     if (!servesRegion(list[i], region)) continue;
+    if (march && list[i].paid) continue;
     if (i === list.length - 1 || fill[i] < sellableUnits(list[i])) return i;
   }
   return list.length - 1;
@@ -612,7 +645,7 @@ export function batchFill(batches: CampaignBatch[], ordered: PaidUnitsOf): numbe
   for (const run of toRuns(ordered)) {
     let left = Math.max(0, Math.floor(run.units) || 0);
     while (left > 0) {
-      const i = nextIndex(list, fill, run.region);
+      const i = nextIndex(list, fill, run.region, run.march);
       const room = i === list.length - 1 ? left : Math.min(left, sellableUnits(list[i]) - fill[i]);
       fill[i] += room;
       left -= room;
@@ -624,15 +657,17 @@ export function batchFill(batches: CampaignBatch[], ordered: PaidUnitsOf): numbe
 /**
  * Allocate one unit for `region` into `fill` (from {@link batchFill}, or
  * all zero) and return its 1-based batch and entry. `fill` is updated.
+ * A `march` unit (its order ships with a line outside paid stock) skips paid batches.
  */
 export function allocateUnit(
   batches: CampaignBatch[],
   fill: number[],
   region: Region,
+  march = false,
 ): {batch: number; entry: CampaignBatch} {
   const list = openBatches(batches);
   while (fill.length < list.length) fill.push(0);
-  const index = nextIndex(list, fill, region);
+  const index = nextIndex(list, fill, region, march);
   fill[index] += 1;
   return {batch: index + 1, entry: list[index]};
 }
@@ -666,7 +701,9 @@ export function batchOfUnit(batches: CampaignBatch[], unit: number): {batch: num
  */
 export function tierUnits(batches: CampaignBatch[], ordered: PaidUnitsOf): number {
   const list = openBatches(batches);
-  const fill = batchFill(batches, ordered);
+  // Price steps keep counting every paid unit as one ladder: `march` units
+  // fill the batches as they did before the batch-1-only rule.
+  const fill = batchFill(batches, toRuns(ordered).map(({region, units}) => ({region, units})));
   const index = nextIndex(list, fill, 'EU');
   const before = list.slice(0, index).filter((b) => servesRegion(b, 'EU')).reduce((sum, b) => sum + sellableUnits(b), 0);
   return before + fill[index];

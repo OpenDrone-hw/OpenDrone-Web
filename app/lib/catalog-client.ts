@@ -65,7 +65,7 @@ async function withCampaign(env: Env, catalog: Catalog, region: Region): Promise
   // A closed store has no campaign preorder variant and never calls the
   // Admin API. Its campaign SKUs still never show a compare-at price.
   if (!needsCampaignCounts(catalog, CAMPAIGN, region)) return {...catalog, campaign_skus: campaignSkus(CAMPAIGN)};
-  const units = await paidUnitRuns(env, CAMPAIGN.countFrom, CAMPAIGN_SKUS).catch(
+  const units = await paidUnitRuns(env, CAMPAIGN.countFrom, CAMPAIGN_SKUS, fetch, Date.now, CAMPAIGN).catch(
     (error: unknown) => {
       console.error(
         '[preorders] paid counts unavailable, closing campaign SKUs',
