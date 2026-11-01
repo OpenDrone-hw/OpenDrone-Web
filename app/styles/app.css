@@ -3197,7 +3197,7 @@ button.reset {
 }
 
 .collection-sort select:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-field-border));
 }
 
 .collection-sort select:focus-visible {
@@ -18254,7 +18254,7 @@ html.hero-header-in .homepage-layout .site-header {
   cursor: pointer;
 }
 .ship-to-select:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-field-border));
 }
 .ship-to-select:disabled {
   opacity: 0.6;
