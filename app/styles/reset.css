@@ -91,13 +91,22 @@ form {
   max-width: 100%;
 }
 
-input {
-  border-radius: 4px;
-  border: 1px solid #000;
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
-  margin-top: 0.25rem;
-  padding: 0.5rem;
+/* The input reset lives in its own cascade layer, ordered between Tailwind's
+   `base` (preflight, which it must still beat) and `components`/`utilities`
+   (which must beat it). Unlayered, it overrode layered field-border utilities
+   (WCAG 1.4.11). Layer order is fixed by first appearance, and this sheet loads
+   before app.css, so the full Tailwind order is declared here. */
+@layer theme, base, reset-input, components, utilities;
+
+@layer reset-input {
+  input {
+    border-radius: 4px;
+    border: 1px solid #000;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    margin-top: 0.25rem;
+    padding: 0.5rem;
+  }
 }
 
 legend {
