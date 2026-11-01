@@ -261,7 +261,7 @@ export function MobileHome({
         className="home-mobile-browse"
       >
         <Txt id="home.m_browse" />
-        <svg
+        <svg aria-hidden="true" focusable="false"
           width="16"
           height="16"
           viewBox="0 0 24 24"
