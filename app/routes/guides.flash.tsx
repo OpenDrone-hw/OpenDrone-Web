@@ -1,5 +1,5 @@
 /**
- * /flash: install verified firmware on OpenDrone boards from the browser.
+ * /guides/flash (was /flash, which now 301s here): install verified firmware on OpenDrone boards from the browser.
  *
  *   - Flight controller (OpenFC-Lite / Lite Mini, Betaflight): verified UF2
  *     download + drag-and-drop onto the BOOTSEL drive (every browser);
@@ -22,7 +22,8 @@
  */
 
 import {useCallback, useEffect, useState} from 'react';
-import type {Route} from './+types/flash';
+import {Link} from 'react-router';
+import type {Route} from './+types/guides.flash';
 import {ChoiceLadder} from '~/components/ChoiceLadder';
 import {isWebSerialAvailable} from '~/lib/flasher/msp';
 import {isWebUsbAvailable} from '~/lib/flasher/picoboot';
@@ -30,7 +31,10 @@ import {policyAllows} from '~/lib/flasher/targets';
 import {EscFlasher} from '~/lib/flasher/ui/EscFlasher';
 import {FcFlasher} from '~/lib/flasher/ui/FcFlasher';
 import {InfoCallout, StagingBenchNotice} from '~/lib/flasher/ui/status';
-import {buildSeoMeta} from '~/lib/seo';
+import {buildBreadcrumbJsonLd, buildSeoMeta} from '~/lib/seo';
+import {jsonLd} from '~/lib/guides';
+import {Txt} from '~/components/Txt';
+import {copyText} from '~/lib/copy';
 
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
@@ -61,7 +65,24 @@ export default function FlashRoute() {
 
   return (
     <article className="page-shell">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLd(
+            buildBreadcrumbJsonLd([
+              {name: 'OpenDrone', path: '/'},
+              {name: copyText('guides.title') ?? 'Firmware guides', path: '/guides'},
+              {name: 'Update firmware', path: '/guides/flash'},
+            ]),
+          ),
+        }}
+      />
       <div className="reading-column">
+        <div className="policy-back-link">
+          <Link prefetch="intent" to="/guides">
+            <Txt id="guides.back_link" fallback="All guides" />
+          </Link>
+        </div>
         <StagingBenchNotice />
         <header className="page-header">
           <p className="page-eyebrow">Firmware</p>

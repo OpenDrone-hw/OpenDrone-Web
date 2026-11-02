@@ -64,6 +64,20 @@ export default function GuidesIndex() {
             </ul>
           </section>
 
+          {/* The web flasher, listed as a guide of its own. Heading and text are
+              placeholders until the audience pass supplies the wording. */}
+          <section className="mt-10">
+            <h2 className="text-[22px]">
+              <Txt id="guides.flasher_heading" fallback="Update firmware" />
+            </h2>
+            <Txt id="guides.flash_cta_note" as="p" />
+            {/* Full document load: /guides/flash's USB/serial Permissions-Policy
+                only applies to a freshly loaded document. */}
+            <a href="/guides/flash" className="btn-primary btn-sm mt-3 inline-block">
+              {copyText('guides.flash_cta') ?? 'Open the firmware page'}
+            </a>
+          </section>
+
           {GUIDE_FAMILIES.map((family) => (
             <section key={family.id} className="mt-10">
               <h2 className="text-[22px]">
@@ -82,14 +96,6 @@ export default function GuidesIndex() {
             </section>
           ))}
 
-          <section className="mt-10">
-            <Txt id="guides.flash_cta_note" as="p" />
-            {/* Full document load: /flash's USB/serial Permissions-Policy only
-                applies to a freshly loaded document. */}
-            <a href="/flash" className="btn-primary btn-sm mt-3 inline-block">
-              {copyText('guides.flash_cta') ?? 'Open the firmware page'}
-            </a>
-          </section>
         </div>
       </div>
     </article>

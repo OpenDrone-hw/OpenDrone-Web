@@ -500,8 +500,8 @@ export default function SupportRoute() {
           <span className="sp-tile-title">{t('find_cta')}</span>
         </Link>
 
-        {/* A full document load: /flash has its own Permissions-Policy. */}
-        <Link to="/flash" reloadDocument className="sp-tile">
+        {/* A full document load: /guides/flash has its own Permissions-Policy. */}
+        <Link to="/guides/flash" reloadDocument className="sp-tile">
           <Zap size={18} className="sp-tile-icon" aria-hidden="true" />
           <span className="sp-tile-title">{t('flash_title')}</span>
           <span className="sp-tile-line">

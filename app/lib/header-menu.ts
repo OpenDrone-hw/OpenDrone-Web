@@ -8,7 +8,7 @@ export const HEADER_MENU_LINKS: ReadonlyArray<{to: string; copy: string}> = [
   {to: '/wholesale', copy: 'chrome.nav_trade'},
   {to: '/newsletter', copy: 'chrome.nav_newsletter'},
   {to: '/owners', copy: 'chrome.nav_owners'},
-  {to: '/flash', copy: 'chrome.nav_flash'},
+  {to: '/guides/flash', copy: 'chrome.nav_flash'},
   {to: '/guides', copy: 'chrome.nav_guides'},
   {to: '/support', copy: 'chrome.nav_contact'},
 ];

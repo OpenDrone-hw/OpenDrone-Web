@@ -206,8 +206,8 @@ export default function GuideStepRoute() {
           </section>
 
           <p className="mt-8">
-            {/* Full document load: see GuideText on /flash links. */}
-            <a href="/flash" className="btn-primary btn-sm inline-block">
+            {/* Full document load: see GuideText on /guides/flash links. */}
+            <a href="/guides/flash" className="btn-primary btn-sm inline-block">
               {copyText('guides.flash_link') ?? 'Go to the firmware page'}
             </a>
           </p>

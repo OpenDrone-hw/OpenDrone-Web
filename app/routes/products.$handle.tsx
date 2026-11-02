@@ -3016,11 +3016,11 @@ function ProductPage() {
             </p>
             {/* Flasher links: FC and ESC only. The 20x20 tier (OpenFC-Lite
                 Mini, OpenESC 20x20) has firmware; the 30x30 tier (OpenFC-Lite,
-                OpenESC 30x30) has none yet outside the staging bench build. /flash has its own
+                OpenESC 30x30) has none yet outside the staging bench build. /guides/flash has its own
                 Permissions-Policy, so this is a full document load. */}
             {product.handle === 'openfc-lite' || product.handle === 'openesc' ? (
               <p>
-                <Link prefetch="none" reloadDocument to="/flash">
+                <Link prefetch="none" reloadDocument to="/guides/flash">
                   {/^20/.test(activeTier.trim()) ? (
                     say('product-chrome.firmware_flash_link', 'Flash firmware')
                   ) : (
