@@ -4,6 +4,7 @@ import {describe, it} from 'node:test';
 import {EU_COUNTRY_CODES} from './eu-countries.ts';
 import {
   GEO_AVAILABILITY_COPY,
+  availabilityBannerHiddenOn,
   GEO_BANNER_COPY,
   INTL_AVAILABILITY_STARTS,
   batchOnePromises,
@@ -119,6 +120,43 @@ describe('geoBannerLines', () => {
     for (const [locale, words] of Object.entries(GEO_BANNER_COPY)) {
       for (const key of ['title', 'eu', 'intl', 'dismiss'] as const) assert.ok(words[key].trim(), `${locale}.${key}`);
       assert.equal(geoBannerLines('fallback', locale as 'en' | 'nl' | 'fr').length, 2);
+    }
+  });
+});
+
+describe('availability card route exclusion', () => {
+  it('is never rendered on /flash or any /guides page, with or without a locale prefix', () => {
+    for (const p of [
+      '/flash',
+      '/flash/',
+      '/flash?x=1',
+      '/flash#step-2',
+      '/guides',
+      '/guides/',
+      '/guides/flash-openfc/boot-mode',
+      '/guides/flash-openesc/recovery?ref=x',
+      '/nl/flash',
+      '/fr/guides/flash-openfc/flash',
+      '/en/guides',
+      '/FLASH',
+    ]) {
+      assert.equal(availabilityBannerHiddenOn(p), true, p);
+    }
+  });
+  it('still shows everywhere else, including look-alike paths', () => {
+    for (const p of [
+      '/',
+      '/products/openesc',
+      '/products/flash-card',
+      '/support',
+      '/nl',
+      '/flashing',
+      '/guides-old',
+      '/blogs/news/flash-guide',
+      '/de/flash',
+      '/learn/guides',
+    ]) {
+      assert.equal(availabilityBannerHiddenOn(p), false, p);
     }
   });
 });

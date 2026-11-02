@@ -108,6 +108,19 @@ export const GEO_BANNER_COPY: Record<Locale, {title: string; eu: string; intl: s
 /** localStorage key of a dismissed banner; bump it when the lines change. */
 export const GEO_BANNER_DISMISSED_KEY = 'od-availability-banner-v1';
 
+/** Routes where the availability card is never rendered: tool and how-to pages, where a floating
+ *  card over steps and buttons only gets in the way. Prefix match on whole segments, with or
+ *  without a locale segment (the same en/nl/fr as i18n.ts LOCALES; that module is not
+ *  importable from plain Node tests). */
+const GEO_BANNER_EXCLUDED_ROOTS = ['flash', 'guides'] as const;
+const PATH_LOCALES = new Set(['en', 'nl', 'fr']);
+
+export function availabilityBannerHiddenOn(pathname: string): boolean {
+  const segments = pathname.split('?')[0]!.split('#')[0]!.split('/').filter(Boolean);
+  if (PATH_LOCALES.has(segments[0] ?? '')) segments.shift();
+  return (GEO_BANNER_EXCLUDED_ROOTS as readonly string[]).includes((segments[0] ?? '').toLowerCase());
+}
+
 /**
  * The banner's lines: the visitor's own line when the country is known, both
  * lines when it is not. Every line carries its text label ("EU", "Outside

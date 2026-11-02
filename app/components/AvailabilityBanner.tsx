@@ -50,6 +50,28 @@ export function AvailabilityBanner({geo}: {geo: {region: GeoAvailabilityRegion; 
     el.addEventListener('keydown', onKey);
     return () => el.removeEventListener('keydown', onKey);
   }, [dismissed]);
+  // Reserve the room the card covers at the bottom of the viewport (card height + its bottom offset) as
+  // --avail-banner-space on <html>, so the page can always be scrolled clear of it. 0 while it is hidden
+  // (display:none from the pre-paint dismissal style, or on phones behind a bottom bar); removed on unmount.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      const space = r.height > 0 ? Math.max(0, Math.ceil(window.innerHeight - r.top)) : 0;
+      root.style.setProperty('--avail-banner-space', `${space}px`);
+    };
+    measure();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    ro?.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', measure);
+      root.style.removeProperty('--avail-banner-space');
+    };
+  }, [dismissed, geo]);
   if (!geo || dismissed) return null;
   const words = GEO_BANNER_COPY[geo.locale];
   const lines = geoBannerLines(geo.region, geo.locale);

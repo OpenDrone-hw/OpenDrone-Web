@@ -2037,6 +2037,9 @@ body:has(.test-banner) .site-header {
 }
 .avail-banner-close:hover { color: var(--color-text); }
 .avail-banner-close:focus-visible { outline: 2px solid var(--color-gold); outline-offset: -2px; }
+/* While the card is up, the page ends that much later, so the last content (footer links, form
+   buttons) scrolls clear of it. On the body, not main: the footer follows main. 0 when hidden. */
+body:has(.avail-banner) { padding-bottom: var(--avail-banner-space, 0px); }
 @media (max-width: 959px) {
   .avail-banner { left: 0.75rem; right: 5rem; max-width: none; bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); }
   body:has(.buy-rail.is-pinned) .avail-banner,

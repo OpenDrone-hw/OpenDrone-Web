@@ -12,7 +12,7 @@ import {CartAddedDialog} from '~/components/CartAddedDialog';
 import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
 import type {CommerceHandoff} from '~/lib/shop-links';
 import {AvailabilityBanner} from '~/components/AvailabilityBanner';
-import type {GeoAvailabilityRegion} from '~/lib/geo-availability';
+import {availabilityBannerHiddenOn, type GeoAvailabilityRegion} from '~/lib/geo-availability';
 import type {Locale} from '~/lib/i18n';
 
 interface PageLayoutProps {
@@ -53,8 +53,8 @@ export function PageLayout({
             <Txt id="chrome.skip_link" />
           </a>
           <RouteProgress />
-          {/* Ordering is open: the batch line for the visitor's country. */}
-          {shopOpen ? <AvailabilityBanner geo={geo} /> : null}
+          {/* Ordering is open: the batch line for the visitor's country. Never on /flash or /guides/*. */}
+          {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBanner geo={geo} /> : null}
           <Header
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}
