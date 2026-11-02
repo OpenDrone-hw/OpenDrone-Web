@@ -79,11 +79,13 @@ export async function loader(args: Route.LoaderArgs) {
     }
   }
   // Parts that do not work together: a warning in the visitor's chosen language (the language cookie), never a block.
-  const compat = cartCompatAlert(
-    (base.quote?.lines ?? []).flatMap((l) => (l.sku ? [l.sku] : [])),
-    base.country,
-    compatLocale(readLocaleCookie(request.headers.get('Cookie'))),
-  );
+  const locale = compatLocale(readLocaleCookie(request.headers.get('Cookie')));
+  let compat: ReturnType<typeof cartCompatAlert> = {locale, heading: '', note: '', issues: []};
+  try {
+    compat = cartCompatAlert((base.quote?.lines ?? []).flatMap((l) => (l.sku ? [l.sku] : [])), base.country, locale);
+  } catch (err) {
+    console.error('cart-compat', err);
+  }
   return data({...base, changes, compat, accountEmail: account?.email ?? null, prefill: prefill ? {name: prefill.name, line1: prefill.line1, line2: prefill.line2, postal_code: prefill.postal_code, city: prefill.city, phone: prefill.phone} : null}, {headers});
 }
 

@@ -38,7 +38,7 @@ export type FcPart = Base & {kind: 'fc'; mount: StackMount; cells: Cells; escHar
 export type EscPart = Base & {kind: 'esc'; mount: StackMount; cells: Cells; fcHarness: EscHarness; protocol: EscProtocol; batteryPlug: BatteryPlug};
 export type FramePart = Base & {kind: 'frame'; stackMounts: readonly StackMount[]; motorMounts: readonly MotorMount[]; propSize: PropSize};
 export type MotorPart = Base & {kind: 'motor'; mount: MotorMount | null; ratedCells: number | null; shaft: PropShaft | null; propSize: PropSize};
-export type PropsPart = Base & {kind: 'props'; size: PropSize; shaft: PropShaft};
+export type PropsPart = Base & {kind: 'props'; size: PropSize; shaft: PropShaft | null};
 export type RxPart = Base & {kind: 'rx'; protocol: RxProtocol; bands: readonly Band[]; antennaPlug: 'U.FL' | null};
 export type AntennaPart = Base & {kind: 'antenna'; bands: readonly Band[]; plug: 'U.FL'};
 /** `maxCells`: the highest pack the capacitor is shipped for on our own ESCs. */
@@ -62,11 +62,13 @@ export const COMPAT_PARTS: Record<string, CompatPart> = {
   'OPENFRAME-5': {kind: 'frame', name: 'OpenFrame 5"', handle: 'openframe', stackMounts: ['30.5x30.5', '20x20'], motorMounts: ['16x16'], propSize: 5},
   'OPENMOTOR-1604': {kind: 'motor', name: 'OpenMotor 1604 6S', handle: 'openmotor', mount: '9x9', ratedCells: 6, shaft: '1.5mm', propSize: 3},
   'OPENMOTOR-1604-4S': {kind: 'motor', name: 'OpenMotor 1604 4S', handle: 'openmotor', mount: '9x9', ratedCells: 4, shaft: '1.5mm', propSize: 3},
-  // The 2306's mount is not published yet (null on the product page). Its shaft is 5 mm: it ships with an M5 prop nut.
-  'OPENMOTOR-2306': {kind: 'motor', name: 'OpenMotor 2306 6S', handle: 'openmotor', mount: null, ratedCells: 6, shaft: '5mm', propSize: 5},
-  'OPENMOTOR-2306-4S': {kind: 'motor', name: 'OpenMotor 2306 4S', handle: 'openmotor', mount: null, ratedCells: 4, shaft: '5mm', propSize: 5},
+  // The 2306's mount and shaft are not published yet (null on the product page).
+  'OPENMOTOR-2306': {kind: 'motor', name: 'OpenMotor 2306 6S', handle: 'openmotor', mount: null, ratedCells: 6, shaft: null, propSize: 5},
+  'OPENMOTOR-2306-4S': {kind: 'motor', name: 'OpenMotor 2306 4S', handle: 'openmotor', mount: null, ratedCells: 4, shaft: null, propSize: 5},
   'OPENRX-LITE': {kind: 'rx', name: 'OpenRX Lite', handle: 'openrx', protocol: 'CRSF', bands: ['2.4GHz'], antennaPlug: null},
   'OPENRX-LITE-UFL': {kind: 'rx', name: 'OpenRX Lite-UFL', handle: 'openrx', protocol: 'CRSF', bands: ['2.4GHz'], antennaPlug: 'U.FL'},
+  // Sub-GHz is listed as both 868 and 915 MHz (the radio covers both; the product page says "sub-GHz"), so rx-region
+  // stays quiet for these until a region-locked part is added.
   'OPENRX-MONO': {kind: 'rx', name: 'OpenRX Mono', handle: 'openrx', protocol: 'CRSF', bands: ['2.4GHz', '868MHz', '915MHz'], antennaPlug: 'U.FL'},
   'OPENRX-GEMINI': {kind: 'rx', name: 'OpenRX Gemini', handle: 'openrx', protocol: 'CRSF', bands: ['2.4GHz', '868MHz', '915MHz'], antennaPlug: 'U.FL'},
   'ACC-ANT-T': {kind: 'antenna', name: '2.4 GHz T antenna', handle: 'elrs-antenna-24', bands: ['2.4GHz'], plug: 'U.FL'},
@@ -76,7 +78,8 @@ export const COMPAT_PARTS: Record<string, CompatPart> = {
   'ACC-CAP-470UF-50V': {kind: 'capacitor', name: '470 µF 50 V capacitor', handle: 'capacitor-470uf-50v-low-esr', maxCells: 8},
   'ACC-PROP-3-HQ-T3X3X3': {kind: 'props', name: '3" T-mount props (3×3×3)', handle: 'hqprop-t3x3x3-propeller-set-3-inch-t-mount', size: 3, shaft: '1.5mm'},
   'ACC-PROP-3-HQ-T3X2X3-DUR': {kind: 'props', name: '3" T-mount props (3×2×3, durable)', handle: 'hqprop-durable-t3x2x3-propeller-set-3-inch-t-mount', size: 3, shaft: '1.5mm'},
-  'ACC-PROP-3-GF-3020': {kind: 'props', name: '3" T-mount props (3020)', handle: 'gemfan-3020-3-propeller-set-3-inch-t-mount', size: 3, shaft: '1.5mm'},
+  // Its mount is still a placeholder on the product page.
+  'ACC-PROP-3-GF-3020': {kind: 'props', name: '3" props (3020)', handle: 'gemfan-3020-3-propeller-set-3-inch-t-mount', size: 3, shaft: null},
   'ACC-PROP-5-HQ-5X43X3-V2S': {kind: 'props', name: '5" props (5×4.3×3)', handle: 'hqprop-5x4-3x3-v2s-propeller-set-5-inch', size: 5, shaft: '5mm'},
   'ACC-PROP-5-HQ-J37': {kind: 'props', name: '5" props (J37)', handle: 'hqprop-juicy-j37-propeller-set-5-inch', size: 5, shaft: '5mm'},
   'ACC-PROP-5-GF-51466': {kind: 'props', name: '5" props (51466)', handle: 'gemfan-hurricane-51466-v2-propeller-set-5-inch', size: 5, shaft: '5mm'},
@@ -214,7 +217,7 @@ export const COMPAT_RULES: readonly CompatRule[] = [
     messages: {
       en: {problem: 'This battery is {aValue}, but the {b} is rated {bValue}.', fix: 'Choose a battery within {bValue}.'},
       nl: {problem: 'Deze batterij is {aValue}, maar {b} is geschikt voor {bValue}.', fix: 'Kies een batterij binnen {bValue}.'},
-      fr: {problem: 'Cette batterie est en {aValue}, mais {b} est prévu pour {bValue}.', fix: 'Choisissez une batterie dans la plage {bValue}.'},
+      fr: {problem: 'Cette batterie est en {aValue}, mais {b} est prévu pour {bValue}.', fix: 'Choisissez une batterie dans la plage de {bValue}.'},
     },
   },
   {
@@ -271,12 +274,21 @@ export const COMPAT_RULES: readonly CompatRule[] = [
     messages: {
       en: {problem: 'The {a} are {aValue}, but the {b} is built for {bValue} props.', fix: 'Choose {bValue} props.'},
       nl: {problem: '{a} zijn {aValue}, maar {b} is gebouwd voor {bValue}-propellers.', fix: 'Kies {bValue}-propellers.'},
-      fr: {problem: '{a} font {aValue}, mais {b} est conçu pour des hélices de {bValue}.', fix: 'Choisissez des hélices de {bValue}.'},
+      fr: {problem: '{a} mesurent {aValue}, mais {b} est conçu pour des hélices de {bValue}.', fix: 'Choisissez des hélices de {bValue}.'},
+    },
+  },
+  {
+    id: 'prop-motor-size',
+    ...pair(['props'] as const, ['motor'] as const, (a, b) => a.size === b.propSize, (a, b) => ({aValue: `${a.size}"`, bValue: `${b.propSize}"`})),
+    messages: {
+      en: {problem: 'The {a} are {aValue}, but the {b} is sized for {bValue} props.', fix: 'Choose {bValue} props.'},
+      nl: {problem: '{a} zijn {aValue}, maar {b} is bedoeld voor {bValue}-propellers.', fix: 'Kies {bValue}-propellers.'},
+      fr: {problem: '{a} mesurent {aValue}, mais {b} est prévu pour des hélices de {bValue}.', fix: 'Choisissez des hélices de {bValue}.'},
     },
   },
   {
     id: 'prop-shaft',
-    ...pair(['props'] as const, ['motor'] as const, (a, b) => (b.shaft == null ? undefined : a.shaft === b.shaft), (a, b) => ({aValue: SHAFT_TEXT[a.shaft], bValue: b.shaft ? SHAFT_TEXT[b.shaft] : ''})),
+    ...pair(['props'] as const, ['motor'] as const, (a, b) => (a.shaft == null || b.shaft == null ? undefined : a.shaft === b.shaft), (a, b) => ({aValue: a.shaft ? SHAFT_TEXT[a.shaft] : '', bValue: b.shaft ? SHAFT_TEXT[b.shaft] : ''})),
     messages: {
       en: {problem: 'The {a} fit a {aValue} shaft, but the {b} has a {bValue} shaft.', fix: 'Choose props for a {bValue} shaft.'},
       nl: {problem: '{a} passen op een as van {aValue}, maar {b} heeft een as van {bValue}.', fix: 'Kies propellers voor een as van {bValue}.'},
@@ -294,11 +306,11 @@ export const COMPAT_RULES: readonly CompatRule[] = [
   },
   {
     id: 'antenna-band',
-    ...pair(['antenna'] as const, ['rx'] as const, (a, b) => (b.antennaPlug == null ? undefined : b.bands.every((x) => a.bands.includes(x))), (a, b) => ({aValue: bands(a.bands), bValue: bands(b.bands.filter((x) => !a.bands.includes(x)))})),
+    ...pair(['antenna'] as const, ['rx'] as const, (a, b) => (b.antennaPlug == null ? undefined : b.bands.every((x) => a.bands.includes(x))), (a, b) => ({aValue: bands(a.bands), bValue: b.bands.some((x) => x !== '2.4GHz' && !a.bands.includes(x)) ? 'sub-GHz' : bands(b.bands.filter((x) => !a.bands.includes(x)))})),
     messages: {
-      en: {problem: 'The {a} covers {aValue} only, but the {b} also uses {bValue}.', fix: 'Choose an antenna that also covers {bValue}.'},
-      nl: {problem: '{a} dekt alleen {aValue}, maar {b} gebruikt ook {bValue}.', fix: 'Kies een antenne die ook {bValue} dekt.'},
-      fr: {problem: '{a} ne couvre que {aValue}, mais {b} utilise aussi {bValue}.', fix: 'Choisissez une antenne qui couvre aussi {bValue}.'},
+      en: {problem: 'The {a} covers {aValue} only, so the {b} cannot use {bValue} with it.', fix: 'If you fly {bValue}, choose an antenna that also covers it.'},
+      nl: {problem: '{a} dekt alleen {aValue}, dus {b} kan er geen {bValue} mee gebruiken.', fix: 'Vlieg je op {bValue}, kies dan een antenne die dat ook dekt.'},
+      fr: {problem: '{a} ne couvre que {aValue} : {b} ne peut pas l’utiliser en {bValue}.', fix: 'Si vous volez en {bValue}, choisissez une antenne qui couvre aussi cette bande.'},
     },
   },
   {
@@ -313,8 +325,8 @@ export const COMPAT_RULES: readonly CompatRule[] = [
     values: (a, band) => ({aValue: a.kind === 'rx' || a.kind === 'antenna' ? bands(a.bands.filter((x) => x !== '2.4GHz')) : '', bValue: typeof band === 'string' ? BAND_TEXT[band] : ''}),
     messages: {
       en: {problem: 'The {a} works on {aValue}, but the sub-GHz band where you ship to is {bValue}.', fix: 'Choose a {bValue} version, or use the 2.4 GHz band.'},
-      nl: {problem: '{a} werkt op {aValue}, maar de sub-GHz-band in je leveringsland is {bValue}.', fix: 'Kies een versie voor {bValue}, of gebruik de 2,4 GHz-band.'},
-      fr: {problem: '{a} fonctionne en {aValue}, mais la bande sub-GHz du pays de livraison est {bValue}.', fix: 'Choisissez une version {bValue}, ou utilisez la bande 2,4 GHz.'},
+      nl: {problem: '{a} werkt op {aValue}, maar de sub-GHz-band in je leveringsland is {bValue}.', fix: 'Kies een versie voor {bValue}, of gebruik de 2.4 GHz-band.'},
+      fr: {problem: '{a} fonctionne en {aValue}, mais la bande sub-GHz du pays de livraison est {bValue}.', fix: 'Choisissez une version {bValue}, ou utilisez la bande 2.4 GHz.'},
     },
   },
 ];

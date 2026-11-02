@@ -49,7 +49,7 @@ function swapFor(rule: CompatRule, sku: string, other: CompatPart | Band, asPart
   const part = ctx.catalog[sku];
   const rest = ctx.skus.filter((s) => s !== sku);
   const candidates = Object.entries(ctx.catalog).filter(([candidate, p]) => {
-    if (candidate === sku || p.kind !== part.kind) return false;
+    if (ctx.skus.includes(candidate) || p.kind !== part.kind) return false;
     if ((asPartner ? rule.fits(other as CompatPart, p) : rule.fits(p, other)) !== true) return false;
     return !conflicts({...ctx, skus: [...rest, candidate]}, false).some((c) => c.a === candidate || c.b === candidate);
   });
