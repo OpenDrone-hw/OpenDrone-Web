@@ -10,7 +10,7 @@
  * the port to the ESCs; the next reboot or cmd_InterfaceExit ends it.
  */
 
-import {SerialLink, type ByteLink} from './serial-link.ts';
+import {SerialLink, SerialLinkError, type ByteLink, type Decoded} from './serial-link.ts';
 import {policyAllows} from './targets.ts';
 
 export const MSP = {
@@ -22,8 +22,6 @@ export const MSP = {
   SET_PASSTHROUGH: 245,
 } as const;
 
-/** MSP_SET_REBOOT types (msp.c): 1 = ROM bootloader, which on RP2350 is BOOTSEL. */
-const REBOOT_BOOTLOADER_ROM = 1;
 
 export type BoardInfo = {
   fcVariant: string;
@@ -105,6 +103,28 @@ export function mspFrame(cmd: number) {
   };
 }
 
+const CR_LF = String.fromCharCode(13, 10);
+
+/** CLI byte sequences for the ROM-bootloader restart (exact bytes are tested). */
+export const CLI_ENTER = '#' + CR_LF;
+export const CLI_BL_ROM = 'bl rom' + CR_LF;
+
+function ascii(s: string): Uint8Array<ArrayBuffer> {
+  return Uint8Array.from(s, (c) => c.charCodeAt(0));
+}
+
+/** A ByteLink decoder that waits for any of the given ASCII markers and consumes up to its end. */
+export function textFrame(markers: readonly string[]) {
+  return (buf: Uint8Array): Decoded<string> => {
+    const s = String.fromCharCode(...buf);
+    for (const m of markers) {
+      const i = s.indexOf(m);
+      if (i >= 0) return {value: m, consumed: i + m.length};
+    }
+    return null;
+  };
+}
+
 export class MspConnection {
   readonly link: ByteLink;
   private readonly owned: SerialLink | null;
@@ -147,9 +167,31 @@ export class MspConnection {
     };
   }
 
-  /** Reboot into BOOTSEL. The port disappears; the caller closes it. */
+  /**
+   * Reboot into the RP2350 ROM bootloader (BOOTSEL) through the Betaflight CLI: "#" opens the CLI, then
+   * "bl rom". MSP_SET_REBOOT type 1 was sent without waiting for its reply and did not reach the ROM
+   * bootloader on the RP2350 build (bench, 2026-11-02); this is the sequence proven from a terminal.
+   * Resolves when the FC says "Rebooting" or the port vanishes (both mean the restart started). Throws
+   * a visible error when the CLI prompt does not come within 1.5 s or nothing happens within 2 s.
+   * The caller closes the port and ignores close errors from the vanished port.
+   */
   async rebootToBootloader(): Promise<void> {
-    await this.link.write(encodeMspV1(MSP.SET_REBOOT, Uint8Array.of(REBOOT_BOOTLOADER_ROM)));
+    this.link.flush();
+    await this.link.write(ascii(CLI_ENTER));
+    try {
+      await this.link.readFrame(textFrame(['Entering CLI Mode', '# ']), 1500, 'CLI prompt');
+    } catch {
+      throw new MspError('The flight controller did not open its CLI (no "#" prompt), so no restart was sent.');
+    }
+    await this.link.write(ascii(CLI_BL_ROM));
+    try {
+      await this.link.readFrame(textFrame(['Rebooting']), 2000, 'bl rom');
+    } catch (e) {
+      if (e instanceof SerialLinkError && e.message.startsWith('No reply')) {
+        throw new MspError('The flight controller did not confirm "bl rom" within 2 s.');
+      }
+      // The port closed or failed mid-read: the board left Betaflight, which is what "bl rom" does.
+    }
   }
 
   /**

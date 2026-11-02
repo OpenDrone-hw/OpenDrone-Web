@@ -25,6 +25,7 @@ import {ChoiceLadder} from '~/components/ChoiceLadder';
 import {FIRMWARE_MANIFEST, releasesFor} from '../firmware-manifest.ts';
 import {fcDirectWriteGate, fcInstallEnabled, fcTargetProblems, knownFcNamesIn, type MspReport} from '../gates.ts';
 import {fetchVerifiedFirmware, isPublished, releaseFileName, type FirmwareRelease} from '../manifest.ts';
+import {fcDeviceBusy, serialButtonState, usbDisconnectDropsConnection} from '../device-hold.ts';
 import {rebootFcToBootsel} from '../fc-reboot.ts';
 import {MspConnection, type BoardInfo} from '../msp.ts';
 import {Picoboot, chipPackageResult, type ChipInfo, type FlashPhase} from '../picoboot.ts';
@@ -76,6 +77,8 @@ export function FcFlasher({
   const [lockedTo, setLockedTo] = useState<FlasherTarget | null>(null);
   /** Bumped on every board change or new download, so a slow download cannot land under another board (R1). */
   const prepareSeq = useRef(0);
+  /** Set by DirectInstall while it holds the board: lets step 3 offer Disconnect. */
+  const usbDisconnect = useRef<(() => Promise<void>) | null>(null);
   /** True while the direct-install panel holds the board open or is writing: the board choice is locked (R1). */
   const [deviceBusy, setDeviceBusy] = useState(false);
 
@@ -103,7 +106,10 @@ export function FcFlasher({
   };
 
   const prepare = async (release: FirmwareRelease) => {
-    if (!board || deviceBusy) return;
+    if (!board || deviceBusy) {
+      setFwStatus({kind: 'error', text: board ? 'Disconnect the USB install panel in step 4 first.' : 'Choose your board in step 1 first.'});
+      return;
+    }
     const seq = ++prepareSeq.current;
     const target = board;
     setVerified(null);
@@ -223,6 +229,7 @@ export function FcFlasher({
             <button type="button" className="btn-secondary btn-sm mt-2" onClick={() => void identify()} disabled={deviceBusy}>
               Identify connected board
             </button>
+            <UsbHoldNote holds={deviceBusy} onDisconnect={usbDisconnect} />
             {fcInfo ? (
               <p className="mt-2 font-mono text-[13px]">
                 {fcInfo.manufacturerId} {fcInfo.boardName} ({fcInfo.fcVariant} {fcInfo.fcVersion}, MSP {fcInfo.apiVersion})
@@ -273,13 +280,15 @@ export function FcFlasher({
 
       <Step id="fc" n={3} title="Put the board in bootloader mode" open={!!verifiedForBoard}>
         <p className="text-[16px]">
-          Battery off, USB only. Save your settings first (CLI: <code>diff all</code>).
+          Battery off, USB only. <strong>Save your settings first</strong> (CLI: <code>diff all</code>): installing
+          resets them.
         </p>
         {hasSerial ? (
           <>
             <button type="button" className="btn-secondary btn-sm mt-3" onClick={() => void rebootToBootsel()} disabled={deviceBusy}>
               Restart board into bootloader
             </button>
+            <UsbHoldNote holds={deviceBusy} onDisconnect={usbDisconnect} />
             <StatusLine status={rebootStatus} />
           </>
         ) : null}
@@ -295,7 +304,13 @@ export function FcFlasher({
             {/* Direct install only where the gates allow it (directInstallEnabled = flags || staging switch);
                 otherwise a disabled button with the reason, and the copy method open. */}
             {hasUsb && directInstallEnabled ? (
-              <DirectInstall target={board} verified={verifiedForBoard} say={say} onBusyChange={setDeviceBusy} />
+              <DirectInstall
+                target={board}
+                verified={verifiedForBoard}
+                say={say}
+                onBusyChange={setDeviceBusy}
+                disconnectRef={usbDisconnect}
+              />
             ) : (
               <div>
                 <button type="button" className="btn-primary btn-sm" disabled>
@@ -320,13 +335,29 @@ export function FcFlasher({
               </ol>
               <InfoUf2Check onFile={checkInfoUf2} status={infoUf2Status} />
             </details>
-            <p className="mt-4 text-[14px] text-[var(--color-text-muted)]">
-              Stuck? Hold BOOT while plugging in USB: the board always comes back. Then check your settings in Betaflight.
+            <p className="mt-4 text-[15px]">
+              <strong>Installing resets the Betaflight settings</strong> (either method): paste your saved{' '}
+              <code>diff all</code> back in the CLI afterwards. Stuck? Hold BOOT while plugging in USB: the board always
+              comes back.
             </p>
           </>
         ) : null}
       </Step>
     </>
+  );
+}
+
+/** Why a serial button is disabled while the step-4 USB connection holds the board, with a way out. Never silent. */
+function UsbHoldNote({holds, onDisconnect}: {holds: boolean; onDisconnect: React.RefObject<(() => Promise<void>) | null>}) {
+  const {reason} = serialButtonState({usbHolds: holds});
+  if (!reason) return null;
+  return (
+    <p className="mt-2 text-[15px]" role="status">
+      {reason}{' '}
+      <button type="button" className="underline" onClick={() => void onDisconnect.current?.()}>
+        Disconnect
+      </button>
+    </p>
   );
 }
 
@@ -358,11 +389,13 @@ function DirectInstall({
   verified,
   say,
   onBusyChange,
+  disconnectRef,
 }: {
   target: FlasherTarget;
   verified: Verified;
   say: (t: string) => void;
   onBusyChange: (busy: boolean) => void;
+  disconnectRef: React.RefObject<(() => Promise<void>) | null>;
 }) {
   /** F3: device, chip and on-board scan are one object, set once after a complete read. Never a mix of two boards. */
   const [conn, setConn] = useState<Connection | null>(null);
@@ -378,7 +411,46 @@ function DirectInstall({
 
   useBeforeUnloadWhile(flashing);
   useEffect(() => () => void openDev.current?.close(), []);
-  useEffect(() => onBusyChange(!!conn || connecting || flashing), [conn, connecting, flashing, onBusyChange]);
+  useEffect(() => onBusyChange(fcDeviceBusy({connected: !!conn, connecting, flashing})), [conn, connecting, flashing, onBusyChange]);
+  const connRef = useRef<Connection | null>(null);
+  connRef.current = conn;
+  const flashingRef = useRef(false);
+  flashingRef.current = flashing;
+  const disconnect = async () => {
+    if (flashingRef.current) return;
+    const dev = openDev.current;
+    openDev.current = null;
+    setConn(null);
+    setBattery(false);
+    setFinished(false);
+    setStatus({kind: 'idle'});
+    await dev?.close().catch(() => {});
+  };
+  // Step 3 (and Identify) can release the board through this.
+  useEffect(() => {
+    disconnectRef.current = disconnect;
+    return () => {
+      disconnectRef.current = null;
+    };
+  });
+  // The board left bootloader mode (rebooted into Betaflight, unplugged): drop the stale connection so the
+  // serial buttons work again. A running write is left to its own error path.
+  useEffect(() => {
+    const usb = typeof navigator === 'undefined' ? undefined : navigator.usb;
+    if (!usb) return;
+    const onDisconnect = (ev: Event) => {
+      const c = connRef.current;
+      const device = (ev as Event & {device?: unknown}).device;
+      if (!c || !usbDisconnectDropsConnection(c.pb.device, device, flashingRef.current)) return;
+      if (openDev.current === c.pb) openDev.current = null;
+      void c.pb.close().catch(() => {});
+      setConn(null);
+      setBattery(false);
+      setStatus({kind: 'error', text: 'The board left bootloader mode (USB disconnected). Connect again to install.'});
+    };
+    usb.addEventListener('disconnect', onDisconnect);
+    return () => usb.removeEventListener('disconnect', onDisconnect);
+  }, []);
   useEffect(() => () => onBusyChange(false), [onBusyChange]);
 
   // The connection belongs to one verified image and one board choice.
@@ -485,6 +557,11 @@ function DirectInstall({
       <button type="button" className="btn-secondary btn-sm" onClick={() => void connect()} disabled={flashing || connecting}>
         Connect to board in bootloader mode
       </button>
+      {conn && !flashing ? (
+        <button type="button" className="ml-3 underline text-[15px]" onClick={() => void disconnect()}>
+          Disconnect
+        </button>
+      ) : null}
       {conn ? (
         <ul className="mt-3 text-[15px]">
           <li>

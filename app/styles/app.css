@@ -4032,6 +4032,16 @@ button.reset {
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
+/* A disabled secondary button must look disabled (it looked clickable, /flash 2026-11-02). */
+.btn-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-secondary:disabled:hover {
+  border-color: var(--color-border-strong);
+  background: transparent;
+}
+
 /* Stock indicator: green dot + label, replaces the awkward chip. */
 /* In place of a buy button for a visitor not sold direct ("Available
    through shops", "Opening in Germany soon"): a status line, not a CTA. */

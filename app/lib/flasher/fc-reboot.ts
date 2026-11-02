@@ -23,7 +23,7 @@ export type RebootConnection = {
 };
 
 export const REBOOT_SENT_TEXT =
-  'Restart command sent. If a drive named RP2350 appears, the board is in bootloader mode. If it restarts into Betaflight instead, hold BOOT while plugging in USB.';
+  'Restart sent; wait for the RP2350 drive (a few seconds). No drive? Hold BOOT while plugging in USB.';
 
 export function errText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
