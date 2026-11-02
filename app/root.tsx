@@ -39,7 +39,7 @@ import {Txt} from './components/Txt';
 import {copyText} from '~/lib/copy';
 import {getCompanyIdentity} from '~/lib/company';
 import {getLocaleFromRequest, localeFromPathname, seoLocaleTag} from '~/lib/i18n';
-import {geoAvailabilityRegion} from '~/lib/geo-availability';
+import {GEO_BANNER_DISMISSED_KEY, geoAvailabilityRegion} from '~/lib/geo-availability';
 import {visitorCountry as ipCountry} from '~/lib/visitor-country';
 import {buildOrgJsonLd, buildSeoMeta} from '~/lib/seo';
 import {themeOverrideCss} from '~/lib/theme-overrides';
@@ -219,7 +219,7 @@ export async function loader(args: Route.LoaderArgs) {
     visitorCountry: buyerCountry(args.request, usRate),
     // The batch 1 ship line by CF-IPCountry (app/lib/geo-availability.ts):
     // the region and the language its line is written in.
-    geo: {region: geoAvailabilityRegion(ipCountry(args.request)), locale: getLocaleFromRequest(args.request)},
+    geo: {region: geoAvailabilityRegion(ipCountry(args.request)), locale: urlLocale ?? getLocaleFromRequest(args.request)},
     // Present only while US sales are open: the flat US rate in USD.
     ...(usRate != null ? {usShippingRate: usRate} : {}),
     // Plausible counts the production site only: staging, previews and
@@ -365,6 +365,17 @@ export function Layout({children}: {children?: React.ReactNode}) {
           dangerouslySetInnerHTML={{
             __html:
               "(function(){var r=document.documentElement,last=0,jank=0,total=0,bad=0,good=0,lite=false;var JANK=34,WIN=90,BAD=0.4,GOOD=0.15;function tick(ts){var paused=r.classList.contains('anim-paused');if(!document.hidden&&document.hasFocus()&&!paused){if(last){var d=ts-last;total++;if(d>JANK)jank++;}last=ts;if(total>=WIN){var f=jank/total;jank=0;total=0;if(f>BAD){good=0;if(++bad>=2&&!lite){lite=true;r.classList.add('perf-lite');}}else if(f<GOOD){bad=0;if(++good>=2&&lite){lite=false;r.classList.remove('perf-lite');}}else{bad=0;good=0;}}}else{last=0;jank=0;total=0;}requestAnimationFrame(tick);}requestAnimationFrame(tick);})();",
+          }}
+        />
+        {/* A visitor who dismissed the availability card (AvailabilityBanner)
+            never sees it flash in before hydration: a style node, as above,
+            since hydration wipes markers off <html>. Harmless when the shop
+            is closed and no card renders. */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem(${JSON.stringify(GEO_BANNER_DISMISSED_KEY)})==='1'){var s=document.createElement('style');s.textContent='.avail-banner{display:none!important}';document.head.appendChild(s)}}catch(e){}`,
           }}
         />
         <link rel="stylesheet" href={resetStyles}></link>

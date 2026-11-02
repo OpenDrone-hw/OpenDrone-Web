@@ -97,3 +97,26 @@ export function offerAvailability(
   if (offer.batchOne && geo) return {...geo};
   return {availability: offer.preorder ? 'https://schema.org/PreOrder' : 'https://schema.org/InStock'};
 }
+
+/** The site-wide availability banner: its heading, line labels and dismiss label. */
+export const GEO_BANNER_COPY: Record<Locale, {title: string; eu: string; intl: string; dismiss: string}> = {
+  en: {title: 'Availability', eu: 'EU', intl: 'Outside the EU', dismiss: 'Dismiss the availability notice'},
+  nl: {title: 'Beschikbaarheid', eu: 'EU', intl: 'Buiten de EU', dismiss: 'Melding over beschikbaarheid sluiten'},
+  fr: {title: 'Disponibilité', eu: 'UE', intl: 'Hors UE', dismiss: 'Fermer l’avis de disponibilité'},
+};
+
+/** localStorage key of a dismissed banner; bump it when the lines change. */
+export const GEO_BANNER_DISMISSED_KEY = 'od-availability-banner-v1';
+
+/**
+ * The banner's lines: the visitor's own line when the country is known, both
+ * lines when it is not. Every line carries its text label ("EU", "Outside
+ * the EU"), so nothing depends on colour.
+ */
+export function geoBannerLines(
+  region: GeoAvailabilityRegion,
+  locale: Locale,
+): Array<{region: 'eu' | 'intl'; label: string; text: string}> {
+  const regions: Array<'eu' | 'intl'> = region === 'fallback' ? ['eu', 'intl'] : [region];
+  return regions.map((r) => ({region: r, label: GEO_BANNER_COPY[locale][r], text: GEO_AVAILABILITY_COPY[locale][r]}));
+}

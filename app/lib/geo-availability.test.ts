@@ -4,9 +4,11 @@ import {describe, it} from 'node:test';
 import {EU_COUNTRY_CODES} from './eu-countries.ts';
 import {
   GEO_AVAILABILITY_COPY,
+  GEO_BANNER_COPY,
   INTL_AVAILABILITY_STARTS,
   batchOnePromises,
   geoAvailabilityRegion,
+  geoBannerLines,
   geoOfferAvailability,
   geoShipText,
   hasBatchOne,
@@ -97,5 +99,26 @@ describe('hasBatchOne', () => {
     // Batch 1 sold out, or a region it does not ship to: the next unit is a later batch.
     assert.equal(hasBatchOne({paidStock: false}), false);
     assert.equal(hasBatchOne(null), false);
+  });
+});
+
+describe('geoBannerLines', () => {
+  it('shows only the visitor line when the country is known', () => {
+    assert.deepEqual(geoBannerLines('eu', 'en'), [{region: 'eu', label: 'EU', text: 'In stock in Belgium, ships in a few days.'}]);
+    assert.deepEqual(geoBannerLines('intl', 'en'), [{region: 'intl', label: 'Outside the EU', text: 'Pre-order, ships March 2027.'}]);
+  });
+
+  it('shows both lines, labelled, when the country is unknown', () => {
+    assert.deepEqual(
+      geoBannerLines('fallback', 'en').map((l) => `${l.label}: ${l.text}`),
+      ['EU: In stock in Belgium, ships in a few days.', 'Outside the EU: Pre-order, ships March 2027.'],
+    );
+  });
+
+  it('has a heading, labels and a dismiss label in every locale', () => {
+    for (const [locale, words] of Object.entries(GEO_BANNER_COPY)) {
+      for (const key of ['title', 'eu', 'intl', 'dismiss'] as const) assert.ok(words[key].trim(), `${locale}.${key}`);
+      assert.equal(geoBannerLines('fallback', locale as 'en' | 'nl' | 'fr').length, 2);
+    }
   });
 });
