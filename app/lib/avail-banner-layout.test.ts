@@ -4,12 +4,12 @@ import {test} from 'node:test';
 
 const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf8');
 
-test('phones get the availability card in the page flow, never as a fixed overlay', () => {
+test('the in-flow card is static at every width; phones never get the fixed card', () => {
   const css = read('../styles/site-ui.css');
   const phone = css.indexOf('@media (max-width: 768px), (max-height: 500px) and (orientation: landscape) {\n  .avail-banner:not(.avail-banner--inline)'.replace(/\n/g, css.includes('\r\n') ? '\r\n' : '\n'));
   assert.ok(phone > 0, 'phone query hides the fixed card');
-  assert.match(css.slice(phone), /\.avail-banner\.avail-banner--inline \{ display: flex; position: static;/);
-  assert.match(css, /\n\.avail-banner--inline \{ display: none; \}/, 'inline card hidden off phones');
+  assert.match(css, /\.avail-banner\.avail-banner--inline \{\s+position: static;/, 'in-flow card is never fixed');
+  assert.doesNotMatch(css, /\.avail-banner--inline \{ display: none; \}/, 'in-flow card shows at every width');
 });
 
 test('the in-flow card sits at the top of <main>, and under the hero on the phone homepage', () => {
@@ -27,4 +27,10 @@ test('the in-flow card keeps the /flash and /guides rule and reserves no bottom 
   const banner = read('../components/AvailabilityBanner.tsx');
   assert.match(banner, /if \(!root\?\.shopOpen \|\| availabilityBannerHiddenOn\(pathname\)\) return null;/);
   assert.match(banner, /if \(!el \|\| inline\) return;/);
+});
+
+test('the fixed (floating) card renders only on the homepage', () => {
+  const layout = read('../components/PageLayout.tsx');
+  assert.match(layout, /\{isHomepage && shopOpen && !availabilityBannerHiddenOn\(pathname\) \? <AvailabilityBanner geo=\{geo\} \/> : null\}/);
+  assert.match(layout, /\{isHomepage \? null : <InlineAvailabilityBanner \/>\}/);
 });

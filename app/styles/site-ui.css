@@ -2050,12 +2050,18 @@ body:has(.avail-banner) { padding-bottom: var(--avail-banner-space, 0px); }
   body:has(.buy-rail.is-pinned) .avail-banner:not(.avail-banner--inline),
   body:has(.cart-bar) .avail-banner:not(.avail-banner--inline) { display: none; }
 }
-/* Phones (the MobileHome query, no 3D hero): the card is in the page flow (InlineAvailabilityBanner),
-   never a fixed overlay, so it cannot cover content. Elsewhere only the fixed card shows. */
-.avail-banner--inline { display: none; }
+/* In the page flow (InlineAvailabilityBanner): every page but the homepage at all widths, and the phone
+   homepage (the MobileHome query, no 3D hero) under its hero. Never a fixed overlay, so it cannot cover
+   content. A compact card whose left edge sits on the content rail. */
+.avail-banner.avail-banner--inline {
+  position: static;
+  width: fit-content;
+  max-width: min(40rem, var(--rail-width));
+  margin: 0 auto 0 calc((100% - var(--rail-width)) / 2);
+}
 @media (max-width: 768px), (max-height: 500px) and (orientation: landscape) {
   .avail-banner:not(.avail-banner--inline) { display: none; }
-  .avail-banner.avail-banner--inline { display: flex; position: static; max-width: none; margin: 0 1rem 1rem; }
+  .avail-banner.avail-banner--inline { width: auto; max-width: none; margin: 0 1rem 1rem; }
 }
 
 /* App-backed shop pages (cart, order status, news): the site's rail, type and gold, no framework classes. */

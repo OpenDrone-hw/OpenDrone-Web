@@ -53,8 +53,10 @@ export function PageLayout({
             <Txt id="chrome.skip_link" />
           </a>
           <RouteProgress />
-          {/* Ordering is open: the batch line for the visitor's country. Never on /flash or /guides/*. */}
-          {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBanner geo={geo} /> : null}
+          {/* Ordering is open: the batch line for the visitor's country. Floats bottom-left only on the
+              homepage (its pinned hero has no flow to sit in; it rises above the wordmark there). Every
+              other page gets it in the flow at the top of <main>. Never on /flash or /guides/*. */}
+          {isHomepage && shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBanner geo={geo} /> : null}
           <Header
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}
@@ -62,7 +64,7 @@ export function PageLayout({
             shopOpen={shopOpen}
           />
           <main id="main-content" className="site-main">
-            {/* Phones: the same card in the flow; the homepage places it under its hero instead. */}
+            {/* The card in the flow, all widths; the phone homepage places it under its hero instead. */}
             {isHomepage ? null : <InlineAvailabilityBanner />}
             {children}
           </main>
