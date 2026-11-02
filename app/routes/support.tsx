@@ -7,6 +7,7 @@ import {copyText} from '~/lib/copy';
 import {DISCORD_INVITE_URL, getCompanyIdentity} from '~/lib/company';
 import {legalHref} from '~/components/LangToggle';
 import {Txt} from '~/components/Txt';
+import {StagingBenchText} from '~/lib/flasher/ui/status';
 import {DiscordLink, DiscordMark} from '~/components/Discord';
 import {
   FilePicker,
@@ -503,7 +504,9 @@ export default function SupportRoute() {
         <Link to="/flash" reloadDocument className="sp-tile">
           <Zap size={18} className="sp-tile-icon" aria-hidden="true" />
           <span className="sp-tile-title">{t('flash_title')}</span>
-          <span className="sp-tile-line">{t('flash_line')}</span>
+          <span className="sp-tile-line">
+            <StagingBenchText normal={t('flash_line')} bench={t('flash_line_bench')} />
+          </span>
         </Link>
 
         {/* Community help, not order support: orders go through the ticket above. */}

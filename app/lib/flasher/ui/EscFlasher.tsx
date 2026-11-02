@@ -32,7 +32,7 @@ import {
   type EscIdentity,
 } from '../am32.ts';
 import {ChoiceLadder} from '~/components/ChoiceLadder';
-import {releasesFor} from '../firmware-manifest.ts';
+import {FIRMWARE_MANIFEST, releasesFor} from '../firmware-manifest.ts';
 import {FourWay} from '../fourway.ts';
 import {escDirectWriteGate, escTargetProblems} from '../gates.ts';
 import {fetchVerifiedFirmware, isPublished, releaseFileName, type FirmwareRelease} from '../manifest.ts';
@@ -47,6 +47,7 @@ import {
   pickerErrText,
   saveBytes,
   useBeforeUnloadWhile,
+  useStagingBench,
   type Status,
 } from './status.tsx';
 
@@ -87,6 +88,7 @@ export function EscFlasher({
   const prepareSeq = useRef(0);
 
   const [connecting, setConnecting] = useState(false);
+  const staging = useStagingBench();
   const releases = useMemo(() => (esc ? releasesFor(esc.target) : []), [esc]);
   const busy = !!session || connecting || writing !== null;
   // F6: an open session means the FC is in passthrough; warn before the tab closes or navigates away.
@@ -135,7 +137,7 @@ export function EscFlasher({
       const image = prepareAm32Image(release.kind === 'am32-bin' ? bytes : new TextDecoder().decode(bytes), target, eeprom);
       if (seq !== prepareSeq.current) return;
       setVerified({target, release, bytes, image, fileName: releaseFileName(release)});
-      const msg = `Firmware verified: SHA-256 matches the pinned release, AM32 image for ${target.target}, bootloader untouched.${image.eeprom ? ' Installing also resets the ESC settings to the pinned defaults.' : ''}`;
+      const msg = `Firmware verified: SHA-256 matches the pinned release, AM32 image ${target.firmwareName} for ${target.displayName}, bootloader untouched.${image.eeprom ? ' Installing also resets the ESC settings to the pinned defaults.' : ''}`;
       setFwStatus({kind: 'ok', text: msg});
       say(msg);
     } catch (e) {
@@ -255,16 +257,22 @@ export function EscFlasher({
             const t = ESC_TARGETS.find((x) => x.target === key);
             if (t) chooseEsc(t);
           }}
-          items={[
-            ...ESC_TARGETS.map((t) => ({
+          items={ESC_TARGETS.map((t) => {
+            // The 30x30 stays the shop's coming-soon card until a release is pinned for it (staging bench only so far).
+            // F7: the staging manifest only after mount (`staging`), so server and first client render agree.
+            const shown = staging ? releasesFor(t.target) : FIRMWARE_MANIFEST.filter((r) => r.target === t.target);
+            const unavailable = !!t.comingSoonUntilPinned && !shown.some(isPublished);
+            return {
               key: t.target,
               name: t.displayName.replace(/ \(.*\)$/, '').replace('OpenESC-', 'OpenESC ').replace('x', '×'),
-              tag: t.target,
+              // The firmware it runs (the 30x30 runs the 20x20 image), not the page key. None on a coming-soon card (as before).
+              tag: unavailable ? undefined : t.firmwareName,
               selected: esc?.target === t.target,
-            })),
-            // No AM32 target yet: shown like the shop's coming-soon version.
-            {key: 'openesc-30x30', name: 'OpenESC 30×30', selected: false, disabled: true, tone: 'comingsoon' as const, flag: 'Coming soon'},
-          ]}
+              disabled: unavailable,
+              tone: unavailable ? ('comingsoon' as const) : undefined,
+              flag: unavailable ? 'Coming soon' : undefined,
+            };
+          })}
         />
       </Step>
 

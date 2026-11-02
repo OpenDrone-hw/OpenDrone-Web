@@ -87,9 +87,9 @@ export function knownFcNamesIn(contains: (name: string) => boolean): string[] {
   return FLASHER_TARGETS.map((t) => t.target).filter(contains);
 }
 
-/** Same for ESC identity names (the AM32 name slot string, EscTarget.firmwareName). */
+/** Same for ESC identity names (the AM32 name slot string, EscTarget.firmwareName), each once (two ESCs can share one). */
 export function knownEscNamesIn(contains: (name: string) => boolean): string[] {
-  return ESC_TARGETS.map((t) => t.firmwareName).filter(contains);
+  return [...new Set(ESC_TARGETS.map((t) => t.firmwareName))].filter(contains);
 }
 
 export function escTargetProblems(input: {

@@ -328,16 +328,21 @@ describe('staging manifest exists only with the switch on', () => {
       ['opendrone.be', ON],
     ] as const) {
       setup(h, env);
-      for (const t of ['OPENFC_LITE_MINI_RP2350A', 'OPENESC_20_F421', 'OPENFC_LITE_RP2350B']) {
+      for (const t of ['OPENFC_LITE_MINI_RP2350A', 'OPENESC_20_F421', 'OPENFC_LITE_RP2350B', 'OPENESC_30X30']) {
         assert.ok(fm.releasesFor(t).every((r) => !man.isPublished(r) && r.url === null), `${h} ${t}`);
       }
       assert.equal(man.isStagingFirmwareUrl('/firmware-staging/' + MINI_FILE), false);
       const leaked = fm.pinToRelease('OPENFC_LITE_MINI_RP2350A', fm.STAGING_PINNED.OPENFC_LITE_MINI_RP2350A!);
       assert.equal(man.isPublished(leaked), false);
     }
-    assert.deepEqual(fm.PINNED, {OPENFC_LITE_RP2350B: null, OPENFC_LITE_MINI_RP2350A: null, OPENESC_20_F421: null});
+    assert.deepEqual(fm.PINNED, {
+      OPENFC_LITE_RP2350B: null,
+      OPENFC_LITE_MINI_RP2350A: null,
+      OPENESC_20_F421: null,
+      OPENESC_30X30: null,
+    });
   });
-  it('on: Mini and ESC 20x20 resolve to same-origin /firmware-staging/ with the pinned hashes; Lite and 30x30 stay unavailable', () => {
+  it('on: Mini and ESC 20x20 resolve to same-origin /firmware-staging/ with the pinned hashes', () => {
     setup('x.trycloudflare.com', ON);
     const [mini] = fm.releasesFor('OPENFC_LITE_MINI_RP2350A');
     assert.equal(man.isPublished(mini!), true);
@@ -358,9 +363,41 @@ describe('staging manifest exists only with the switch on', () => {
       sha256: '8e5cd69bc32e07154e9866ca737ee53a9d5b134059934fbfd9c3df664e2b1fa6',
       size: 192,
     });
-    assert.ok(fm.releasesFor('OPENFC_LITE_RP2350B').every((r) => !man.isPublished(r)));
     assert.equal(T.escTargetByName('OPENESC_30_F421'), undefined);
     assert.doesNotThrow(() => man.resolveRelease(escR!));
+  });
+  it('on: OpenFC-Lite gets its own QC image (same d593400 + cfg a2b6666 build, its own target)', () => {
+    setup('x.trycloudflare.com', ON);
+    const [lite] = fm.releasesFor('OPENFC_LITE_RP2350B');
+    assert.equal(man.isPublished(lite!), true);
+    assert.equal(lite!.target, 'OPENFC_LITE_RP2350B');
+    assert.equal(lite!.kind, 'betaflight-uf2');
+    assert.equal(lite!.url, '/firmware-staging/OpenFC-Lite_betaflight-2026.12.0-alpha-d593400_cfg-a2b6666_OPENFC_LITE_RP2350B.uf2');
+    assert.equal(lite!.sha256, 'cf94838a4207f89c196ff3ba5c4e0136eb6e9920eb68033876b90c0b6f4b4196');
+    assert.equal(lite!.size, 899584);
+    assert.equal(lite!.version, '2026.12.0-alpha (d593400 + cfg a2b6666)');
+    assert.equal(lite!.channel, 'alpha');
+    assert.doesNotMatch(lite!.url!, /MINI/);
+    assert.doesNotThrow(() => man.resolveRelease(lite!));
+  });
+  it('on: OpenESC 30x30 pins exactly the 20x20 files (QC record) under its own key', () => {
+    setup('x.trycloudflare.com', ON);
+    const [e20] = fm.releasesFor('OPENESC_20_F421');
+    const [e30] = fm.releasesFor('OPENESC_30X30');
+    assert.equal(man.isPublished(e30!), true);
+    assert.equal(e30!.target, 'OPENESC_30X30');
+    for (const k of ['kind', 'url', 'sha256', 'size', 'version', 'channel', 'eepromDefaults'] as const) {
+      assert.deepEqual(e30![k], e20![k], k);
+    }
+    assert.doesNotThrow(() => man.resolveRelease(e30!));
+  });
+  it('the staging route serves exactly the four bench files', () => {
+    assert.deepEqual([...fm.STAGING_FILE_NAMES].sort(), [
+      'OpenESC-20x20_AM32_EEPROM_DEFAULT_v4.bin',
+      'OpenESC-20x20_AM32_OPENESC_20_F421_2.21.bin',
+      'OpenFC-Lite-Mini_betaflight-2026.12.0-alpha-d593400_cfg-a2b6666_OPENFC_LITE_MINI_RP2350A.uf2',
+      'OpenFC-Lite_betaflight-2026.12.0-alpha-d593400_cfg-a2b6666_OPENFC_LITE_RP2350B.uf2',
+    ]);
   });
   it('on: only plain file names under /firmware-staging/ are accepted', () => {
     setup('localhost', ON);
@@ -405,5 +442,94 @@ describe('staging manifest exists only with the switch on', () => {
     seen.length = 0;
     await assert.rejects(man.fetchVerifiedFirmware(rel, 'https://opendrone.be/flash', fetcher), man.FirmwareNotPublishedError);
     assert.deepEqual(seen, []);
+  });
+});
+
+describe('Lite vs Mini: a mix-up is refused in both directions (switch ON)', () => {
+  const LITE = T.FLASHER_TARGETS.find((t) => t.target === 'OPENFC_LITE_RP2350B')!;
+  const pkg = {OPENFC_LITE_MINI_RP2350A: 'QFN60', OPENFC_LITE_RP2350B: 'QFN80'} as const;
+  const pairs = [
+    [MINI, LITE],
+    [LITE, MINI],
+  ] as const;
+  const okFor = (b: typeof MINI) => ({
+    chosen: b,
+    release: fm.releasesFor(b.target)[0]!,
+    verifiedFor: b.target,
+    imageStart: 0x10000000,
+    imageEnd: 0x10001000,
+    chipPackage: {status: 'ok', value: pkg[b.target as keyof typeof pkg]} as const,
+    flashBytes: null,
+    installed: [b.target],
+  });
+  it('each board passes with its own image, package and installed firmware', () => {
+    setup('x.trycloudflare.com', ON);
+    for (const b of [MINI, LITE]) assert.deepEqual(gates.fcDirectWriteGate(okFor(b)).reasons, [], b.target);
+  });
+  it('direct write: the other board release, verified file, chip package or installed firmware each block', () => {
+    setup('x.trycloudflare.com', ON);
+    for (const [chosen, other] of pairs) {
+      const ok = okFor(chosen);
+      const otherRel = fm.releasesFor(other.target)[0]!;
+      assert.equal(man.isPublished(otherRel), true);
+      const cases = {
+        release: {...ok, release: otherRel},
+        verifiedFor: {...ok, verifiedFor: other.target},
+        chipPackage: {...ok, chipPackage: {status: 'ok', value: pkg[other.target as keyof typeof pkg]} as const},
+        installed: {...ok, installed: [other.target]},
+      };
+      for (const [k, input] of Object.entries(cases)) {
+        assert.equal(gates.fcDirectWriteGate(input).allowed, false, `${chosen.target} <- ${other.target}: ${k}`);
+      }
+    }
+  });
+  it('target matching: the other board manifest entry, image or MSP report is refused', () => {
+    for (const [chosen, other] of pairs) {
+      assert.ok(gates.fcTargetProblems({chosen, manifestTarget: other.target}).length > 0);
+      const img = gates.fcTargetProblems({chosen, imageNames: [other.target]});
+      assert.ok(img.some((p) => p.includes(`names ${other.target}`)), img.join(' | '));
+      const msp = gates.fcTargetProblems({chosen, reported: {boardName: other.target, targetName: '', manufacturerId: 'OPFC'}});
+      assert.ok(msp.some((p) => p.includes(`reports ${other.target}`)), msp.join(' | '));
+    }
+  });
+  it('neither target name contains the other, so the image name scan cannot confuse them', () => {
+    assert.equal(MINI.target.includes(LITE.target), false);
+    assert.equal(LITE.target.includes(MINI.target), false);
+    const has = (text: string) => (n: string) => text.includes(n);
+    assert.deepEqual(gates.knownFcNamesIn(has(`xx${LITE.target}\0yy`)), [LITE.target]);
+    assert.deepEqual(gates.knownFcNamesIn(has(`xx${MINI.target}\0yy`)), [MINI.target]);
+  });
+});
+
+describe('OpenESC 30x30: runs the 20x20 image; the page cannot tell them apart', () => {
+  const ESC30 = T.escTargetByName('OPENESC_30X30')!;
+  it('same MCU and firmware name as the 20x20, so both read the same identity', () => {
+    assert.equal(ESC30.firmwareName, ESC20.firmwareName);
+    assert.equal(ESC30.mcu, ESC20.mcu);
+    assert.deepEqual(gates.knownEscNamesIn(() => true), ['OPENESC_20_F421'], 'deduplicated');
+  });
+  it('switch ON: a 30x30 that reads OPENESC_20_F421 passes; any other name or chip blocks', () => {
+    setup('localhost', ON);
+    const base = {
+      chosen: ESC30,
+      release: fm.releasesFor('OPENESC_30X30')[0]!,
+      verifiedFor: ESC30.target,
+      mcu: {status: 'ok', value: 'AT32F421'} as const,
+      firmwareName: {status: 'ok', value: 'OPENESC_20_F421'} as const,
+    };
+    assert.deepEqual(gates.escDirectWriteGate(base).reasons, []);
+    assert.equal(gates.escDirectWriteGate({...base, firmwareName: {status: 'ok', value: 'OPENESC_30_F421'}}).allowed, false);
+    assert.equal(gates.escDirectWriteGate({...base, firmwareName: {status: 'blank', detail: 'x'}}).allowed, false);
+    assert.equal(gates.escDirectWriteGate({...base, mcu: {status: 'unknown', detail: 'x'}}).allowed, false);
+    assert.equal(gates.escDirectWriteGate({...base, release: fm.releasesFor('OPENESC_20_F421')[0]!}).allowed, false);
+  });
+  it('prepareAm32Image accepts the 20x20 image for the 30x30 and refuses another name', () => {
+    const img = prepareAm32Image(app(), ESC30, defaults());
+    assert.equal(img.target, 'OPENESC_30X30');
+    assert.throws(() => prepareAm32Image(app('OPENESC_30_F421'), ESC30, defaults()), /not for this ESC/);
+  });
+  it('switch OFF: the 30x30 has no published release', () => {
+    setup('opendrone.be', ON);
+    assert.ok(fm.releasesFor('OPENESC_30X30').every((r) => !man.isPublished(r)));
   });
 });

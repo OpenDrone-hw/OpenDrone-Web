@@ -24,7 +24,9 @@
  *     (not pinned): Lite 2026.6.0-alpha, 868352 B, sha256 4dbd52d8...cfcd581;
  *     Mini 2026.12.0-alpha 0b1c266/cfg 9eada21, 897536 B, sha256 555f9ff4...241660a.
  *     Pin them as channel 'alpha' once they are attached to a release.
- *   - OpenESC-20x20: no public AM32 build exists yet.
+ *   - OpenESC-20x20 and OpenESC-30x30: no public AM32 build exists yet. Both
+ *     run the same AM32 OPENESC_20_F421 image (QC record), so their pins
+ *     will be the same files.
  */
 
 import {PLACEHOLDER_SHA256, type FirmwareKind, type FirmwareRelease, type PinnedAsset} from './manifest.ts';
@@ -67,6 +69,12 @@ const BOARDS = {
     channelWhileUnpinned: 'stable',
     notes: 'No public AM32 build for OpenESC-20x20 yet.',
   },
+  OPENESC_30X30: {
+    kind: 'am32-hex',
+    firmware: 'AM32 (OpenDrone fork, OPENESC_20_F421, same image as the 20x20)',
+    channelWhileUnpinned: 'stable',
+    notes: 'No public AM32 build for OpenESC-30x30 yet.',
+  },
 } as const satisfies Record<string, BoardFirmware>;
 
 export type PinnedTarget = keyof typeof BOARDS;
@@ -78,6 +86,7 @@ export const PINNED: Readonly<Record<PinnedTarget, FirmwarePin | null>> = {
   OPENFC_LITE_RP2350B: null,
   OPENFC_LITE_MINI_RP2350A: null,
   OPENESC_20_F421: null,
+  OPENESC_30X30: null,
 };
 
 /**
@@ -125,9 +134,32 @@ export function pinToRelease(target: PinnedTarget, pin: FirmwarePin | null): Fir
  * public/firmware-staging/ exists. Source copies live in .firmware-staging/
  * (git-ignored). Used ONLY while stagingBenchEnabled() (staging.ts); otherwise
  * they do not exist for the page. The GitHub draft releases cannot be created yet.
- * OpenFC-Lite and OpenESC-30x30 have no entry here: "not yet available".
+ * Lite and Mini are the same d593400 + cfg a2b6666 build for their own targets
+ * (the batch-1 QC images). OpenESC-30x30 pins the 20x20 files: its QC flashed
+ * the same images (esc-qc.csv 2026-10-31).
  */
+const STAGING_ESC_AM32_2_21: FirmwarePin = {
+  version: '2.21',
+  url: '/firmware-staging/OpenESC-20x20_AM32_OPENESC_20_F421_2.21.bin',
+  sha256: '24ed68c8d0e6eb3b9f0f0cd3713cb08397a805cf9a2450d9254d818c457c3b66',
+  size: 27648,
+  channel: 'alpha',
+  kind: 'am32-bin',
+  eepromDefaults: {
+    url: '/firmware-staging/OpenESC-20x20_AM32_EEPROM_DEFAULT_v4.bin',
+    sha256: '8e5cd69bc32e07154e9866ca737ee53a9d5b134059934fbfd9c3df664e2b1fa6',
+    size: 192,
+  },
+};
+
 export const STAGING_PINNED: Readonly<Partial<Record<PinnedTarget, FirmwarePin>>> = {
+  OPENFC_LITE_RP2350B: {
+    version: '2026.12.0-alpha (d593400 + cfg a2b6666)',
+    url: '/firmware-staging/OpenFC-Lite_betaflight-2026.12.0-alpha-d593400_cfg-a2b6666_OPENFC_LITE_RP2350B.uf2',
+    sha256: 'cf94838a4207f89c196ff3ba5c4e0136eb6e9920eb68033876b90c0b6f4b4196',
+    size: 899584,
+    channel: 'alpha',
+  },
   OPENFC_LITE_MINI_RP2350A: {
     version: '2026.12.0-alpha (d593400 + cfg a2b6666)',
     url: '/firmware-staging/OpenFC-Lite-Mini_betaflight-2026.12.0-alpha-d593400_cfg-a2b6666_OPENFC_LITE_MINI_RP2350A.uf2',
@@ -135,19 +167,8 @@ export const STAGING_PINNED: Readonly<Partial<Record<PinnedTarget, FirmwarePin>>
     size: 897536,
     channel: 'alpha',
   },
-  OPENESC_20_F421: {
-    version: '2.21',
-    url: '/firmware-staging/OpenESC-20x20_AM32_OPENESC_20_F421_2.21.bin',
-    sha256: '24ed68c8d0e6eb3b9f0f0cd3713cb08397a805cf9a2450d9254d818c457c3b66',
-    size: 27648,
-    channel: 'alpha',
-    kind: 'am32-bin',
-    eepromDefaults: {
-      url: '/firmware-staging/OpenESC-20x20_AM32_EEPROM_DEFAULT_v4.bin',
-      sha256: '8e5cd69bc32e07154e9866ca737ee53a9d5b134059934fbfd9c3df664e2b1fa6',
-      size: 192,
-    },
-  },
+  OPENESC_20_F421: STAGING_ESC_AM32_2_21,
+  OPENESC_30X30: STAGING_ESC_AM32_2_21,
 };
 
 /** Every file name the staging route may serve: the file names in STAGING_PINNED (apps and EEPROM defaults), nothing else. */

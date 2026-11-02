@@ -55,7 +55,8 @@ export function targetByName(name: string): FlasherTarget | undefined {
 }
 
 /**
- * ESC targets (AM32). `target` is AM32's FILE_NAME (the release file name).
+ * ESC targets (AM32). `target` is the page's key for the ESC: AM32's
+ * FILE_NAME (the release file name) where the ESC has its own AM32 target.
  * `firmwareName` is the identity string the flasher reads back from the ESC
  * and from the image: the AM32 name slot at flash 0x08007BE0, which holds
  * FILE_NAME, NUL padded (derivation in am32-layout.ts, AM32_NAME_SLOT_OFFSET).
@@ -63,8 +64,14 @@ export function targetByName(name: string): FlasherTarget | undefined {
  * built app, and EEPROM bytes 5..16 are settings in EEPROM v4. Source: OpenDrone
  * AM32 fork (branch feat/openesc-20-target, Inc/targets.h, OPENESC_20_F421).
  *
- * OpenESC-30x30 has no AM32 target of its own yet, so it is not listed: the
- * page cannot pin firmware for it and offers nothing rather than guessing.
+ * OpenESC-30x30 has no AM32 target of its own. Its QC bed flashed the same
+ * three images as the 20x20 (bootloader V17, AM32 2.21 OPENESC_20_F421, EEPROM
+ * v4 defaults; esc-qc.csv, 2026-10-31), so it runs OPENESC_20_F421 and its name
+ * slot reads exactly that. `OPENESC_30X30` is a page key only, not an AM32
+ * target. The flasher therefore CANNOT tell a 20x20 from a 30x30: same MCU,
+ * same bootloader signature, same name slot. Choosing the wrong one installs
+ * the identical image, which is harmless while both share it. Give the 30x30
+ * its own firmwareName once it gets its own AM32 target.
  */
 export type EscMcu = 'AT32F421';
 
@@ -74,6 +81,8 @@ export type EscTarget = {
   product: string;
   displayName: string;
   mcu: EscMcu;
+  /** Shown as "Coming soon" (not selectable) until a published release exists for it. */
+  comingSoonUntilPinned?: boolean;
 };
 
 export const ESC_TARGETS: readonly EscTarget[] = [
@@ -83,6 +92,14 @@ export const ESC_TARGETS: readonly EscTarget[] = [
     product: 'openesc-20x20',
     displayName: 'OpenESC-20x20 (AT32F421)',
     mcu: 'AT32F421',
+  },
+  {
+    target: 'OPENESC_30X30',
+    firmwareName: 'OPENESC_20_F421',
+    product: 'openesc-30x30',
+    displayName: 'OpenESC-30x30 (AT32F421)',
+    mcu: 'AT32F421',
+    comingSoonUntilPinned: true,
   },
 ] as const;
 

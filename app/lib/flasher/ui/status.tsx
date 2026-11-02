@@ -31,6 +31,16 @@ export function useStagingBench(): boolean {
   return on;
 }
 
+/**
+ * Text that differs on a staging bench build (e.g. the PDP and /support
+ * firmware lines once the bench offers every board). Server render and first
+ * client render show `normal`; `bench` only after mount and only when the
+ * switch is on, so production output is unchanged.
+ */
+export function StagingBenchText({normal, bench}: {normal: React.ReactNode; bench: React.ReactNode}) {
+  return <>{useStagingBench() ? bench : normal}</>;
+}
+
 /** Red notice at the top of /flash on a staging bench build. Icon + text + role=alert, error token; renders nothing otherwise. */
 export function StagingBenchNotice() {
   if (!useStagingBench()) return null;
