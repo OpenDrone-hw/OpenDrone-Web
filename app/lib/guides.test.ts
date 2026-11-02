@@ -121,9 +121,9 @@ test('ESC pages that mention installing carry the "coming after bench verificati
   const esc = findFamily('flash-openesc');
   assert.ok(esc);
   for (const slug of ['flash', 'recovery']) {
-    const page = esc.pages.find((p) => p.slug === slug);
+    const page: (typeof esc.pages)[number] | undefined = esc.pages.find((p) => p.slug === slug);
     assert.ok(page);
-    assert.ok(page.callouts.some((c) => c.title === ESC_COMING_STATUS), slug);
+    assert.ok(page.callouts.some((c: (typeof page.callouts)[number]) => c.title === ESC_COMING_STATUS), slug);
     assert.equal(page.howTo, false, `${slug}: no HowTo for steps that cannot be done yet`);
   }
   const flash = esc.pages.find((p) => p.slug === 'flash');
