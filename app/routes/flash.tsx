@@ -72,10 +72,7 @@ export default function FlashRoute() {
           {announce}
         </div>
 
-        <p className="mt-4 max-w-[68ch] text-[16px]">
-          Every file on this page is checked against a pinned SHA-256 before you get it. Take the propellers off before
-          you start.
-        </p>
+        <p className="flash-lede">Alpha (pre-release) build.</p>
         {blockedByPolicy ? (
           <InfoCallout role="alert">
             <strong>USB access needs a fresh page load.</strong>{' '}

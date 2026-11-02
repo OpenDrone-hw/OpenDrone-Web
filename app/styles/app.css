@@ -19155,3 +19155,61 @@ summary,
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
+
+/* /flash one-button FC flow (F). Unlayered like the other .flash-* rules. */
+.flash-lede {
+  margin: var(--sp-2) 0 0;
+  font-size: 16px;
+}
+.flash-update {
+  margin-top: var(--sp-5);
+  padding: var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+}
+@media (min-width: 768px) {
+  .flash-update {
+    padding: var(--sp-5) var(--sp-6);
+  }
+}
+.flash-update-title {
+  margin: 0 0 var(--sp-2);
+  font-size: 18px;
+}
+.flash-checklist {
+  margin: 0 0 var(--sp-4);
+  padding-left: 1.25rem;
+  list-style: disc;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.flash-note,
+.flash-stage {
+  margin: var(--sp-3) 0 0;
+  font-size: 16px;
+}
+.flash-stage {
+  font-weight: 600;
+}
+.flash-fail {
+  margin: var(--sp-3) 0 0;
+  padding: var(--sp-3);
+  border: 1px solid var(--color-error);
+  border-radius: var(--r-md);
+  font-size: 16px;
+}
+.flash-fail p {
+  margin: 0;
+}
+.flash-more {
+  margin-top: var(--sp-4);
+  font-size: 16px;
+}
+.flash-more > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.flash-more p {
+  margin: 0;
+}
