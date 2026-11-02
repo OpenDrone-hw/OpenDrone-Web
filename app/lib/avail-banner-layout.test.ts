@@ -79,8 +79,8 @@ test('no footer jump: the lazily loaded footer drawing has its box reserved with
   const svg = read('../../public/boards/openfc-lite/board-lite.svg');
   const [, , w, h] = svg.match(/viewBox="([^"]+)"/)![1]!.split(/\s+/).map(Number) as [number, number, number, number];
   const pad = w * 0.18; // DrawingView: margins for the dimension line and its text
-  const m = css.match(/\.footer-view \{[^}]*aspect-ratio: ([\d.]+) \/ ([\d.]+);/);
-  assert.ok(m, '.footer-view reserves an aspect-ratio');
+  const m = css.match(/\.footer-view-art \{ aspect-ratio: ([\d.]+) \/ ([\d.]+); \}/);
+  assert.ok(m, '.footer-view-art reserves an aspect-ratio');
   assert.ok(Math.abs(Number(m[1]) / Number(m[2]) - (w + 2 * pad) / (h + 2.4 * pad)) < 0.001);
   const footer = read('../components/Footer.tsx');
   assert.match(footer, /viewBox=\{`\$\{o\.x - pad\} \$\{o\.y - pad\} \$\{o\.w \+ pad \* 2\} \$\{o\.h \+ pad \* 2\.4\}`\}/, 'same margins as the CSS reserve');

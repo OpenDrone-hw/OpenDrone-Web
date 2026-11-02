@@ -972,15 +972,15 @@
 .footer-view {
   flex: none;
   width: 120px;
-  /* The drawing loads lazily (DrawingView); reserve its box from the first paint so the footer never
-     grows when it arrives. = (w + 0.36w) / (h + 0.432w) of board-lite.svg's viewBox (37.9424 x 37.9425),
-     the margins DrawingView adds; checked by app/lib/avail-banner-layout.test.ts. */
-  aspect-ratio: 51.602 / 54.334;
   margin: 0 0 10px 4px;
   color: var(--ink);
   opacity: 0.85;
   pointer-events: none;
 }
+/* The drawing loads lazily (DrawingView); its box is reserved from the first paint so the label under it
+   and the footer never move when it arrives. = (w + 0.36w) / (h + 0.432w) of board-lite.svg's viewBox
+   (37.9424 x 37.9425), the margins DrawingView adds; checked by app/lib/avail-banner-layout.test.ts. */
+.footer-view-art { aspect-ratio: 51.602 / 54.334; }
 .footer-view svg { display: block; width: 100%; height: auto; overflow: visible; }
 .footer-view-outline { fill: none; stroke: currentColor; stroke-width: 1.25; }
 .footer-view-dim { fill: none; stroke: currentColor; stroke-width: 0.75; opacity: 0.8; }

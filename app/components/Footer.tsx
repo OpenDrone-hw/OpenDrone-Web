@@ -253,6 +253,9 @@ function DrawingView() {
   const pad = o ? o.w * 0.18 : 0;
   return (
     <div ref={ref} className="footer-view" aria-hidden="true">
+      {/* The art box is reserved before the drawing loads (CSS aspect-ratio), so the label under it and the
+          footer never move when it arrives. */}
+      <div className="footer-view-art">
       {o ? (
         <svg
           viewBox={`${o.x - pad} ${o.y - pad} ${o.w + pad * 2} ${o.h + pad * 2.4}`}
@@ -286,6 +289,7 @@ function DrawingView() {
           </text>
         </svg>
       ) : null}
+      </div>
       <Txt id="chrome.footer_view_label" as="p" className="footer-view-label" />
     </div>
   );
