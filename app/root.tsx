@@ -4,6 +4,7 @@ import {
   Outlet,
   useRouteError,
   isRouteErrorResponse,
+  type HeadersFunction,
   type ShouldRevalidateFunction,
   Links,
   Meta,
@@ -37,7 +38,9 @@ import {SignalLost} from './components/SignalLost';
 import {Txt} from './components/Txt';
 import {copyText} from '~/lib/copy';
 import {getCompanyIdentity} from '~/lib/company';
-import {localeFromPathname, seoLocaleTag} from '~/lib/i18n';
+import {getLocaleFromRequest, localeFromPathname, seoLocaleTag} from '~/lib/i18n';
+import {GEO_BANNER_DISMISSED_KEY, geoAvailabilityRegion} from '~/lib/geo-availability';
+import {visitorCountry as ipCountry} from '~/lib/visitor-country';
 import {buildOrgJsonLd, buildSeoMeta} from '~/lib/seo';
 import {themeOverrideCss} from '~/lib/theme-overrides';
 import {installViewTransitionGuard} from '~/lib/view-transition';
@@ -72,6 +75,19 @@ export const meta: Route.MetaFunction = ({error}) => {
 };
 
 /**
+ * Every page can show the batch 1 line for the visitor's CF-IPCountry
+ * (app/lib/geo-availability.ts) besides prices and buy gates for the ship-to
+ * cookie, so no shared cache may store a page. Cloudflare ignores `Vary` on
+ * HTML, so `private` is what keeps the edge from serving one country's copy
+ * and JSON-LD to another; `Vary` tells any other cache in between. A route
+ * with its own `headers` export (the cart's `no-store`) replaces this one.
+ */
+export const headers: HeadersFunction = () => ({
+  'Cache-Control': 'private, no-cache',
+  Vary: 'CF-IPCountry, Cookie, Accept-Language',
+});
+
+/**
  * This is important to avoid re-fetching root queries on sub-navigations
  */
 export const shouldRevalidate: ShouldRevalidateFunction = ({
@@ -84,6 +100,9 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
   // revalidate when manually revalidating via useRevalidator
   if (currentUrl.toString() === nextUrl.toString()) return true;
+
+  // A ?country=XX link changes the visitor country and the batch 1 line.
+  if (currentUrl.searchParams.get('country') !== nextUrl.searchParams.get('country')) return true;
 
   // Defaulting to no revalidation for root loader data to improve performance.
   // When using this feature, you risk your UI getting out of sync with your server.
@@ -198,6 +217,9 @@ export async function loader(args: Route.LoaderArgs) {
     // (`shipCountryForRequest`: ?country, the picked
     // destination, the IP, the browser), so every surface agrees.
     visitorCountry: buyerCountry(args.request, usRate),
+    // The batch 1 ship line by CF-IPCountry (app/lib/geo-availability.ts):
+    // the region and the language its line is written in.
+    geo: {region: geoAvailabilityRegion(ipCountry(args.request)), locale: urlLocale ?? getLocaleFromRequest(args.request)},
     // Present only while US sales are open: the flat US rate in USD.
     ...(usRate != null ? {usShippingRate: usRate} : {}),
     // Plausible counts the production site only: staging, previews and
@@ -343,6 +365,17 @@ export function Layout({children}: {children?: React.ReactNode}) {
           dangerouslySetInnerHTML={{
             __html:
               "(function(){var r=document.documentElement,last=0,jank=0,total=0,bad=0,good=0,lite=false;var JANK=34,WIN=90,BAD=0.4,GOOD=0.15;function tick(ts){var paused=r.classList.contains('anim-paused');if(!document.hidden&&document.hasFocus()&&!paused){if(last){var d=ts-last;total++;if(d>JANK)jank++;}last=ts;if(total>=WIN){var f=jank/total;jank=0;total=0;if(f>BAD){good=0;if(++bad>=2&&!lite){lite=true;r.classList.add('perf-lite');}}else if(f<GOOD){bad=0;if(++good>=2&&lite){lite=false;r.classList.remove('perf-lite');}}else{bad=0;good=0;}}}else{last=0;jank=0;total=0;}requestAnimationFrame(tick);}requestAnimationFrame(tick);})();",
+          }}
+        />
+        {/* A visitor who dismissed the availability card (AvailabilityBanner)
+            never sees it flash in before hydration: a style node, as above,
+            since hydration wipes markers off <html>. Harmless when the shop
+            is closed and no card renders. */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem(${JSON.stringify(GEO_BANNER_DISMISSED_KEY)})==='1'){var s=document.createElement('style');s.textContent='.avail-banner{display:none!important}';document.head.appendChild(s)}}catch(e){}`,
           }}
         />
         <link rel="stylesheet" href={resetStyles}></link>

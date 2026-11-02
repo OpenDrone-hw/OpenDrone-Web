@@ -11,6 +11,9 @@ import {Txt} from '~/components/Txt';
 import {CartAddedDialog} from '~/components/CartAddedDialog';
 import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
 import type {CommerceHandoff} from '~/lib/shop-links';
+import {AvailabilityBanner} from '~/components/AvailabilityBanner';
+import type {GeoAvailabilityRegion} from '~/lib/geo-availability';
+import type {Locale} from '~/lib/i18n';
 
 interface PageLayoutProps {
   commerceHandoff: CommerceHandoff;
@@ -20,6 +23,8 @@ interface PageLayoutProps {
   /** Both commerce gates are open (root loader). */
   shopOpen?: boolean;
   familyProducts?: HeaderFamilyProduct[];
+  /** The visitor's batch region and language (root loader), for the availability card. */
+  geo?: {region: GeoAvailabilityRegion; locale: Locale};
   children?: React.ReactNode;
 }
 
@@ -31,6 +36,7 @@ export function PageLayout({
   turnstileSiteKey,
   shopOpen = false,
   familyProducts,
+  geo,
 }: PageLayoutProps) {
   const {pathname} = useLocation();
   const isHomepage = pathname === '/';
@@ -47,6 +53,8 @@ export function PageLayout({
             <Txt id="chrome.skip_link" />
           </a>
           <RouteProgress />
+          {/* Ordering is open: the batch line for the visitor's country. */}
+          {shopOpen ? <AvailabilityBanner geo={geo} /> : null}
           <Header
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}
