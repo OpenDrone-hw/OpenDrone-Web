@@ -671,7 +671,8 @@ export function HeaderMenu({
             end
             key={item.id}
             onClick={close}
-            prefetch="intent"
+            prefetch={url === '/flash' ? 'none' : 'intent'}
+            reloadDocument={url === '/flash'}
             to={url}
             className={({isActive}) =>
               `${isMobile ? 'text-base' : 'text-[13px]'} transition-colors ${
@@ -746,7 +747,14 @@ function SecondaryLinks({onNavigate}: {onNavigate?: () => void}) {
   return (
     <>
       {HEADER_MENU_LINKS.map((l) => (
-        <NavLink key={l.to} prefetch="intent" to={l.to} className={cls} onClick={onNavigate}>
+        <NavLink
+          key={l.to}
+          prefetch={l.to === '/flash' ? 'none' : 'intent'}
+          reloadDocument={l.to === '/flash'}
+          to={l.to}
+          className={cls}
+          onClick={onNavigate}
+        >
           <Txt id={l.copy} />
         </NavLink>
       ))}
@@ -1018,6 +1026,8 @@ const HEADER_MENU = {
     {id: 'menu-wholesale', title: 'Wholesale', url: '/wholesale'},
     {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
     {id: 'menu-owners', title: 'Owners map', url: '/owners'},
+    {id: 'menu-flash', title: 'Flash firmware', url: '/flash'},
+    {id: 'menu-guides', title: 'Firmware guides', url: '/guides'},
     // Mobile drawer only: desktop shows Support as the Contact link.
     {id: 'menu-support', title: 'Support', url: '/support'},
     {

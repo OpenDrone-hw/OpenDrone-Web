@@ -54,6 +54,7 @@ const HELP_LINKS: Array<{to: string; copy: string}> = [
   {to: '/herroepingsrecht', copy: 'nav_returns'},
   {to: '/warranty', copy: 'nav_warranty'},
   {to: '/support/find', copy: 'nav_find_ticket'},
+  {to: '/flash', copy: 'nav_flash'},
   {to: '/guides', copy: 'nav_guides'},
 ];
 
@@ -164,7 +165,8 @@ function FooterNavLink({
   return (
     <NavLink
       end
-      prefetch="intent"
+      prefetch={to === '/flash' ? 'none' : 'intent'}
+      reloadDocument={to === '/flash'}
       to={to}
       className={({isActive}) =>
         `footer-link text-xs transition-colors flex items-center min-h-[36px] md:min-h-0 ${
