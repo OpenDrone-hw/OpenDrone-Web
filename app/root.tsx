@@ -375,7 +375,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
           nonce={nonce}
           suppressHydrationWarning
           dangerouslySetInnerHTML={{
-            __html: `try{if(localStorage.getItem(${JSON.stringify(GEO_BANNER_DISMISSED_KEY)})==='1'){var s=document.createElement('style');s.textContent='.avail-banner{display:none!important}';document.head.appendChild(s)}}catch(e){}`,
+            __html: `try{if(localStorage.getItem(${JSON.stringify(GEO_BANNER_DISMISSED_KEY)})==='1'){var s=document.createElement('style');s.textContent='.avail-banner{display:none!important}[data-avail-reserve]{padding-bottom:0!important}';document.head.appendChild(s)}}catch(e){}`,
           }}
         />
         <link rel="stylesheet" href={resetStyles}></link>

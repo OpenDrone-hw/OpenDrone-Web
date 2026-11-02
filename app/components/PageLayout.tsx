@@ -48,7 +48,10 @@ export function PageLayout({
             is its own overlay, opened by every AddToCartButton. */}
         <MobileMenuAside accountUrl={accountUrl} />
         <CartAddedDialog />
-        <div className={isHomepage ? 'homepage-layout' : ''}>
+        <div
+          className={isHomepage ? 'homepage-layout' : ''}
+          data-avail-reserve={isHomepage && shopOpen && !availabilityBannerHiddenOn(pathname) ? '' : undefined}
+        >
           <a className="skip-link" href="#main-content">
             <Txt id="chrome.skip_link" />
           </a>

@@ -41,3 +41,35 @@ test('on the PDP the in-flow card starts on the product column, not the wider ra
   const app = read('../styles/app.css');
   assert.match(app, /\.product-page \{\s+width: min\(var\(--rail-width\), 1102px\);/, 'keep in step with the PDP column width');
 });
+
+test('the floating card moves by transform only (no top/bottom animation), eased, and snaps under reduced motion', () => {
+  const css = read('../styles/site-ui.css');
+  const block = css.slice(css.indexOf('.avail-banner {'), css.indexOf('}', css.indexOf('.avail-banner {')));
+  assert.match(block, /transform: translate3d\(0, calc\(-1 \* var\(--avail-banner-lift, 0px\)\), 0\);/);
+  assert.match(block, /transition: transform 2[0-5]0ms ease-out;/);
+  assert.doesNotMatch(block, /bottom:[^;]*--avail-banner-lift/, 'the lift never feeds bottom (a layout property)');
+  assert.doesNotMatch(css, /--avail-banner-lift[^;]*\)\s*\+\s*env/, 'no other rule puts the lift into bottom');
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\s+\.avail-banner \{ transition: none; \}/);
+});
+
+test('no layout shift from the card: the page room is a constant reserve from SSR, never measured', () => {
+  const css = read('../styles/site-ui.css');
+  const banner = read('../components/AvailabilityBanner.tsx');
+  const layout = read('../components/PageLayout.tsx');
+  const root = read('../root.tsx');
+  assert.doesNotMatch(css, /body:has\(\.avail-banner\)/, 'no padding that appears or changes with the card');
+  assert.doesNotMatch(banner, /--avail-banner-space/, 'nothing re-measures page space');
+  assert.match(css, /\[data-avail-reserve\] \{ padding-bottom: calc\(var\(--avail-banner-reserve\)/);
+  assert.match(layout, /data-avail-reserve=\{isHomepage && shopOpen && !availabilityBannerHiddenOn\(pathname\) \? '' : undefined\}/);
+  assert.match(root, /\[data-avail-reserve\]\{padding-bottom:0!important\}/, 'a dismissed visitor gets no reserve from the first paint');
+});
+
+test('measurement is rAF-throttled and does every read before its single write', () => {
+  const banner = read('../components/AvailabilityBanner.tsx');
+  assert.match(banner, /if \(!frame\) frame = requestAnimationFrame\(measure\);/);
+  const m = banner.slice(banner.indexOf('const measure = () => {'), banner.indexOf('const schedule'));
+  const write = m.indexOf("el.style.setProperty('--avail-banner-lift'");
+  assert.ok(write > 0);
+  for (const read of ['getBoundingClientRect', 'getComputedStyle']) assert.ok(m.lastIndexOf(read) < write, `${read} before the write`);
+  assert.equal(m.split('setProperty').length - 1, 1, 'one write');
+});

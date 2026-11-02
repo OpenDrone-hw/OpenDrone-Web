@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {useLocation, useRouteLoaderData} from 'react-router';
-import {availBannerLift} from '~/lib/avail-banner-lift';
+import {stableBannerLift, type Box} from '~/lib/avail-banner-lift';
 import {
   GEO_BANNER_COPY,
   GEO_BANNER_DISMISSED_KEY,
@@ -11,8 +11,10 @@ import {
 import type {Locale} from '~/lib/i18n';
 import type {RootLoader} from '~/root';
 
-/** Space (px) kept between the end of the page and the card's top edge. */
+/** Space (px) kept between the card and an element it rises above. */
 const GAP = 12;
+/** Extra margin before a lifted card drops back (hysteresis), so it never jitters at the boundary. */
+const HYSTERESIS = 16;
 
 /** Remember the dismissal (if storage allows) and hide the card; focus that
  *  was on the card moves to the main content instead of falling to <body>. */
@@ -64,29 +66,35 @@ export function AvailabilityBanner({
     el.addEventListener('keydown', onKey);
     return () => el.removeEventListener('keydown', onKey);
   }, [dismissed]);
-  // Reserve the room the card covers at the bottom of the viewport (card height + its bottom offset
-  // --avail-banner-offset + a GAP so content ends clearly above it) as
-  // --avail-banner-space on <html>, so the page can always be scrolled clear of it. 0 while it is hidden
-  // (display:none from the pre-paint dismissal style, or on phones behind a bottom bar); removed on unmount.
+  // Lift above [data-avail-avoid] elements (the homepage hero's wordmark and GitHub link) with a transform
+  // only (CSS: translate3d + a 220 ms ease-out, none under prefers-reduced-motion), so the move never changes
+  // layout and never shifts the page. Measured once per animation frame at most; every read (card, avoided
+  // elements, their styles) happens before the single write. The page's bottom room is a constant CSS
+  // reserve ([data-avail-reserve]), never re-measured here, so the footer cannot jump.
   useEffect(() => {
     const el = ref.current;
-    // The in-flow phone card reserves no space and never needs lifting.
     if (!el || inline) return;
-    const root = document.documentElement;
     let lift = 0;
     let frame = 0;
     const measure = () => {
       frame = 0;
+      // reads
       const r = el.getBoundingClientRect();
-      // The card's box at rest: undo the current lift.
-      const rest = {top: r.top + lift, bottom: r.bottom + lift, left: r.left, right: r.right};
-      const space = r.height > 0 ? Math.max(0, Math.ceil(window.innerHeight - rest.top + GAP)) : 0;
-      root.style.setProperty('--avail-banner-space', `${space}px`);
-      // Rise above elements that must stay visible (data-avail-avoid), measured, never a fixed px value.
-      const avoid = r.height > 0 ? [...document.querySelectorAll<HTMLElement>('[data-avail-avoid]')]
-        .filter((a) => getComputedStyle(a).visibility !== 'hidden' && Number(getComputedStyle(a).opacity) > 0)
-        .map((a) => a.getBoundingClientRect()) : [];
-      const next = availBannerLift(rest, avoid, window.innerHeight, GAP);
+      const rest: Box = {top: r.top + lift, bottom: r.bottom + lift, left: r.left, right: r.right};
+      const strict: Box[] = [];
+      const loose: Box[] = [];
+      if (r.height > 0) {
+        for (const a of document.querySelectorAll<HTMLElement>('[data-avail-avoid]')) {
+          const cs = getComputedStyle(a);
+          if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+          const op = Number(cs.opacity);
+          const box = a.getBoundingClientRect();
+          if (op > 0) loose.push(box);
+          if (op > 0.5) strict.push(box);
+        }
+      }
+      const next = r.height > 0 ? stableBannerLift(lift, rest, strict, loose, window.innerHeight, GAP, HYSTERESIS) : 0;
+      // the one write
       if (next !== lift) {
         lift = next;
         el.style.setProperty('--avail-banner-lift', `${lift}px`);
@@ -95,15 +103,22 @@ export function AvailabilityBanner({
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(measure);
     };
-    measure();
+    schedule();
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule);
     ro?.observe(el);
     document.querySelectorAll('[data-avail-avoid]').forEach((a) => ro?.observe(a));
     // The hero wordmark slides into its corner with a CSS transition and fades with the scroll.
     window.addEventListener('resize', schedule);
     window.addEventListener('scroll', schedule, {passive: true});
+    window.addEventListener('wheel', schedule, {passive: true});
     document.addEventListener('transitionend', schedule);
-    const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(schedule);
+    const mo =
+      typeof MutationObserver === 'undefined'
+        ? null
+        : new MutationObserver((records) => {
+            // Our own --avail-banner-lift write is not a reason to measure again.
+            if (records.some((m) => !el.contains(m.target as Node))) schedule();
+          });
     mo?.observe(document.body, {subtree: true, childList: true, attributeFilter: ['class', 'style']});
     return () => {
       if (frame) cancelAnimationFrame(frame);
@@ -111,8 +126,8 @@ export function AvailabilityBanner({
       mo?.disconnect();
       window.removeEventListener('resize', schedule);
       window.removeEventListener('scroll', schedule);
+      window.removeEventListener('wheel', schedule);
       document.removeEventListener('transitionend', schedule);
-      root.style.removeProperty('--avail-banner-space');
     };
   }, [dismissed, geo, inline]);
   if (!geo || dismissed) return null;

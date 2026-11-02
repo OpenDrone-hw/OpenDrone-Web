@@ -25,3 +25,27 @@ export function availBannerLift(card: Box, avoid: readonly Box[], viewportHeight
   }
   return lift;
 }
+
+/**
+ * The lift to apply next frame, with hysteresis so the card never jitters at the boundary.
+ *  - Rising: as soon as an element the card must avoid is fully shown (`strict`: opacity > 0.5) and
+ *    overlaps with `gap`, rise to clear it; never sit lower than needed.
+ *  - Staying: once lifted, stay at the current lift while anything is still near (`loose`: opacity > 0,
+ *    within gap + hysteresis). Small moves of the avoided element (a sliding or fading wordmark) do not
+ *    re-position the card.
+ *  - Dropping: only when nothing is near any more, back to the strict need (usually 0).
+ */
+export function stableBannerLift(
+  current: number,
+  card: Box,
+  strict: readonly Box[],
+  loose: readonly Box[],
+  viewportHeight: number,
+  gap: number,
+  hysteresis: number,
+): number {
+  const need = availBannerLift(card, strict, viewportHeight, gap);
+  if (need > current) return need;
+  if (current > 0 && availBannerLift(card, loose, viewportHeight, gap + hysteresis) > 0) return current;
+  return need;
+}

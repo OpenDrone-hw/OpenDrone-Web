@@ -1993,14 +1993,17 @@ body:has(.test-banner) .site-header {
    moves; the ChatFPV button keeps the bottom-right corner, also on phones. Hidden on phones while a bottom bar (pinned buy rail, cart
    bar) holds that edge. Labels are text, not colour. */
 .avail-banner {
-  /* Lifted off the bottom edge so it clears the footer's bottom-left board drawing; the page padding
-     below (--avail-banner-space) is measured from the card's top, so it follows this offset. */
+  /* Lifted off the bottom edge so it clears the footer's bottom-left board drawing. */
   --avail-banner-offset: 2rem;
   position: fixed;
   left: 1rem;
-  /* --avail-banner-lift (set by AvailabilityBanner): measured rise above [data-avail-avoid] elements such as the
-     homepage hero's wordmark and GitHub link; 0 elsewhere. */
-  bottom: calc(var(--avail-banner-offset) + var(--avail-banner-lift, 0px) + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--avail-banner-offset) + env(safe-area-inset-bottom, 0px));
+  /* --avail-banner-lift (set by AvailabilityBanner, with hysteresis): measured rise above [data-avail-avoid]
+     elements such as the homepage hero's wordmark and GitHub link. A transform only, so the move never
+     changes layout (no layout shift); eased, and a snap under prefers-reduced-motion. */
+  transform: translate3d(0, calc(-1 * var(--avail-banner-lift, 0px)), 0);
+  transition: transform 220ms ease-out;
+  will-change: transform;
   z-index: 900;
   max-width: min(28rem, calc(100vw - 2rem));
   display: flex;
@@ -2042,11 +2045,20 @@ body:has(.test-banner) .site-header {
 }
 .avail-banner-close:hover { color: var(--color-text); }
 .avail-banner-close:focus-visible { outline: 2px solid var(--color-gold); outline-offset: -2px; }
-/* While the card is up, the page ends that much later, so the last content (footer links, form
-   buttons) scrolls clear of it. On the body, not main: the footer follows main. 0 when hidden. */
-body:has(.avail-banner) { padding-bottom: var(--avail-banner-space, 0px); }
+@media (prefers-reduced-motion: reduce) {
+  .avail-banner { transition: none; }
+}
+/* Room at the end of the page so the last content (footer links, form buttons) scrolls clear of the
+   floating card. A constant from the first paint (the layout div carries data-avail-reserve when the card
+   can show; PageLayout, server-rendered), never measured or changed while the card moves, hides or is
+   dismissed, so the footer cannot jump. The pre-paint dismissal style in root.tsx zeroes it for a visitor
+   who dismissed the card. Phones have no floating card (in-flow card instead), so no room there. */
+:root { --avail-banner-reserve: 9rem; }
+@media (min-width: 769px) {
+  [data-avail-reserve] { padding-bottom: calc(var(--avail-banner-reserve) + env(safe-area-inset-bottom, 0px)); }
+}
 @media (max-width: 959px) {
-  .avail-banner { --avail-banner-offset: 1.5rem; left: 0.75rem; right: 5rem; max-width: none; bottom: calc(var(--avail-banner-offset) + var(--avail-banner-lift, 0px) + env(safe-area-inset-bottom, 0px)); }
+  .avail-banner { --avail-banner-offset: 1.5rem; left: 0.75rem; right: 5rem; max-width: none; }
   body:has(.buy-rail.is-pinned) .avail-banner:not(.avail-banner--inline),
   body:has(.cart-bar) .avail-banner:not(.avail-banner--inline) { display: none; }
 }
