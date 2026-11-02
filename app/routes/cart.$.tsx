@@ -2,6 +2,9 @@ import {createContext, useCallback, useContext, useEffect, useRef, useState} fro
 import {Form, Link, redirect, useLoaderData, useRevalidator, useRouteLoaderData} from 'react-router';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import type {Route} from './+types/cart.$';
+import {compatForLines, compatLocale} from '~/lib/cart-compat';
+import {readLocaleCookie} from '~/lib/i18n';
+import {CompatAlert} from '~/components/commerce/CompatAlert';
 import {fetchPaymentMethods, getCart, updateCartLines, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
 import {
   CART_CHECK,
@@ -165,7 +168,9 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   const shippingFrom = cart?.lines.length && quote && isInternationalQuote(quote)
     ? {country: quote.country, price: await internationalShippingFrom(context.env, quote.country, cart)}
     : null;
-  return {cart, info, check, payments, country, shippingFrom};
+  // Parts that do not work together: a warning in the visitor's language, never a block.
+  const compat = compatForLines(cart?.lines ?? [], country, compatLocale(readLocaleCookie(request.headers.get('Cookie'))));
+  return {cart, info, check, payments, country, shippingFrom, compat};
 }
 
 type Removed = SplitItem[];
@@ -193,7 +198,7 @@ function checkNotice(check: string | null): string | null {
 }
 
 export default function CartPage() {
-  const {cart, info, check, payments, country, shippingFrom} = useLoaderData<typeof loader>();
+  const {cart, info, check, payments, country, shippingFrom, compat} = useLoaderData<typeof loader>();
   const rootData = useRouteLoaderData<RootLoader>('root');
   // Lines moved out for a second order: kept in this browser so the list
   // survives a reload and the trip through checkout.
@@ -215,6 +220,7 @@ export default function CartPage() {
       {removed.length ? (
         <SplitReminder items={removed} cartHasLines={Boolean(cart?.lines.length)} onChange={updateRemoved} />
       ) : null}
+      {cart?.lines.length ? <CompatAlert alert={compat} /> : null}
       {cart?.lines.length ? (
         <PopulatedCart
           cart={cart}

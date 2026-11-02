@@ -131,3 +131,13 @@ export function explainConflicts(conflicts: readonly CompatConflict[], locale: C
 export function cartCompatAlert(skus: readonly string[], country: string | null, locale: CompatLocale): CompatAlert {
   return explainConflicts(findConflicts(skus, country), locale);
 }
+
+/** The same alert for a cart whose lines carry a `sku` (the Shopify cart on /cart, the app cart on /shop/cart). Never throws: a cart page must render without it. */
+export function compatForLines(lines: ReadonlyArray<{sku?: string | null}>, country: string | null, locale: CompatLocale): CompatAlert {
+  try {
+    return cartCompatAlert(lines.flatMap((l) => (l.sku ? [l.sku] : [])), country, locale);
+  } catch (err) {
+    console.error('cart-compat', err);
+    return {locale, heading: '', note: '', issues: []};
+  }
+}

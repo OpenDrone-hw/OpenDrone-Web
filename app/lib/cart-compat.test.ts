@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {describe, it} from 'node:test';
 import {COMPAT_LOCALES, COMPAT_PARTS, COMPAT_RULES, COMPAT_UI, type CompatPart} from './cart-compat-data.ts';
-import {cartCompatAlert, compatLocale, explainConflicts, findConflicts} from './cart-compat.ts';
+import {cartCompatAlert, compatForLines, compatLocale, explainConflicts, findConflicts} from './cart-compat.ts';
 
 const BUILDS = JSON.parse(fs.readFileSync(new URL('../../content/builds.json', import.meta.url), 'utf8')) as {
   builds: Array<{id: string; parts: Array<{sku: string}>}>;
@@ -218,5 +218,24 @@ describe('explainConflicts', () => {
     assert.equal(compatLocale('de'), 'en');
     assert.equal(compatLocale(null), 'en');
     assert.equal(compatLocale('fr'), 'fr');
+  });
+});
+
+describe('/cart (Shopify cart route)', () => {
+  const line = (sku: string) => ({id: sku, sku, handle: 'x', quantity: 1});
+  it('alerts for an incompatible combo, in the visitor language', () => {
+    const a = compatForLines([line('OPENFC-LITE-2020'), line('OPENESC-3030')], 'BE', 'nl');
+    assert.ok(a.issues.length > 0);
+    assert.equal(a.locale, 'nl');
+    assert.ok(a.heading);
+  });
+  it('stays silent for a compatible build and for lines without a SKU', () => {
+    assert.equal(compatForLines([line('OPENFC-LITE-2020'), line('OPENESC-2020')], 'BE', 'en').issues.length, 0);
+    assert.equal(compatForLines([{sku: null}], 'BE', 'en').issues.length, 0);
+  });
+  it('is wired into the route loader and page', () => {
+    const src = fs.readFileSync(new URL('../routes/cart.$.tsx', import.meta.url), 'utf8');
+    assert.match(src, /compatForLines\(cart\?\.lines/);
+    assert.match(src, /<CompatAlert alert=\{compat\}/);
   });
 });
