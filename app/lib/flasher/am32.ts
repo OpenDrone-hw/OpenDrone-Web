@@ -301,7 +301,13 @@ export async function flashAm32(
   onProgress('check-eeprom', ++done, total);
   await verifyWholeImage(fw, image.pages, eeprom);
   onProgress('reset', done, total);
-  await fw.resetEsc(index);
+  try {
+    await fw.resetEsc(index);
+  } catch (e) {
+    throw new Am32Error(
+      `Firmware written and verified; the ESC did not restart, so power-cycle it (${(e as Error).message}).`,
+    );
+  }
   return report;
 }
 
@@ -331,6 +337,9 @@ async function verifyWholeImage(fw: FourWay, pages: readonly Am32Page[], eeprom:
   const first = pages[0];
   if (first) {
     try {
+      // A transient read failure leaves the link desynced and every command is refused: re-sync
+      // first (testAlive), so the erase can still run. A failed resync keeps the conservative path.
+      await fw.resync();
       await erasePage(fw, first.offset);
       disabled = true;
     } catch {

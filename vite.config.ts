@@ -1,6 +1,6 @@
 import {execSync} from 'node:child_process';
 import {existsSync} from 'node:fs';
-import {join} from 'node:path';
+import {dirname, join, resolve} from 'node:path';
 import {defineConfig, type Plugin} from 'vite';
 import {cloudflare} from '@cloudflare/vite-plugin';
 import {reactRouter} from '@react-router/dev/vite';
@@ -56,15 +56,31 @@ function editorialManifestPlugin(): Plugin {
 // bench files live in .firmware-staging/ and only the bench Worker serves
 // them, behind basic auth (app/lib/flasher/staging-serve.ts).
 function firmwareStagingBuildGuardPlugin(): Plugin {
-  const check = (paths: readonly string[]) => {
-    const problem = firmwareStagingBuildProblem((rel) => existsSync(join(process.cwd(), rel)), paths);
+  // Paths come from Vite's resolved config, not the shell's working directory: a build started from
+  // another directory (or with --config / a root argument) is checked just the same.
+  let root = '';
+  let publicDir: string | false = false;
+  let outDirs: string[] = [];
+  const fail = (found: string[]) => {
+    const problem = firmwareStagingBuildProblem((p) => found.includes(p), found);
     if (problem) throw new Error(problem);
   };
+  const checkSource = () => fail([...FIRMWARE_STAGING_FORBIDDEN_SOURCES.map((p) => join(root, p)), ...(publicDir ? [join(publicDir, 'firmware-staging')] : [])].filter((p) => existsSync(p)));
+  const checkOutputs = () => fail(outDirs.map((d) => join(d, 'firmware-staging')).filter((p) => existsSync(p)));
   return {
     name: 'opendrone:firmware-staging-build-guard',
     apply: 'build',
-    buildStart: () => check(FIRMWARE_STAGING_FORBIDDEN_SOURCES),
-    closeBundle: () => check(FIRMWARE_STAGING_FORBIDDEN_OUTPUTS),
+    configResolved(config) {
+      root = config.root;
+      publicDir = config.publicDir;
+      // The Cloudflare/React Router build writes per-environment outputs; check the configured outDir
+      // and the usual client folders under it, plus the legacy fixed paths under the root.
+      const out = resolve(root, config.build.outDir);
+      outDirs = [...new Set([out, join(out, 'client'), ...FIRMWARE_STAGING_FORBIDDEN_OUTPUTS.map((p) => resolve(root, dirname(p)))])];
+    },
+    buildStart: checkSource,
+    writeBundle: checkOutputs,
+    closeBundle: checkOutputs,
   };
 }
 

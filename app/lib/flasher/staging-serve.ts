@@ -18,6 +18,7 @@
  * firmware-staging folder. Pure module: runs under `node --test`.
  */
 
+import {STAGING_FILE_NAMES} from './firmware-manifest.ts';
 import {stagingChallenge, stagingCredentialsOk} from '../staging-auth.ts';
 
 export const STAGING_FIRMWARE_PREFIX = '/firmware-staging/';
@@ -50,7 +51,7 @@ export async function handleStagingFirmware(request: Request, env: StagingFirmwa
     return new Response('Method not allowed', {status: 405, headers: {Allow: 'GET, HEAD', 'Cache-Control': 'no-store'}});
   }
   const name = url.pathname.slice(STAGING_FIRMWARE_PREFIX.length);
-  if (url.search || !FILE_NAME_RE.test(name)) return notFound();
+  if (url.search || !FILE_NAME_RE.test(name) || !STAGING_FILE_NAMES.has(name)) return notFound();
   const obj = await env.store.get(name);
   if (!obj) return notFound();
   return new Response(request.method === 'HEAD' ? null : obj.body, {

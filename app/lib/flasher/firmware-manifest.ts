@@ -150,6 +150,13 @@ export const STAGING_PINNED: Readonly<Partial<Record<PinnedTarget, FirmwarePin>>
   },
 };
 
+/** Every file name the staging route may serve: the file names in STAGING_PINNED (apps and EEPROM defaults), nothing else. */
+export const STAGING_FILE_NAMES: ReadonlySet<string> = new Set(
+  Object.values(STAGING_PINNED).flatMap((pin) =>
+    [pin.url, pin.eepromDefaults?.url].flatMap((u) => (u?.startsWith('/firmware-staging/') ? [u.slice('/firmware-staging/'.length)] : [])),
+  ),
+);
+
 /** The production manifest: PINNED only. Never includes a staging entry. */
 export const FIRMWARE_MANIFEST: readonly FirmwareRelease[] = (Object.keys(PINNED) as PinnedTarget[]).map((t) =>
   pinToRelease(t, PINNED[t]),

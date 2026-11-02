@@ -712,6 +712,8 @@ class FakeEsc implements ByteLink {
   erases: number[] = [];
   sig = AM32_SIGNATURE_AT32F421;
   dead = false;
+  /** Number of upcoming requests that get no reply (a timeout on the host side). */
+  dropReplies = 0;
   /** F4: the bootloader ACKs page erases but does nothing. */
   eraseNoop = false;
   /** Review 3 F5: a write at a 1 KB-aligned address erases its erase block first (upstream AM32 bootloader behaviour). */
@@ -768,6 +770,10 @@ class FakeEsc implements ByteLink {
     const params = req.subarray(5, 5 + len);
     let reply: Uint8Array = Uint8Array.of(0);
     if (this.dead) return;
+    if (this.dropReplies > 0 && cmd !== FOURWAY_CMD.DeviceReset) {
+      this.dropReplies--;
+      return;
+    }
     switch (cmd) {
       case FOURWAY_CMD.DeviceInitFlash:
         reply = Uint8Array.of(this.sig & 0xff, this.sig >> 8, 0, FOURWAY_MODE_ARM_BLB);
@@ -1005,6 +1011,52 @@ describe('AM32 write procedure (simulated ESC)', () => {
     assert.ok(err instanceof Am32FinalVerifyError, String(err));
     assert.match(err.message, /settings page/);
     assert.equal(esc.resets, 0);
+  });
+  it('N4: a transient read failure in the final check resyncs, then still disables the first page', async () => {
+    const esc = new FakeEsc('OPENESC_20_F421');
+    const fw = new FourWay(esc);
+    const bootBefore = esc.flash.slice(0, 0x1000);
+    const err = await withSimulatedWrites(() =>
+      flashAm32(fw, 0, image(), ESC20, release, (ph) => { if (ph === 'check-eeprom') esc.dropReplies = 1; }, allOn).then(
+        () => assert.fail('install must fail'),
+        (e: unknown) => e,
+      ),
+    );
+    assert.ok(err instanceof Am32FinalVerifyError, String(err));
+    assert.equal(err.disabled, true, 'resync then erase of the first page');
+    assert.equal(fw.isDesynced, false);
+    assert.ok(esc.flash.slice(AM32_APP_START, AM32_APP_START + AM32_PAGE_SIZE).every((b) => b === 0xff));
+    assert.equal(esc.resets, 0);
+    assert.deepEqual(esc.flash.slice(0, 0x1000), bootBefore);
+  });
+  it('N4: if the resync fails too, the link stays refused and disabled is false (conservative)', async () => {
+    const esc = new FakeEsc('OPENESC_20_F421');
+    const err = await withSimulatedWrites(() =>
+      flashAm32(new FourWay(esc), 0, image(), ESC20, release, (ph) => { if (ph === 'check-eeprom') esc.dropReplies = 100; }, allOn).then(
+        () => assert.fail('install must fail'),
+        (e: unknown) => e,
+      ),
+    );
+    assert.ok(err instanceof Am32FinalVerifyError, String(err));
+    assert.equal(err.disabled, false);
+    assert.equal(esc.resets, 0);
+  });
+  it('N5: a failed final reset after a verified image gets its own message, not a plain success', async () => {
+    const esc = new FakeEsc('OPENESC_20_F421');
+    const origWrite = esc.write.bind(esc);
+    esc.write = async (req: Uint8Array) => {
+      if (req[1] === FOURWAY_CMD.DeviceReset) return; // no reply
+      return origWrite(req);
+    };
+    const err = await withSimulatedWrites(() =>
+      flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn).then(
+        () => assert.fail('must not resolve as installed'),
+        (e: unknown) => e,
+      ),
+    );
+    assert.ok(err instanceof Error);
+    assert.match(err.message, /Firmware written and verified; the ESC did not restart, so power-cycle it/);
+    assert.ok(!(err instanceof Am32FinalVerifyError));
   });
   it('F2: flushes before each command; a stale frame already buffered is dropped', async () => {
     const esc = new FakeEsc('OPENESC_20_F421');

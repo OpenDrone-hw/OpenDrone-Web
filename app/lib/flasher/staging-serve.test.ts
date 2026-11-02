@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {describe, it} from 'node:test';
+import {STAGING_FILE_NAMES} from './firmware-manifest.ts';
 import {
   FIRMWARE_STAGING_FORBIDDEN_OUTPUTS,
   FIRMWARE_STAGING_FORBIDDEN_SOURCES,
@@ -33,6 +34,20 @@ const basic = (user: string, pass: string) => `Basic ${btoa(`${user}:${pass}`)}`
 const req = (path: string, auth?: string, method = 'GET') =>
   new Request(`http://localhost:8787${path}`, {method, headers: auth ? {Authorization: auth} : {}});
 const okAuth = basic('opendrone', PASSWORD);
+
+describe('staging firmware route: only manifest file names (N2)', () => {
+  it('serves every manifest file name and 404s any other key, even a plain-looking one', async () => {
+    const names = [...STAGING_FILE_NAMES];
+    assert.ok(names.includes(FILE) && names.length >= 3);
+    const files = Object.fromEntries([...names, 'notes.txt', 'other.bin'].map((n) => [n, BYTES]));
+    for (const n of names) assert.equal((await handleStagingFirmware(req(`/firmware-staging/${n}`, okAuth), {password: PASSWORD, store: store(files)}))!.status, 200, n);
+    for (const n of ['notes.txt', 'other.bin']) {
+      const st = store(files);
+      assert.equal((await handleStagingFirmware(req(`/firmware-staging/${n}`, okAuth), {password: PASSWORD, store: st}))!.status, 404, n);
+      assert.deepEqual(st.gets, [], 'R2 not asked for a name outside the manifest');
+    }
+  });
+});
 
 describe('staging firmware route (F1)', () => {
   it('ignores every other path', async () => {
@@ -89,7 +104,7 @@ describe('staging firmware route (F1)', () => {
       const r = await handleStagingFirmware(req(p, okAuth), {password: PASSWORD, store: s});
       assert.equal(r?.status, 404, p);
     }
-    assert.deepEqual(s.gets, ['missing.bin']);
+    assert.deepEqual(s.gets, [], 'only manifest file names reach R2');
   });
   it('only GET and HEAD', async () => {
     const r = await handleStagingFirmware(req(`/firmware-staging/${FILE}`, okAuth, 'POST'), {password: PASSWORD, store: store()});
@@ -131,6 +146,7 @@ describe('firmware-staging build guard (F2)', () => {
   it('vite.config.ts registers the guard as a build plugin', () => {
     const src = readFileSync(join(import.meta.dirname, '..', '..', '..', 'vite.config.ts'), 'utf8');
     assert.match(src, /firmwareStagingBuildGuardPlugin\(\),/);
-    assert.match(src, /apply: 'build',\s*buildStart: \(\) => check\(FIRMWARE_STAGING_FORBIDDEN_SOURCES\)/);
+    assert.match(src, /apply: 'build',\s*configResolved\(config\)[\s\S]*buildStart: checkSource,\s*writeBundle: checkOutputs,\s*closeBundle: checkOutputs/);
+    assert.doesNotMatch(src.slice(src.indexOf('function firmwareStagingBuildGuardPlugin'), src.indexOf('function firmwareStagingDevRefusePlugin')), /process\.cwd\(\)/);
   });
 });
