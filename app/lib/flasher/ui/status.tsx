@@ -1,6 +1,7 @@
 /** Shared status text and step layout for the /flash page. Text first: colour is only a second cue. */
 
-import {useEffect, useRef} from 'react';
+import {useEffect, useRef, useState} from 'react';
+import {stagingBenchEnabled} from '../staging.ts';
 
 export type Status =
   | {kind: 'idle'}
@@ -16,6 +17,48 @@ export function errText(e: unknown): string {
 export function pickerErrText(e: unknown): string {
   if (e instanceof DOMException && e.name === 'NotFoundError') return 'No device was selected.';
   return errText(e);
+}
+
+/**
+ * Whether the staging bench switch is on, read after mount so the server
+ * render and the first client render agree (the server has no window, so it is
+ * always false there). Display only: the write gates call stagingBenchEnabled()
+ * themselves.
+ */
+export function useStagingBench(): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => setOn(stagingBenchEnabled()), []);
+  return on;
+}
+
+/** Red notice at the top of /flash on a staging bench build. Icon + text + role=alert, error token; renders nothing otherwise. */
+export function StagingBenchNotice() {
+  if (!useStagingBench()) return null;
+  return (
+    <div
+      role="alert"
+      className="mt-4 border-2 border-[var(--color-error)] bg-[color-mix(in_srgb,var(--color-error)_12%,transparent)] p-4"
+    >
+      <p className="flex items-center gap-2 text-[18px] font-bold text-[var(--color-text)]">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          width="26"
+          height="26"
+          fill="none"
+          stroke="var(--color-error)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 3 2 21h20L12 3Z" />
+          <path d="M12 10v5M12 18v.5" />
+        </svg>
+        <span>UNVERIFIED BENCH BUILD, may need DFU/SWD recovery</span>
+      </p>
+      <p className="mt-1 text-[15px]">Staging only. Flashing here is for bench testing with the bench sheet.</p>
+    </div>
+  );
 }
 
 export function StatusLine({status}: {status: Status}) {

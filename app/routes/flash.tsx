@@ -28,6 +28,7 @@ import {isWebUsbAvailable} from '~/lib/flasher/picoboot';
 import {policyAllows} from '~/lib/flasher/targets';
 import {EscFlasher} from '~/lib/flasher/ui/EscFlasher';
 import {FcFlasher} from '~/lib/flasher/ui/FcFlasher';
+import {StagingBenchNotice} from '~/lib/flasher/ui/status';
 import {buildSeoMeta} from '~/lib/seo';
 
 export const meta: Route.MetaFunction = () =>
@@ -58,6 +59,7 @@ export default function FlashRoute() {
   return (
     <article className="page-shell">
       <div className="reading-column">
+        <StagingBenchNotice />
         <header className="page-header">
           <p className="page-eyebrow">Firmware</p>
           <h1 className="page-title">Update firmware</h1>

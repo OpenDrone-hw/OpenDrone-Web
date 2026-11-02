@@ -27,7 +27,8 @@
  *   - OpenESC-20x20: no public AM32 build exists yet.
  */
 
-import {PLACEHOLDER_SHA256, type FirmwareKind, type FirmwareRelease} from './manifest.ts';
+import {PLACEHOLDER_SHA256, type FirmwareKind, type FirmwareRelease, type PinnedAsset} from './manifest.ts';
+import {stagingBenchEnabled} from './staging.ts';
 
 export type FirmwareChannel = FirmwareRelease['channel'];
 
@@ -38,6 +39,10 @@ export type FirmwarePin = {
   sha256: string;
   size: number;
   channel: FirmwareChannel;
+  /** Overrides the board's file kind (the staging ESC app is a raw .bin). */
+  kind?: FirmwareKind;
+  /** AM32: the pinned EEPROM v4 defaults written after the app. */
+  eepromDefaults?: PinnedAsset;
 };
 
 /** Fixed facts per board; the pin carries everything that changes per release. */
@@ -99,7 +104,7 @@ export function pinToRelease(target: PinnedTarget, pin: FirmwarePin | null): Fir
   }
   return {
     target,
-    kind: b.kind,
+    kind: pin.kind ?? b.kind,
     version: pin.version,
     firmware: b.firmware,
     channel: pin.channel,
@@ -108,13 +113,51 @@ export function pinToRelease(target: PinnedTarget, pin: FirmwarePin | null): Fir
     size: pin.size,
     sha256: pin.sha256,
     published: true,
+    ...(pin.eepromDefaults ? {eepromDefaults: pin.eepromDefaults} : {}),
   };
 }
 
+/**
+ * STAGING bench files: local copies served from the page's own origin under
+ * /firmware-staging/ (public/firmware-staging/, git-ignored, never committed).
+ * Used ONLY while stagingBenchEnabled() (staging.ts); otherwise they do not
+ * exist for the page. The GitHub draft releases cannot be created yet.
+ * OpenFC-Lite and OpenESC-30x30 have no entry here: "not yet available".
+ */
+export const STAGING_PINNED: Readonly<Partial<Record<PinnedTarget, FirmwarePin>>> = {
+  OPENFC_LITE_MINI_RP2350A: {
+    version: '2026.12.0-alpha (d593400 + cfg a2b6666)',
+    url: '/firmware-staging/OpenFC-Lite-Mini_betaflight-2026.12.0-alpha-d593400_cfg-a2b6666_OPENFC_LITE_MINI_RP2350A.uf2',
+    sha256: '75dca15360c94c168b6fb81c58ae4ebb0432be64155e6e2afdbf4197288ea457',
+    size: 897536,
+    channel: 'alpha',
+  },
+  OPENESC_20_F421: {
+    version: '2.21',
+    url: '/firmware-staging/OpenESC-20x20_AM32_OPENESC_20_F421_2.21.bin',
+    sha256: '24ed68c8d0e6eb3b9f0f0cd3713cb08397a805cf9a2450d9254d818c457c3b66',
+    size: 27648,
+    channel: 'alpha',
+    kind: 'am32-bin',
+    eepromDefaults: {
+      url: '/firmware-staging/OpenESC-20x20_AM32_EEPROM_DEFAULT_v4.bin',
+      sha256: '8e5cd69bc32e07154e9866ca737ee53a9d5b134059934fbfd9c3df664e2b1fa6',
+      size: 192,
+    },
+  },
+};
+
+/** The production manifest: PINNED only. Never includes a staging entry. */
 export const FIRMWARE_MANIFEST: readonly FirmwareRelease[] = (Object.keys(PINNED) as PinnedTarget[]).map((t) =>
   pinToRelease(t, PINNED[t]),
 );
 
+/** The manifest the page uses: PINNED, with the staging bench entries replacing it only while the switch is on. */
+export function currentManifest(): readonly FirmwareRelease[] {
+  if (!stagingBenchEnabled()) return FIRMWARE_MANIFEST;
+  return (Object.keys(PINNED) as PinnedTarget[]).map((t) => pinToRelease(t, STAGING_PINNED[t] ?? PINNED[t]));
+}
+
 export function releasesFor(target: string): FirmwareRelease[] {
-  return FIRMWARE_MANIFEST.filter((r) => r.target === target);
+  return currentManifest().filter((r) => r.target === target);
 }

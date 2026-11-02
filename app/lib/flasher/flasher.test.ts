@@ -4,6 +4,7 @@ import {join} from 'node:path';
 import {describe, it} from 'node:test';
 import {
   AM32_APP_START,
+  AM32_EEPROM_DEFAULTS_SIZE,
   AM32_EEPROM_OFFSET,
   AM32_GATES,
   AM32_NAME_SLOT_OFFSET,
@@ -17,6 +18,8 @@ import {
   Am32WriteDisabledError,
   FOURWAY_MODE_ARM_BLB,
   am32WritesEnabled,
+  assertAm32EepromPageErasable,
+  assertAm32EepromWritable,
   assertAm32Writable,
   type Am32Gates,
 } from './am32-layout.ts';
@@ -126,6 +129,14 @@ function makeAm32App(name = 'OPENESC_20_F421', slot: Uint8Array = nameSlot(name)
   const b = new Uint8Array(size);
   for (let i = 0; i < size; i++) b[i] = ((i * 7 + 1) & 0x7f) | 0x80; // never ASCII
   b.set(slot, AM32_NAME_SLOT_OFFSET - AM32_APP_START);
+  return b;
+}
+
+/** SYNTHETIC EEPROM v4 defaults blob: 192 bytes, byte 1 = layout version 4. No bytes from any real image. */
+function makeEepromDefaults(): Uint8Array {
+  const b = new Uint8Array(AM32_EEPROM_DEFAULTS_SIZE);
+  for (let i = 0; i < b.length; i++) b[i] = (i * 13 + 5) & 0xff;
+  b[1] = 4;
   return b;
 }
 
@@ -795,7 +806,7 @@ describe('AM32 write procedure (simulated ESC)', () => {
     AM32_WRITE_PROCEDURE_VERIFIED: true,
   };
   const release = published({target: ESC20.target, kind: 'am32-hex'});
-  const image = () => prepareAm32Image(makeHex(AT32F421_FLASH_BASE + AM32_APP_START, makeAm32App()), ESC20);
+  const image = () => prepareAm32Image(makeHex(AT32F421_FLASH_BASE + AM32_APP_START, makeAm32App()), ESC20, makeEepromDefaults());
   const noop = () => {};
 
   it('identifies MCU and firmware name read-only', async () => {
@@ -929,20 +940,80 @@ describe('AM32 write procedure (simulated ESC)', () => {
     esc.lateFrames.push(FakeEsc.frame(FOURWAY_CMD.DeviceInitFlash, 0, Uint8Array.of(0x06, 0x47)));
     assert.equal((await identifyEsc(new FourWay(esc), 0)).mcu.status, 'unreadable');
   });
-  it('with all flags on (simulated): first page erased first and written last, bootloader and EEPROM untouched', async () => {
+  it('with all flags on (simulated): first page erased first and written last, EEPROM = pinned defaults, bootloader untouched', async () => {
     const esc = new FakeEsc('OPENESC_20_F421');
+    esc.flash.fill(0xa5, AM32_EEPROM_OFFSET + 192, AM32_EEPROM_OFFSET + AM32_PAGE_SIZE); // old settings tail
     const bootBefore = esc.flash.slice(0, 0x1000);
-    const eepromBefore = esc.flash.slice(AM32_EEPROM_OFFSET, AM32_EEPROM_OFFSET + AM32_PAGE_SIZE);
     const img = image();
     await withSimulatedWrites(() => flashAm32(new FourWay(esc), 0, img, ESC20, release, noop, allOn));
     assert.equal(esc.erases[0], AM32_APP_START);
-    assert.equal(esc.writes[esc.writes.length - 4], AM32_APP_START);
+    assert.equal(esc.writes[esc.writes.length - 4], AM32_APP_START, 'first app page written last (4 chunks)');
+    assert.equal(esc.writes[esc.writes.length - 5], AM32_EEPROM_OFFSET, 'EEPROM defaults written just before it');
+    assert.equal(esc.erases[esc.erases.length - 1], AM32_EEPROM_OFFSET, 'EEPROM page erased after the other app pages');
     assert.equal(esc.erases[1], 0x7800, 'the name-slot page is rewritten right after the first erase');
     assert.equal(esc.writes[0], 0x7800);
     assert.deepEqual(esc.flash.slice(AM32_NAME_SLOT_OFFSET, AM32_EEPROM_OFFSET), nameSlot('OPENESC_20_F421'));
-    for (const a of [...esc.writes, ...esc.erases]) assert.ok(a >= AM32_APP_START && a < AM32_EEPROM_OFFSET);
+    for (const a of [...esc.writes, ...esc.erases]) assert.ok(a >= AM32_APP_START && a <= AM32_EEPROM_OFFSET);
+    assert.equal(esc.writes.filter((a) => a >= AM32_EEPROM_OFFSET).length, 1, 'one EEPROM write');
     assert.deepEqual(esc.flash.slice(0, 0x1000), bootBefore);
-    assert.deepEqual(esc.flash.slice(AM32_EEPROM_OFFSET, AM32_EEPROM_OFFSET + AM32_PAGE_SIZE), eepromBefore);
+    const page = esc.flash.slice(AM32_EEPROM_OFFSET, AM32_EEPROM_OFFSET + AM32_PAGE_SIZE);
+    assert.deepEqual(page.slice(0, 192), makeEepromDefaults());
+    assert.ok(page.slice(192).every((b) => b === 0xff), 'rest of the settings page erased');
     for (const p of img.pages) assert.deepEqual(esc.flash.slice(p.offset, p.offset + p.data.length), p.data);
+  });
+
+  it('refuses an image without EEPROM defaults, before touching flash', async () => {
+    const esc = new FakeEsc('OPENESC_20_F421');
+    const noDefaults = prepareAm32Image(makeHex(AT32F421_FLASH_BASE + AM32_APP_START, makeAm32App()), ESC20);
+    await withSimulatedWrites(() =>
+      assert.rejects(flashAm32(new FourWay(esc), 0, noDefaults, ESC20, release, noop, allOn), /no EEPROM defaults/),
+    );
+    assert.equal(esc.writes.length + esc.erases.length, 0);
+  });
+  it('a settings page that does not erase aborts before the defaults are written', async () => {
+    const esc = new FakeEsc('OPENESC_20_F421');
+    const orig = esc.write.bind(esc);
+    esc.write = async (req: Uint8Array) => {
+      if (req[1] === FOURWAY_CMD.DevicePageErase && req[5] === AM32_EEPROM_OFFSET / AM32_PAGE_SIZE) {
+        esc.erases.push(AM32_EEPROM_OFFSET);
+        esc.queue(FakeEsc.frame(req[1]!, 0, Uint8Array.of(0)));
+        return;
+      }
+      return orig(req);
+    };
+    await withSimulatedWrites(() =>
+      assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn), /did not erase the settings page/),
+    );
+    assert.equal(esc.writes.filter((a) => a >= AM32_EEPROM_OFFSET).length, 0);
+  });
+  it('prepareAm32Image checks the EEPROM defaults: 192 bytes, layout v4', () => {
+    const hex = makeHex(AT32F421_FLASH_BASE + AM32_APP_START, makeAm32App());
+    assert.throws(() => prepareAm32Image(hex, ESC20, new Uint8Array(191)), /192 bytes/);
+    const v3 = makeEepromDefaults();
+    v3[1] = 3;
+    assert.throws(() => prepareAm32Image(hex, ESC20, v3), /layout v4/);
+  });
+  it('prepareAm32Image accepts a raw .bin at the app address (same checks as hex)', () => {
+    const img = prepareAm32Image(makeAm32App(), ESC20, makeEepromDefaults());
+    assert.equal(img.pages.length, 27);
+    assert.equal(img.start, AM32_APP_START);
+    assert.throws(() => prepareAm32Image(makeAm32App('OPENESC_30_F421'), ESC20, makeEepromDefaults()), /not OPENESC_20_F421/);
+    assert.throws(() => prepareAm32Image(new Uint8Array(0), ESC20), /no data/);
+  });
+});
+
+describe('AM32 EEPROM write guard', () => {
+  it('allows exactly 0x7C00..0x7CBF (192 bytes)', () => {
+    assert.doesNotThrow(() => assertAm32EepromWritable(0x7c00, 192));
+    assert.doesNotThrow(() => assertAm32EepromPageErasable(0x7c00));
+  });
+  it('refuses anything else: other lengths, offsets, the bootloader and the app', () => {
+    for (const [o, l] of [[0x7c00, 191], [0x7c00, 193], [0x7c00, 1024], [0x7c01, 192], [0x7bc0, 192], [0x7be0, 64], [0x7cc0, 192], [0, 192], [0x0f00, 192], [0x1000, 192], [0x8000, 192], [0x7c00, 0], [-1, 192], [0x7c00, Number.NaN]] as const) {
+      assert.throws(() => assertAm32EepromWritable(o, l), Am32AddressError, `${o}+${l}`);
+    }
+    for (const o of [0, 0x1000, 0x7800, 0x7c01, 0x8000]) assert.throws(() => assertAm32EepromPageErasable(o), Am32AddressError);
+  });
+  it('the app guard still refuses the EEPROM page', () => {
+    assert.throws(() => assertAm32Writable(0x7c00, 192), /EEPROM/);
   });
 });

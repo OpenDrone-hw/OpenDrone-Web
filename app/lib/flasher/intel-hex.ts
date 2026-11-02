@@ -84,6 +84,19 @@ export function parseIntelHex(text: string): HexImage {
   return {start, end, bytes};
 }
 
+/**
+ * Raw binary at a known absolute base address (a staging .bin app), as the
+ * same HexImage the Intel HEX parser produces, so every later check (address
+ * guard, name slot, ambiguous names) is the same code path.
+ */
+export function imageFromBinary(bytes: Uint8Array, base: number): HexImage {
+  if (bytes.length === 0) throw new IntelHexError('File contains no data.');
+  if (bytes.length > MAX_BYTES) throw new IntelHexError('File is larger than any ESC flash.');
+  const map = new Map<number, number>();
+  for (let i = 0; i < bytes.length; i++) map.set(base + i, bytes[i] ?? 0xff);
+  return {start: base, end: base + bytes.length, bytes: map};
+}
+
 /** Contiguous 0xFF-filled buffer for [from, to). */
 export function hexSlice(image: HexImage, from: number, to: number): Uint8Array {
   const out = new Uint8Array(to - from).fill(0xff);

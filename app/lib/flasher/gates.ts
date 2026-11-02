@@ -4,12 +4,16 @@
  *
  * Fail-closed: anything unread, unknown, blank or mismatched blocks, every
  * hardware-verify flag that is false blocks, and there is no override input.
+ * The only thing that stands in for a hardware-verify flag is the staging
+ * bench switch (staging.ts, build-time env + host check): `flag || stagingBenchEnabled()`.
+ * It never replaces a target, MCU, name, chip-package, size or hash check.
  * When a direct write is blocked, the fallback is always the verified file:
  * UF2 copy for the FC, esc-configurator.com for the ESC.
  */
 
 import {AM32_GATES, type Am32Gates} from './am32-layout.ts';
 import {isPublished, type FirmwareRelease} from './manifest.ts';
+import {stagingBenchEnabled} from './staging.ts';
 import {
   CHIP_PACKAGE_VERIFIED,
   ESC_TARGETS,
@@ -152,9 +156,10 @@ export type FcDirectWriteInput = {
  */
 export function fcDirectWriteGate(i: FcDirectWriteInput): GateResult {
   const gates = i.gates ?? FC_GATES;
+  const staging = stagingBenchEnabled();
   const reasons: string[] = [];
-  if (!gates.CHIP_PACKAGE_VERIFIED) reasons.push('Chip package detection is not verified on hardware yet (CHIP_PACKAGE_VERIFIED=false).');
-  if (!gates.PICOBOOT_WRITE_VERIFIED) reasons.push('The direct write sequence is not verified on hardware yet (PICOBOOT_WRITE_VERIFIED=false).');
+  if (!(gates.CHIP_PACKAGE_VERIFIED || staging)) reasons.push('Chip package detection is not verified on hardware yet (CHIP_PACKAGE_VERIFIED=false).');
+  if (!(gates.PICOBOOT_WRITE_VERIFIED || staging)) reasons.push('The direct write sequence is not verified on hardware yet (PICOBOOT_WRITE_VERIFIED=false).');
   if (!isPublished(i.release)) reasons.push('Firmware not published yet.');
   if (i.verifiedFor !== i.chosen.target) reasons.push('The verified file is not for the chosen board. Download it again.');
   if (i.release.target !== i.chosen.target) reasons.push(`The firmware entry is for ${i.release.target}, not ${i.chosen.target}.`);
@@ -217,9 +222,10 @@ export type EscDirectWriteInput = {
  */
 export function escDirectWriteGate(i: EscDirectWriteInput): GateResult {
   const gates = i.gates ?? AM32_GATES;
+  const staging = stagingBenchEnabled();
   const reasons: string[] = [];
   for (const [name, ok] of Object.entries(gates)) {
-    if (!ok) reasons.push(`${name}=false: not verified on hardware yet.`);
+    if (!(ok || staging)) reasons.push(`${name}=false: not verified on hardware yet.`);
   }
   if (!isPublished(i.release)) reasons.push('Firmware not published yet.');
   if (i.verifiedFor !== i.chosen.target) reasons.push('The verified file is not for the chosen ESC. Download it again.');

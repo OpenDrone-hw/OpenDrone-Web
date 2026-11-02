@@ -5,26 +5,40 @@
  * Clean-room TypeScript from the protocol and layout descriptions in
  * am32-layout.ts; no esc-configurator, BLHeliSuite or Betaflight code.
  *
+ * The flash reproduces the QC image: app + EEPROM v4 defaults (192 B at
+ * 0x7C00). The bootloader is never written.
+ *
  * Write order (flashAm32), chosen so an interruption leaves the AM32
  * bootloader in charge rather than a half-written app:
  *   1. re-identify the ESC (MCU + name slot at 0x7BE0) and refuse on any mismatch;
- *   2. read the EEPROM/settings page as a backup for the after-check;
- *   3. erase the FIRST app page (vector table) so a partial app cannot start,
+ *   2. erase the FIRST app page (vector table) so a partial app cannot start,
  *      and read it back: it must be all 0xFF before anything else is written;
- *   4. erase (+ blank check) + write + read-back-verify every other app page,
+ *   3. erase (+ blank check) + write + read-back-verify every other app page,
  *      the page holding the name slot first, so an interrupted update almost
  *      never leaves the ESC without an identity to retry against;
- *   5. write + verify the first app page LAST;
- *   6. read the EEPROM page again and require it unchanged; reset the ESC.
- * Every erase/write offset goes through assertAm32Writable, so the
- * bootloader and the EEPROM page cannot be touched. The shipped
- * AM32_*_VERIFIED constants are hard-checked here AND inside
+ *   4. EEPROM: erase the page at 0x7C00 (must read back all 0xFF), write the
+ *      pinned 192-byte defaults, read back and compare byte for byte. It sits
+ *      AFTER every other app page is verified and BEFORE the first page: until
+ *      the first page is written the bootloader will not start the app, so an
+ *      interruption in the EEPROM step can never leave a runnable app with a
+ *      blank or half-written settings page. (Settings are lost either way;
+ *      the identity needed for a retry lives in the app area, not here.)
+ *   5. write + verify the first app page LAST (this is what makes the app bootable);
+ *   6. read the EEPROM page once more and require it equal to the defaults
+ *      (192 B) followed by 0xFF; reset the ESC.
+ * App erase/write offsets go through assertAm32Writable, so they can never
+ * reach the bootloader or the EEPROM page. The EEPROM step goes only through
+ * assertAm32EepromWritable / assertAm32EepromPageErasable (exactly
+ * 0x7C00..0x7CBF). The AM32_*_VERIFIED flags (or the staging bench switch,
+ * staging.ts) are hard-checked here AND inside
  * FourWay.pageEraseUnchecked/writeUnchecked (F1); the `gates` argument of
  * flashAm32 only feeds the reason text and can never unlock a write.
  */
 
 import {
   AM32_APP_START,
+  AM32_EEPROM_DEFAULTS_SIZE,
+  AM32_EEPROM_LAYOUT_VERSION_INDEX,
   AM32_EEPROM_OFFSET,
   AM32_EEPROM_SIZE,
   AM32_GATES,
@@ -36,13 +50,15 @@ import {
   AT32F421_FLASH_BASE,
   FOURWAY_MAX_CHUNK,
   FOURWAY_MODE_ARM_BLB,
+  assertAm32EepromPageErasable,
+  assertAm32EepromWritable,
   assertAm32WritesEnabled,
   assertAm32Writable,
   type Am32Gates,
 } from './am32-layout.ts';
 import type {FourWay, FourWayDeviceInfo} from './fourway.ts';
 import {escDirectWriteGate, knownEscNamesIn, type ReadResult} from './gates.ts';
-import {hexContainsAscii, hexSlice, parseIntelHex} from './intel-hex.ts';
+import {hexContainsAscii, hexSlice, imageFromBinary, parseIntelHex, type HexImage} from './intel-hex.ts';
 import type {FirmwareRelease} from './manifest.ts';
 import type {EscMcu, EscTarget} from './targets.ts';
 
@@ -132,16 +148,28 @@ export type Am32Image = {
   pages: Am32Page[];
   start: number;
   end: number;
+  /** The pinned EEPROM v4 defaults (192 B), or null when the image is only for the esc-configurator download. flashAm32 refuses null. */
+  eeprom: Uint8Array | null;
 };
 
 /**
- * Parse and check a verified AM32 .hex for one ESC target. Rejects: data in
+ * Parse and check a verified AM32 app for one ESC target: Intel HEX text, or a
+ * raw .bin (Uint8Array, staging) that starts at the AM32 app address. `eeprom`
+ * is the pinned defaults blob: exactly 192 bytes, EEPROM layout version 4.
+ * Rejects: data in
  * the bootloader, in the EEPROM page or past the app area; an image whose
  * name slot (0x08007BE0, same parser as the ESC read) is not exactly the
  * target's name; an image that also carries another ESC's name anywhere.
  */
-export function prepareAm32Image(hexText: string, target: EscTarget): Am32Image {
-  const hex = parseIntelHex(hexText);
+export function prepareAm32Image(source: string | Uint8Array, target: EscTarget, eeprom: Uint8Array | null = null): Am32Image {
+  if (eeprom !== null) {
+    if (eeprom.length !== AM32_EEPROM_DEFAULTS_SIZE) {
+      throw new Am32Error(`The EEPROM defaults must be ${AM32_EEPROM_DEFAULTS_SIZE} bytes, not ${eeprom.length}.`);
+    }
+    if (eeprom[AM32_EEPROM_LAYOUT_VERSION_INDEX] !== 4) throw new Am32Error('The EEPROM defaults are not EEPROM layout v4.');
+  }
+  const hex: HexImage =
+    typeof source === 'string' ? parseIntelHex(source) : imageFromBinary(source, AT32F421_FLASH_BASE + AM32_APP_START);
   const start = hex.start - AT32F421_FLASH_BASE;
   const end = hex.end - AT32F421_FLASH_BASE;
   if (hex.start < AT32F421_FLASH_BASE) throw new Am32Error('The file has data below ESC flash.');
@@ -173,10 +201,10 @@ export function prepareAm32Image(hexText: string, target: EscTarget): Am32Image 
   if (!pages.length || pages[0]?.offset !== AM32_APP_START) {
     throw new Am32Error(`The image must start at the AM32 app address 0x${(AT32F421_FLASH_BASE + AM32_APP_START).toString(16)}.`);
   }
-  return {target: target.target, pages, start, end};
+  return {target: target.target, pages, start, end, eeprom: eeprom ? Uint8Array.from(eeprom) : null};
 }
 
-export type Am32Phase = 'identify' | 'backup' | 'erase-first' | 'write' | 'write-first' | 'check-eeprom' | 'reset';
+export type Am32Phase = 'identify' | 'erase-first' | 'write' | 'write-eeprom' | 'write-first' | 'check-eeprom' | 'reset';
 
 function equal(a: Uint8Array, b: Uint8Array): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
@@ -213,9 +241,9 @@ export async function flashAm32(
   });
   if (!gate.allowed) throw new Am32Error(`Not writing: ${gate.reasons.join(' ')}`);
   for (const p of image.pages) assertAm32Writable(p.offset, p.data.length);
-
-  onProgress('backup', 0, total);
-  const eepromBefore = await fw.readRange(AM32_EEPROM_OFFSET, AM32_EEPROM_SIZE);
+  const eeprom = image.eeprom;
+  if (!eeprom) throw new Am32Error('The image has no EEPROM defaults; refusing a partial install.');
+  assertAm32EepromWritable(AM32_EEPROM_OFFSET, eeprom.length);
 
   const [firstPage, ...others] = image.pages;
   if (!firstPage || firstPage.offset !== AM32_APP_START) throw new Am32Error('Image has no first app page.');
@@ -231,15 +259,34 @@ export async function flashAm32(
     await writeAndVerify(fw, p);
     onProgress('write', ++done, total);
   }
+  onProgress('write-eeprom', done, total);
+  await writeEepromDefaults(fw, eeprom);
   onProgress('write-first', done, total);
   await writeAndVerify(fw, firstPage);
   onProgress('check-eeprom', ++done, total);
-  const eepromAfter = await fw.readRange(AM32_EEPROM_OFFSET, AM32_EEPROM_SIZE);
-  if (!equal(eepromBefore, eepromAfter)) {
-    throw new Am32Error('The ESC settings page changed during the update. Check the ESC settings in esc-configurator.');
-  }
+  await checkEeprom(fw, eeprom);
   onProgress('reset', done, total);
   await fw.resetEsc(index);
+}
+
+/** Erase the EEPROM page (must read back all 0xFF), write the pinned defaults, read back and compare. */
+async function writeEepromDefaults(fw: FourWay, eeprom: Uint8Array): Promise<void> {
+  assertAm32EepromWritable(AM32_EEPROM_OFFSET, eeprom.length);
+  assertAm32EepromPageErasable(AM32_EEPROM_OFFSET);
+  if (eeprom.length > FOURWAY_MAX_CHUNK) throw new Am32Error('EEPROM defaults do not fit one write.');
+  await fw.pageEraseUnchecked(AM32_EEPROM_OFFSET / AM32_PAGE_SIZE);
+  const blank = await fw.readRange(AM32_EEPROM_OFFSET, AM32_EEPROM_SIZE);
+  if (blank.some((b) => b !== 0xff)) throw new Am32Error('The ESC did not erase the settings page. Stopped before writing the defaults.');
+  await fw.writeUnchecked(AM32_EEPROM_OFFSET, eeprom);
+  await checkEeprom(fw, eeprom);
+}
+
+/** The settings page must equal the pinned defaults (first 192 bytes) and be erased (0xFF) after them. */
+async function checkEeprom(fw: FourWay, eeprom: Uint8Array): Promise<void> {
+  const page = await fw.readRange(AM32_EEPROM_OFFSET, AM32_EEPROM_SIZE);
+  if (!equal(page.subarray(0, eeprom.length), eeprom) || page.subarray(eeprom.length).some((b) => b !== 0xff)) {
+    throw new Am32Error('The ESC settings page does not equal the pinned defaults after the write.');
+  }
 }
 
 /**

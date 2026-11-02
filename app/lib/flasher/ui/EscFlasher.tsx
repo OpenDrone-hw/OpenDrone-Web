@@ -1,9 +1,11 @@
 /**
  * ESC (OpenESC, AM32 on AT32F421) flow on /flash.
  *
- *   - Firmware: pinned release -> same-origin download -> SHA-256 -> Intel
- *     HEX parse -> address guard (no bootloader, no EEPROM page) -> the image
- *     must carry the chosen ESC's firmware name and no other.
+ *   - Firmware: pinned release -> download -> SHA-256 -> Intel HEX (or, on a
+ *     staging bench build, raw .bin) parse -> address guard (no bootloader, no
+ *     app write into the EEPROM page) -> the image must carry the chosen ESC's
+ *     firmware name and no other. A direct install also writes the pinned
+ *     EEPROM v4 defaults (ESC settings are reset).
  *   - Read ESC info (Chromium, Web Serial): through a Betaflight FC
  *     (MSP_SET_PASSTHROUGH, then the 4-way interface) or a USB link adapter
  *     speaking 4-way directly. Read-only: bootloader signature (MCU) and the
@@ -48,11 +50,11 @@ const SERIAL_BAUD = 115200;
 
 const PHASE_TEXT: Record<Am32Phase, string> = {
   identify: 'Checking the ESC again.',
-  backup: 'Reading the ESC settings page.',
   'erase-first': 'Clearing the firmware start so a half-finished update cannot run.',
   write: 'Writing and checking firmware.',
   'write-first': 'Writing the firmware start last.',
-  'check-eeprom': 'Checking the ESC settings are unchanged.',
+  'write-eeprom': 'Resetting the ESC settings to the pinned defaults and checking them.',
+  'check-eeprom': 'Checking the ESC settings equal the pinned defaults.',
   reset: 'Restarting the ESC.',
 };
 
@@ -120,11 +122,11 @@ export function EscFlasher({
     try {
       const problems = escTargetProblems({chosen: target, manifestTarget: release.target});
       if (problems.length) throw new Error(problems.join(' '));
-      const {bytes} = await fetchVerifiedFirmware(release, window.location.href);
-      const image = prepareAm32Image(new TextDecoder().decode(bytes), target);
+      const {bytes, eeprom} = await fetchVerifiedFirmware(release, window.location.href);
+      const image = prepareAm32Image(release.kind === 'am32-bin' ? bytes : new TextDecoder().decode(bytes), target, eeprom);
       if (seq !== prepareSeq.current) return;
       setVerified({target, release, bytes, image, fileName: releaseFileName(release)});
-      const msg = `Firmware verified: SHA-256 matches the pinned release, AM32 image for ${target.target}, bootloader and settings areas untouched.`;
+      const msg = `Firmware verified: SHA-256 matches the pinned release, AM32 image for ${target.target}, bootloader untouched.${image.eeprom ? ' Installing also resets the ESC settings to the pinned defaults.' : ''}`;
       setFwStatus({kind: 'ok', text: msg});
       say(msg);
     } catch (e) {
@@ -200,7 +202,10 @@ export function EscFlasher({
         setProgress({done, total});
         say(`${PHASE_TEXT[phase]} ${Math.round((done / Math.max(total, 1)) * 100)} percent.`);
       });
-      setConnStatus({kind: 'ok', text: `Installed ${verified.release.version} on ESC ${index + 1}.`});
+      setConnStatus({
+        kind: 'ok',
+        text: `Installed ${verified.release.version} on ESC ${index + 1}. The ESC settings are now the pinned defaults: set the low-voltage cutoff in esc-configurator before flying.`,
+      });
     } catch (e) {
       setConnStatus({
         kind: 'error',
@@ -375,6 +380,12 @@ function EscRow({
       <strong>ESC {id.index + 1}:</strong> chip {show(id.mcu)}, firmware {show(id.firmwareName)}{' '}
       <strong>{problems.length ? 'MISMATCH' : 'Match'}</strong>
       <BlockedReasons title="Direct install not available. Use esc-configurator with the verified file:" reasons={gate.reasons} />
+      {gate.allowed ? (
+        <p className="mt-2 text-[15px]">
+          <strong>Installing resets the ESC settings to defaults.</strong> Set the low-voltage cutoff in
+          esc-configurator afterwards: the defaults do not protect the battery.
+        </p>
+      ) : null}
       {gate.allowed ? (
         <button type="button" className="btn-primary btn-sm mt-2" onClick={onWrite} disabled={writing !== null}>
           Install on ESC {id.index + 1}

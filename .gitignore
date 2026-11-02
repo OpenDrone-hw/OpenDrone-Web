@@ -69,3 +69,6 @@ brand.zip
 
 # Held bench evidence (needs-review), never public
 .testing-held/
+
+# Staging bench firmware copies (staging switch only): never commit
+/public/firmware-staging/

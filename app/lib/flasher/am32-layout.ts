@@ -13,8 +13,12 @@
  *   0x0000 .. 0x0FFF  AM32 bootloader (4 KB)             NEVER written
  *   0x1000 .. 0x7BFF  AM32 application                   written + verified
  *     0x7BE0 .. 0x7BFF  name slot (AM32 FILE_NAME), last 32 bytes of the app area: ESC identity
- *   0x7C00 .. 0x7FFF  EEPROM / settings page (1 KB)      NEVER written, compared before/after
+ *   0x7C00 .. 0x7CBF  EEPROM v4 settings (192 B)         erased + written with the PINNED defaults blob, read back
+ *   0x7CC0 .. 0x7FFF  rest of the EEPROM page            erased with the page, must read back 0xFF
  *   0x8000 ..         rest of a 64 KB part               NEVER written
+ *
+ * STAGING: a private bench build may stand in for the AM32_*_VERIFIED flags
+ * (staging.ts, `CONST || stagingBenchEnabled()`). The constants stay false.
  *
  * FAIL-CLOSED GATES: every constant below that was not confirmed on an
  * OpenESC with the AM32 bootloader is covered by an AM32_*_VERIFIED flag.
@@ -23,6 +27,8 @@
  * override. Flip a flag only in a reviewed PR that records how it was checked
  * (e.g. a read-only dump over the 4-way interface compared with a SWD read).
  */
+
+import {stagingBenchEnabled} from './staging.ts';
 
 /** AT32F421 main flash base (reference manual memory map). */
 export const AT32F421_FLASH_BASE = 0x08000000;
@@ -39,6 +45,13 @@ export const AM32_APP_START = AM32_BOOTLOADER_SIZE;
 /** AM32 EEPROM (settings) page offset on F421 builds, and its size (one page). */
 export const AM32_EEPROM_OFFSET = 0x7c00;
 export const AM32_EEPROM_SIZE = AM32_PAGE_SIZE;
+
+/**
+ * The pinned EEPROM v4 defaults blob (the QC image's settings) is exactly this
+ * long. The EEPROM write guard (assertAm32EepromWritable) allows exactly
+ * 0x7C00..0x7CBF and nothing else.
+ */
+export const AM32_EEPROM_DEFAULTS_SIZE = 192;
 
 /** The application must end before the EEPROM page. */
 export const AM32_APP_END = AM32_EEPROM_OFFSET;
@@ -164,9 +177,23 @@ function am32TestSeamOpen(): boolean {
   return !!p?.versions?.node && p.env?.[AM32_TEST_SEAM_ENV] === AM32_TEST_SEAM_VALUE;
 }
 
-/** True only when every shipped AM32_*_VERIFIED constant is true (or the Node-only test seam is open). Reads the constants, never a parameter. */
+/**
+ * The flags as the code must read them: each shipped constant OR the staging
+ * bench switch (staging.ts). The constants themselves are never changed.
+ */
+export function effectiveAm32Gates(): Am32Gates {
+  const staging = stagingBenchEnabled();
+  return {
+    AM32_LAYOUT_VERIFIED: AM32_LAYOUT_VERIFIED || staging,
+    AM32_SIGNATURE_VERIFIED: AM32_SIGNATURE_VERIFIED || staging,
+    AM32_EEPROM_LAYOUT_VERIFIED: AM32_EEPROM_LAYOUT_VERIFIED || staging,
+    AM32_WRITE_PROCEDURE_VERIFIED: AM32_WRITE_PROCEDURE_VERIFIED || staging,
+  };
+}
+
+/** True only when every effective flag is true (constant or staging switch), or the Node-only test seam is open. Reads the constants, never a parameter. */
 export function am32WritesEnabled(): boolean {
-  return Object.values(AM32_GATES).every(Boolean) || am32TestSeamOpen();
+  return Object.values(effectiveAm32Gates()).every(Boolean) || am32TestSeamOpen();
 }
 
 export class Am32WriteDisabledError extends Error {
@@ -212,6 +239,26 @@ export function assertAm32Writable(offset: number, length: number): void {
   if (end > AM32_APP_END) {
     throw new Am32AddressError(`Refusing to write ${hex(offset)}..${hex(end)}: past the end of the application area.`);
   }
+}
+
+/**
+ * The EEPROM guard. The ONLY way to write the settings page: exactly
+ * 0x7C00..0x7CBF (the pinned 192-byte defaults blob). Any other offset or
+ * length, including partial or longer ranges and everything in the bootloader
+ * or the rest of the flash, throws. App writes still go through
+ * assertAm32Writable, which keeps refusing the EEPROM page.
+ */
+export function assertAm32EepromWritable(offset: number, length: number): void {
+  if (offset !== AM32_EEPROM_OFFSET || length !== AM32_EEPROM_DEFAULTS_SIZE) {
+    throw new Am32AddressError(
+      `Refusing EEPROM write ${hex(offset)}+${length}: only ${hex(AM32_EEPROM_OFFSET)}..${hex(AM32_EEPROM_OFFSET + AM32_EEPROM_DEFAULTS_SIZE)} (the pinned defaults) may be written.`,
+    );
+  }
+}
+
+/** Erase guard for the settings page: only the page that starts at 0x7C00. */
+export function assertAm32EepromPageErasable(offset: number): void {
+  if (offset !== AM32_EEPROM_OFFSET) throw new Am32AddressError(`Refusing to erase ${hex(offset)}: not the EEPROM page at ${hex(AM32_EEPROM_OFFSET)}.`);
 }
 
 /** Convert an absolute AT32F421 address to the 16-bit 4-way offset, or throw. */

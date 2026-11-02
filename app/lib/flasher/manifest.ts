@@ -17,9 +17,14 @@
  * Pure module (WebCrypto only), so it runs under `node --test`.
  */
 
+import {stagingBenchEnabled} from './staging.ts';
 import {escTargetByName, targetByName, type EscTarget, type FlasherTarget} from './targets.ts';
 
-export type FirmwareKind = 'betaflight-uf2' | 'am32-hex';
+/** am32-bin: a raw app binary that starts at the AM32 app address (staging bench build only). */
+export type FirmwareKind = 'betaflight-uf2' | 'am32-hex' | 'am32-bin';
+
+/** A second pinned file that belongs to a release (the ESC EEPROM v4 defaults). */
+export type PinnedAsset = {url: string; size: number; sha256: string};
 
 export type FirmwareRelease = {
   /** Allowlisted target name (Betaflight target or AM32 FILE_NAME). */
@@ -36,6 +41,8 @@ export type FirmwareRelease = {
   sha256: string;
   /** True only for an entry built from a non-null pin (firmware-manifest.ts PINNED). */
   published: boolean;
+  /** AM32 only: the pinned EEPROM v4 defaults written after the app. Must itself be a valid pinned asset. */
+  eepromDefaults?: PinnedAsset;
   notes?: string;
 };
 
@@ -86,11 +93,28 @@ export function isAllowedFirmwareUrl(raw: unknown): raw is string {
   return FIRMWARE_URL_ALLOWLIST.some((a) => u.hostname === a.host && a.path.test(u.pathname));
 }
 
+/**
+ * Same-origin bench files, ONLY while the staging bench switch is on
+ * (staging.ts). A relative path under /firmware-staging/ with a plain file
+ * name. With the switch off this is always false, so production stays on
+ * isAllowedFirmwareUrl (GitHub release assets) alone.
+ */
+export function isStagingFirmwareUrl(raw: unknown): raw is string {
+  return stagingBenchEnabled() && typeof raw === 'string' && /^\/firmware-staging\/[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(raw);
+}
+
+const urlOk = (raw: unknown): raw is string => isAllowedFirmwareUrl(raw) || isStagingFirmwareUrl(raw);
+
+function assetOk(a: PinnedAsset | undefined): boolean {
+  return !!a && urlOk(a.url) && Number.isInteger(a.size) && a.size > 0 && a.size <= MAX_FILE && SHA256_RE.test(a.sha256);
+}
+
 /** True only for a complete, published entry. Everything else is a placeholder. */
 export function isPublished(r: FirmwareRelease): r is FirmwareRelease & {url: string} {
   return (
     r.published === true &&
-    isAllowedFirmwareUrl(r.url) &&
+    urlOk(r.url) &&
+    (r.eepromDefaults === undefined || assetOk(r.eepromDefaults)) &&
     typeof r.version === 'string' &&
     r.version.trim().length > 0 &&
     (r.channel === 'stable' || r.channel === 'beta' || r.channel === 'alpha') &&
@@ -117,7 +141,7 @@ export function resolveRelease(r: FirmwareRelease): ResolvedRelease {
   }
   const esc = escTargetByName(r.target);
   if (esc) {
-    if (r.kind !== 'am32-hex') throw new ManifestError(`${r.target} is an ESC but the entry is ${r.kind}.`);
+    if (r.kind !== 'am32-hex' && r.kind !== 'am32-bin') throw new ManifestError(`${r.target} is an ESC but the entry is ${r.kind}.`);
     return {product: 'esc', target: esc, release: r};
   }
   throw new ManifestError(`Manifest entry for unknown target ${r.target}.`);
@@ -138,15 +162,37 @@ export async function sha256Hex(bytes: Uint8Array): Promise<string> {
   return hex(new Uint8Array(await crypto.subtle.digest('SHA-256', buf(bytes))));
 }
 
+function checkBytes(what: string, size: number, sha256: string, bytes: Uint8Array): Promise<string> {
+  if (bytes.length !== size) throw new ManifestError(`${what} size ${bytes.length} does not match the pinned size (${size}).`);
+  return sha256Hex(bytes).then((digest) => {
+    if (digest !== sha256) throw new ManifestError(`${what} checksum does not match the pinned SHA-256.`);
+    return digest;
+  });
+}
+
 /** Check bytes against a manifest entry. Placeholders always fail. */
 export async function verifyFirmwareBytes(release: FirmwareRelease, bytes: Uint8Array): Promise<string> {
   if (!isPublished(release)) throw new FirmwareNotPublishedError(release);
-  if (bytes.length !== release.size) {
-    throw new ManifestError(`Firmware size ${bytes.length} does not match the pinned size (${release.size}).`);
+  return checkBytes('Firmware', release.size, release.sha256, bytes);
+}
+
+/** Allowlisted https URL as before; a staging path only when the switch is on and it stays on the page's own origin. */
+function resolveUrl(raw: string, baseUrl: string): URL {
+  if (isStagingFirmwareUrl(raw)) {
+    const base = new URL(baseUrl);
+    const u = new URL(raw, base);
+    if (u.origin !== base.origin) throw new ManifestError('Staging firmware must come from the same origin as this page.');
+    return u;
   }
-  const digest = await sha256Hex(bytes);
-  if (digest !== release.sha256) throw new ManifestError('Firmware checksum does not match the pinned SHA-256.');
-  return digest;
+  const u = new URL(raw, baseUrl);
+  if (!isAllowedFirmwareUrl(u.href)) throw new ManifestError('Firmware URL is not an allowlisted release URL.');
+  return u;
+}
+
+async function download(url: URL, fetcher: typeof fetch): Promise<Uint8Array> {
+  const res = await fetcher(url.toString(), {cache: 'no-store'});
+  if (!res.ok) throw new ManifestError(`Firmware download failed (HTTP ${res.status}).`);
+  return new Uint8Array(await res.arrayBuffer());
 }
 
 /** Download a release file (allowlisted URL only) and verify it. Placeholders are never fetched. */
@@ -154,18 +200,20 @@ export async function fetchVerifiedFirmware(
   release: FirmwareRelease,
   baseUrl: string,
   fetcher: typeof fetch = fetch,
-): Promise<{bytes: Uint8Array; sha256: string}> {
+): Promise<{bytes: Uint8Array; sha256: string; eeprom: Uint8Array | null}> {
   if (!isPublished(release)) throw new FirmwareNotPublishedError(release);
-  const url = new URL(release.url, baseUrl);
-  if (!isAllowedFirmwareUrl(url.href)) throw new ManifestError('Firmware URL is not an allowlisted release URL.');
-  const res = await fetcher(url.toString(), {cache: 'no-store'});
-  if (!res.ok) throw new ManifestError(`Firmware download failed (HTTP ${res.status}).`);
-  const bytes = new Uint8Array(await res.arrayBuffer());
+  const bytes = await download(resolveUrl(release.url, baseUrl), fetcher);
   const sha256 = await verifyFirmwareBytes(release, bytes);
-  return {bytes, sha256};
+  let eeprom: Uint8Array | null = null;
+  const e = release.eepromDefaults;
+  if (e) {
+    eeprom = await download(resolveUrl(e.url, baseUrl), fetcher);
+    await checkBytes('EEPROM defaults', e.size, e.sha256, eeprom);
+  }
+  return {bytes, sha256, eeprom};
 }
 
 export function releaseFileName(r: FirmwareRelease): string {
-  const ext = r.kind === 'am32-hex' ? 'hex' : 'uf2';
+  const ext = r.kind === 'am32-hex' ? 'hex' : r.kind === 'am32-bin' ? 'bin' : 'uf2';
   return r.url?.split('/').pop() ?? `${r.target}-${r.version}.${ext}`;
 }

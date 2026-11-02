@@ -12,6 +12,7 @@
  * (QFN-80) + 2 MB. Betaflight names the targets after the die (RP2350A/B).
  */
 
+import {stagingBenchEnabled} from './staging.ts';
 import {UF2_FAMILY} from './uf2.ts';
 
 export type ChipPackage = 'QFN60' | 'QFN80';
@@ -109,6 +110,21 @@ export function escTargetByName(name: string): EscTarget | undefined {
  */
 export const CHIP_PACKAGE_VERIFIED = false;
 export const PICOBOOT_WRITE_VERIFIED = false;
+
+/**
+ * The two flags as the code must read them: each constant OR the staging
+ * bench switch (staging.ts). Every check of CHIP_PACKAGE_VERIFIED /
+ * PICOBOOT_WRITE_VERIFIED goes through here (or through the same
+ * `CONST || stagingBenchEnabled()`); the constants stay false. This replaces
+ * only the "unverified on hardware" flags, never the target or package match.
+ */
+export function effectiveFcGates(): {CHIP_PACKAGE_VERIFIED: boolean; PICOBOOT_WRITE_VERIFIED: boolean} {
+  const staging = stagingBenchEnabled();
+  return {
+    CHIP_PACKAGE_VERIFIED: CHIP_PACKAGE_VERIFIED || staging,
+    PICOBOOT_WRITE_VERIFIED: PICOBOOT_WRITE_VERIFIED || staging,
+  };
+}
 
 /** USB IDs. */
 export const RPI_VID = 0x2e8a;

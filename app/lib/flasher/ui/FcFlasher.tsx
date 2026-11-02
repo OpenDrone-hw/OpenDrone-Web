@@ -22,11 +22,11 @@
 
 import {useEffect, useId, useMemo, useRef, useState} from 'react';
 import {releasesFor} from '../firmware-manifest.ts';
-import {FC_GATES, fcDirectWriteGate, fcInstallEnabled, fcTargetProblems, knownFcNamesIn, type MspReport} from '../gates.ts';
+import {fcDirectWriteGate, fcInstallEnabled, fcTargetProblems, knownFcNamesIn, type MspReport} from '../gates.ts';
 import {fetchVerifiedFirmware, isPublished, releaseFileName, type FirmwareRelease} from '../manifest.ts';
 import {MspConnection, type BoardInfo} from '../msp.ts';
 import {Picoboot, chipPackageResult, type ChipInfo, type FlashPhase} from '../picoboot.ts';
-import {FLASHER_TARGETS, type FlasherTarget} from '../targets.ts';
+import {CHIP_PACKAGE_VERIFIED, FLASHER_TARGETS, PICOBOOT_WRITE_VERIFIED, type FlasherTarget} from '../targets.ts';
 import {imageContainsAscii, parseInfoUf2, parseUf2, type Uf2Image} from '../uf2.ts';
 import {
   BlockedReasons,
@@ -36,6 +36,7 @@ import {
   pickerErrText,
   saveBytes,
   useBeforeUnloadWhile,
+  useStagingBench,
   type Status,
 } from './status.tsx';
 
@@ -49,7 +50,6 @@ type Verified = {
   fileName: string;
 };
 
-const DIRECT_INSTALL_ENABLED = FC_GATES.CHIP_PACKAGE_VERIFIED && FC_GATES.PICOBOOT_WRITE_VERIFIED;
 
 export function FcFlasher({
   hasUsb,
@@ -76,6 +76,9 @@ export function FcFlasher({
   /** True while the direct-install panel holds the board open or is writing: the board choice is locked (R1). */
   const [deviceBusy, setDeviceBusy] = useState(false);
 
+  // CONST || staging switch, read after mount (hydration-safe). DirectInstall still runs the full fcDirectWriteGate.
+  const staging = useStagingBench();
+  const directInstallEnabled = staging || (CHIP_PACKAGE_VERIFIED && PICOBOOT_WRITE_VERIFIED);
   const releases = useMemo(() => (board ? releasesFor(board.target) : []), [board]);
   useEffect(() => onBusyChange(deviceBusy), [deviceBusy, onBusyChange]);
 
@@ -301,7 +304,7 @@ export function FcFlasher({
             </ol>
             <InfoUf2Check onFile={checkInfoUf2} status={infoUf2Status} />
             {hasUsb ? (
-              DIRECT_INSTALL_ENABLED ? (
+              directInstallEnabled ? (
                 <DirectInstall target={board} verified={verifiedForBoard} say={say} onBusyChange={setDeviceBusy} />
               ) : (
                 <p className="mt-6 text-[15px]">
