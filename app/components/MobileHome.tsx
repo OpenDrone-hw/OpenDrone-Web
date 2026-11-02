@@ -6,7 +6,6 @@ import {ProductItem} from '~/components/ProductItem';
 import {EarlyBirdNote, anyEarlyPrice} from '~/components/EarlyPriceCue';
 import {AnimatedNumber} from '~/components/AnimatedNumber';
 import {Txt} from '~/components/Txt';
-import {InlineAvailabilityBanner} from '~/components/AvailabilityBanner';
 import {copyText} from '~/lib/copy';
 import {PRODUCT_CONTENT, isConceptFor} from '~/lib/product-content';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
@@ -172,7 +171,6 @@ export function MobileHome({
         </div>
       </section>
 
-      <InlineAvailabilityBanner />
 
       <section
         className="home-mobile-build"

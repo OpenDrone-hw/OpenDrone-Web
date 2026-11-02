@@ -1962,13 +1962,16 @@ a.hero-build-add { text-decoration: none; }
   }
 }
 
-/* Test shop banner (Worker var TEST_BANNER): a slim fixed strip above the page, nothing when unset. The floating
-   header and the page start below it through --test-banner-h. */
-.test-banner {
+/* Top strips: thin full-width bars above the page, one shared look (gold, dark mono uppercase).
+   .test-banner (Worker var TEST_BANNER, staging only) and .avail-bar (the availability line, AvailabilityBar).
+   Both are fixed at the top and server-rendered, and their heights are CSS variables set from the markup
+   (--test-banner-h, --avail-bar-h), so the page and the floating header start below them from the first
+   paint: no layout shift. The pre-paint dismissal style in root.tsx sets --avail-bar-h to 0 and hides a
+   dismissed bar. The availability bar sits under the staging strip, with a 1px divider. */
+.top-strip {
   position: fixed;
-  inset: 0 0 auto 0;
-  z-index: 1000;
-  height: var(--test-banner-h);
+  left: 0;
+  right: 0;
   margin: 0;
   display: flex;
   align-items: center;
@@ -1985,120 +1988,73 @@ a.hero-build-add { text-decoration: none; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-body:has(.test-banner) {
-  --test-banner-h: 26px;
-  padding-top: var(--test-banner-h);
+.test-banner {
+  top: 0;
+  z-index: 1000;
+  height: var(--test-banner-h);
 }
-body:has(.test-banner) .site-header {
-  top: var(--test-banner-h);
+.avail-bar {
+  top: var(--test-banner-h, 0px);
+  z-index: 999;
+  height: var(--avail-bar-h);
+  padding-right: 2.25rem;
 }
-
-/* Availability card (AvailabilityBanner): floats bottom-left over the page, so no header, sticky rail or pinned scene
-   moves; the ChatFPV button keeps the bottom-right corner, also on phones. Hidden on phones while a bottom bar (pinned buy rail, cart
-   bar) holds that edge. Labels are text, not colour. */
-.avail-banner {
-  /* Lifted off the bottom edge so it clears the footer's bottom-left board drawing. */
-  --avail-banner-offset: 2rem;
-  position: fixed;
-  left: 1rem;
-  bottom: calc(var(--avail-banner-offset) + env(safe-area-inset-bottom, 0px));
-  /* --avail-banner-lift (set by AvailabilityBanner, with hysteresis): measured rise above [data-avail-avoid]
-     elements such as the homepage hero's wordmark and GitHub link. A transform only, so the move never
-     changes layout (no layout shift); eased, and a snap under prefers-reduced-motion. */
-  transform: translate3d(0, calc(-1 * var(--avail-banner-lift, 0px)), 0);
-  transition: transform 220ms ease-out;
-  will-change: transform;
-  z-index: 900;
-  /* A fixed width, not content-sized: the font swap (Inter) must not resize the card and move its button. */
-  width: min(30rem, calc(100vw - 2rem));
-  display: flex;
-  align-items: flex-start;
-  gap: 0.25rem;
-  padding: 0.625rem 0.25rem 0.625rem 0.875rem;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-strong);
-  border-radius: 8px;
-  color: var(--color-text);
-  font-size: 13px;
-  line-height: 1.4;
+body:has(.test-banner) .avail-bar {
+  border-top: 1px solid color-mix(in srgb, var(--color-on-accent) 35%, transparent);
 }
-.avail-banner-lines {
-  flex: 1;
+.avail-bar-text {
+  margin: 0;
   min-width: 0;
-  margin: 0.375rem 0;
-  display: grid;
-  gap: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-/* Two labelled lines: the labels sit in a fixed column, so the text after them never moves when the
-   label's font swaps in (no layout shift). */
-.avail-banner[data-lines="2"] .avail-banner-line {
-  display: grid;
-  grid-template-columns: 10.5rem 1fr;
-  column-gap: 0.4rem;
+.avail-bar-short { display: none; }
+@media (max-width: 768px) {
+  .avail-bar-long { display: none; }
+  .avail-bar-short { display: inline; }
 }
-.avail-banner[data-lines="2"] .avail-banner-line strong { white-space: nowrap; }
-.avail-banner-line strong {
-  color: var(--color-gold-text);
-  font-family: var(--font-mono);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-.avail-banner-close {
-  flex: none;
-  width: 2.75rem;
-  height: 2.75rem;
+.avail-bar-close {
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.75rem;
+  height: 1.75rem;
   display: grid;
   place-items: center;
-  background: none;
+  padding: 0;
   border: 0;
-  border-radius: 6px;
-  color: var(--color-text-muted);
-  font-size: 18px;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
   cursor: pointer;
 }
-.avail-banner-close:hover { color: var(--color-text); }
-.avail-banner-close:focus-visible { outline: 2px solid var(--color-gold); outline-offset: -2px; }
-@media (prefers-reduced-motion: reduce) {
-  .avail-banner { transition: none; }
+.avail-bar-close:focus-visible { outline: 2px solid var(--color-on-accent); outline-offset: -2px; }
+body:has(.test-banner) { --test-banner-h: 26px; }
+body:has(.avail-bar) { --avail-bar-h: 26px; }
+body:has(.test-banner),
+body:has(.avail-bar) {
+  padding-top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px));
 }
-/* Room at the end of the page so the last content (footer links, form buttons) scrolls clear of the
-   floating card. A constant from the first paint (the layout div carries data-avail-reserve when the card
-   can show; PageLayout, server-rendered), never measured or changed while the card moves, hides or is
-   dismissed, so the footer cannot jump. The pre-paint dismissal style in root.tsx zeroes it for a visitor
-   who dismissed the card. Phones have no floating card (in-flow card instead), so no room there. */
-:root { --avail-banner-reserve: 9rem; }
-@media (min-width: 769px) {
-  [data-avail-reserve] { padding-bottom: calc(var(--avail-banner-reserve) + env(safe-area-inset-bottom, 0px)); }
+body:has(.test-banner) .site-header,
+body:has(.avail-bar) .site-header {
+  top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px));
 }
-@media (max-width: 959px) {
-  .avail-banner { --avail-banner-offset: 1.5rem; left: 0.75rem; right: 5rem; width: auto; max-width: none; }
-  body:has(.buy-rail.is-pinned) .avail-banner:not(.avail-banner--inline),
-  body:has(.cart-bar) .avail-banner:not(.avail-banner--inline) { display: none; }
+
+/* Sticky footer: the layout fills the viewport below the top strips, <main> grows, and the footer is the
+   last thing on the page: flush with the bottom on short pages, nothing under it on long ones. */
+.site-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--test-banner-h, 0px) - var(--avail-bar-h, 0px));
+  min-height: calc(100dvh - var(--test-banner-h, 0px) - var(--avail-bar-h, 0px));
 }
-/* In the page flow (InlineAvailabilityBanner): every page but the homepage at all widths, and the phone
-   homepage (the MobileHome query, no 3D hero) under its hero. Never a fixed overlay, so it cannot cover
-   content. A compact card whose left edge sits on the content rail. */
-.avail-banner.avail-banner--inline {
-  position: static;
-  /* Fixed width (not fit-content) for the same no-shift reason as the floating card. */
-  width: min(30rem, var(--rail-width));
-  max-width: min(40rem, var(--rail-width));
-  margin: 0 auto 0 calc((100% - var(--rail-width)) / 2);
+.site-layout > .site-main {
+  flex: 1 0 auto;
 }
-/* PDP: the product column is narrower than the rail (.product-page, app.css: min(var(--rail-width), 1102px)),
-   so the card starts where that column starts. */
-.site-main:has(> .product-page) > .avail-banner.avail-banner--inline {
-  max-width: min(40rem, var(--rail-width), 1102px);
-  margin-left: calc((100% - min(var(--rail-width), 1102px)) / 2);
-}
-@media (max-width: 768px), (max-height: 500px) and (orientation: landscape) {
-  .avail-banner:not(.avail-banner--inline) { display: none; }
-  .avail-banner.avail-banner--inline { width: auto; max-width: none; margin: 0 1rem 1rem; }
-  .site-main:has(> .product-page) > .avail-banner.avail-banner--inline {
-    width: min(var(--rail-width), 1102px);
-    max-width: none;
-    margin: 0 auto 1rem;
-  }
+.site-layout > footer {
+  flex: none;
+  margin-bottom: 0;
 }
 
 /* App-backed shop pages (cart, order status, news): the site's rail, type and gold, no framework classes. */

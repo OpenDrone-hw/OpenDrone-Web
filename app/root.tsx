@@ -375,7 +375,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
           nonce={nonce}
           suppressHydrationWarning
           dangerouslySetInnerHTML={{
-            __html: `try{if(localStorage.getItem(${JSON.stringify(GEO_BANNER_DISMISSED_KEY)})==='1'){var s=document.createElement('style');s.textContent='.avail-banner{display:none!important}[data-avail-reserve]{padding-bottom:0!important}';document.head.appendChild(s)}}catch(e){}`,
+            __html: `try{if(localStorage.getItem(${JSON.stringify(GEO_BANNER_DISMISSED_KEY)})==='1'){var s=document.createElement('style');s.textContent='.avail-bar{display:none!important}body{--avail-bar-h:0px!important}';document.head.appendChild(s)}}catch(e){}`,
           }}
         />
         <link rel="stylesheet" href={resetStyles}></link>
@@ -430,7 +430,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
       </head>
       <body className="bg-[var(--color-bg)] text-[var(--color-text)] min-h-screen flex flex-col">
         {data?.testBanner ? (
-          <p className="test-banner" role="status">
+          <p className="top-strip test-banner" role="status">
             {data.testBanner}
           </p>
         ) : null}

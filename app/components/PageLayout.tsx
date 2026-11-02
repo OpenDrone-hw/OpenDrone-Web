@@ -11,7 +11,7 @@ import {Txt} from '~/components/Txt';
 import {CartAddedDialog} from '~/components/CartAddedDialog';
 import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
 import type {CommerceHandoff} from '~/lib/shop-links';
-import {AvailabilityBanner, InlineAvailabilityBanner} from '~/components/AvailabilityBanner';
+import {AvailabilityBar} from '~/components/AvailabilityBanner';
 import {availabilityBannerHiddenOn, type GeoAvailabilityRegion} from '~/lib/geo-availability';
 import type {Locale} from '~/lib/i18n';
 
@@ -49,17 +49,15 @@ export function PageLayout({
         <MobileMenuAside accountUrl={accountUrl} />
         <CartAddedDialog />
         <div
-          className={isHomepage ? 'homepage-layout' : ''}
-          data-avail-reserve={isHomepage && shopOpen && !availabilityBannerHiddenOn(pathname) ? '' : undefined}
+          className={isHomepage ? 'site-layout homepage-layout' : 'site-layout'}
         >
           <a className="skip-link" href="#main-content">
             <Txt id="chrome.skip_link" />
           </a>
           <RouteProgress />
-          {/* Ordering is open: the batch line for the visitor's country. Floats bottom-left only on the
-              homepage (its pinned hero has no flow to sit in; it rises above the wordmark there). Every
-              other page gets it in the flow at the top of <main>. Never on /flash or /guides/*. */}
-          {isHomepage && shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBanner geo={geo} /> : null}
+          {/* Ordering is open: the batch line for the visitor's country, a bar at the very top (under the
+              staging strip on staging). Never on /flash or /guides/*. */}
+          {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBar geo={geo} /> : null}
           <Header
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}
@@ -68,7 +66,6 @@ export function PageLayout({
           />
           <main id="main-content" className="site-main">
             {/* The card in the flow, all widths; the phone homepage places it under its hero instead. */}
-            {isHomepage ? null : <InlineAvailabilityBanner />}
             {children}
           </main>
           {/* The home scene is one pinned viewport; the footer sits under it,

@@ -105,8 +105,23 @@ export const GEO_BANNER_COPY: Record<Locale, {title: string; eu: string; intl: s
   fr: {title: 'Disponibilité', eu: 'UE', intl: 'Hors UE', dismiss: 'Fermer l’avis de disponibilité'},
 };
 
+/** The shorter line per region for the bar on phones (one line, no wrap). */
+export const GEO_BAR_SHORT: Record<Locale, Record<Exclude<GeoAvailabilityRegion, 'fallback'>, string>> = {
+  en: {eu: 'In stock, ships in days', intl: 'Pre-order, ships Mar 2027'},
+  nl: {eu: 'Op voorraad, binnen dagen verzonden', intl: 'Pre-order, verzending mrt 2027'},
+  fr: {eu: 'En stock, expédié sous quelques jours', intl: 'Précommande, mars 2027'},
+};
+
+/** The bar's one line: "EU: In stock in Belgium, ships in a few days" (the visitor's region), or both
+ *  regions joined with " · " when the country is unknown. `short` is the phone line. Upper-cased by CSS. */
+export function geoBarText(region: GeoAvailabilityRegion, locale: Locale, short: boolean): string {
+  return geoBannerLines(region, locale)
+    .map((l) => `${l.label}: ${(short ? GEO_BAR_SHORT[locale][l.region] : l.text).replace(/\.$/, '')}`)
+    .join(' · ');
+}
+
 /** localStorage key of a dismissed banner; bump it when the lines change. */
-export const GEO_BANNER_DISMISSED_KEY = 'od-availability-banner-v1';
+export const GEO_BANNER_DISMISSED_KEY = 'od-availability-bar-v1';
 
 /** Routes where the availability card is never rendered: tool and how-to pages, where a floating
  *  card over steps and buttons only gets in the way. Prefix match on whole segments, with or

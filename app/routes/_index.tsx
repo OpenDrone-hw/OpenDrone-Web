@@ -620,7 +620,6 @@ function DesktopHome({
             return (
               <h1
                 className={`hero-wordmark${splashSettled ? ' is-settled' : ''}`}
-                data-avail-avoid
                 style={{
                   // Stays put bottom-left through the whole scroll now - the
                   // brand anchors the hero while the product cards reveal.
@@ -712,7 +711,6 @@ function DesktopHome({
             target="_blank"
             rel="noopener noreferrer"
             className={`hero-github${splashSettled ? ' is-visible' : ''}`}
-            data-avail-avoid
             style={{opacity: splashSettled ? 1 : 0}}
             aria-label="GitHub"
           >
