@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {
   BOOT_HINT,
+  boardAfterFailure,
+  bootselPickErrorText,
   continueUpdate,
+  PICKER_BLOCKED_TEXT,
+  PICKER_CLOSED_TEXT,
+  pickBootsel,
   DONE_TEXT,
   GATED_TEXT,
   startUpdate,
@@ -102,7 +107,7 @@ function rig(o: Opts = {}) {
     },
     findBootsel: async () => (o.permitted ? {id: 'rp2350-boot'} : null),
     openPicoboot: async (dev) => {
-      log.push(dev ? 'open-permitted' : 'requestDevice');
+      log.push((dev as {id?: string}).id === 'rp2350-boot' ? 'open-permitted' : 'open-picked');
       if (o.picker === 'fail') throw new DOMException('No device selected.', 'NotFoundError');
       return pb;
     },
@@ -123,10 +128,11 @@ describe('F: one-button FC update', () => {
     const r = rig();
     const first = await startUpdate(r.deps);
     assert.equal(first.kind, 'need-usb');
-    assert.ok(!r.log.includes('requestDevice'));
+    assert.ok(!r.log.some((x) => x.startsWith('open')), 'nothing opened without the Continue click');
+    assert.ok(!r.stages.includes('usb'), 'no "choose RP2350 Boot" line before a window can open');
     if (first.kind !== 'need-usb') return;
-    assert.deepEqual(await continueUpdate(r.deps, first), {kind: 'done'});
-    assert.ok(r.log.includes('requestDevice') && r.log.includes('flash'));
+    assert.deepEqual(await continueUpdate(r.deps, {...first, device: {id: 'picked'}}), {kind: 'done'});
+    assert.ok(r.log.includes('open-picked') && r.log.includes('flash'));
   });
 
   it('identify decides the board: a Mini gets the Mini file and installs only with QFN60 + Mini firmware', async () => {
@@ -151,7 +157,7 @@ describe('F: one-button FC update', () => {
       assert.ok(!r.log.includes('flash'));
     }
     const pick = rig({picker: 'fail'});
-    const p = await continueUpdate(pick.deps, {board: LITE, prepared: prepared(LITE)});
+    const p = await continueUpdate(pick.deps, {board: LITE, prepared: prepared(LITE), device: {id: 'picked'}});
     assert.equal(p.kind === 'failed' && p.stage, 'usb');
     const fl = rig({flash: 'fail', permitted: true});
     const f = await startUpdate(fl.deps);
@@ -166,16 +172,16 @@ describe('F: one-button FC update', () => {
     if (res.kind !== 'failed') return;
     assert.equal(res.board?.target, LITE.target);
     assert.ok(res.prepared);
-    assert.deepEqual(await continueUpdate(r.deps, {board: res.board, prepared: res.prepared}), {kind: 'done'});
+    assert.deepEqual(await continueUpdate(r.deps, {board: res.board, prepared: res.prepared, device: {id: 'picked'}}), {kind: 'done'});
     assert.equal(r.log.filter((x) => x.startsWith('prepare')).length, 1);
   });
 
   it('resume when the board was never identified asks for the board first; nothing is opened', async () => {
     const r = rig();
-    const res = await continueUpdate(r.deps, {board: null, prepared: null});
+    const res = await continueUpdate(r.deps, {board: null, prepared: null, device: {id: 'picked'}});
     assert.equal(res.kind, 'failed');
     if (res.kind === 'failed') assert.match(res.text, /Choose which board/);
-    assert.ok(!r.log.includes('requestDevice'));
+    assert.ok(!r.log.some((x) => x.startsWith('open')));
   });
 
   it('refusals end the flow with nothing written', async () => {
@@ -204,7 +210,7 @@ describe('F: one-button FC update', () => {
   it('gates off (production): the flow never starts', async () => {
     const r = rig({gatesOn: false});
     assert.deepEqual(await startUpdate(r.deps), {kind: 'refused', text: GATED_TEXT});
-    assert.deepEqual(await continueUpdate(r.deps, {board: LITE, prepared: prepared(LITE)}), {kind: 'refused', text: GATED_TEXT});
+    assert.deepEqual(await continueUpdate(r.deps, {board: LITE, prepared: prepared(LITE), device: {id: 'picked'}}), {kind: 'refused', text: GATED_TEXT});
     assert.deepEqual(r.log, []);
   });
 
@@ -212,5 +218,40 @@ describe('F: one-button FC update', () => {
     assert.equal(STAGE_TEXT.usb, 'Now choose "RP2350 Boot" in the second window.');
     assert.equal(BOOT_HINT, 'Hold the BOOT button on the board while plugging in USB, then Continue.');
     assert.match(DONE_TEXT, /check your settings/);
+  });
+});
+
+describe('F bench fix: the RP2350 Boot window opens only from the Continue click', () => {
+  const VID = 0x2e8a;
+  const PID = 0x000f;
+  it('pickBootsel calls requestDevice synchronously, before any await, with the RP2350 Boot filter', () => {
+    const calls: unknown[] = [];
+    const usb = {requestDevice: (o: unknown) => (calls.push(o), new Promise<unknown>(() => {}))};
+    void pickBootsel(usb, null, VID, PID);
+    assert.deepEqual(calls, [{filters: [{vendorId: VID, productId: PID}]}], 'called in the same tick as the click');
+  });
+  it('an already-permitted RP2350 Boot skips the window', async () => {
+    let called = false;
+    const usb = {requestDevice: async () => ((called = true), {})};
+    const dev = {id: 'permitted'};
+    assert.equal(await pickBootsel(usb, dev, VID, PID), dev);
+    assert.equal(called, false);
+  });
+  it('continueUpdate never opens a window itself: no device means a visible failure, nothing opened', async () => {
+    const r = rig();
+    const res = await continueUpdate(r.deps, {board: LITE, prepared: prepared(LITE)});
+    assert.equal(res.kind, 'failed');
+    if (res.kind === 'failed') assert.match(res.text, /Click Continue/);
+    assert.ok(!r.log.some((x) => x.startsWith('open')));
+  });
+  it('closed window vs a window the browser refused (no click activation) get different messages', () => {
+    assert.equal(bootselPickErrorText(new DOMException('No device selected.', 'NotFoundError')), PICKER_CLOSED_TEXT);
+    assert.equal(bootselPickErrorText(new DOMException('Must be handling a user gesture.', 'SecurityError')), PICKER_BLOCKED_TEXT);
+    assert.notEqual(PICKER_CLOSED_TEXT, PICKER_BLOCKED_TEXT);
+  });
+  it('after a failure the identified board stays selected, so Continue is usable', () => {
+    assert.equal(boardAfterFailure(null, LITE), LITE);
+    assert.equal(boardAfterFailure(MINI, LITE), MINI);
+    assert.equal(boardAfterFailure(null, null), null);
   });
 });

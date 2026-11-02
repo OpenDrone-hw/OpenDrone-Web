@@ -38,6 +38,36 @@ export const STAGE_TEXT: Record<Stage, string> = {
   restart: 'Restarting the board.',
 };
 export const DONE_TEXT = 'Done. Reconnect in Betaflight and check your settings.';
+/** Shown after "bl rom" while the page waits for the click that opens the WebUSB window. */
+export const NEED_USB_TEXT = 'The board is in bootloader mode. Click Continue, then choose "RP2350 Boot".';
+export const PICKER_CLOSED_TEXT = 'Picker closed. Click Continue again.';
+export const PICKER_BLOCKED_TEXT = 'The browser did not open the device window. Click Continue again.';
+
+/** Minimal navigator.usb for the pick. */
+export type UsbLike = {requestDevice(options: {filters: {vendorId: number; productId: number}[]}): Promise<unknown>};
+
+/**
+ * The RP2350 Boot pick, for a click handler. Returns an already-permitted device without a window;
+ * otherwise calls requestDevice SYNCHRONOUSLY (before any await), so the click's activation is still fresh.
+ */
+export function pickBootsel(usb: UsbLike | undefined, permitted: unknown | null, vid: number, pid: number): Promise<unknown> {
+  if (permitted != null) return Promise.resolve(permitted);
+  if (!usb) return Promise.reject(new Error('This browser has no WebUSB.'));
+  return usb.requestDevice({filters: [{vendorId: vid, productId: pid}]});
+}
+
+/** After a failure, the board to preselect: this attempt's identify result, else the last one. */
+export function boardAfterFailure<T>(thisAttempt: T | null, lastIdentified: T | null): T | null {
+  return thisAttempt ?? lastIdentified;
+}
+
+/** Plain text for a failed pick: closed window vs a window the browser refused to open (no click activation). */
+export function bootselPickErrorText(e: unknown): string {
+  const name = e instanceof Error || (typeof DOMException !== 'undefined' && e instanceof DOMException) ? (e as Error).name : '';
+  if (name === 'NotFoundError') return PICKER_CLOSED_TEXT;
+  if (name === 'SecurityError' || name === 'NotAllowedError') return PICKER_BLOCKED_TEXT;
+  return errText(e);
+}
 export const BOOT_HINT = 'Hold the BOOT button on the board while plugging in USB, then Continue.';
 export const GATED_TEXT = 'Direct install is off for now. Use Other ways.';
 
@@ -67,8 +97,8 @@ export type FlowDeps = {
   prepare: (target: FlasherTarget) => Promise<Prepared>;
   /** An already-permitted RP2350 Boot device once it appears (up to timeoutMs), or null. */
   findBootsel: (timeoutMs: number) => Promise<unknown | null>;
-  /** Open that device, or (device = null) ask with the WebUSB picker: needs a click. */
-  openPicoboot: (device: unknown | null) => Promise<PicobootLike>;
+  /** Open a device the click handler picked (pickBootsel) or the browser already permits. Never opens a picker. */
+  openPicoboot: (device: unknown) => Promise<PicobootLike>;
   onStage: (stage: Stage, percent?: number) => void;
   /** Tests only: the hardware flags as fcDirectWriteGate takes them. The page leaves this unset (constants || staging switch). */
   gates?: FcGates;
@@ -129,7 +159,7 @@ export async function startUpdate(deps: FlowDeps): Promise<FlowResult> {
   } finally {
     await conn?.close().catch(() => {});
   }
-  deps.onStage('usb');
+  // Still "Restarting into the bootloader." while waiting: no window opens here, so don't ask the user to choose one.
   const device = await deps.findBootsel(10_000).catch(() => null);
   if (device == null) return {kind: 'need-usb', board, prepared};
   return continueUpdate(deps, {board, prepared, device});
@@ -143,6 +173,9 @@ export async function continueUpdate(
   if (!deps.gatesOn()) return {kind: 'refused', text: GATED_TEXT};
   const board = ctx.board;
   if (!board) return failed('usb', 'Choose which board it is first.', null, null);
+  // The device comes from the click handler (pickBootsel), never from a picker opened here: by now the
+  // click's activation may have expired (bench, 2026-11-02).
+  if (ctx.device == null) return failed('usb', 'Click Continue to choose "RP2350 Boot".', board, ctx.prepared);
   let prepared = ctx.prepared && ctx.prepared.target.target === board.target ? ctx.prepared : null;
   if (!prepared) {
     deps.onStage('check');
@@ -155,9 +188,9 @@ export async function continueUpdate(
   deps.onStage('usb');
   let pb: PicobootLike;
   try {
-    pb = await deps.openPicoboot(ctx.device ?? null);
+    pb = await deps.openPicoboot(ctx.device);
   } catch (e) {
-    return failed('usb', pickerErrText(e), board, prepared);
+    return failed('usb', errText(e), board, prepared);
   }
   try {
     deps.onStage('check');

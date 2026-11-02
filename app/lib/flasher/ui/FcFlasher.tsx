@@ -16,8 +16,12 @@ import {ChoiceLadder} from '~/components/ChoiceLadder';
 import {FIRMWARE_MANIFEST, releasesFor} from '../firmware-manifest.ts';
 import {
   BOOT_HINT,
+  boardAfterFailure,
+  bootselPickErrorText,
   continueUpdate,
   DONE_TEXT,
+  NEED_USB_TEXT,
+  pickBootsel,
   STAGE_TEXT,
   startUpdate,
   type FlowDeps,
@@ -99,7 +103,28 @@ export function FcFlasher({
   /** What the last attempt learned, so Continue resumes at the WebUSB stage. */
   const ctx = useRef<{board: FlasherTarget | null; prepared: Prepared | null}>({board: null, prepared: null});
   const [resumeBoard, setResumeBoard] = useState<FlasherTarget | null>(null);
+  /** The board the last identify found; kept across attempts so a failure can preselect it. */
+  const lastBoard = useRef<FlasherTarget | null>(null);
+  /** An RP2350 Boot device the browser already permits (polled while waiting), so Continue can skip the window. */
+  const permittedBootsel = useRef<unknown | null>(null);
   const running = run.kind === 'running';
+  const waitingForUsb = run.kind === 'need-usb' || run.kind === 'failed';
+  useEffect(() => {
+    if (!waitingForUsb || typeof navigator === 'undefined' || !navigator.usb) return;
+    let stop = false;
+    const poll = async () => {
+      const dev = (await navigator.usb!.getDevices().catch(() => [])).find(
+        (d) => d.vendorId === RPI_VID && d.productId === RP2350_BOOTSEL_PID,
+      );
+      if (!stop) permittedBootsel.current = dev ?? null;
+    };
+    void poll();
+    const id = setInterval(() => void poll(), 1000);
+    return () => {
+      stop = true;
+      clearInterval(id);
+    };
+  }, [waitingForUsb]);
   useBeforeUnloadWhile(running && (run.stage === 'install' || run.stage === 'restart'));
   useEffect(() => onBusyChange(running), [running, onBusyChange]);
 
@@ -108,7 +133,7 @@ export function FcFlasher({
     openSerial: () => MspConnection.request(),
     prepare: prepareFor,
     findBootsel: findPermittedBootsel,
-    openPicoboot: (dev) => (dev ? Picoboot.open(dev as Parameters<typeof Picoboot.open>[0]) : Picoboot.request()),
+    openPicoboot: (dev) => Picoboot.open(dev as Parameters<typeof Picoboot.open>[0]),
     onStage: (stage, percent) => {
       setRun({kind: 'running', stage, percent});
       if (stage !== 'install' || percent === 0) say(STAGE_TEXT[stage].replace('{n}', String(percent ?? 0)));
@@ -122,11 +147,15 @@ export function FcFlasher({
       say(DONE_TEXT);
     } else if (r.kind === 'need-usb') {
       ctx.current = {board: r.board, prepared: r.prepared};
+      lastBoard.current = r.board;
       setRun({kind: 'need-usb'});
-      say(STAGE_TEXT.usb);
+      say(NEED_USB_TEXT);
     } else if (r.kind === 'failed') {
-      ctx.current = {board: r.board, prepared: r.prepared};
-      setResumeBoard(r.board);
+      // Keep (or recall) the identified board so Continue stays usable after a failure.
+      const board = boardAfterFailure(r.board, lastBoard.current);
+      if (r.board) lastBoard.current = r.board;
+      ctx.current = {board, prepared: r.prepared ?? (board && ctx.current.prepared?.target.target === board.target ? ctx.current.prepared : null)};
+      setResumeBoard(board);
       setRun({kind: 'failed', stage: r.stage, text: r.text});
       say(`${r.text} ${BOOT_HINT}`);
     } else {
@@ -136,30 +165,43 @@ export function FcFlasher({
   };
 
   const start = async () => {
-    if (running) return;
+    if (running || run.kind === 'need-usb') return;
     ctx.current = {board: null, prepared: null};
-    setResumeBoard(null);
     const r = await startUpdate(deps).catch(
       (e): FlowResult => ({kind: 'failed', stage: 'serial', text: errText(e), board: null, prepared: null}),
     );
     finish(r);
   };
-  const resume = async () => {
+  // Continue: the RP2350 Boot pick is the FIRST thing this click does (pickBootsel calls requestDevice
+  // synchronously), so the browser still treats it as a user gesture. Everything else follows.
+  const resume = () => {
     if (running) return;
     const board = ctx.current.board ?? resumeBoard;
-    const prepared = ctx.current.prepared;
-    const r = await continueUpdate(deps, {board, prepared}).catch(
-      (e): FlowResult => ({kind: 'failed', stage: 'usb', text: errText(e), board, prepared}),
+    const prepared = ctx.current.prepared && board && ctx.current.prepared.target.target === board.target ? ctx.current.prepared : null;
+    const picking = pickBootsel(navigator.usb, permittedBootsel.current, RPI_VID, RP2350_BOOTSEL_PID);
+    setRun({kind: 'running', stage: 'usb'});
+    say(STAGE_TEXT.usb);
+    void picking.then(
+      async (device) => {
+        const r = await continueUpdate(deps, {board, prepared, device}).catch(
+          (e): FlowResult => ({kind: 'failed', stage: 'usb', text: errText(e), board, prepared}),
+        );
+        finish(r);
+      },
+      (e: unknown) => {
+        console.warn('RP2350 Boot pick failed:', e instanceof Error ? e.name : e);
+        finish({kind: 'failed', stage: 'usb', text: bootselPickErrorText(e), board, prepared});
+      },
     );
-    finish(r);
   };
 
+  // The board picker shows when no identify result is known; it starts with the last identified board selected.
   const needsBoardForResume = run.kind === 'failed' && !ctx.current.board;
   const statusLine =
     run.kind === 'running'
       ? STAGE_TEXT[run.stage].replace('{n}', String(run.percent ?? 0))
       : run.kind === 'need-usb'
-        ? STAGE_TEXT.usb
+        ? NEED_USB_TEXT
         : run.kind === 'done'
           ? DONE_TEXT
           : null;
@@ -177,7 +219,7 @@ export function FcFlasher({
         <li>Chrome or Edge, OpenFC-Lite or Lite Mini.</li>
       </ul>
 
-      <button type="button" className="btn-primary" onClick={() => void start()} disabled={!canRun || running}>
+      <button type="button" className="btn-primary" onClick={() => void start()} disabled={!canRun || running || run.kind === 'need-usb'}>
         Update firmware
       </button>
       {!browserOk ? (
@@ -189,7 +231,7 @@ export function FcFlasher({
       <div aria-live="polite">
         {statusLine ? <p className="flash-stage">{statusLine}</p> : null}
         {run.kind === 'need-usb' ? (
-          <button type="button" className="btn-secondary mt-2" onClick={() => void resume()}>
+          <button type="button" className="btn-primary mt-2" onClick={resume}>
             Continue
           </button>
         ) : null}
@@ -207,12 +249,7 @@ export function FcFlasher({
                 items={FLASHER_TARGETS.map((t) => ({key: t.target, name: short(t), selected: resumeBoard?.target === t.target}))}
               />
             ) : null}
-            <button
-              type="button"
-              className="btn-secondary mt-2"
-              onClick={() => void resume()}
-              disabled={needsBoardForResume && !resumeBoard}
-            >
+            <button type="button" className="btn-primary mt-2" onClick={resume} disabled={needsBoardForResume && !resumeBoard}>
               Continue
             </button>
           </div>
