@@ -1,12 +1,15 @@
 import {useEffect, useRef, useState} from 'react';
+import {useLocation, useRouteLoaderData} from 'react-router';
 import {availBannerLift} from '~/lib/avail-banner-lift';
 import {
   GEO_BANNER_COPY,
   GEO_BANNER_DISMISSED_KEY,
+  availabilityBannerHiddenOn,
   geoBannerLines,
   type GeoAvailabilityRegion,
 } from '~/lib/geo-availability';
 import type {Locale} from '~/lib/i18n';
+import type {RootLoader} from '~/root';
 
 /** Space (px) kept between the end of the page and the card's top edge. */
 const GAP = 12;
@@ -34,7 +37,14 @@ function dismiss(setDismissed: (v: boolean) => void, card: HTMLElement | null) {
  * remembered in localStorage; the inline script in root.tsx hides it before
  * first paint for a visitor who dismissed it, so the page does not jump.
  */
-export function AvailabilityBanner({geo}: {geo: {region: GeoAvailabilityRegion; locale: Locale} | null | undefined}) {
+export function AvailabilityBanner({
+  geo,
+  inline = false,
+}: {
+  geo: {region: GeoAvailabilityRegion; locale: Locale} | null | undefined;
+  /** Phone layout: a card in the page flow (CSS shows it only where the fixed card is hidden). */
+  inline?: boolean;
+}) {
   const [dismissed, setDismissed] = useState(false);
   const ref = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -60,7 +70,8 @@ export function AvailabilityBanner({geo}: {geo: {region: GeoAvailabilityRegion; 
   // (display:none from the pre-paint dismissal style, or on phones behind a bottom bar); removed on unmount.
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    // The in-flow phone card reserves no space and never needs lifting.
+    if (!el || inline) return;
     const root = document.documentElement;
     let lift = 0;
     let frame = 0;
@@ -103,12 +114,12 @@ export function AvailabilityBanner({geo}: {geo: {region: GeoAvailabilityRegion; 
       document.removeEventListener('transitionend', schedule);
       root.style.removeProperty('--avail-banner-space');
     };
-  }, [dismissed, geo]);
+  }, [dismissed, geo, inline]);
   if (!geo || dismissed) return null;
   const words = GEO_BANNER_COPY[geo.locale];
   const lines = geoBannerLines(geo.region, geo.locale);
   return (
-    <section ref={ref} className="avail-banner" aria-label={words.title} data-lines={lines.length} lang={geo.locale}>
+    <section ref={ref} className={inline ? 'avail-banner avail-banner--inline' : 'avail-banner'} aria-label={words.title} data-lines={lines.length} lang={geo.locale}>
       <p className="avail-banner-lines">
         {lines.map((line) => (
           <span key={line.region} className="avail-banner-line">
@@ -121,4 +132,16 @@ export function AvailabilityBanner({geo}: {geo: {region: GeoAvailabilityRegion; 
       </button>
     </section>
   );
+}
+
+/**
+ * The phone card, in the page flow: placed by the page (top of <main> on most routes, under the
+ * hero on the phone homepage) so it never floats over content. Same data, dismissal and
+ * /flash + /guides rule as the fixed card; CSS shows exactly one of the two.
+ */
+export function InlineAvailabilityBanner() {
+  const {pathname} = useLocation();
+  const root = useRouteLoaderData<RootLoader>('root');
+  if (!root?.shopOpen || availabilityBannerHiddenOn(pathname)) return null;
+  return <AvailabilityBanner geo={root.geo} inline />;
 }

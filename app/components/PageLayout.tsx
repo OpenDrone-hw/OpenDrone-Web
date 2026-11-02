@@ -11,7 +11,7 @@ import {Txt} from '~/components/Txt';
 import {CartAddedDialog} from '~/components/CartAddedDialog';
 import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
 import type {CommerceHandoff} from '~/lib/shop-links';
-import {AvailabilityBanner} from '~/components/AvailabilityBanner';
+import {AvailabilityBanner, InlineAvailabilityBanner} from '~/components/AvailabilityBanner';
 import {availabilityBannerHiddenOn, type GeoAvailabilityRegion} from '~/lib/geo-availability';
 import type {Locale} from '~/lib/i18n';
 
@@ -62,6 +62,8 @@ export function PageLayout({
             shopOpen={shopOpen}
           />
           <main id="main-content" className="site-main">
+            {/* Phones: the same card in the flow; the homepage places it under its hero instead. */}
+            {isHomepage ? null : <InlineAvailabilityBanner />}
             {children}
           </main>
           {/* The home scene is one pinned viewport; the footer sits under it,
