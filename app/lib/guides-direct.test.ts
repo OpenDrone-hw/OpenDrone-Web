@@ -58,7 +58,7 @@ test('the /guides index entry and the OpenFC list follow the same gate', () => {
   assert.match(openfc.tool!.directTitle, /one click/);
   assert.doesNotMatch(openfc.tool!.title, ON_ONLY);
   const copy = JSON.parse(read('../../content/copy/guides.json')) as Record<string, string>;
-  assert.match(copy.flash_cta_note_direct, /one button in Chrome or Edge/);
+  assert.match(copy.flash_cta_note_direct, /In Chrome or Edge, .* one button: Update firmware\./);
   assert.match(copy.flash_cta_note_direct, /fallback/);
   assert.doesNotMatch(copy.flash_cta_note, ON_ONLY);
   const index = read('../routes/guides._index.tsx');

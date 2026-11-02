@@ -124,7 +124,7 @@ const FC_SAFETY: Callout = {
 const NEVER_UNPLUG: Callout = {
   kind: 'safety',
   title: 'Never unplug while it is writing',
-  text: 'Do not unplug the cable, close the browser tab or let the computer sleep while firmware is being written. If it happens anyway, the board can still be recovered: see [Recover a failed update](/guides/flash-openfc/recovery).',
+  text: 'Do not unplug the cable, close the browser tab or let the computer sleep while firmware is being written. If it happens anyway, see [Recover a failed update](/guides/flash-openfc/recovery).',
 };
 
 const ESC_SAFETY: Callout = {
@@ -207,7 +207,7 @@ const VERIFY_STEPS: GuideStep[] = [
     },
     {
       title: 'Check your settings',
-      text: 'Settings usually survive an update, but do not count on it. If your ports, modes or rates are back to defaults, paste the `diff all` file you saved into the CLI, press Enter, then type `save` and press Enter.',
+      text: 'An update can reset your settings. If your ports, modes or rates are back to defaults, paste the `diff all` file you saved into the CLI, press Enter, then type `save` and press Enter.',
       see: 'The board restarts and your settings are back.',
     },
 ];
@@ -219,7 +219,7 @@ const VERIFY_STEPS: GuideStep[] = [
 const BOOT_MODE_DIRECT: GuidePageDirect = {
   intro: [
     'Clicking **Update firmware** on the [firmware page](/guides/flash) restarts the board into bootloader mode for you, so usually you can skip this page. Use it when that step fails, or for the copy method.',
-    'In bootloader mode the board shows up as a drive called **RP2350**. The bootloader is built into the chip and cannot be erased, so you can always get back to it.',
+    'In bootloader mode the board shows up as a drive called **RP2350**. The bootloader is in ROM inside the chip and cannot be erased.',
   ],
   sections: [
     {
@@ -236,7 +236,14 @@ const INSTALL_DIRECT: GuidePageDirect = {
     'In Chrome or Edge, the [firmware page](/guides/flash) installs Betaflight with one button. It checks the file and the board before it writes anything.',
     "Installing resets the board's settings, so save them first.",
   ],
-  callouts: [FC_SAFETY, NEVER_UNPLUG],
+  callouts: [
+    FC_SAFETY,
+    {
+      kind: 'safety',
+      title: 'Never unplug while it is writing',
+      text: 'Do not unplug the cable, close the tab or let the computer sleep until the page says Done. If it happens anyway, see [Recover a failed update](/guides/flash-openfc/recovery).',
+    },
+  ],
   steps: [
     {
       title: 'Save your settings',
@@ -282,6 +289,10 @@ const INSTALL_DIRECT: GuidePageDirect = {
       fix: 'It refuses rather than guess. If you are sure the board is an OpenFC-Lite or Lite Mini, use the copy method above.',
     },
     {
+      problem: 'The page says "Not installing".',
+      fix: 'It found a different board or chip than the one you chose, and wrote nothing. Pick the board printed on yours and try again.',
+    },
+    {
       problem: 'The page says the file failed its check.',
       fix: 'Do not use that file. Reload the page and try again. If it keeps failing, open a [support ticket](/support).',
     },
@@ -325,7 +336,7 @@ const OPENFC: GuideFamily = {
         'Step 1 of updating an OpenFC flight controller: save your settings, then hold BOOT and plug in USB so the board shows up as a drive named RP2350.',
       intro: [
         'Before new firmware can go on, the flight controller has to be in **bootloader mode**. In this mode the board stops running Betaflight and shows up on your computer as a small USB drive called **RP2350**, ready to receive a firmware file.',
-        'The bootloader is built into the chip itself and cannot be erased. Whatever happens during an update, you can always get back to this mode.',
+        'The bootloader is in ROM inside the chip and cannot be erased.',
       ],
       tools: FC_TOOLS,
       callouts: [FC_SAFETY, BROWSER_NOTE],
@@ -459,7 +470,7 @@ const OPENFC: GuideFamily = {
         },
         {
           problem: 'The copy stopped halfway, or the cable came out.',
-          fix: 'Nothing is lost. Follow [Recover a failed update](/guides/flash-openfc/recovery).',
+          fix: 'Follow [Recover a failed update](/guides/flash-openfc/recovery).',
         },
         {
           problem: 'The page says "Firmware not published yet" and offers no download.',
@@ -491,7 +502,7 @@ const OPENFC: GuideFamily = {
         },
         {
           problem: 'The board name in `version` is not the board you have.',
-          fix: 'The firmware for the other board went on. Go back to the [firmware page](/guides/flash), pick the board printed on yours and install again. Bootloader mode always works, so this is fixable.',
+          fix: 'The firmware for the other board went on. Go back to the [firmware page](/guides/flash), pick the board printed on yours and install again.',
         },
         {
           problem: 'The version is not the one the firmware page showed.',
