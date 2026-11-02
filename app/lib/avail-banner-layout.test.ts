@@ -73,3 +73,24 @@ test('measurement is rAF-throttled and does every read before its single write',
   for (const read of ['getBoundingClientRect', 'getComputedStyle']) assert.ok(m.lastIndexOf(read) < write, `${read} before the write`);
   assert.equal(m.split('setProperty').length - 1, 1, 'one write');
 });
+
+test('no footer jump: the lazily loaded footer drawing has its box reserved with the board outline aspect', () => {
+  const css = read('../styles/site-ui.css');
+  const svg = read('../../public/boards/openfc-lite/board-lite.svg');
+  const [, , w, h] = svg.match(/viewBox="([^"]+)"/)![1]!.split(/\s+/).map(Number) as [number, number, number, number];
+  const pad = w * 0.18; // DrawingView: margins for the dimension line and its text
+  const m = css.match(/\.footer-view \{[^}]*aspect-ratio: ([\d.]+) \/ ([\d.]+);/);
+  assert.ok(m, '.footer-view reserves an aspect-ratio');
+  assert.ok(Math.abs(Number(m[1]) / Number(m[2]) - (w + 2 * pad) / (h + 2.4 * pad)) < 0.001);
+  const footer = read('../components/Footer.tsx');
+  assert.match(footer, /viewBox=\{`\$\{o\.x - pad\} \$\{o\.y - pad\} \$\{o\.w \+ pad \* 2\} \$\{o\.h \+ pad \* 2\.4\}`\}/, 'same margins as the CSS reserve');
+  assert.match(footer, /const pad = o \? o\.w \* 0\.18 : 0;/);
+});
+
+test('no shift from the font swap: both cards have a fixed width and two-line labels a fixed column', () => {
+  const css = read('../styles/site-ui.css');
+  const fixed = css.slice(css.indexOf('.avail-banner {'), css.indexOf('}', css.indexOf('.avail-banner {')));
+  assert.match(fixed, /width: min\(28rem, calc\(100vw - 2rem\)\);/);
+  assert.doesNotMatch(css.slice(css.indexOf('.avail-banner.avail-banner--inline {')), /^\s*width: fit-content;/m);
+  assert.match(css, /\.avail-banner\[data-lines="2"\] \.avail-banner-line \{\s+display: grid;\s+grid-template-columns: 8\.75rem 1fr;/);
+});
