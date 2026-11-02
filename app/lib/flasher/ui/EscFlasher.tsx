@@ -284,7 +284,11 @@ export function EscFlasher({
               <dt className="text-[var(--color-text-muted)]">Firmware</dt>
               <dd>{r.firmware}</dd>
               <dt className="text-[var(--color-text-muted)]">Target</dt>
-              <dd className="font-mono">{r.target}</dd>
+              {/* The firmware target, not the page key (OPENESC_30X30 is internal). */}
+              <dd>
+                <span className="font-mono">{esc?.firmwareName ?? r.target}</span>
+                {esc && esc.target !== esc.firmwareName ? ' (30x30 runs the 20x20 image)' : null}
+              </dd>
               {isPublished(r) ? (
                 <>
                   <dt className="text-[var(--color-text-muted)]">Version</dt>
