@@ -1998,7 +1998,9 @@ body:has(.test-banner) .site-header {
   --avail-banner-offset: 2rem;
   position: fixed;
   left: 1rem;
-  bottom: calc(var(--avail-banner-offset) + env(safe-area-inset-bottom, 0px));
+  /* --avail-banner-lift (set by AvailabilityBanner): measured rise above [data-avail-avoid] elements such as the
+     homepage hero's wordmark and GitHub link; 0 elsewhere. */
+  bottom: calc(var(--avail-banner-offset) + var(--avail-banner-lift, 0px) + env(safe-area-inset-bottom, 0px));
   z-index: 900;
   max-width: min(28rem, calc(100vw - 2rem));
   display: flex;
@@ -2044,7 +2046,7 @@ body:has(.test-banner) .site-header {
    buttons) scrolls clear of it. On the body, not main: the footer follows main. 0 when hidden. */
 body:has(.avail-banner) { padding-bottom: var(--avail-banner-space, 0px); }
 @media (max-width: 959px) {
-  .avail-banner { --avail-banner-offset: 1.5rem; left: 0.75rem; right: 5rem; max-width: none; bottom: calc(var(--avail-banner-offset) + env(safe-area-inset-bottom, 0px)); }
+  .avail-banner { --avail-banner-offset: 1.5rem; left: 0.75rem; right: 5rem; max-width: none; bottom: calc(var(--avail-banner-offset) + var(--avail-banner-lift, 0px) + env(safe-area-inset-bottom, 0px)); }
   body:has(.buy-rail.is-pinned) .avail-banner,
   body:has(.cart-bar) .avail-banner { display: none; }
 }

@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
+import {availBannerLift} from '~/lib/avail-banner-lift';
 import {
   GEO_BANNER_COPY,
   GEO_BANNER_DISMISSED_KEY,
@@ -61,18 +62,45 @@ export function AvailabilityBanner({geo}: {geo: {region: GeoAvailabilityRegion; 
     const el = ref.current;
     if (!el) return;
     const root = document.documentElement;
+    let lift = 0;
+    let frame = 0;
     const measure = () => {
+      frame = 0;
       const r = el.getBoundingClientRect();
-      const space = r.height > 0 ? Math.max(0, Math.ceil(window.innerHeight - r.top + GAP)) : 0;
+      // The card's box at rest: undo the current lift.
+      const rest = {top: r.top + lift, bottom: r.bottom + lift, left: r.left, right: r.right};
+      const space = r.height > 0 ? Math.max(0, Math.ceil(window.innerHeight - rest.top + GAP)) : 0;
       root.style.setProperty('--avail-banner-space', `${space}px`);
+      // Rise above elements that must stay visible (data-avail-avoid), measured, never a fixed px value.
+      const avoid = r.height > 0 ? [...document.querySelectorAll<HTMLElement>('[data-avail-avoid]')]
+        .filter((a) => getComputedStyle(a).visibility !== 'hidden' && Number(getComputedStyle(a).opacity) > 0)
+        .map((a) => a.getBoundingClientRect()) : [];
+      const next = availBannerLift(rest, avoid, window.innerHeight, GAP);
+      if (next !== lift) {
+        lift = next;
+        el.style.setProperty('--avail-banner-lift', `${lift}px`);
+      }
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
     };
     measure();
-    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule);
     ro?.observe(el);
-    window.addEventListener('resize', measure);
+    document.querySelectorAll('[data-avail-avoid]').forEach((a) => ro?.observe(a));
+    // The hero wordmark slides into its corner with a CSS transition and fades with the scroll.
+    window.addEventListener('resize', schedule);
+    window.addEventListener('scroll', schedule, {passive: true});
+    document.addEventListener('transitionend', schedule);
+    const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(schedule);
+    mo?.observe(document.body, {subtree: true, childList: true, attributeFilter: ['class', 'style']});
     return () => {
+      if (frame) cancelAnimationFrame(frame);
       ro?.disconnect();
-      window.removeEventListener('resize', measure);
+      mo?.disconnect();
+      window.removeEventListener('resize', schedule);
+      window.removeEventListener('scroll', schedule);
+      document.removeEventListener('transitionend', schedule);
       root.style.removeProperty('--avail-banner-space');
     };
   }, [dismissed, geo]);
