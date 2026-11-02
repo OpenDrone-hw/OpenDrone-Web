@@ -245,8 +245,9 @@ export function EscFlasher({
   return (
     <>
       <Step id="esc" n={1} title="Choose your ESC" open>
-        <p className="mb-3 text-[15px] text-[var(--color-text-muted)]">The name is printed on the board.</p>
+        <p className="flash-step-hint text-[15px] text-[var(--color-text-muted)]">The name is printed on the board.</p>
         <ChoiceLadder
+          className="flash-ladder"
           ariaLabel="Choose your ESC"
           disabledGroup={busy}
           tabbableKey={esc?.target ?? ESC_TARGETS[0]?.target}
@@ -340,6 +341,7 @@ export function EscFlasher({
               </p>
               <p className="mt-3 text-[15px]">Connected through</p>
               <ChoiceLadder
+                className="flash-ladder"
                 ariaLabel="Connected through"
                 disabledGroup={busy}
                 tabbableKey={via}

@@ -26,6 +26,7 @@ export function ChoiceLadder({
   tabbableKey,
   onSelect,
   disabledGroup = false,
+  className,
 }: {
   ariaLabel: string;
   items: ChoiceLadderItem[];
@@ -33,12 +34,14 @@ export function ChoiceLadder({
   onSelect: (key: string) => void;
   /** Whole group locked (a device is busy): every card disabled. */
   disabledGroup?: boolean;
+  /** Extra class on the group, for page-scoped spacing (the PDP passes none). */
+  className?: string;
 }) {
   const groupId = useId();
   const reducedMotion = useReducedMotion();
   return (
     <div
-      className="variant-ladder"
+      className={className ? `variant-ladder ${className}` : 'variant-ladder'}
       role="radiogroup"
       tabIndex={-1}
       aria-label={ariaLabel}

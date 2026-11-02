@@ -19029,3 +19029,45 @@ summary,
     width: 100%;
   }
 }
+
+/* /flash step cards, hint, options and the staging notice. Unlayered on
+   purpose: the global `section { padding: 1rem 0 }` and the h2/p resets are
+   unlayered too and beat Tailwind's padding and margin utilities. Card padding follows
+   the spacing scale: 16px on phones, 24/32px from tablet up. Locked steps
+   collapse to their header. `.flash-ladder` only widens the shared
+   variant-ladder on /flash; the PDP never sets it. */
+.flash-staging-notice {
+  margin: var(--sp-4) 0 var(--sp-6);
+}
+.flash-staging-notice p + p {
+  margin-top: var(--sp-1);
+}
+.flash-step {
+  margin-top: var(--sp-4);
+  padding: var(--sp-4);
+}
+.flash-step > h2 {
+  margin: 0;
+}
+.flash-step.is-locked {
+  padding-block: var(--sp-3);
+}
+@media (min-width: 768px) {
+  .flash-step {
+    padding: var(--sp-5) var(--sp-6);
+  }
+  .flash-step.is-locked {
+    padding-block: var(--sp-4);
+  }
+}
+.flash-step-hint {
+  margin: 0 0 var(--sp-4);
+}
+.flash-ladder .variant-ladder-track {
+  gap: var(--sp-3);
+}
+.flash-ladder .variant-tier {
+  justify-content: center;
+  min-height: 4.5rem;
+  padding: var(--sp-4) var(--sp-5);
+}

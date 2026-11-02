@@ -204,8 +204,9 @@ export function FcFlasher({
   return (
     <>
       <Step id="fc" n={1} title="Choose your board" open>
-        <p className="mb-3 text-[15px] text-[var(--color-text-muted)]">The name is printed on the board.</p>
+        <p className="flash-step-hint text-[15px] text-[var(--color-text-muted)]">The name is printed on the board.</p>
         <ChoiceLadder
+          className="flash-ladder"
           ariaLabel="Choose your board"
           disabledGroup={deviceBusy}
           tabbableKey={board?.target ?? FLASHER_TARGETS.find(isAvailable)?.target}

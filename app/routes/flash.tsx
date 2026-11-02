@@ -93,6 +93,7 @@ export default function FlashRoute() {
         <div className="mt-6">
           <h2 className="mb-2 text-[15px] font-semibold">What are you updating?</h2>
           <ChoiceLadder
+            className="flash-ladder"
             ariaLabel="What are you updating?"
             disabledGroup={busy}
             tabbableKey={product}

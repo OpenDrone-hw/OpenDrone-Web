@@ -37,7 +37,7 @@ export function StagingBenchNotice() {
   return (
     <div
       role="alert"
-      className="mt-4 border-2 border-[var(--color-error)] bg-[color-mix(in_srgb,var(--color-error)_12%,transparent)] p-4"
+      className="flash-staging-notice border-2 border-[var(--color-error)] bg-[color-mix(in_srgb,var(--color-error)_12%,transparent)] p-4"
     >
       <p className="flex items-center gap-2 text-[18px] font-bold text-[var(--color-text)]">
         <svg
@@ -95,8 +95,8 @@ export function Step({
   }, [open]);
   return (
     <section
-      className={`mt-4 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-bg-card)] p-4 md:p-5 ${
-        open ? '' : 'opacity-60'
+      className={`flash-step rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-bg-card)] ${
+        open ? '' : 'is-locked opacity-60'
       }`}
       aria-labelledby={`${id}-step-${n}`}
     >
