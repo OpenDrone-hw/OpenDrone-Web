@@ -3013,6 +3013,22 @@ function ProductPage() {
                 {say('product-chrome.firmware_freedom_link', 'Warranty')}
               </Link>
             </p>
+            {/* Flasher links: FC and ESC only. The 20x20 tier (OpenFC-Lite
+                Mini, OpenESC 20x20) has firmware; the 30x30 tier (OpenFC-Lite,
+                OpenESC 30x30) has none yet. /flash has its own
+                Permissions-Policy, so this is a full document load. */}
+            {product.handle === 'openfc-lite' || product.handle === 'openesc' ? (
+              <p>
+                <Link prefetch="none" reloadDocument to="/flash">
+                  {/^20/.test(activeTier.trim())
+                    ? say('product-chrome.firmware_flash_link', 'Flash firmware')
+                    : say(
+                        'product-chrome.firmware_flash_unavailable',
+                        'Firmware download: not available yet',
+                      )}
+                </Link>
+              </p>
+            ) : null}
           </div>
           <FirmwareSupport
             firmwareProject={content.firmware.project}

@@ -226,6 +226,10 @@ declare global {
     SUPPORT_CRM_API?: string;
     SUPPORT_COMMUNITY_ROUTE?: string;
     SUPPORT_FILES?: R2Bucket;
+    // Staging bench firmware (app/lib/flasher/staging-serve.ts). Declared ONLY
+    // in wrangler.bench.toml (a local R2 bucket), never in wrangler.toml or
+    // wrangler.production.toml.
+    FIRMWARE_STAGING?: R2Bucket;
     SUPPORT_STAFF_API_TOKEN?: string;
     // Bearer token for the full body of GET /api/status/campaign (paid counts, price sync, holds); without it the
     // route answers only allOpen and the status code. Worker secret.

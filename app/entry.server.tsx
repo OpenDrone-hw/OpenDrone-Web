@@ -136,9 +136,18 @@ export default async function handleRequest(
   );
   responseHeaders.set('X-Frame-Options', isDev ? 'SAMEORIGIN' : 'DENY');
   responseHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  /**
+   * USB and serial stay off site-wide. Only the web flasher page (/flash)
+   * gets them, same-origin only, because WebUSB/Web Serial calls are blocked
+   * by `usb=()` / `serial=()` even inside a user gesture. Trailing slashes
+   * are ignored (F10): React Router also serves `/flash/`, and a blocked
+   * policy there would make the page's "Reload" advice loop forever.
+   */
+  const devicePolicy =
+    new URL(request.url).pathname.replace(/\/+$/, '') === '/flash' ? 'serial=(self), usb=(self)' : 'serial=(), usb=()';
   responseHeaders.set(
     'Permissions-Policy',
-    'accelerometer=(), autoplay=(self "https://www.youtube-nocookie.com"), browsing-topics=(), camera=(), display-capture=(), fullscreen=(self "https://www.youtube-nocookie.com"), geolocation=(), gyroscope=(), hid=(), interest-cohort=(), magnetometer=(), microphone=(), midi=(), payment=(self), picture-in-picture=("https://www.youtube-nocookie.com"), screen-wake-lock=(), serial=(), usb=(), xr-spatial-tracking=()',
+    `accelerometer=(), autoplay=(self "https://www.youtube-nocookie.com"), browsing-topics=(), camera=(), display-capture=(), fullscreen=(self "https://www.youtube-nocookie.com"), geolocation=(), gyroscope=(), hid=(), interest-cohort=(), magnetometer=(), microphone=(), midi=(), payment=(self), picture-in-picture=("https://www.youtube-nocookie.com"), screen-wake-lock=(), ${devicePolicy}, xr-spatial-tracking=()`,
   );
   responseHeaders.set('Cross-Origin-Resource-Policy', 'same-site');
   if (new URL(request.url).protocol === 'https:') {
