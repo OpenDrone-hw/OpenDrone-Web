@@ -2547,6 +2547,12 @@ button.reset {
 .rich-content a {
   color: var(--color-gold-text-hover);
 }
+/* A button-styled link inside guide prose keeps the button's own text colour (it was gold on gold). */
+.rich-content a.btn-primary,
+.rich-content a.btn-primary:hover {
+  color: var(--color-on-accent);
+  text-decoration: none;
+}
 
 .rich-content h2,
 .rich-content h3 {
