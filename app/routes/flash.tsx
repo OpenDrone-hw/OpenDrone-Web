@@ -23,12 +23,13 @@
 
 import {useCallback, useEffect, useState} from 'react';
 import type {Route} from './+types/flash';
+import {ChoiceLadder} from '~/components/ChoiceLadder';
 import {isWebSerialAvailable} from '~/lib/flasher/msp';
 import {isWebUsbAvailable} from '~/lib/flasher/picoboot';
 import {policyAllows} from '~/lib/flasher/targets';
 import {EscFlasher} from '~/lib/flasher/ui/EscFlasher';
 import {FcFlasher} from '~/lib/flasher/ui/FcFlasher';
-import {StagingBenchNotice} from '~/lib/flasher/ui/status';
+import {InfoCallout, StagingBenchNotice} from '~/lib/flasher/ui/status';
 import {buildSeoMeta} from '~/lib/seo';
 
 export const meta: Route.MetaFunction = () =>
@@ -41,6 +42,7 @@ export const meta: Route.MetaFunction = () =>
 type Product = 'fc' | 'esc';
 
 export default function FlashRoute() {
+  const [checked, setChecked] = useState(false);
   const [hasUsb, setHasUsb] = useState(false);
   const [hasSerial, setHasSerial] = useState(false);
   const [blockedByPolicy, setBlockedByPolicy] = useState(false);
@@ -51,6 +53,7 @@ export default function FlashRoute() {
   const say = useCallback((text: string) => setAnnounce(text), []);
 
   useEffect(() => {
+    setChecked(true);
     setHasUsb(isWebUsbAvailable());
     setHasSerial(isWebSerialAvailable());
     setBlockedByPolicy((!!navigator.usb && !policyAllows('usb')) || (!!navigator.serial && !policyAllows('serial')));
@@ -74,39 +77,35 @@ export default function FlashRoute() {
           you start.
         </p>
         {blockedByPolicy ? (
-          <p className="mt-4 text-[15px]">
-            <strong>Note:</strong> USB access needs a fresh page load.{' '}
+          <InfoCallout role="alert">
+            <strong>USB access needs a fresh page load.</strong>{' '}
             <button type="button" className="underline" onClick={() => window.location.reload()}>
               Reload this page
             </button>
-          </p>
-        ) : !hasUsb && !hasSerial ? (
-          <p className="mt-4 text-[15px] text-[var(--color-text-muted)]">
-            <strong>Note:</strong> this browser cannot talk to USB devices directly (Safari and Firefox cannot). The
-            download method works in every browser.
-          </p>
+          </InfoCallout>
+        ) : checked && !hasUsb && !hasSerial ? (
+          <InfoCallout>
+            <strong>This browser cannot talk to USB devices directly</strong> (Safari and Firefox cannot). The download
+            method works in every browser.
+          </InfoCallout>
         ) : null}
 
-        <fieldset className="mt-6" disabled={busy}>
-          <legend className="text-[17px] font-semibold">What are you updating?</legend>
-          <label className="mt-2 flex items-center gap-2 text-[16px]">
-            <input type="radio" name="product" checked={product === 'fc'} onChange={() => setProduct('fc')} />
-            Flight controller (OpenFC-Lite, OpenFC-Lite Mini)
-          </label>
-          <label className="mt-2 flex items-center gap-2 text-[16px]">
-            <input type="radio" name="product" checked={product === 'esc'} onChange={() => setProduct('esc')} />
-            ESC (OpenESC)
-          </label>
-        </fieldset>
+        <div className="mt-6">
+          <h2 className="mb-2 text-[15px] font-semibold">What are you updating?</h2>
+          <ChoiceLadder
+            ariaLabel="What are you updating?"
+            disabledGroup={busy}
+            tabbableKey={product}
+            onSelect={(key) => setProduct(key as Product)}
+            items={[
+              {key: 'fc', name: 'Flight controller', selected: product === 'fc'},
+              {key: 'esc', name: 'ESC', selected: product === 'esc'},
+            ]}
+          />
+        </div>
 
         {product === 'fc' ? (
-          <>
-            <p className="mt-4 max-w-[68ch] text-[15px]">
-              If anything goes wrong, nothing is lost for good: hold the BOOT button while plugging in USB and the board
-              always comes back in bootloader mode.
-            </p>
-            <FcFlasher hasUsb={hasUsb} hasSerial={hasSerial} say={say} onBusyChange={setBusy} />
-          </>
+          <FcFlasher hasUsb={hasUsb} hasSerial={hasSerial} say={say} onBusyChange={setBusy} />
         ) : (
           <EscFlasher hasSerial={hasSerial} say={say} onBusyChange={setBusy} />
         )}

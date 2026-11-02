@@ -23,6 +23,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {ESC_CONFIGURATOR_URL} from '../am32-layout.ts';
 import {flashAm32, identifyEsc, prepareAm32Image, type Am32Image, type Am32Phase, type EscIdentity} from '../am32.ts';
+import {ChoiceLadder} from '~/components/ChoiceLadder';
 import {releasesFor} from '../firmware-manifest.ts';
 import {FourWay} from '../fourway.ts';
 import {escDirectWriteGate, escTargetProblems} from '../gates.ts';
@@ -221,16 +222,26 @@ export function EscFlasher({
   return (
     <>
       <Step id="esc" n={1} title="Choose your ESC" open>
-        <fieldset disabled={busy}>
-          <legend className="text-[15px] text-[var(--color-text-muted)]">The name is printed on the board.</legend>
-          {ESC_TARGETS.map((t) => (
-            <label key={t.target} className="mt-2 flex items-center gap-2 text-[16px]">
-              <input type="radio" name="esc-board" checked={esc?.target === t.target} onChange={() => chooseEsc(t)} />
-              {t.displayName} <span className="font-mono text-[13px] text-[var(--color-text-muted)]">{t.target}</span>
-            </label>
-          ))}
-        </fieldset>
-        <p className="mt-2 text-[15px] text-[var(--color-text-muted)]">OpenESC-30x30 firmware is not listed here yet.</p>
+        <p className="mb-3 text-[15px] text-[var(--color-text-muted)]">The name is printed on the board.</p>
+        <ChoiceLadder
+          ariaLabel="Choose your ESC"
+          disabledGroup={busy}
+          tabbableKey={esc?.target ?? ESC_TARGETS[0]?.target}
+          onSelect={(key) => {
+            const t = ESC_TARGETS.find((x) => x.target === key);
+            if (t) chooseEsc(t);
+          }}
+          items={[
+            ...ESC_TARGETS.map((t) => ({
+              key: t.target,
+              name: t.displayName.replace(/ \(.*\)$/, '').replace('OpenESC-', 'OpenESC ').replace('x', '×'),
+              tag: t.target,
+              selected: esc?.target === t.target,
+            })),
+            // No AM32 target yet: shown like the shop's coming-soon version.
+            {key: 'openesc-30x30', name: 'OpenESC 30×30', selected: false, disabled: true, tone: 'comingsoon' as const, flag: 'Coming soon'},
+          ]}
+        />
       </Step>
 
       <Step id="esc" n={2} title="Get the firmware" open={!!esc}>

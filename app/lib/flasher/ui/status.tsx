@@ -94,13 +94,58 @@ export function Step({
     wasOpen.current = open;
   }, [open]);
   return (
-    <section className="mt-10" aria-labelledby={`${id}-step-${n}`}>
-      <h2 id={`${id}-step-${n}`} ref={ref} tabIndex={-1} className="text-[20px] font-semibold">
-        Step {n}. {title}
-        {!open ? <span className="sr-only"> (not available yet)</span> : null}
+    <section
+      className={`mt-4 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-bg-card)] p-4 md:p-5 ${
+        open ? '' : 'opacity-60'
+      }`}
+      aria-labelledby={`${id}-step-${n}`}
+    >
+      <h2 id={`${id}-step-${n}`} ref={ref} tabIndex={-1} className="flex items-center gap-3 text-[18px] font-semibold">
+        <span
+          aria-hidden="true"
+          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border font-mono text-[13px] ${
+            open
+              ? 'border-[var(--color-accent)] bg-[var(--color-gold-soft)] text-[var(--color-text)]'
+              : 'border-[var(--color-border)] text-[var(--color-text-muted)]'
+          }`}
+        >
+          {n}
+        </span>
+        <span>
+          <span className="sr-only">Step {n}. </span>
+          {title}
+          {!open ? <span className="sr-only"> (not available yet)</span> : null}
+        </span>
       </h2>
-      {open ? <div className="mt-3">{children}</div> : null}
+      {open ? <div className="mt-4">{children}</div> : null}
     </section>
+  );
+}
+
+/** Icon + text note in the guide callout style (accent rail, soft gold surface). */
+export function InfoCallout({children, role}: {children: React.ReactNode; role?: 'alert'}) {
+  return (
+    <aside
+      role={role}
+      className="mt-4 flex items-start gap-3 border-l-2 border-[var(--color-accent)] bg-[var(--color-gold-soft)] p-4 text-[15px]"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        width="20"
+        height="20"
+        className="mt-0.5 shrink-0"
+        fill="none"
+        stroke="var(--color-accent)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v5M12 8v.5" />
+      </svg>
+      <div>{children}</div>
+    </aside>
   );
 }
 

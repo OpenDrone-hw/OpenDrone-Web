@@ -21,6 +21,7 @@
  */
 
 import {useEffect, useId, useMemo, useRef, useState} from 'react';
+import {ChoiceLadder} from '~/components/ChoiceLadder';
 import {releasesFor} from '../firmware-manifest.ts';
 import {fcDirectWriteGate, fcInstallEnabled, fcTargetProblems, knownFcNamesIn, type MspReport} from '../gates.ts';
 import {fetchVerifiedFirmware, isPublished, releaseFileName, type FirmwareRelease} from '../manifest.ts';
@@ -30,6 +31,7 @@ import {CHIP_PACKAGE_VERIFIED, FLASHER_TARGETS, PICOBOOT_WRITE_VERIFIED, type Fl
 import {imageContainsAscii, parseInfoUf2, parseUf2, type Uf2Image} from '../uf2.ts';
 import {
   BlockedReasons,
+  InfoCallout,
   StatusLine,
   Step,
   errText,
@@ -79,6 +81,10 @@ export function FcFlasher({
   // CONST || staging switch, read after mount (hydration-safe). DirectInstall still runs the full fcDirectWriteGate.
   const staging = useStagingBench();
   const directInstallEnabled = staging || (CHIP_PACKAGE_VERIFIED && PICOBOOT_WRITE_VERIFIED);
+  // Once any board has a published file, boards without one read as "coming soon"
+  // (disabled like the shop's version picker). While none has, all stay selectable.
+  const anyPublished = FLASHER_TARGETS.some((x) => releasesFor(x.target).some(isPublished));
+  const isAvailable = (t: FlasherTarget) => !anyPublished || releasesFor(t.target).some(isPublished);
   const releases = useMemo(() => (board ? releasesFor(board.target) : []), [board]);
   useEffect(() => onBusyChange(deviceBusy), [deviceBusy, onBusyChange]);
 
@@ -195,21 +201,29 @@ export function FcFlasher({
   return (
     <>
       <Step id="fc" n={1} title="Choose your board" open>
-        <fieldset disabled={deviceBusy}>
-          <legend className="text-[15px] text-[var(--color-text-muted)]">The name is printed on the board.</legend>
-          {FLASHER_TARGETS.map((t) => (
-            <label key={t.target} className="mt-2 flex items-center gap-2 text-[16px]">
-              <input
-                type="radio"
-                name="fc-board"
-                checked={board?.target === t.target}
-                disabled={!!lockedTo && lockedTo.target !== t.target}
-                onChange={() => chooseBoard(t)}
-              />
-              {t.displayName} <span className="font-mono text-[13px] text-[var(--color-text-muted)]">{t.target}</span>
-            </label>
-          ))}
-        </fieldset>
+        <p className="mb-3 text-[15px] text-[var(--color-text-muted)]">The name is printed on the board.</p>
+        <ChoiceLadder
+          ariaLabel="Choose your board"
+          disabledGroup={deviceBusy}
+          tabbableKey={board?.target ?? FLASHER_TARGETS.find(isAvailable)?.target}
+          onSelect={(key) => {
+            const t = FLASHER_TARGETS.find((x) => x.target === key);
+            if (t) chooseBoard(t);
+          }}
+          items={FLASHER_TARGETS.map((t) => {
+            const locked = !!lockedTo && lockedTo.target !== t.target;
+            const unavailable = !isAvailable(t);
+            return {
+              key: t.target,
+              name: t.displayName.replace(/ \(.*\)$/, ''),
+              tag: t.target,
+              selected: board?.target === t.target,
+              disabled: locked || unavailable,
+              tone: unavailable ? 'comingsoon' : undefined,
+              flag: unavailable ? 'Coming soon' : undefined,
+            };
+          })}
+        />
         {hasSerial ? (
           <div className="mt-4">
             <p className="text-[15px]">Board running Betaflight and plugged in? Let the page read its name instead.</p>
@@ -290,6 +304,10 @@ export function FcFlasher({
       </Step>
 
       <Step id="fc" n={4} title="Install" open={!!verifiedForBoard && !!board}>
+        <InfoCallout>
+          If anything goes wrong, nothing is lost for good: hold the BOOT button while plugging in USB and the board
+          always comes back in bootloader mode.
+        </InfoCallout>
         {verifiedForBoard && board ? (
           <>
             <h3 className="text-[17px] font-semibold">Copy the file (any browser)</h3>
