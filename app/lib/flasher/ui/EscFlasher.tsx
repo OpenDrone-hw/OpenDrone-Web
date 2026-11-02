@@ -247,7 +247,6 @@ export function EscFlasher({
   return (
     <>
       <Step id="esc" n={1} title="Choose your ESC" open>
-        <p className="flash-step-hint text-[15px] text-[var(--color-text-muted)]">The name is printed on the board.</p>
         <ChoiceLadder
           className="flash-ladder"
           ariaLabel="Choose your ESC"
@@ -280,37 +279,36 @@ export function EscFlasher({
         {esc && !releases.length ? <p className="text-[15px]">No firmware is listed for this ESC.</p> : null}
         {releases.map((r) => (
           <div key={r.version} className="mt-2">
-            <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-[15px]">
-              <dt className="text-[var(--color-text-muted)]">Firmware</dt>
-              <dd>{r.firmware}</dd>
-              <dt className="text-[var(--color-text-muted)]">Target</dt>
-              {/* The firmware target, not the page key (OPENESC_30X30 is internal). */}
-              <dd>
-                <span className="font-mono">{esc?.firmwareName ?? r.target}</span>
-                {esc && esc.target !== esc.firmwareName ? ' (30x30 runs the 20x20 image)' : null}
-              </dd>
-              {isPublished(r) ? (
-                <>
-                  <dt className="text-[var(--color-text-muted)]">Version</dt>
-                  <dd>
-                    {r.version} ({r.channel}){' '}
-                    {r.channel !== 'stable' ? <strong>Pre-release ({r.channel}) build, not a stable release.</strong> : null}
-                  </dd>
-                  <dt className="text-[var(--color-text-muted)]">SHA-256</dt>
-                  <dd className="font-mono text-[13px] break-all">{r.sha256}</dd>
-                </>
-              ) : null}
-            </dl>
             {isPublished(r) ? (
-              <button type="button" className="btn-primary btn-sm mt-3" onClick={() => void prepare(r)} disabled={busy}>
+              <button type="button" className="btn-primary btn-sm" onClick={() => void prepare(r)} disabled={busy}>
                 Download and verify {r.version}
               </button>
             ) : (
-              <p className="mt-3 text-[15px]">
-                <strong>Firmware not published yet.</strong> This page cannot offer it until the release file is
-                published.
-              </p>
+              <p>Not published yet.</p>
             )}
+            {/* The 30x30 runs the 20x20 image; the page can't tell the sizes apart (status line, not body copy). */}
+            {esc && esc.target !== esc.firmwareName ? (
+              <p className="flash-filename" role="status">
+                30×30 uses the 20×20 file.
+              </p>
+            ) : null}
+            <details className="flash-more">
+              <summary>Details</summary>
+              <p className="mt-2">
+                AM32 {r.version}, target <code>{esc?.firmwareName ?? r.target}</code>.
+                {isPublished(r) ? (
+                  <>
+                    {' '}
+                    SHA-256 <span className="flash-filename">{r.sha256}</span>
+                    {r.eepromDefaults ? (
+                      <>
+                        EEPROM defaults SHA-256 <span className="flash-filename">{r.eepromDefaults.sha256}</span>
+                      </>
+                    ) : null}
+                  </>
+                ) : null}
+              </p>
+            </details>
           </div>
         ))}
         <StatusLine status={fwStatus} />
@@ -319,7 +317,10 @@ export function EscFlasher({
       <Step id="esc" n={3} title="Install with esc-configurator" open={!!verifiedForEsc}>
         {verifiedForEsc ? (
           <ol className="list-decimal pl-6 text-[16px]">
-            <li>Take the propellers off. The ESC needs the flight battery connected to talk to the computer.</li>
+            <li>
+              Props off, flight battery plugged in. Installing resets the ESC settings; set the low-voltage cutoff
+              afterwards (the default is off).
+            </li>
             <li>
               <button type="button" className="btn-primary btn-sm" onClick={() => saveBytes(verifiedForEsc.bytes, verifiedForEsc.fileName)}>
                 Save firmware (.{verifiedForEsc.fileName.split('.').pop()})
@@ -331,7 +332,7 @@ export function EscFlasher({
               <a href={ESC_CONFIGURATOR_URL} target="_blank" rel="noopener noreferrer" className="underline">
                 esc-configurator.com
               </a>
-              , connect, read the ESCs, and use <em>Flash all</em> with <em>Select file</em> pointing at the saved file.
+              , connect through the flight controller, read the ESCs, then <em>Flash all</em> with the saved file.
             </li>
           </ol>
         ) : null}
@@ -340,19 +341,15 @@ export function EscFlasher({
       {hasSerial ? (
         <Step id="esc" n={4} title="Check your ESCs (optional, Chrome or Edge)" open={!!esc}>
           {esc ? (
-            <>
-              <p className="text-[15px]">
-                Reads which chip and firmware name each ESC has, without changing anything. It does not show the AM32
-                version or the ESC settings; use esc-configurator for those. Propellers off, then plug the flight
-                battery in <em>before</em> you click Read: one click connects, switches the flight controller to ESC
-                passthrough and reads every motor output. The flight controller does not have to be an OpenFC.
+            <details className="flash-more">
+              <summary>Read the ESCs from this page</summary>
+              <p className="mt-2">
+                Props off, battery in, then Read. Shows each ESC&apos;s chip and firmware name; changes nothing.
               </p>
-              <p className="mt-2 text-[15px]">
-                When you are done, click <strong>Disconnect</strong>, then unplug the battery. If you close the tab
-                without disconnecting, the flight controller stays in passthrough and the Betaflight app cannot connect
-                until you unplug USB and the battery and plug them back in.
+              <p className="mt-2">
+                Click <strong>Disconnect</strong> when done. Closed the tab instead? Unplug USB and the battery.
               </p>
-              <p className="mt-3 text-[15px]">Connected through</p>
+              <p className="mt-3">Connected through</p>
               <ChoiceLadder
                 className="flash-ladder"
                 ariaLabel="Connected through"
@@ -392,7 +389,7 @@ export function EscFlasher({
                 <progress className="mt-3 w-full" max={progress.total} value={progress.done} aria-label="ESC install progress" />
               ) : null}
               <StatusLine status={connStatus} />
-            </>
+            </details>
           ) : null}
         </Step>
       ) : null}
@@ -428,11 +425,10 @@ function EscRow({
     <li className="mt-3">
       <strong>ESC {id.index + 1}:</strong> chip {show(id.mcu)}, firmware {show(id.firmwareName)}{' '}
       <strong>{problems.length ? 'MISMATCH' : 'Match'}</strong>
-      <BlockedReasons title="Direct install not available. Use esc-configurator with the verified file:" reasons={gate.reasons} />
+      <BlockedReasons title="Install from this page not available. Use esc-configurator:" reasons={gate.reasons} />
       {gate.allowed ? (
-        <p className="mt-2 text-[15px]">
-          <strong>Installing resets the ESC settings to defaults.</strong> Set the low-voltage cutoff in
-          esc-configurator afterwards: the defaults do not protect the battery.
+        <p className="mt-2">
+          <strong>Installing resets the ESC settings.</strong> Set the low-voltage cutoff afterwards (the default is off).
         </p>
       ) : null}
       {gate.allowed ? (
