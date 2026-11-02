@@ -23,7 +23,7 @@ import {
   assertAm32Writable,
   type Am32Gates,
 } from './am32-layout.ts';
-import {classifyMcu, flashAm32, identifyEsc, parseAm32NameSlot, prepareAm32Image} from './am32.ts';
+import {Am32FinalVerifyError, classifyMcu, flashAm32, identifyEsc, parseAm32NameSlot, prepareAm32Image} from './am32.ts';
 import {FIRMWARE_MANIFEST, PINNED, pinToRelease, type FirmwarePin} from './firmware-manifest.ts';
 import {ACK_TEXT, FOURWAY_CMD, FourWay, crc16Xmodem, decodeFourWay, encodeFourWay, parseDeviceInfo} from './fourway.ts';
 import {
@@ -714,6 +714,18 @@ class FakeEsc implements ByteLink {
   dead = false;
   /** F4: the bootloader ACKs page erases but does nothing. */
   eraseNoop = false;
+  /** Review 3 F5: a write at a 1 KB-aligned address erases its erase block first (upstream AM32 bootloader behaviour). */
+  alignedWriteErases = false;
+  /** Review 3 F4: erase block size (B10): 0x400, or 0x800 for a 2 KB-granularity part. */
+  eraseBlock = AM32_PAGE_SIZE;
+  writeLens: number[] = [];
+  resets = 0;
+  /** Called after every DeviceWrite (tests that damage flash behind the flasher's back). */
+  afterWrite: ((addr: number) => void) | null = null;
+  private eraseAt(addr: number): void {
+    const start = addr - (addr % this.eraseBlock);
+    this.flash.fill(0xff, start, start + this.eraseBlock);
+  }
   /** F2: frames that arrive (late) right before the reply to the next request. */
   lateFrames: Uint8Array[] = [];
   flushes = 0;
@@ -767,11 +779,18 @@ class FakeEsc implements ByteLink {
       }
       case FOURWAY_CMD.DevicePageErase:
         this.erases.push(params[0]! * AM32_PAGE_SIZE);
-        if (!this.eraseNoop) this.flash.fill(0xff, params[0]! * AM32_PAGE_SIZE, (params[0]! + 1) * AM32_PAGE_SIZE);
+        if (!this.eraseNoop) this.eraseAt(params[0]! * AM32_PAGE_SIZE);
         break;
       case FOURWAY_CMD.DeviceWrite:
         this.writes.push(addr);
-        this.flash.set(params, addr);
+        this.writeLens.push(params.length);
+        if (this.alignedWriteErases && addr % AM32_PAGE_SIZE === 0) this.eraseAt(addr);
+        // Flash programming only clears bits: writing over unerased flash ANDs.
+        for (let i = 0; i < params.length; i++) this.flash[addr + i] = (this.flash[addr + i] ?? 0xff) & params[i]!;
+        this.afterWrite?.(addr);
+        break;
+      case FOURWAY_CMD.DeviceReset:
+        this.resets++;
         break;
     }
     this.queue(FakeEsc.frame(cmd, addr, reply));
@@ -894,17 +913,98 @@ describe('AM32 write procedure (simulated ESC)', () => {
       assert.equal(other.writes.length, 0);
     });
   });
-  it('F4: an ESC whose page erase is a no-op aborts before any write, old vector table intact', async () => {
+  it('F4/F5: a bare-ACK page erase on a bootloader without implicit erase fails closed, old vector table intact', async () => {
     const esc = new FakeEsc('OPENESC_20_F421');
     esc.flash.fill(0x5a, AM32_APP_START, AM32_NAME_SLOT_OFFSET); // old app (name slot kept)
     esc.eraseNoop = true;
     const before = esc.flash.slice();
     await withSimulatedWrites(() =>
-      assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn), /did not erase/),
+      assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn), /did not erase .*aligned-write fallback/),
     );
-    assert.equal(esc.writes.length, 0);
+    // Only the F5 fallback: one aligned all-0xFF write at the first app page, which cannot set bits.
+    assert.deepEqual(esc.writes, [AM32_APP_START]);
+    assert.deepEqual(esc.writeLens, [256]);
     assert.deepEqual(esc.erases, [AM32_APP_START]);
     assert.deepEqual(esc.flash, before);
+    assert.equal(esc.resets, 0);
+  });
+  it('F5: a bare-ACK page erase with the aligned-write implicit erase completes through the fallback, inside the guards', async () => {
+    const esc = new FakeEsc('OPENESC_20_F421');
+    esc.flash.fill(0x5a, AM32_APP_START, AM32_NAME_SLOT_OFFSET);
+    esc.flash.fill(0xa5, AM32_EEPROM_OFFSET + 192, AM32_EEPROM_OFFSET + AM32_PAGE_SIZE);
+    esc.eraseNoop = true;
+    esc.alignedWriteErases = true;
+    const bootBefore = esc.flash.slice(0, 0x1000);
+    const img = image();
+    const report = await withSimulatedWrites(() => flashAm32(new FourWay(esc), 0, img, ESC20, release, noop, allOn));
+    assert.equal(report.erases.length, img.pages.length + 1);
+    assert.ok(report.erases.every((r) => r.path === 'aligned-write'));
+    assert.equal(report.erases.at(-1)!.offset, AM32_EEPROM_OFFSET);
+    for (const p of img.pages) assert.deepEqual(esc.flash.slice(p.offset, p.offset + p.data.length), p.data);
+    assert.deepEqual(esc.flash.slice(AM32_EEPROM_OFFSET, AM32_EEPROM_OFFSET + 192), makeEepromDefaults());
+    assert.ok(esc.flash.slice(AM32_EEPROM_OFFSET + 192, AM32_EEPROM_OFFSET + AM32_PAGE_SIZE).every((b) => b === 0xff));
+    assert.deepEqual(esc.flash.slice(0, 0x1000), bootBefore);
+    esc.writes.forEach((a, i) => {
+      const len = esc.writeLens[i]!;
+      if (a >= AM32_EEPROM_OFFSET) assert.deepEqual([a, len], [AM32_EEPROM_OFFSET, 192], 'EEPROM writes are exactly (0x7C00, 192)');
+      else assert.ok(a >= AM32_APP_START && a + len <= AM32_EEPROM_OFFSET);
+    });
+    assert.equal(esc.resets, 1);
+  });
+  it('F5: a normal page erase records the page-erase path (no fallback writes)', async () => {
+    const esc = new FakeEsc('OPENESC_20_F421');
+    const img = image();
+    const report = await withSimulatedWrites(() => flashAm32(new FourWay(esc), 0, img, ESC20, release, noop, allOn));
+    assert.ok(report.erases.every((r) => r.path === 'page-erase'));
+    assert.equal(esc.writes.length, img.pages.length * 4 + 1);
+  });
+  it('F4: 2 KB erase granularity (EEPROM erase blanks the verified name-slot page) is caught by the final read-back; never "installed"', async () => {
+    const esc = new FakeEsc('OPENESC_20_F421');
+    esc.eraseBlock = 0x800;
+    const bootBefore = esc.flash.slice(0, 0x1000);
+    const err = await withSimulatedWrites(() =>
+      flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn).then(
+        () => assert.fail('install must fail'),
+        (e: unknown) => e,
+      ),
+    );
+    assert.ok(err instanceof Am32FinalVerifyError, String(err));
+    assert.match(err.message, /Final check failed: the firmware at 0x8[0-9a-f]+ changed after it was written and checked\. The ESC is NOT installed/);
+    assert.ok(esc.flash.slice(0x7800, AM32_EEPROM_OFFSET).every((b) => b === 0xff), 'name-slot page blanked after its verify (the case F4 describes)');
+    assert.equal(err.disabled, true, 'first app page erased again');
+    assert.ok(esc.flash.slice(AM32_APP_START, AM32_APP_START + AM32_PAGE_SIZE).every((b) => b === 0xff));
+    assert.equal(esc.resets, 0, 'no reset into a hybrid app');
+    assert.deepEqual(esc.flash.slice(0, 0x1000), bootBefore);
+  });
+  it('F4: a page that changes after its own verify (late damage) fails the final read-back', async () => {
+    const esc = new FakeEsc('OPENESC_20_F421');
+    esc.afterWrite = (addr) => {
+      if (addr === AM32_APP_START + 3 * 256) esc.flash[0x5000] = 0x00; // after the last chunk of the first page
+    };
+    const err = await withSimulatedWrites(() =>
+      flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn).then(
+        () => assert.fail('install must fail'),
+        (e: unknown) => e,
+      ),
+    );
+    assert.ok(err instanceof Am32FinalVerifyError, String(err));
+    assert.match(err.message, /0x8005000/);
+    assert.equal(esc.resets, 0);
+  });
+  it('F4: a settings page that changes after its check fails the final read-back', async () => {
+    const esc = new FakeEsc('OPENESC_20_F421');
+    esc.afterWrite = (addr) => {
+      if (addr === AM32_APP_START + 3 * 256) esc.flash[AM32_EEPROM_OFFSET + 10] = (esc.flash[AM32_EEPROM_OFFSET + 10] ?? 0) ^ 0x01;
+    };
+    const err = await withSimulatedWrites(() =>
+      flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn).then(
+        () => assert.fail('install must fail'),
+        (e: unknown) => e,
+      ),
+    );
+    assert.ok(err instanceof Am32FinalVerifyError, String(err));
+    assert.match(err.message, /settings page/);
+    assert.equal(esc.resets, 0);
   });
   it('F2: flushes before each command; a stale frame already buffered is dropped', async () => {
     const esc = new FakeEsc('OPENESC_20_F421');
@@ -981,10 +1081,15 @@ describe('AM32 write procedure (simulated ESC)', () => {
       }
       return orig(req);
     };
+    const settingsBefore = esc.flash.slice(AM32_EEPROM_OFFSET, AM32_EEPROM_OFFSET + AM32_PAGE_SIZE);
     await withSimulatedWrites(() =>
       assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn), /did not erase the settings page/),
     );
-    assert.equal(esc.writes.filter((a) => a >= AM32_EEPROM_OFFSET).length, 0);
+    // Only the F5 fallback (all 0xFF, exactly the guarded 0x7C00 + 192), which cannot set bits: the defaults are never written.
+    const eeWrites = esc.writes.map((a, i) => [a, esc.writeLens[i]]).filter(([a]) => a! >= AM32_EEPROM_OFFSET);
+    assert.deepEqual(eeWrites, [[AM32_EEPROM_OFFSET, 192]]);
+    assert.deepEqual(esc.flash.slice(AM32_EEPROM_OFFSET, AM32_EEPROM_OFFSET + AM32_PAGE_SIZE), settingsBefore);
+    assert.equal(esc.resets, 0);
   });
   it('prepareAm32Image checks the EEPROM defaults: 192 bytes, layout v4', () => {
     const hex = makeHex(AT32F421_FLASH_BASE + AM32_APP_START, makeAm32App());

@@ -22,7 +22,7 @@
 
 import {useEffect, useId, useMemo, useRef, useState} from 'react';
 import {ChoiceLadder} from '~/components/ChoiceLadder';
-import {releasesFor} from '../firmware-manifest.ts';
+import {FIRMWARE_MANIFEST, releasesFor} from '../firmware-manifest.ts';
 import {fcDirectWriteGate, fcInstallEnabled, fcTargetProblems, knownFcNamesIn, type MspReport} from '../gates.ts';
 import {fetchVerifiedFirmware, isPublished, releaseFileName, type FirmwareRelease} from '../manifest.ts';
 import {MspConnection, type BoardInfo} from '../msp.ts';
@@ -83,8 +83,11 @@ export function FcFlasher({
   const directInstallEnabled = staging || (CHIP_PACKAGE_VERIFIED && PICOBOOT_WRITE_VERIFIED);
   // Once any board has a published file, boards without one read as "coming soon"
   // (disabled like the shop's version picker). While none has, all stay selectable.
-  const anyPublished = FLASHER_TARGETS.some((x) => releasesFor(x.target).some(isPublished));
-  const isAvailable = (t: FlasherTarget) => !anyPublished || releasesFor(t.target).some(isPublished);
+  // F7: the staging manifest only after mount (`staging`), so server and first client render agree.
+  const releasesShown = (target: string) =>
+    staging ? releasesFor(target) : FIRMWARE_MANIFEST.filter((r) => r.target === target);
+  const anyPublished = FLASHER_TARGETS.some((x) => releasesShown(x.target).some(isPublished));
+  const isAvailable = (t: FlasherTarget) => !anyPublished || releasesShown(t.target).some(isPublished);
   const releases = useMemo(() => (board ? releasesFor(board.target) : []), [board]);
   useEffect(() => onBusyChange(deviceBusy), [deviceBusy, onBusyChange]);
 

@@ -24,8 +24,22 @@
  *      blank or half-written settings page. (Settings are lost either way;
  *      the identity needed for a retry lives in the app area, not here.)
  *   5. write + verify the first app page LAST (this is what makes the app bootable);
- *   6. read the EEPROM page once more and require it equal to the defaults
- *      (192 B) followed by 0xFF; reset the ESC.
+ *   6. F4 (review 3): read back the WHOLE image once more (every app page,
+ *      name slot included, then the EEPROM page: defaults followed by 0xFF)
+ *      and require it byte-identical. This catches an erase or an implicit
+ *      aligned-write erase that reached a page verified earlier (2 KB erase
+ *      granularity, B10/B11). On a mismatch the first app page is erased
+ *      again (best effort) so the hybrid app cannot run, and the install
+ *      fails with Am32FinalVerifyError; nothing says "Installed";
+ *   7. reset the ESC.
+ * Erase (F5, review 3): every erase is read back. If the page is not blank
+ * after DevicePageErase (the AM32 bootloader may only ACK it and erase inside
+ * its write path for 1 KB-aligned addresses), the fallback writes 0xFF at the
+ * page start (aligned, through the same address guards and gates) and the
+ * blank check runs again; still not blank = stop before writing. Programming
+ * 0xFF over erased flash is a no-op, and over programmed flash it cannot set
+ * bits, so the fallback can only make the check pass through a real erase.
+ * Which path each page took is returned to the caller (bench record).
  * App erase/write offsets go through assertAm32Writable, so they can never
  * reach the bootloader or the EEPROM page. The EEPROM step goes only through
  * assertAm32EepromWritable / assertAm32EepromPageErasable (exactly
@@ -66,6 +80,20 @@ export class Am32Error extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'Am32Error';
+  }
+}
+
+/**
+ * F4: the final whole-image read-back after the last write did not match.
+ * `disabled` is true when the first app page was erased again afterwards
+ * (read back blank), so the bootloader stays in charge and the motor stays silent.
+ */
+export class Am32FinalVerifyError extends Am32Error {
+  readonly disabled: boolean;
+  constructor(message: string, disabled: boolean) {
+    super(message);
+    this.name = 'Am32FinalVerifyError';
+    this.disabled = disabled;
   }
 }
 
@@ -206,6 +234,12 @@ export function prepareAm32Image(source: string | Uint8Array, target: EscTarget,
 
 export type Am32Phase = 'identify' | 'erase-first' | 'write' | 'write-eeprom' | 'write-first' | 'check-eeprom' | 'reset';
 
+/** How each erased page became blank (F5): 'page-erase' = DevicePageErase did it; 'aligned-write' = the 0xFF fallback did. */
+export type Am32EraseRecord = {offset: number; path: 'page-erase' | 'aligned-write'};
+
+/** What flashAm32 did, for the bench record. */
+export type Am32FlashReport = {erases: Am32EraseRecord[]};
+
 function equal(a: Uint8Array, b: Uint8Array): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
 }
@@ -225,7 +259,7 @@ export async function flashAm32(
   release: FirmwareRelease,
   onProgress: (phase: Am32Phase, done: number, total: number) => void,
   gates: Am32Gates = AM32_GATES,
-): Promise<void> {
+): Promise<Am32FlashReport> {
   assertAm32WritesEnabled();
   const total = image.pages.length;
   onProgress('identify', 0, total);
@@ -250,35 +284,97 @@ export async function flashAm32(
   // The page holding the name slot goes first, so the identity is rewritten right away.
   const slotPage = AM32_NAME_SLOT_OFFSET - (AM32_NAME_SLOT_OFFSET % AM32_PAGE_SIZE);
   const rest = [...others.filter((p) => p.offset === slotPage), ...others.filter((p) => p.offset !== slotPage)];
+  const report: Am32FlashReport = {erases: []};
   onProgress('erase-first', 0, total);
-  await erasePage(fw, firstPage.offset);
+  report.erases.push(await erasePage(fw, firstPage.offset));
 
   let done = 0;
   for (const p of rest) {
-    await erasePage(fw, p.offset);
+    report.erases.push(await erasePage(fw, p.offset));
     await writeAndVerify(fw, p);
     onProgress('write', ++done, total);
   }
   onProgress('write-eeprom', done, total);
-  await writeEepromDefaults(fw, eeprom);
+  report.erases.push(await writeEepromDefaults(fw, eeprom));
   onProgress('write-first', done, total);
   await writeAndVerify(fw, firstPage);
   onProgress('check-eeprom', ++done, total);
-  await checkEeprom(fw, eeprom);
+  await verifyWholeImage(fw, image.pages, eeprom);
   onProgress('reset', done, total);
   await fw.resetEsc(index);
+  return report;
+}
+
+/**
+ * F4: after the last write, read back every app page (name slot included) and
+ * the EEPROM page and require them equal to the image and the pinned defaults.
+ * On a mismatch, erase the first app page again (best effort, same guards and
+ * gates) so the hybrid app cannot start, then throw Am32FinalVerifyError.
+ */
+async function verifyWholeImage(fw: FourWay, pages: readonly Am32Page[], eeprom: Uint8Array): Promise<void> {
+  let problem: string | null = null;
+  try {
+    for (const p of pages) {
+      const back = await fw.readRange(p.offset, p.data.length);
+      const bad = back.findIndex((b, i) => b !== p.data[i]);
+      if (back.length !== p.data.length || bad >= 0) {
+        problem = `the firmware at 0x${(AT32F421_FLASH_BASE + p.offset + Math.max(bad, 0)).toString(16)} changed after it was written and checked`;
+        break;
+      }
+    }
+    if (!problem) await checkEeprom(fw, eeprom);
+  } catch (e) {
+    problem ??= (e as Error).message;
+  }
+  if (!problem) return;
+  let disabled = false;
+  const first = pages[0];
+  if (first) {
+    try {
+      await erasePage(fw, first.offset);
+      disabled = true;
+    } catch {
+      disabled = false;
+    }
+  }
+  throw new Am32FinalVerifyError(`Final check failed: ${problem}. The ESC is NOT installed.`, disabled);
 }
 
 /** Erase the EEPROM page (must read back all 0xFF), write the pinned defaults, read back and compare. */
-async function writeEepromDefaults(fw: FourWay, eeprom: Uint8Array): Promise<void> {
+async function writeEepromDefaults(fw: FourWay, eeprom: Uint8Array): Promise<Am32EraseRecord> {
   assertAm32EepromWritable(AM32_EEPROM_OFFSET, eeprom.length);
   assertAm32EepromPageErasable(AM32_EEPROM_OFFSET);
   if (eeprom.length > FOURWAY_MAX_CHUNK) throw new Am32Error('EEPROM defaults do not fit one write.');
   await fw.pageEraseUnchecked(AM32_EEPROM_OFFSET / AM32_PAGE_SIZE);
-  const blank = await fw.readRange(AM32_EEPROM_OFFSET, AM32_EEPROM_SIZE);
-  if (blank.some((b) => b !== 0xff)) throw new Am32Error('The ESC did not erase the settings page. Stopped before writing the defaults.');
+  let path: Am32EraseRecord['path'] = 'page-erase';
+  if (!(await isBlank(fw, AM32_EEPROM_OFFSET, AM32_EEPROM_SIZE))) {
+    // F5 fallback: an aligned 0xFF write of exactly (0x7C00, 192), the only range the EEPROM guard admits.
+    const ff = new Uint8Array(eeprom.length).fill(0xff);
+    assertAm32EepromWritable(AM32_EEPROM_OFFSET, ff.length);
+    await fallbackWrite(fw, AM32_EEPROM_OFFSET, ff, 'the settings page');
+    if (!(await isBlank(fw, AM32_EEPROM_OFFSET, AM32_EEPROM_SIZE))) {
+      throw new Am32Error(
+        'The ESC did not erase the settings page (page erase and aligned-write fallback). Stopped before writing the defaults.',
+      );
+    }
+    path = 'aligned-write';
+  }
   await fw.writeUnchecked(AM32_EEPROM_OFFSET, eeprom);
   await checkEeprom(fw, eeprom);
+  return {offset: AM32_EEPROM_OFFSET, path};
+}
+
+async function isBlank(fw: FourWay, offset: number, size: number): Promise<boolean> {
+  return (await fw.readRange(offset, size)).every((b) => b === 0xff);
+}
+
+/** F5: the 0xFF fallback write. A NACK or timeout here also stops the install (fail-closed). */
+async function fallbackWrite(fw: FourWay, offset: number, ff: Uint8Array, what: string): Promise<void> {
+  try {
+    await fw.writeUnchecked(offset, ff);
+  } catch (e) {
+    throw new Am32Error(`The ESC did not erase ${what}, and the erase fallback failed (${(e as Error).message}). Stopped before writing.`);
+  }
 }
 
 /** The settings page must equal the pinned defaults (first 192 bytes) and be erased (0xFF) after them. */
@@ -295,17 +391,24 @@ async function checkEeprom(fw: FourWay, eeprom: Uint8Array): Promise<void> {
  * (or erases another page) stops the update here, with the old vector table
  * still intact, instead of producing a hybrid image.
  */
-async function erasePage(fw: FourWay, offset: number): Promise<void> {
+async function erasePage(fw: FourWay, offset: number): Promise<Am32EraseRecord> {
   assertAm32Writable(offset, AM32_PAGE_SIZE);
   if (offset % AM32_PAGE_SIZE) throw new Am32Error('Unaligned page erase.');
   await fw.pageEraseUnchecked(offset / AM32_PAGE_SIZE);
+  if (await isBlank(fw, offset, AM32_PAGE_SIZE)) return {offset, path: 'page-erase'};
+  // F5 fallback: 0xFF at the aligned page start, through the same app address guard.
+  const ff = new Uint8Array(FOURWAY_MAX_CHUNK).fill(0xff);
+  assertAm32Writable(offset, ff.length);
+  const where = `the page at 0x${(AT32F421_FLASH_BASE + offset).toString(16)}`;
+  await fallbackWrite(fw, offset, ff, where);
   const back = await fw.readRange(offset, AM32_PAGE_SIZE);
   const bad = back.findIndex((b) => b !== 0xff);
   if (bad >= 0) {
     throw new Am32Error(
-      `The ESC did not erase the page at 0x${(AT32F421_FLASH_BASE + offset).toString(16)} (byte 0x${(AT32F421_FLASH_BASE + offset + bad).toString(16)} is not blank). Stopped before writing.`,
+      `The ESC did not erase ${where} (byte 0x${(AT32F421_FLASH_BASE + offset + bad).toString(16)} is not blank after the page erase and the aligned-write fallback). Stopped before writing.`,
     );
   }
+  return {offset, path: 'aligned-write'};
 }
 
 async function writeAndVerify(fw: FourWay, page: Am32Page): Promise<void> {

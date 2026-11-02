@@ -114,6 +114,8 @@ export function isPublished(r: FirmwareRelease): r is FirmwareRelease & {url: st
   return (
     r.published === true &&
     urlOk(r.url) &&
+    // F8 (review 3): a raw AM32 .bin is a staging bench file only; a public pin ships Intel HEX.
+    (r.kind !== 'am32-bin' || isStagingFirmwareUrl(r.url)) &&
     (r.eepromDefaults === undefined || assetOk(r.eepromDefaults)) &&
     typeof r.version === 'string' &&
     r.version.trim().length > 0 &&

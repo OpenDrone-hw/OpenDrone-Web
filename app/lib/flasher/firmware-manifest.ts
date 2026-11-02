@@ -118,10 +118,13 @@ export function pinToRelease(target: PinnedTarget, pin: FirmwarePin | null): Fir
 }
 
 /**
- * STAGING bench files: local copies served from the page's own origin under
- * /firmware-staging/ (public/firmware-staging/, git-ignored, never committed).
- * Used ONLY while stagingBenchEnabled() (staging.ts); otherwise they do not
- * exist for the page. The GitHub draft releases cannot be created yet.
+ * STAGING bench files, fetched from the page's own origin under
+ * /firmware-staging/. They are NOT static assets (review 3, F1/F2): the bench
+ * Worker serves them from a local R2 binding behind the staging basic auth
+ * (staging-serve.ts, wrangler.bench.toml); the build fails if
+ * public/firmware-staging/ exists. Source copies live in .firmware-staging/
+ * (git-ignored). Used ONLY while stagingBenchEnabled() (staging.ts); otherwise
+ * they do not exist for the page. The GitHub draft releases cannot be created yet.
  * OpenFC-Lite and OpenESC-30x30 have no entry here: "not yet available".
  */
 export const STAGING_PINNED: Readonly<Partial<Record<PinnedTarget, FirmwarePin>>> = {

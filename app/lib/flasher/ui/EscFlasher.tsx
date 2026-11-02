@@ -22,7 +22,15 @@
 
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {ESC_CONFIGURATOR_URL} from '../am32-layout.ts';
-import {flashAm32, identifyEsc, prepareAm32Image, type Am32Image, type Am32Phase, type EscIdentity} from '../am32.ts';
+import {
+  Am32FinalVerifyError,
+  flashAm32,
+  identifyEsc,
+  prepareAm32Image,
+  type Am32Image,
+  type Am32Phase,
+  type EscIdentity,
+} from '../am32.ts';
 import {ChoiceLadder} from '~/components/ChoiceLadder';
 import {releasesFor} from '../firmware-manifest.ts';
 import {FourWay} from '../fourway.ts';
@@ -55,7 +63,7 @@ const PHASE_TEXT: Record<Am32Phase, string> = {
   write: 'Writing and checking firmware.',
   'write-first': 'Writing the firmware start last.',
   'write-eeprom': 'Resetting the ESC settings to the pinned defaults and checking them.',
-  'check-eeprom': 'Checking the ESC settings equal the pinned defaults.',
+  'check-eeprom': 'Reading back the whole firmware and the settings.',
   reset: 'Restarting the ESC.',
 };
 
@@ -199,15 +207,30 @@ export function EscFlasher({
     setWriting(index);
     setConnStatus({kind: 'busy', text: `Installing on ESC ${index + 1}. Do not unplug anything.`});
     try {
-      await flashAm32(session.fw, index, verified.image, esc, verified.release, (phase, done, total) => {
+      const report = await flashAm32(session.fw, index, verified.image, esc, verified.release, (phase, done, total) => {
         setProgress({done, total});
         say(`${PHASE_TEXT[phase]} ${Math.round((done / Math.max(total, 1)) * 100)} percent.`);
       });
+      // F5 bench record: how many pages needed the aligned-write erase fallback.
+      const fallback = report.erases.filter((r) => r.path === 'aligned-write').length;
+      const erasePath = fallback ? ` Erase: the page erase command did not erase; the aligned-write fallback erased ${fallback} of ${report.erases.length} pages.` : '';
       setConnStatus({
         kind: 'ok',
-        text: `Installed ${verified.release.version} on ESC ${index + 1}. The ESC settings are now the pinned defaults: set the low-voltage cutoff in esc-configurator before flying.`,
+        text: `Installed ${verified.release.version} on ESC ${index + 1}. The whole firmware and the settings were read back and match. The ESC settings are now the pinned defaults: set the low-voltage cutoff in esc-configurator before flying.${erasePath}`,
       });
     } catch (e) {
+      if (e instanceof Am32FinalVerifyError) {
+        // F4: the final read-back did not match. Never "Installed"; say what state the ESC is in and how to recover.
+        setConnStatus({
+          kind: 'error',
+          text: `INSTALL FAILED on ESC ${index + 1}. ${errText(e)} ${
+            e.disabled
+              ? 'The page cleared the firmware start again, so the ESC stays in its bootloader and the motor stays silent.'
+              : 'The page could not clear the firmware start: the ESC may run a damaged firmware. Keep props off and do not fly.'
+          } Recovery: disconnect, unplug the battery, plug it back in (props off) and read the ESCs again; then retry Install, or flash the verified file with esc-configurator. If the ESC is not detected any more, it needs an SWD reflash (see the bench sheet). Note this result on the bench sheet.`,
+        });
+        return;
+      }
       setConnStatus({
         kind: 'error',
         text: `${errText(e)} The AM32 bootloader is not touched by this page, so the ESC can be flashed again: retry, or use esc-configurator with the verified file.`,
@@ -315,17 +338,17 @@ export function EscFlasher({
                 without disconnecting, the flight controller stays in passthrough and the Betaflight app cannot connect
                 until you unplug USB and the battery and plug them back in.
               </p>
-              <fieldset className="mt-3" disabled={busy}>
-                <legend className="text-[15px]">Connected through</legend>
-                <label className="mt-1 flex items-center gap-2 text-[15px]">
-                  <input type="radio" name="esc-via" checked={via === 'fc'} onChange={() => setVia('fc')} />
-                  the flight controller (Betaflight, USB)
-                </label>
-                <label className="mt-1 flex items-center gap-2 text-[15px]">
-                  <input type="radio" name="esc-via" checked={via === 'adapter'} onChange={() => setVia('adapter')} />
-                  a USB link adapter on the ESC signal pad
-                </label>
-              </fieldset>
+              <p className="mt-3 text-[15px]">Connected through</p>
+              <ChoiceLadder
+                ariaLabel="Connected through"
+                disabledGroup={busy}
+                tabbableKey={via}
+                onSelect={(key) => setVia(key === 'adapter' ? 'adapter' : 'fc')}
+                items={[
+                  {key: 'fc', name: 'The flight controller', tag: 'Betaflight, USB', selected: via === 'fc'},
+                  {key: 'adapter', name: 'A USB link adapter', tag: 'on the ESC signal pad', selected: via === 'adapter'},
+                ]}
+              />
               <div className="mt-3 flex gap-2">
                 <button type="button" className="btn-secondary btn-sm" onClick={() => void readEscs()} disabled={busy}>
                   Read ESC info

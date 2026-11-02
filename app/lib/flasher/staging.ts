@@ -16,8 +16,10 @@
  * *.pages.dev, is refused. There is no argument, no URL parameter, no
  * storage key and no UI control that can turn it on.
  *
- * Nothing committed sets the variable (wrangler*.toml, .env*); run staging
- * with `VITE_FLASH_STAGING_GATES=1 npm run dev` (see README of the bench sheet).
+ * Nothing committed sets the variable (wrangler*.toml, .env*); the bench runs
+ * a `VITE_FLASH_STAGING_GATES=1` build under `wrangler dev --local --config
+ * wrangler.bench.toml`, which also serves the firmware files behind basic
+ * auth (staging-serve.ts; see the bench sheet).
  * No imports on purpose: this file is reviewed on its own.
  */
 
