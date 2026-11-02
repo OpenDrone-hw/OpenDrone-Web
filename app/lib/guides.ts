@@ -325,7 +325,7 @@ const OPENFC: GuideFamily = {
   firmware: 'Betaflight',
   blurb:
     'Put Betaflight on an OpenFC-Lite or OpenFC-Lite Mini flight controller over USB, check it worked, and recover from a failed update.',
-  tool: {href: '/guides/flash', title: 'Open the firmware page', directTitle: 'Update firmware in one click'},
+  tool: {href: '/guides/flash', title: 'Open the firmware page', directTitle: 'Update firmware with one button'},
   pages: [
     {
       slug: 'boot-mode',

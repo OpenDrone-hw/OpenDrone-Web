@@ -55,7 +55,7 @@ test('gate off (production): no one-button claim anywhere in the OpenFC guide', 
 
 test('the /guides index entry and the OpenFC list follow the same gate', () => {
   assert.equal(openfc.tool?.href, '/guides/flash');
-  assert.match(openfc.tool!.directTitle, /one click/);
+  assert.equal(openfc.tool!.directTitle, 'Update firmware with one button');
   assert.doesNotMatch(openfc.tool!.title, ON_ONLY);
   const copy = JSON.parse(read('../../content/copy/guides.json')) as Record<string, string>;
   assert.match(copy.flash_cta_note_direct, /In Chrome or Edge, .* one button: Update firmware\./);
