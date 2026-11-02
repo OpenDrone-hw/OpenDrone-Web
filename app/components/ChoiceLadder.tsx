@@ -89,7 +89,8 @@ export function ChoiceLadder({
                 {item.flag ? <span className="variant-tier-flag">{item.flag}</span> : null}
               </span>
               {item.tag ? (
-                <span className="font-mono text-[12px] text-[var(--color-text-muted)]">{item.tag}</span>
+                // Above the selection glow, like variant-tier-head (otherwise the selected card hides its tag).
+                <span className="relative z-[1] font-mono text-[12px] text-[var(--color-text-muted)]">{item.tag}</span>
               ) : null}
               {item.price ? <span className="variant-tier-price">{item.price}</span> : null}
             </motion.button>
