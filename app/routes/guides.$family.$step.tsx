@@ -37,7 +37,8 @@ export async function loader({params}: Route.LoaderArgs) {
   return {
     ...loc,
     total: loc.family.pages.length,
-    howTo: buildHowToJsonLd(loc, SITE_ORIGIN),
+    // No HowTo for pages whose steps cannot be carried out yet.
+    howTo: loc.page.howTo === false ? null : buildHowToJsonLd(loc, SITE_ORIGIN),
   };
 }
 
@@ -73,7 +74,7 @@ export default function GuideStepRoute() {
 
   return (
     <article className="page-shell">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{__html: jsonLd(howTo)}} />
+      {howTo ? <script type="application/ld+json" dangerouslySetInnerHTML={{__html: jsonLd(howTo)}} /> : null}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

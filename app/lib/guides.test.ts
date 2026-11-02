@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {
   buildHowToJsonLd,
+  ESC_COMING_STATUS,
   findFamily,
   findGuide,
   GUIDE_FAMILIES,
@@ -114,4 +115,41 @@ test('jsonLd cannot close the script element', () => {
   const out = jsonLd({x: '</script><script>alert(1)</script>'});
   assert.doesNotMatch(out, /</);
   assert.deepEqual(JSON.parse(out), {x: '</script><script>alert(1)</script>'});
+});
+
+test('ESC pages that mention installing carry the "coming after bench verification" status', () => {
+  const esc = findFamily('flash-openesc');
+  assert.ok(esc);
+  for (const slug of ['flash', 'recovery']) {
+    const page = esc.pages.find((p) => p.slug === slug);
+    assert.ok(page);
+    assert.ok(page.callouts.some((c) => c.title === ESC_COMING_STATUS), slug);
+    assert.equal(page.howTo, false, `${slug}: no HowTo for steps that cannot be done yet`);
+  }
+  const flash = esc.pages.find((p) => p.slug === 'flash');
+  assert.ok(flash);
+  assert.match(flash.description, /coming after bench verification/i);
+});
+
+test('ESC guides never tell a beginner to flash with our tool or a third-party file', () => {
+  const esc = findFamily('flash-openesc');
+  assert.ok(esc);
+  const steps = esc.pages.flatMap((p) => p.steps.map((s) => `${s.title} ${s.text}`));
+  for (const t of steps) {
+    assert.doesNotMatch(t, /click the button to flash|Flash All|Select file|use a file from your computer/i, t);
+  }
+});
+
+test('FC install guide says the firmware is not published yet and direct install is off', () => {
+  const loc = findGuide('flash-openfc', 'flash');
+  assert.ok(loc);
+  assert.ok(loc.page.callouts.some((c) => /not published yet/i.test(c.title)));
+  assert.ok(loc.page.sections?.some((s) => /switched off/i.test(s.heading)));
+  assert.ok(findGuide('flash-openfc', 'recovery')?.page.callouts.some((c) => /not published yet/i.test(c.title)));
+});
+
+test('HowTo JSON-LD is kept for the actionable FC pages', () => {
+  for (const slug of ['boot-mode', 'flash', 'verify', 'recovery']) {
+    assert.notEqual(findGuide('flash-openfc', slug)?.page.howTo, false, slug);
+  }
 });
