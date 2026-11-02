@@ -34,3 +34,10 @@ test('the fixed (floating) card renders only on the homepage', () => {
   assert.match(layout, /\{isHomepage && shopOpen && !availabilityBannerHiddenOn\(pathname\) \? <AvailabilityBanner geo=\{geo\} \/> : null\}/);
   assert.match(layout, /\{isHomepage \? null : <InlineAvailabilityBanner \/>\}/);
 });
+
+test('on the PDP the in-flow card starts on the product column, not the wider rail', () => {
+  const css = read('../styles/site-ui.css');
+  assert.match(css, /\.site-main:has\(> \.product-page\) > \.avail-banner\.avail-banner--inline \{\s+max-width: min\(40rem, var\(--rail-width\), 1102px\);\s+margin-left: calc\(\(100% - min\(var\(--rail-width\), 1102px\)\) \/ 2\);/);
+  const app = read('../styles/app.css');
+  assert.match(app, /\.product-page \{\s+width: min\(var\(--rail-width\), 1102px\);/, 'keep in step with the PDP column width');
+});

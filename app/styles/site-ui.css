@@ -2059,9 +2059,16 @@ body:has(.avail-banner) { padding-bottom: var(--avail-banner-space, 0px); }
   max-width: min(40rem, var(--rail-width));
   margin: 0 auto 0 calc((100% - var(--rail-width)) / 2);
 }
+/* PDP: the product column is narrower than the rail (.product-page, app.css: min(var(--rail-width), 1102px)),
+   so the card starts where that column starts. */
+.site-main:has(> .product-page) > .avail-banner.avail-banner--inline {
+  max-width: min(40rem, var(--rail-width), 1102px);
+  margin-left: calc((100% - min(var(--rail-width), 1102px)) / 2);
+}
 @media (max-width: 768px), (max-height: 500px) and (orientation: landscape) {
   .avail-banner:not(.avail-banner--inline) { display: none; }
-  .avail-banner.avail-banner--inline { width: auto; max-width: none; margin: 0 1rem 1rem; }
+  .avail-banner.avail-banner--inline,
+  .site-main:has(> .product-page) > .avail-banner.avail-banner--inline { width: auto; max-width: none; margin: 0 1rem 1rem; }
 }
 
 /* App-backed shop pages (cart, order status, news): the site's rail, type and gold, no framework classes. */
