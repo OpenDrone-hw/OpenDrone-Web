@@ -102,6 +102,45 @@ export const AM32_GATES = {
 
 export type Am32Gates = {[K in keyof typeof AM32_GATES]: boolean};
 
+/**
+ * TEST-ONLY SEAM (F1, review-fable-2). The simulated-ESC unit tests need to
+ * drive the real erase/write path while the shipped constants stay false.
+ * The seam opens only when ALL of these hold:
+ *   - there is no `window` (not a browser page);
+ *   - a Node.js `process` global exists (`process.versions.node`);
+ *   - `process.env.OPENDRONE_SIMULATED_ESC_WRITES === AM32_TEST_SEAM_VALUE`.
+ * A browser has no `process` global and no environment, so nothing on /flash
+ * can open it; there is no function to call, no argument and no UI control.
+ * Only `flasher.test.ts` sets the variable, around the simulated-ESC tests.
+ * It is read through `globalThis` on purpose so no bundler can inline it.
+ */
+export const AM32_TEST_SEAM_ENV = 'OPENDRONE_SIMULATED_ESC_WRITES';
+export const AM32_TEST_SEAM_VALUE = 'simulated-esc-only';
+
+function am32TestSeamOpen(): boolean {
+  const g = globalThis as unknown as {window?: unknown; process?: {versions?: {node?: string}; env?: Record<string, string | undefined>}};
+  if (typeof g.window !== 'undefined') return false;
+  const p = g.process;
+  return !!p?.versions?.node && p.env?.[AM32_TEST_SEAM_ENV] === AM32_TEST_SEAM_VALUE;
+}
+
+/** True only when every shipped AM32_*_VERIFIED constant is true (or the Node-only test seam is open). Reads the constants, never a parameter. */
+export function am32WritesEnabled(): boolean {
+  return Object.values(AM32_GATES).every(Boolean) || am32TestSeamOpen();
+}
+
+export class Am32WriteDisabledError extends Error {
+  constructor() {
+    super('Direct ESC writes are disabled until every AM32_*_VERIFIED flag is confirmed on hardware. Use esc-configurator with the verified file.');
+    this.name = 'Am32WriteDisabledError';
+  }
+}
+
+/** Hard check used inside the lowest-level 4-way erase/write primitives and in flashAm32. */
+export function assertAm32WritesEnabled(): void {
+  if (!am32WritesEnabled()) throw new Am32WriteDisabledError();
+}
+
 /** Fallback when direct writes are disabled. Link only: no esc-configurator code is used. */
 export const ESC_CONFIGURATOR_URL = 'https://esc-configurator.com/';
 

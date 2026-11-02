@@ -25,7 +25,8 @@ export type FirmwareRelease = {
   kind: FirmwareKind;
   version: string;
   firmware: string;
-  channel: 'stable' | 'beta';
+  /** Release channel. Anything but 'stable' is labelled as a pre-release on /flash (F11). */
+  channel: 'stable' | 'beta' | 'alpha';
   released: string;
   /** Same-origin path on opendrone.be, or null while not hosted. */
   url: string | null;

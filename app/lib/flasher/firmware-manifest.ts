@@ -13,7 +13,8 @@
  * Status (2026-11-02):
  *   - OpenFC-Lite / Lite Mini: hashes and sizes are of the rev3.3 UF2s in the
  *     board repos' `firmware/` folders. Not hosted on opendrone.be yet, so
- *     `published: false`.
+ *     `published: false`. Both are Betaflight ALPHA builds: channel 'alpha',
+ *     and /flash labels them as pre-release. Never mark an alpha 'stable'.
  *   - OpenESC-20x20: no AM32 release file exists yet. Placeholder.
  */
 
@@ -25,7 +26,7 @@ export const FIRMWARE_MANIFEST: readonly FirmwareRelease[] = [
     kind: 'betaflight-uf2',
     version: 'rev3.3',
     firmware: 'Betaflight 2026.6.0-alpha',
-    channel: 'stable',
+    channel: 'alpha',
     released: '2026-08-25',
     url: '/firmware/openfc/OpenFC-Lite-rev3.3_betaflight_2026.6.0-alpha_OPENFC_LITE_RP2350B.uf2',
     size: 868352,
@@ -38,7 +39,7 @@ export const FIRMWARE_MANIFEST: readonly FirmwareRelease[] = [
     kind: 'betaflight-uf2',
     version: 'rev3.3',
     firmware: 'Betaflight 2026.12.0-alpha (0b1c266, config 9eada21)',
-    channel: 'stable',
+    channel: 'alpha',
     released: '2026-08-25',
     url: '/firmware/openfc/OpenFC-Lite-Mini-rev3.3_betaflight_2026.12.0-alpha-0b1c266_cfg-9eada21_OPENFC_LITE_MINI_RP2350A.uf2',
     size: 897536,

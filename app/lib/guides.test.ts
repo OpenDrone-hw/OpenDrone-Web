@@ -153,3 +153,15 @@ test('HowTo JSON-LD is kept for the actionable FC pages', () => {
     assert.notEqual(findGuide('flash-openfc', slug)?.page.howTo, false, slug);
   }
 });
+
+test('F5/F6: ESC pages tell the reader how to leave passthrough and never promise a version on /flash', () => {
+  for (const slug of ['connect', 'verify', 'recovery']) {
+    const page = findGuide('flash-openesc', slug)?.page;
+    assert.ok(page, slug);
+    assert.ok(page.troubleshooting.some((t) => /power-cycle the flight controller to leave passthrough/i.test(t.fix)), slug);
+  }
+  const connect = findGuide('flash-openesc', 'connect')?.page;
+  assert.ok(connect?.steps.some((s) => /Disconnect/.test(s.title)));
+  const recovery = findGuide('flash-openesc', 'recovery')?.page;
+  assert.ok(recovery?.troubleshooting.every((t) => !/Flash the others/i.test(t.fix)));
+});

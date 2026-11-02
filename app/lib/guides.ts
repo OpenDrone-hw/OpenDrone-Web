@@ -214,7 +214,7 @@ const OPENFC: GuideFamily = {
         {
           heading: 'Other ways in',
           paragraphs: [
-            'If the board is running Betaflight, you do not need the button. In the Betaflight app\'s **CLI** tab, type `bl rom` and press Enter: the board restarts straight into bootloader mode. The [firmware page](/flash) also has a button that does the same in Chrome or Edge.',
+            'If the board is running Betaflight, you may not need the button. In the Betaflight app\'s **CLI** tab, type `bl rom` and press Enter: the board should restart straight into bootloader mode. The [firmware page](/flash) also has a button meant to do the same in Chrome or Edge. Neither is checked on OpenFC boards yet: if no RP2350 drive appears and the board just restarts into Betaflight, use the BOOT button.',
           ],
         },
         {
@@ -233,7 +233,7 @@ const OPENFC: GuideFamily = {
         },
         {
           problem: 'The board shows up as a serial port or connects in the Betaflight app instead.',
-          fix: 'It started normally, so the button was not held while the cable went in. Unplug, hold BOOT first, then plug in. Or use `bl rom` in the CLI.',
+          fix: 'It started normally, so the button was not held while the cable went in. Unplug, hold BOOT first, then plug in.',
         },
         {
           problem: 'I am not sure the drive is the flight controller.',
@@ -262,7 +262,7 @@ const OPENFC: GuideFamily = {
         {
           title: 'Open the firmware page and pick your board',
           text: 'Go to [the firmware page](/flash) and choose your board. The name is printed on the board: OpenFC-Lite or OpenFC-Lite Mini.',
-          see: `Once released, the page shows the firmware version and the target name: \`${LITE_TARGET}\` for the OpenFC-Lite, \`${MINI_TARGET}\` for the Mini. Write the version down; you will check it later. Until then it says "Firmware not published yet": come back later.`,
+          see: `Once released, the page shows the firmware version, whether it is a stable release or a pre-release (alpha) build, and the target name: \`${LITE_TARGET}\` for the OpenFC-Lite, \`${MINI_TARGET}\` for the Mini. Write the version down; you will check it later. Until then it says "Firmware not published yet": come back later.`,
         },
         {
           title: 'Download and verify the file',
@@ -354,7 +354,7 @@ const OPENFC: GuideFamily = {
         },
         {
           title: 'Compare with the firmware page',
-          text: 'Check that the version matches the one the [firmware page](/flash) listed for the file you installed, and that the board name matches the board printed on yours.',
+          text: 'Check that the version matches the one the [firmware page](/flash) listed for the file you installed, and that the board name matches the board printed on yours. If the page labelled the file a pre-release (alpha) build, the version ends in `-alpha`: that is expected, not an error.',
           see: 'Both match. The firmware update is done.',
         },
         {
@@ -458,7 +458,8 @@ const OPENESC: GuideFamily = {
       intro: [
         'The OpenESC has four small processors, one per motor, each running AM32. Each one has an AM32 **bootloader** that can receive new firmware. Unlike the flight controller, there is no button to press: the tool wakes the bootloader up through the motor signal wire.',
         'This guide covers connecting and reading, which works today. Installing new AM32 from our firmware page is **coming after bench verification**; see [Install AM32 on your OpenESC](/guides/flash-openesc/flash).',
-        'The usual way in is **through the flight controller** (called passthrough): the browser talks to the flight controller over USB, and the flight controller passes the data on to the ESC over the 8-pin cable. A USB link adapter is an alternative, covered at the end.',
+        'The usual way in is **through the flight controller** (called passthrough): the browser talks to the flight controller over USB, and the flight controller passes the data on to the ESC over the 8-pin cable. The flight controller does not have to be an OpenFC: any board running Betaflight can do this. A USB link adapter is an alternative, covered at the end.',
+        'Two tools can read the ESCs. The [firmware page](/flash) shows the chip and the firmware name of each ESC. [esc-configurator.com](https://esc-configurator.com) also shows the AM32 version and the ESC settings. Both only read when you use them as described here.',
       ],
       tools: ESC_TOOLS,
       callouts: [ESC_SAFETY, ESC_BROWSER_NOTE],
@@ -478,19 +479,19 @@ const OPENESC: GuideFamily = {
           text: 'Connect the flight controller with a USB data cable. Do not press the BOOT button: the flight controller has to run Betaflight normally for passthrough.',
         },
         {
-          title: 'Connect from the browser',
-          text: 'Open [esc-configurator.com](https://esc-configurator.com), or the [firmware page](/flash) (choose OpenESC, then use its "Check your ESCs" step), and click the connect button. Pick the flight controller\'s port in the list Chrome or Edge shows. Only read and look: do not flash anything.',
-          see: 'The page says it is connected to the flight controller.',
-        },
-        {
           title: 'Plug in the battery',
-          text: 'Now plug the flight battery in. Keep your hands and the cables clear of the motors.',
+          text: 'Now plug the flight battery in, propellers still off. Keep your hands and the cables clear of the motors. The ESC gets its power only from the battery, so it must be in before you read.',
           see: 'The motors play their start-up beeps. The ESC is powered.',
         },
         {
           title: 'Read the ESCs',
-          text: 'Click the button to read the ESCs (**Read ESC info** on the firmware page, **Read Settings** in esc-configurator). This only reads; it changes nothing.',
-          see: 'Four ESC entries, one per motor, each showing AM32 and its version. Write the version down.',
+          text: 'On the [firmware page](/flash), choose OpenESC and click **Read ESC info** in its "Check your ESCs" step, then pick the flight controller\'s port in the list Chrome or Edge shows. That one click connects, switches the flight controller to ESC passthrough and reads every motor output. In esc-configurator instead, click **Connect**, then **Read Settings**. Either way, only read: do not flash anything.',
+          see: 'On the firmware page: one row per motor output Betaflight has set up (four on a quad), each with the chip and the firmware name. In esc-configurator: one entry per ESC with AM32 and its version. Write down what you see.',
+        },
+        {
+          title: 'Disconnect, then unplug the battery',
+          text: 'Click **Disconnect** (on the firmware page or in esc-configurator), then unplug the flight battery.',
+          see: 'The flight controller is back to normal and connects in the Betaflight app again.',
         },
       ],
       sections: [
@@ -507,8 +508,16 @@ const OPENESC: GuideFamily = {
           fix: 'Check the flight controller is running Betaflight (not in bootloader mode), try another data cable, and close the Betaflight app or any other tab that might hold the port.',
         },
         {
-          problem: 'No ESCs, or fewer than four, are found.',
-          fix: 'Make sure the battery is plugged in and the 8-pin cable is seated at both ends. Unplug the battery, reconnect in the browser, plug the battery in again and read again.',
+          problem: 'Every ESC row on the firmware page says "unreadable".',
+          fix: 'The battery was not plugged in when you clicked Read, so the ESCs had no power. Click Disconnect, plug the battery in (propellers off) and click Read ESC info again. Also check the 8-pin cable is seated at both ends.',
+        },
+        {
+          problem: 'The page finds fewer motor outputs than you have motors, or none.',
+          fix: 'The page reads as many ESCs as Betaflight has motor outputs set up. Check the mixer and motor settings in the Betaflight app, then read again.',
+        },
+        {
+          problem: 'The Betaflight app no longer connects after reading the ESCs.',
+          fix: 'The flight controller is still in ESC passthrough, usually because the tab was closed without Disconnect. Power-cycle the flight controller to leave passthrough: unplug USB and the battery, wait five seconds, then plug USB back in.',
         },
         {
           problem: 'One ESC entry is always missing or shows no firmware.',
@@ -540,8 +549,8 @@ const OPENESC: GuideFamily = {
         },
         {
           title: 'Read and note what your ESCs run now',
-          text: 'Follow [Connect your OpenESC and read its firmware](/guides/flash-openesc/connect) and write down the AM32 version shown for each motor.',
-          see: 'Four ESC entries with their versions written down. Unplug the battery afterwards.',
+          text: 'Follow [Connect your OpenESC and read its firmware](/guides/flash-openesc/connect) and write down what each motor shows: the chip and firmware name on the firmware page, or the AM32 version in esc-configurator.',
+          see: 'One line per motor written down. You clicked Disconnect and unplugged the battery afterwards.',
         },
         {
           title: 'Leave the firmware as it is',
@@ -585,28 +594,29 @@ const OPENESC: GuideFamily = {
         'Step 3 for an OpenESC: read all four ESCs, confirm they all run the same AM32 version, then test the motors with props off.',
       intro: [
         'Confirm that all four motor channels run the same AM32 version, and that the motors spin the right way. This works with the firmware your ESCs have today; installing a new version from our page is coming after bench verification.',
+        'The AM32 version and the ESC settings are shown by [esc-configurator.com](https://esc-configurator.com), not by our firmware page: the firmware page only shows each ESC\'s chip and firmware name. Use esc-configurator here, and only read.',
       ],
       tools: ESC_TOOLS,
       callouts: [ESC_SAFETY, ESC_BROWSER_NOTE],
       steps: [
         {
-          title: 'Read the ESCs again',
-          text: 'With propellers off, connect as in [step 1](/guides/flash-openesc/connect): USB to the flight controller, connect in the browser, battery in, then read the ESCs.',
-          see: 'Four ESC entries.',
+          title: 'Read the ESCs in esc-configurator',
+          text: 'With propellers off, set up as in [step 1](/guides/flash-openesc/connect): USB to the flight controller, battery in. Open [esc-configurator.com](https://esc-configurator.com), click **Connect**, then **Read Settings**.',
+          see: 'Four ESC entries, each with AM32 and a version.',
         },
         {
           title: 'Compare the versions',
-          text: 'Each entry shows AM32 and a version number. Compare the four with each other. Once an OpenESC release is published on the [firmware page](/flash), compare them with its version too.',
+          text: 'In esc-configurator, compare the four version numbers with each other. Once an OpenESC release is published on the [firmware page](/flash), compare them with its version too.',
           see: 'All four show the same version.',
         },
         {
           title: 'Check the ESC settings',
-          text: 'Look over the settings shown for each ESC, such as motor direction. Change something only if you know why.',
+          text: 'Still in esc-configurator, look over the settings shown for each ESC, such as motor direction. Change something only if you know why.',
           see: 'The settings are as you want them.',
         },
         {
           title: 'Test the motors',
-          text: 'Disconnect in the browser. In the Betaflight app, open the **Motors** tab, read and accept the safety notice, and spin each motor briefly at low speed.',
+          text: 'Click **Disconnect** in esc-configurator. In the Betaflight app, open the **Motors** tab, read and accept the safety notice, and spin each motor briefly at low speed.',
           see: 'Every motor spins smoothly, in the direction the motor diagram shows.',
         },
         {
@@ -622,6 +632,10 @@ const OPENESC: GuideFamily = {
         {
           problem: 'One ESC shows no firmware or is missing.',
           fix: 'Follow [Recover a failed ESC update](/guides/flash-openesc/recovery).',
+        },
+        {
+          problem: 'The Betaflight app does not connect after reading the ESCs.',
+          fix: 'The flight controller is still in ESC passthrough. Power-cycle the flight controller to leave passthrough: unplug USB and the battery, wait five seconds, then plug USB back in.',
         },
         {
           problem: 'A motor spins the wrong way.',
@@ -652,13 +666,13 @@ const OPENESC: GuideFamily = {
         },
         {
           title: 'Reconnect',
-          text: 'Connect as in [step 1](/guides/flash-openesc/connect): USB to the flight controller, connect in the browser, then plug in the battery.',
+          text: 'Set up as in [step 1](/guides/flash-openesc/connect): USB to the flight controller, then plug in the battery.',
           see: 'Start-up beeps from the ESCs that still have firmware. The failed one may stay silent.',
         },
         {
           title: 'Read the ESCs',
-          text: 'Read the ESCs (read only).',
-          see: 'The failed ESC may show no firmware or an unknown version. That is expected.',
+          text: 'Read the ESCs as in [step 1](/guides/flash-openesc/connect) (read only), then click **Disconnect**.',
+          see: 'The failed ESC may show no firmware name, "unreadable" or an unknown version. That is expected.',
         },
         {
           title: 'Reflashing: coming after bench verification',
@@ -673,7 +687,11 @@ const OPENESC: GuideFamily = {
       troubleshooting: [
         {
           problem: 'The failed ESC is not found at all, even after a power cycle.',
-          fix: 'Check the 8-pin cable and the solder joints on that motor\'s signal pad, then retry. Flash the others meanwhile; they are independent.',
+          fix: 'Check the 8-pin cable and the solder joints on that motor\'s signal pad, then retry.',
+        },
+        {
+          problem: 'The Betaflight app no longer connects to the flight controller.',
+          fix: 'It is still in ESC passthrough. Power-cycle the flight controller to leave passthrough: unplug USB and the battery, wait five seconds, then plug USB back in.',
         },
         {
           problem: 'It still fails after several tries.',

@@ -16,10 +16,12 @@
  */
 
 import {
+  AM32_PAGE_SIZE,
   FOURWAY_DEVICE_INFO_MODE_INDEX,
   FOURWAY_DEVICE_INFO_SIG_HI_INDEX,
   FOURWAY_DEVICE_INFO_SIG_LO_INDEX,
   FOURWAY_MAX_CHUNK,
+  assertAm32WritesEnabled,
 } from './am32-layout.ts';
 import type {ByteLink, Decoded} from './serial-link.ts';
 
@@ -41,16 +43,14 @@ export const FOURWAY_CMD = {
   DeviceVerify: 0x40,
 } as const;
 
-const ACK_TEXT: Record<number, string> = {
+/** 4-way ACK codes (0x01, 0x05..0x07 are reserved). */
+export const ACK_TEXT: Readonly<Record<number, string>> = {
   0x00: 'OK',
   0x02: 'invalid command',
   0x03: 'CRC error',
   0x04: 'verify error',
-  0x08: 'device rejected the command',
-  0x09: 'device command failed',
-  0x0a: 'unknown device error',
-  0x0b: 'invalid ESC number',
-  0x0c: 'invalid parameter',
+  0x08: 'invalid ESC number',
+  0x09: 'invalid parameter',
   0x0f: 'general device error',
 };
 
@@ -136,21 +136,65 @@ export function parseDeviceInfo(params: Uint8Array): FourWayDeviceInfo {
 
 export class FourWay {
   private readonly link: ByteLink;
+  /**
+   * F2: set after a timeout or a reply that does not belong to the request.
+   * While set, every command except InterfaceTestAlive is refused, so a late
+   * frame can never be taken as the answer to a later request.
+   */
+  private desynced = false;
   constructor(link: ByteLink) {
     this.link = link;
   }
 
-  async command(cmd: number, address = 0, params?: Uint8Array, timeoutMs = 2000): Promise<FourWayResponse> {
+  get isDesynced(): boolean {
+    return this.desynced;
+  }
+
+  /**
+   * Send one request and return its reply. The receive buffer is flushed
+   * first, the reply must carry the same command, and `check` binds it to the
+   * request (address, length). Any mismatch or timeout marks the link out of
+   * step until testAlive() round-trips cleanly.
+   */
+  async command(
+    cmd: number,
+    address = 0,
+    params?: Uint8Array,
+    timeoutMs = 2000,
+    check?: (r: FourWayResponse) => string | null,
+  ): Promise<FourWayResponse> {
+    const what = `4-way command 0x${cmd.toString(16)}`;
+    if (this.desynced && cmd !== FOURWAY_CMD.InterfaceTestAlive) {
+      throw new FourWayError(`ESC link is out of step after a missing or mismatched reply; not sending ${what}. Reconnect and try again.`);
+    }
+    this.link.flush();
     await this.link.write(encodeFourWay(cmd, address, params));
-    const r = await this.link.readFrame((b) => decodeFourWay(b, cmd), timeoutMs, `4-way command 0x${cmd.toString(16)}`);
+    let r: FourWayResponse;
+    try {
+      r = await this.link.readFrame((b) => decodeFourWay(b, cmd), timeoutMs, what);
+    } catch (e) {
+      this.desynced = true;
+      throw e;
+    }
+    const problem = check?.(r) ?? null;
+    if (problem) {
+      this.desynced = true;
+      throw new FourWayError(`Reply does not match the request (${what}): ${problem}.`);
+    }
     if (r.ack !== 0) {
       throw new FourWayError(`ESC interface: ${ACK_TEXT[r.ack] ?? `error 0x${r.ack.toString(16)}`} (command 0x${cmd.toString(16)}).`, r.ack);
     }
+    if (cmd === FOURWAY_CMD.InterfaceTestAlive) this.desynced = false;
     return r;
   }
 
   async testAlive(): Promise<void> {
-    await this.command(FOURWAY_CMD.InterfaceTestAlive);
+    await this.command(FOURWAY_CMD.InterfaceTestAlive, 0, undefined, 2000, sameAddress(0));
+  }
+
+  /** If an earlier command timed out or mismatched, re-sync with a clean testAlive round trip. */
+  async resync(): Promise<void> {
+    if (this.desynced) await this.testAlive();
   }
 
   async protocolVersion(): Promise<number> {
@@ -163,15 +207,18 @@ export class FourWay {
 
   /** Connect to ESC `index`'s bootloader and read its device info. Read-only. */
   async initFlash(index: number): Promise<FourWayDeviceInfo> {
-    const r = await this.command(FOURWAY_CMD.DeviceInitFlash, 0, Uint8Array.of(index), 4000);
+    const r = await this.command(FOURWAY_CMD.DeviceInitFlash, 0, Uint8Array.of(index), 4000, (x) =>
+      x.params.length === 4 ? null : `device info is ${x.params.length} bytes, expected 4`,
+    );
     return parseDeviceInfo(r.params);
   }
 
   /** Read `length` (1..256) bytes at 4-way offset `address`. */
   async read(address: number, length: number): Promise<Uint8Array> {
     if (length < 1 || length > FOURWAY_MAX_CHUNK) throw new FourWayError('Read length must be 1..256.');
-    const r = await this.command(FOURWAY_CMD.DeviceRead, address, Uint8Array.of(length & 0xff));
-    if (r.params.length !== length) throw new FourWayError(`Short read at 0x${address.toString(16)}.`);
+    const r = await this.command(FOURWAY_CMD.DeviceRead, address, Uint8Array.of(length & 0xff), 2000, (x) =>
+      sameAddress(address)(x) ?? (x.params.length === length ? null : `${x.params.length} bytes, expected ${length}`),
+    );
     return r.params;
   }
 
@@ -184,16 +231,23 @@ export class FourWay {
   }
 
   /**
-   * Low-level erase/write. Callers must have passed the address through
-   * assertAm32Writable first; the AM32 flasher (am32.ts) is the only caller.
+   * Low-level erase/write. F1: both hard-check the shipped AM32_*_VERIFIED
+   * constants themselves (assertAm32WritesEnabled), like Picoboot.flashImage,
+   * so no caller can reach the ESC flash while any flag is false. Address
+   * checks (assertAm32Writable) stay the caller's job; am32.ts is the only one.
    */
   async pageEraseUnchecked(page: number): Promise<void> {
-    await this.command(FOURWAY_CMD.DevicePageErase, 0, Uint8Array.of(page & 0xff), 4000);
+    assertAm32WritesEnabled();
+    // Betaflight's 4-way interface answers an ARM page erase with the page's byte address; accept that or 0.
+    await this.command(FOURWAY_CMD.DevicePageErase, 0, Uint8Array.of(page & 0xff), 4000, (x) =>
+      x.address === 0 || x.address === ((page * AM32_PAGE_SIZE) & 0xffff) ? null : `address 0x${x.address.toString(16)} for page ${page}`,
+    );
   }
 
   async writeUnchecked(address: number, data: Uint8Array): Promise<void> {
+    assertAm32WritesEnabled();
     if (data.length < 1 || data.length > FOURWAY_MAX_CHUNK) throw new FourWayError('Write length must be 1..256.');
-    await this.command(FOURWAY_CMD.DeviceWrite, address, data, 4000);
+    await this.command(FOURWAY_CMD.DeviceWrite, address, data, 4000, sameAddress(address));
   }
 
   async resetEsc(index: number): Promise<void> {
@@ -204,4 +258,8 @@ export class FourWay {
   async exit(): Promise<void> {
     await this.command(FOURWAY_CMD.InterfaceExit);
   }
+}
+
+function sameAddress(address: number): (r: FourWayResponse) => string | null {
+  return (r) => (r.address === address ? null : `reply for 0x${r.address.toString(16)}, request was 0x${address.toString(16)}`);
 }

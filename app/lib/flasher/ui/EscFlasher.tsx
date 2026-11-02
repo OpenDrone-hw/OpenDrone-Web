@@ -12,6 +12,10 @@
  *     shipped AM32_*_VERIFIED=false flags it never does; there is no override.
  *   - Fallback, always shown: save the verified file and flash it with
  *     esc-configurator.com.
+ *   - F6 (review-fable-2.md): while a session is open the FC sits in 4-way
+ *     passthrough and ignores MSP until InterfaceExit or a power cycle, so
+ *     leaving the page warns (beforeunload) and pagehide sends a best-effort
+ *     InterfaceExit.
  */
 
 import {useEffect, useMemo, useRef, useState} from 'react';
@@ -71,13 +75,24 @@ export function EscFlasher({
   const [progress, setProgress] = useState<{done: number; total: number} | null>(null);
   const prepareSeq = useRef(0);
 
-  useBeforeUnloadWhile(writing !== null);
+  const [connecting, setConnecting] = useState(false);
   const releases = useMemo(() => (esc ? releasesFor(esc.target) : []), [esc]);
-  const busy = !!session || writing !== null;
+  const busy = !!session || connecting || writing !== null;
+  // F6: an open session means the FC is in passthrough; warn before the tab closes or navigates away.
+  useBeforeUnloadWhile(busy);
   useEffect(() => onBusyChange(busy), [busy, onBusyChange]);
   // Leave passthrough and release the port if the panel goes away.
   const sessionRef = useRef<Session | null>(null);
   sessionRef.current = session;
+  // F6: best effort on tab close / navigation (the unmount cleanup below does not run in time then).
+  useEffect(() => {
+    const onHide = () => {
+      const s = sessionRef.current;
+      if (s?.via === 'fc') void s.fw.exit().catch(() => {});
+    };
+    window.addEventListener('pagehide', onHide);
+    return () => window.removeEventListener('pagehide', onHide);
+  }, []);
   useEffect(
     () => () => {
       const s = sessionRef.current;
@@ -125,8 +140,7 @@ export function EscFlasher({
     setSession(null);
   };
 
-  const readEscs = async () => {
-    if (busy) return;
+  const readEscsInner = async () => {
     setConnStatus({kind: 'busy', text: 'Connecting.'});
     let link: SerialLink;
     try {
@@ -145,7 +159,8 @@ export function EscFlasher({
         if (info.fcVariant !== 'BTFL') throw new Error(`The flight controller runs ${info.fcVariant}, not Betaflight.`);
         setConnStatus({kind: 'busy', text: 'Switching the flight controller to ESC passthrough.'});
         count = await msp.enterEscPassthrough();
-        if (count < 1) throw new Error('The flight controller reports no ESCs. Is the battery connected and the motor protocol DShot?');
+        // MSP_SET_PASSTHROUGH answers with the number of motor outputs Betaflight has configured (battery and protocol do not matter).
+        if (count < 1) throw new Error('Betaflight has no motor outputs configured, so there are no ESCs to read. Check the motor/mixer setup in the Betaflight app.');
       } else {
         await fw.testAlive();
       }
@@ -154,12 +169,25 @@ export function EscFlasher({
         s.escs.push(await identifyEsc(fw, i));
       }
       setSession({...s});
-      const msg = `Read ${count} ESC${count === 1 ? '' : 's'}.`;
-      setConnStatus({kind: 'ok', text: msg});
+      const none = s.escs.every((id) => id.mcu.status === 'unreadable');
+      const msg = none
+        ? `No ESC answered on ${count} motor output${count === 1 ? '' : 's'}. Is the flight battery plugged in? The ESCs are powered only by the battery. Click Disconnect, plug the battery in (props off) and read again.`
+        : `Read ${count} motor output${count === 1 ? '' : 's'}. When you are done, click Disconnect, then unplug the battery.`;
+      setConnStatus({kind: none ? 'error' : 'ok', text: msg});
       say(msg);
     } catch (e) {
       await disconnect(s);
       setConnStatus({kind: 'error', text: errText(e)});
+    }
+  };
+
+  const readEscs = async () => {
+    if (busy) return;
+    setConnecting(true);
+    try {
+      await readEscsInner();
+    } finally {
+      setConnecting(false);
     }
   };
 
@@ -212,7 +240,10 @@ export function EscFlasher({
               {isPublished(r) ? (
                 <>
                   <dt className="text-[var(--color-text-muted)]">Version</dt>
-                  <dd>{r.version}</dd>
+                  <dd>
+                    {r.version} ({r.channel}){' '}
+                    {r.channel !== 'stable' ? <strong>Pre-release ({r.channel}) build, not a stable release.</strong> : null}
+                  </dd>
                   <dt className="text-[var(--color-text-muted)]">SHA-256</dt>
                   <dd className="font-mono text-[13px] break-all">{r.sha256}</dd>
                 </>
@@ -258,8 +289,15 @@ export function EscFlasher({
           {esc ? (
             <>
               <p className="text-[15px]">
-                Reads which chip and firmware each ESC has, without changing anything. Propellers off, battery
-                connected.
+                Reads which chip and firmware name each ESC has, without changing anything. It does not show the AM32
+                version or the ESC settings; use esc-configurator for those. Propellers off, then plug the flight
+                battery in <em>before</em> you click Read: one click connects, switches the flight controller to ESC
+                passthrough and reads every motor output. The flight controller does not have to be an OpenFC.
+              </p>
+              <p className="mt-2 text-[15px]">
+                When you are done, click <strong>Disconnect</strong>, then unplug the battery. If you close the tab
+                without disconnecting, the flight controller stays in passthrough and the Betaflight app cannot connect
+                until you unplug USB and the battery and plug them back in.
               </p>
               <fieldset className="mt-3" disabled={busy}>
                 <legend className="text-[15px]">Connected through</legend>

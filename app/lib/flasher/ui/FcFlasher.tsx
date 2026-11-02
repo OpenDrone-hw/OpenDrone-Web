@@ -14,11 +14,15 @@
  * R1 (review-flash-write-safety.md): the verified image carries its target,
  * stale downloads are dropped by a sequence counter, and the board choice is
  * locked while a device is open or writing.
+ * F3 (review-fable-2.md): DirectInstall keeps {device, chip, installed} as one
+ * object set once after a complete read, clears it before the picker opens,
+ * and disables Install while connecting. F12: after a successful Identify the
+ * board choice is locked to the identified board until Identify runs again.
  */
 
-import {useCallback, useEffect, useId, useMemo, useRef, useState} from 'react';
+import {useEffect, useId, useMemo, useRef, useState} from 'react';
 import {releasesFor} from '../firmware-manifest.ts';
-import {FC_GATES, fcDirectWriteGate, fcTargetProblems, knownFcNamesIn, type MspReport} from '../gates.ts';
+import {FC_GATES, fcDirectWriteGate, fcInstallEnabled, fcTargetProblems, knownFcNamesIn, type MspReport} from '../gates.ts';
 import {fetchVerifiedFirmware, isPublished, releaseFileName, type FirmwareRelease} from '../manifest.ts';
 import {MspConnection, type BoardInfo} from '../msp.ts';
 import {Picoboot, chipPackageResult, type ChipInfo, type FlashPhase} from '../picoboot.ts';
@@ -65,6 +69,8 @@ export function FcFlasher({
   const [fcStatus, setFcStatus] = useState<Status>({kind: 'idle'});
   const [rebootStatus, setRebootStatus] = useState<Status>({kind: 'idle'});
   const [infoUf2Status, setInfoUf2Status] = useState<Status>({kind: 'idle'});
+  /** F12: board reported by the last successful Identify. The other radios stay disabled until Identify runs again. */
+  const [lockedTo, setLockedTo] = useState<FlasherTarget | null>(null);
   /** Bumped on every board change or new download, so a slow download cannot land under another board (R1). */
   const prepareSeq = useRef(0);
   /** True while the direct-install panel holds the board open or is writing: the board choice is locked (R1). */
@@ -73,8 +79,9 @@ export function FcFlasher({
   const releases = useMemo(() => (board ? releasesFor(board.target) : []), [board]);
   useEffect(() => onBusyChange(deviceBusy), [deviceBusy, onBusyChange]);
 
-  const chooseBoard = (t: FlasherTarget) => {
+  const chooseBoard = (t: FlasherTarget, fromIdentify = false) => {
     if (deviceBusy) return;
+    if (!fromIdentify && lockedTo && lockedTo.target !== t.target) return;
     prepareSeq.current++;
     setBoard(t);
     setVerified(null);
@@ -116,6 +123,7 @@ export function FcFlasher({
   });
 
   const identify = async () => {
+    setLockedTo(null);
     setFcStatus({kind: 'busy', text: 'Asking the flight controller who it is.'});
     let conn: MspConnection | null = null;
     try {
@@ -125,13 +133,16 @@ export function FcFlasher({
       const known = FLASHER_TARGETS.find((t) => fcTargetProblems({chosen: t, reported: toReport(info)}).length === 0);
       if (!known) {
         setFcStatus({kind: 'error', text: `This is ${info.manufacturerId} ${info.boardName || info.targetName}, not a board this page can update.`});
-      } else if (board && known.target !== board.target) {
-        setFcStatus({kind: 'error', text: `This board reports ${known.displayName}, but you chose ${board.displayName}. Choose the matching board in step 1.`});
       } else {
-        const msg = `Found ${known.displayName} running ${info.fcVariant} ${info.fcVersion}.`;
-        setFcStatus({kind: 'ok', text: msg});
+        const lock = `The board choice is now locked to ${known.displayName}; run Identify again to change it.`;
+        const wrong = board && known.target !== board.target ? board : null;
+        setLockedTo(known);
+        if (board?.target !== known.target) chooseBoard(known, true);
+        const msg = wrong
+          ? `This board reports ${known.displayName}, but you had chosen ${wrong.displayName}. Switched to ${known.displayName}. Check the name printed on the board. ${lock}`
+          : `Found ${known.displayName} running ${info.fcVariant} ${info.fcVersion}. ${lock}`;
+        setFcStatus({kind: wrong ? 'error' : 'ok', text: msg});
         say(msg);
-        if (!board) chooseBoard(known);
       }
     } catch (e) {
       setFcStatus({kind: 'error', text: pickerErrText(e)});
@@ -150,7 +161,7 @@ export function FcFlasher({
       const problems = fcTargetProblems({chosen: board, reported: toReport(info)});
       if (problems.length) throw new Error(`${problems.join(' ')} Not restarting it.`);
       await conn.rebootToBootloader();
-      const msg = 'Board restarted. It should now show up as a drive named RP2350.';
+      const msg = 'Restart command sent. If a drive named RP2350 appears, the board is in bootloader mode. If the board just restarts into Betaflight, use the BOOT button instead.';
       setRebootStatus({kind: 'ok', text: msg});
       say(msg);
     } catch (e) {
@@ -185,7 +196,13 @@ export function FcFlasher({
           <legend className="text-[15px] text-[var(--color-text-muted)]">The name is printed on the board.</legend>
           {FLASHER_TARGETS.map((t) => (
             <label key={t.target} className="mt-2 flex items-center gap-2 text-[16px]">
-              <input type="radio" name="fc-board" checked={board?.target === t.target} onChange={() => chooseBoard(t)} />
+              <input
+                type="radio"
+                name="fc-board"
+                checked={board?.target === t.target}
+                disabled={!!lockedTo && lockedTo.target !== t.target}
+                onChange={() => chooseBoard(t)}
+              />
               {t.displayName} <span className="font-mono text-[13px] text-[var(--color-text-muted)]">{t.target}</span>
             </label>
           ))}
@@ -213,7 +230,10 @@ export function FcFlasher({
               <div key={r.version} className="mt-2">
                 <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-[15px]">
                   <dt className="text-[var(--color-text-muted)]">Version</dt>
-                  <dd>{r.version} ({r.channel})</dd>
+                  <dd>
+                    {r.version} ({r.channel}){' '}
+                    {r.channel !== 'stable' ? <strong>Pre-release ({r.channel}) Betaflight build, not a stable release.</strong> : null}
+                  </dd>
                   <dt className="text-[var(--color-text-muted)]">Firmware</dt>
                   <dd>{r.firmware}</dd>
                   <dt className="text-[var(--color-text-muted)]">Target</dt>
@@ -248,8 +268,9 @@ export function FcFlasher({
             Save your settings first: in the Betaflight app, CLI tab, run <code>diff all</code> and save the output.
           </li>
           <li>
-            Then either hold the BOOT button while plugging in USB, run <code>bl rom</code> in the CLI, or use the button
-            below.
+            Then hold the BOOT button while plugging in USB. Running <code>bl rom</code> in the CLI or the button below
+            should do the same, but that is not yet checked on these boards: if no RP2350 drive appears, use the BOOT
+            button.
           </li>
         </ol>
         {hasSerial ? (
@@ -309,6 +330,8 @@ function InfoUf2Check({onFile, status}: {onFile: (f: File | undefined) => Promis
   );
 }
 
+type Connection = {pb: Picoboot; chip: ChipInfo; installed: string[]};
+
 const PHASE_TEXT: Record<FlashPhase, string> = {
   'erase-boot': 'Clearing the old firmware start so a half-finished update can never boot.',
   write: 'Writing and checking firmware.',
@@ -328,44 +351,57 @@ function DirectInstall({
   say: (t: string) => void;
   onBusyChange: (busy: boolean) => void;
 }) {
-  const [pb, setPb] = useState<Picoboot | null>(null);
-  const [chip, setChip] = useState<ChipInfo | null>(null);
-  const [installed, setInstalled] = useState<string[] | null>(null);
+  /** F3: device, chip and on-board scan are one object, set once after a complete read. Never a mix of two boards. */
+  const [conn, setConn] = useState<Connection | null>(null);
+  const [connecting, setConnecting] = useState(false);
   const [status, setStatus] = useState<Status>({kind: 'idle'});
   const [battery, setBattery] = useState(false);
   const [progress, setProgress] = useState<{done: number; total: number} | null>(null);
   const [flashing, setFlashing] = useState(false);
   const [finished, setFinished] = useState(false);
   const batteryId = useId();
+  /** The device currently open (also while connecting), so it is closed on unmount or reconnect. */
+  const openDev = useRef<Picoboot | null>(null);
 
   useBeforeUnloadWhile(flashing);
-  useEffect(() => () => void pb?.close(), [pb]);
-  useEffect(() => onBusyChange(!!pb || flashing), [pb, flashing, onBusyChange]);
+  useEffect(() => () => void openDev.current?.close(), []);
+  useEffect(() => onBusyChange(!!conn || connecting || flashing), [conn, connecting, flashing, onBusyChange]);
   useEffect(() => () => onBusyChange(false), [onBusyChange]);
 
   // The connection belongs to one verified image and one board choice.
   useEffect(() => {
-    setChip(null);
-    setInstalled(null);
+    void openDev.current?.close().catch(() => {});
+    openDev.current = null;
+    setConn(null);
+    setBattery(false);
     setFinished(false);
   }, [verified, target]);
 
-  const gate = fcDirectWriteGate({
-    chosen: target,
-    release: verified.release,
-    verifiedFor: verified.target.target,
-    imageStart: verified.image.start,
-    imageEnd: verified.image.end,
-    chipPackage: chip ? chipPackageResult(chip) : null,
-    flashBytes: chip?.flashBytes ?? null,
-    installed,
-  });
-  const canFlash = gate.allowed && !!pb && battery && !flashing && !finished;
+  const gateFor = (c: Connection | null) =>
+    fcDirectWriteGate({
+      chosen: target,
+      release: verified.release,
+      verifiedFor: verified.target.target,
+      imageStart: verified.image.start,
+      imageEnd: verified.image.end,
+      chipPackage: c ? chipPackageResult(c.chip) : null,
+      flashBytes: c?.chip.flashBytes ?? null,
+      installed: c?.installed ?? null,
+    });
+  const gate = gateFor(conn);
+  const canFlash = fcInstallEnabled({gate, connected: !!conn, connecting, battery, flashing, finished});
 
-  const connect = useCallback(async () => {
+  const connect = async () => {
+    if (connecting || flashing) return;
+    // F3: forget the previous board BEFORE the picker opens, so nothing of board A survives while board B is read.
+    setConnecting(true);
+    setConn(null);
+    setBattery(false);
+    setFinished(false);
     setStatus({kind: 'busy', text: 'Connecting to the bootloader.'});
     try {
-      await pb?.close();
+      await openDev.current?.close().catch(() => {});
+      openDev.current = null;
       let dev: Picoboot;
       try {
         dev = await Picoboot.request();
@@ -373,34 +409,44 @@ function DirectInstall({
         setStatus({kind: 'error', text: pickerErrText(e)});
         return;
       }
-      setPb(dev);
-      const info = await dev.chipInfo();
-      setChip(info);
+      openDev.current = dev;
+      const chip = await dev.chipInfo();
       setStatus({kind: 'busy', text: 'Reading the firmware that is on the board now.'});
-      let found: string[];
+      let installed: string[];
       await dev.exclusive(true);
       try {
         await dev.exitXip();
-        found = await dev.findInstalledTargets(verified.image.start, verified.image.end);
+        installed = await dev.findInstalledTargets(verified.image.start, verified.image.end);
       } finally {
         await dev.exclusive(false).catch(() => {});
       }
-      setInstalled(found);
-      const msg = `Connected. Chip package ${info.chipPackage ?? 'unreadable'}; firmware on board names ${found.length ? found.join(', ') : 'no known OpenFC'} (scanned the range the new image covers).`;
+      setConn({pb: dev, chip, installed});
+      const msg = `Connected. Chip package ${chip.chipPackage ?? 'unreadable'}; firmware on board names ${installed.length ? installed.join(', ') : 'no known OpenFC'} (scanned the range the new image covers).`;
       setStatus({kind: 'ok', text: msg});
       say(msg);
     } catch (e) {
+      await openDev.current?.close().catch(() => {});
+      openDev.current = null;
       setStatus({kind: 'error', text: errText(e)});
+    } finally {
+      setConnecting(false);
     }
-  }, [pb, say, verified]);
+  };
 
   const flash = async () => {
-    if (!pb || !canFlash) return;
+    const c = conn;
+    if (!c || !canFlash) return;
+    // Fresh gate on the stored connection object, not the render-time closure.
+    const fresh = gateFor(c);
+    if (!fresh.allowed || c.pb !== openDev.current) {
+      setStatus({kind: 'error', text: `Not installing: ${fresh.reasons.join(' ') || 'the connection changed. Connect again.'}`});
+      return;
+    }
     setFlashing(true);
     setStatus({kind: 'busy', text: 'Installing. Do not unplug the board.'});
     say('Installing. Do not unplug the board.');
     try {
-      await pb.flashImage(verified.image, (phase, done, total) => {
+      await c.pb.flashImage(verified.image, (phase, done, total) => {
         setProgress({done, total});
         say(`${PHASE_TEXT[phase]} ${Math.round((done / total) * 100)} percent.`);
       });
@@ -415,33 +461,32 @@ function DirectInstall({
       });
     } finally {
       setFlashing(false);
-      await pb.close();
-      setPb(null);
+      await c.pb.close();
+      if (openDev.current === c.pb) openDev.current = null;
+      setConn(null);
     }
   };
 
   return (
     <div className="mt-8">
       <h3 className="text-[17px] font-semibold">Or install directly (Chrome, Edge)</h3>
-      <button type="button" className="btn-secondary btn-sm mt-2" onClick={() => void connect()} disabled={flashing}>
+      <button type="button" className="btn-secondary btn-sm mt-2" onClick={() => void connect()} disabled={flashing || connecting}>
         Connect to board in bootloader mode
       </button>
-      {chip ? (
+      {conn ? (
         <ul className="mt-3 text-[15px]">
           <li>
-            Chip package: {chip.chipPackage ?? 'unreadable'} (expected {target.chipPackage}){' '}
-            <strong>{chip.chipPackage === target.chipPackage ? 'Match' : 'MISMATCH'}</strong>
+            Chip package: {conn.chip.chipPackage ?? 'unreadable'} (expected {target.chipPackage}){' '}
+            <strong>{conn.chip.chipPackage === target.chipPackage ? 'Match' : 'MISMATCH'}</strong>
           </li>
-          {installed !== null ? (
-            <li>
-              Firmware on board:{' '}
-              {installed.length ? installed.join(', ') : 'does not name an OpenFC (blank, damaged or third-party)'}
-            </li>
-          ) : null}
+          <li>
+            Firmware on board:{' '}
+            {conn.installed.length ? conn.installed.join(', ') : 'does not name an OpenFC (blank, damaged or third-party)'}
+          </li>
         </ul>
       ) : null}
-      {pb ? <BlockedReasons title="Direct install not available. Use the copy method above:" reasons={gate.reasons} /> : null}
-      {pb && gate.allowed ? (
+      {conn ? <BlockedReasons title="Direct install not available. Use the copy method above:" reasons={gate.reasons} /> : null}
+      {conn && gate.allowed ? (
         <fieldset className="mt-4" disabled={flashing || finished}>
           <legend className="text-[15px] font-semibold">Before installing</legend>
           <div className="mt-2 flex items-start gap-2">

@@ -177,6 +177,22 @@ export function fcDirectWriteGate(i: FcDirectWriteInput): GateResult {
   return result(reasons);
 }
 
+/**
+ * F3: whether the DirectInstall button is enabled. Never while a (re)connect
+ * is in progress, so a gate result computed from the previous board's chip and
+ * scan can never be combined with a newly opened device.
+ */
+export function fcInstallEnabled(i: {
+  gate: GateResult;
+  connected: boolean;
+  connecting: boolean;
+  battery: boolean;
+  flashing: boolean;
+  finished: boolean;
+}): boolean {
+  return i.gate.allowed && i.connected && !i.connecting && i.battery && !i.flashing && !i.finished;
+}
+
 // ---------------------------------------------------------------------------
 // ESC: direct 4-way write.
 // ---------------------------------------------------------------------------

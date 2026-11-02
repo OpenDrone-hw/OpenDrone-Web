@@ -9,12 +9,16 @@
  * bootloader in charge rather than a half-written app:
  *   1. re-identify the ESC (MCU + firmware name) and refuse on any mismatch;
  *   2. read the EEPROM/settings page as a backup for the after-check;
- *   3. erase the FIRST app page (vector table) so a partial app cannot start;
- *   4. erase + write + read-back-verify every other app page;
+ *   3. erase the FIRST app page (vector table) so a partial app cannot start,
+ *      and read it back: it must be all 0xFF before anything else is written;
+ *   4. erase (+ blank check) + write + read-back-verify every other app page;
  *   5. write + verify the first app page LAST;
  *   6. read the EEPROM page again and require it unchanged; reset the ESC.
  * Every erase/write offset goes through assertAm32Writable, so the
- * bootloader and the EEPROM page cannot be touched.
+ * bootloader and the EEPROM page cannot be touched. The shipped
+ * AM32_*_VERIFIED constants are hard-checked here AND inside
+ * FourWay.pageEraseUnchecked/writeUnchecked (F1); the `gates` argument of
+ * flashAm32 only feeds the reason text and can never unlock a write.
  */
 
 import {
@@ -29,6 +33,7 @@ import {
   AT32F421_FLASH_BASE,
   FOURWAY_MAX_CHUNK,
   FOURWAY_MODE_ARM_BLB,
+  assertAm32WritesEnabled,
   assertAm32Writable,
   type Am32Gates,
 } from './am32-layout.ts';
@@ -88,6 +93,7 @@ export async function identifyEsc(fw: FourWay, index: number): Promise<EscIdenti
   let deviceInfo: FourWayDeviceInfo | null = null;
   let mcu: ReadResult<EscMcu>;
   try {
+    await fw.resync();
     deviceInfo = await fw.initFlash(index);
     mcu = classifyMcu(deviceInfo);
   } catch (e) {
@@ -131,20 +137,24 @@ export function prepareAm32Image(hexText: string, target: EscTarget): Am32Image 
   const end = hex.end - AT32F421_FLASH_BASE;
   if (hex.start < AT32F421_FLASH_BASE) throw new Am32Error('The file has data below ESC flash.');
   assertAm32Writable(start, end - start);
+  // F9: AM32 builds start exactly at the app address. Anything else would be
+  // padded with 0xFF and could write 0xFFFFFFFF as the initial stack pointer.
+  if (start !== AM32_APP_START) {
+    throw new Am32Error(`The image must start at the AM32 app address 0x${(AT32F421_FLASH_BASE + AM32_APP_START).toString(16)}.`);
+  }
   const names = knownEscNamesIn((n) => hexContainsAscii(hex, n));
   if (!names.includes(target.firmwareName)) {
     throw new Am32Error(`The file does not contain the firmware name ${target.firmwareName}; it is not for this ESC.`);
   }
   const others = names.filter((n) => n !== target.firmwareName);
   if (others.length) throw new Am32Error(`The file also names ${others.join(', ')}; refusing an ambiguous image.`);
+  // F9: every page from the app start to the image end is erased and written,
+  // including pages with no data (written as 0xFF), so no old code survives in a hole.
   const pages: Am32Page[] = [];
-  const first = start - (start % AM32_PAGE_SIZE);
-  for (let off = first; off < end; off += AM32_PAGE_SIZE) {
+  for (let off = AM32_APP_START; off < end; off += AM32_PAGE_SIZE) {
     assertAm32Writable(off, AM32_PAGE_SIZE);
     const abs = AT32F421_FLASH_BASE + off;
-    let any = false;
-    for (let a = abs; a < abs + AM32_PAGE_SIZE && !any; a++) any = hex.bytes.has(a);
-    if (any) pages.push({offset: off, data: hexSlice(hex, abs, abs + AM32_PAGE_SIZE)});
+    pages.push({offset: off, data: hexSlice(hex, abs, abs + AM32_PAGE_SIZE)});
   }
   if (!pages.length || pages[0]?.offset !== AM32_APP_START) {
     throw new Am32Error(`The image must start at the AM32 app address 0x${(AT32F421_FLASH_BASE + AM32_APP_START).toString(16)}.`);
@@ -162,7 +172,8 @@ function equal(a: Uint8Array, b: Uint8Array): boolean {
  * Write a prepared image to ESC `index`. Re-runs the full gate right before
  * writing (gates, published release, MCU + firmware name read now) and
  * throws if anything does not hold. With the shipped AM32_*_VERIFIED=false
- * flags this always throws before touching flash.
+ * flags this always throws before touching flash, whatever `gates` says:
+ * `gates` only shapes the reason text (F1).
  */
 export async function flashAm32(
   fw: FourWay,
@@ -173,6 +184,7 @@ export async function flashAm32(
   onProgress: (phase: Am32Phase, done: number, total: number) => void,
   gates: Am32Gates = AM32_GATES,
 ): Promise<void> {
+  assertAm32WritesEnabled();
   const total = image.pages.length;
   onProgress('identify', 0, total);
   if (image.target !== target.target) throw new Am32Error('The prepared image is for another ESC.');
@@ -213,10 +225,23 @@ export async function flashAm32(
   await fw.resetEsc(index);
 }
 
+/**
+ * Erase one app page and read it back (F4): the page must be all 0xFF before
+ * anything else happens. A bootloader that ACKs the erase without doing it
+ * (or erases another page) stops the update here, with the old vector table
+ * still intact, instead of producing a hybrid image.
+ */
 async function erasePage(fw: FourWay, offset: number): Promise<void> {
   assertAm32Writable(offset, AM32_PAGE_SIZE);
   if (offset % AM32_PAGE_SIZE) throw new Am32Error('Unaligned page erase.');
   await fw.pageEraseUnchecked(offset / AM32_PAGE_SIZE);
+  const back = await fw.readRange(offset, AM32_PAGE_SIZE);
+  const bad = back.findIndex((b) => b !== 0xff);
+  if (bad >= 0) {
+    throw new Am32Error(
+      `The ESC did not erase the page at 0x${(AT32F421_FLASH_BASE + offset).toString(16)} (byte 0x${(AT32F421_FLASH_BASE + offset + bad).toString(16)} is not blank). Stopped before writing.`,
+    );
+  }
 }
 
 async function writeAndVerify(fw: FourWay, page: Am32Page): Promise<void> {

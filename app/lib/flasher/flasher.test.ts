@@ -9,20 +9,25 @@ import {
   AM32_GATES,
   AM32_PAGE_SIZE,
   AM32_SIGNATURE_AT32F421,
+  AM32_TEST_SEAM_ENV,
+  AM32_TEST_SEAM_VALUE,
   AT32F421_FLASH_BASE,
   Am32AddressError,
+  Am32WriteDisabledError,
   FOURWAY_MODE_ARM_BLB,
+  am32WritesEnabled,
   assertAm32Writable,
   type Am32Gates,
 } from './am32-layout.ts';
-import {Am32Error, classifyMcu, flashAm32, identifyEsc, parseEepromFirmwareName, prepareAm32Image} from './am32.ts';
+import {classifyMcu, flashAm32, identifyEsc, parseEepromFirmwareName, prepareAm32Image} from './am32.ts';
 import {FIRMWARE_MANIFEST} from './firmware-manifest.ts';
-import {FOURWAY_CMD, FourWay, crc16Xmodem, decodeFourWay, encodeFourWay, parseDeviceInfo} from './fourway.ts';
+import {ACK_TEXT, FOURWAY_CMD, FourWay, crc16Xmodem, decodeFourWay, encodeFourWay, parseDeviceInfo} from './fourway.ts';
 import {
   FC_GATES,
   escDirectWriteGate,
   escTargetProblems,
   fcDirectWriteGate,
+  fcInstallEnabled,
   fcTargetProblems,
   type FcDirectWriteInput,
   type EscDirectWriteInput,
@@ -240,6 +245,11 @@ describe('pinned manifest and hash verification', () => {
     assert.ok(!isPublished({...r, url: 'https://evil.example/x.uf2'}));
     assert.ok(!isPublished({...r, url: '//evil.example/x.uf2'}));
   });
+  it('F11: alpha builds are channel alpha, never stable', () => {
+    for (const r of FIRMWARE_MANIFEST) {
+      if (/alpha/i.test(r.firmware)) assert.equal(r.channel, 'alpha', r.target);
+    }
+  });
   it('uppercase or short hashes are placeholders', () => {
     assert.ok(!isPublished(published({sha256: 'A'.repeat(64)})));
     assert.ok(!isPublished(published({sha256: 'a'.repeat(63)})));
@@ -331,6 +341,14 @@ describe('FC direct-write gate', () => {
     assert.equal(fcDirectWriteGate(good({installed: [LITE.target]})).allowed, false);
     assert.equal(fcDirectWriteGate(good({installed: [MINI.target, LITE.target]})).allowed, false);
     assert.equal(fcDirectWriteGate(good({installed: null})).allowed, false);
+  });
+  it('F3: Install stays disabled while connecting, even with an allowed gate from the previous board', () => {
+    const ok = {gate: {allowed: true, reasons: []}, connected: true, connecting: false, battery: true, flashing: false, finished: false};
+    assert.equal(fcInstallEnabled(ok), true);
+    assert.equal(fcInstallEnabled({...ok, connecting: true}), false);
+    assert.equal(fcInstallEnabled({...ok, connected: false}), false);
+    assert.equal(fcInstallEnabled({...ok, battery: false}), false);
+    assert.equal(fcInstallEnabled({...ok, gate: {allowed: false, reasons: ['x']}}), false);
   });
   it('R1: blocks a verified image prepared for another board', () => {
     assert.equal(fcDirectWriteGate(good({verifiedFor: LITE.target})).allowed, false);
@@ -451,6 +469,11 @@ describe('4-way framing and CRC', () => {
     const big = resp(0x3a, 0, new Uint8Array(256).fill(1));
     assert.equal(decodeFourWay(big, 0x3a)!.value.params.length, 256);
   });
+  it('F8: ACK codes match the 4-way interface', () => {
+    assert.equal(ACK_TEXT[0x08], 'invalid ESC number');
+    assert.equal(ACK_TEXT[0x09], 'invalid parameter');
+    assert.equal(ACK_TEXT[0x0b], undefined);
+  });
   it('parses device info', () => {
     const d = parseDeviceInfo(Uint8Array.of(0x06, 0x47, 0x00, FOURWAY_MODE_ARM_BLB));
     assert.equal(d.signature, AM32_SIGNATURE_AT32F421);
@@ -503,6 +526,25 @@ describe('AM32 address guard', () => {
     assert.equal(img.pages[0]!.offset, AM32_APP_START);
     assert.throws(() => prepareAm32Image(makeHex(AT32F421_FLASH_BASE + AM32_APP_START, makeAm32App('SomeOther   ')), ESC20), /firmware name/);
   });
+  it('F9: refuses an image that does not start exactly at the app address', () => {
+    const app = makeAm32App();
+    assert.throws(() => prepareAm32Image(makeHex(AT32F421_FLASH_BASE + AM32_APP_START + 4, app), ESC20), /app address/);
+  });
+  it('F9: pages without data inside the image are still erased and written (0xFF)', () => {
+    const app = makeAm32App('OpenESC_20  ', 4 * 1024);
+    app.fill(0xff, 1024, 2048); // second page has no meaningful data; drop it from the hex entirely
+    const text = makeHex(AT32F421_FLASH_BASE + AM32_APP_START, app)
+      .split('\r\n')
+      .filter((l) => {
+        if (!l.startsWith(':10')) return true;
+        const addr = parseInt(l.slice(3, 7), 16);
+        return addr < 0x1400 || addr >= 0x1800;
+      })
+      .join('\r\n');
+    const img = prepareAm32Image(text, ESC20);
+    assert.deepEqual(img.pages.map((p) => p.offset), [0x1000, 0x1400, 0x1800, 0x1c00]);
+    assert.ok(img.pages[1]!.data.every((b) => b === 0xff));
+  });
   it('reads the EEPROM firmware name: ok, blank, not text', () => {
     const e = new Uint8Array(32).fill(0xff);
     assert.equal(parseEepromFirmwareName(e).status, 'blank');
@@ -525,6 +567,11 @@ class FakeEsc implements ByteLink {
   erases: number[] = [];
   sig = AM32_SIGNATURE_AT32F421;
   dead = false;
+  /** F4: the bootloader ACKs page erases but does nothing. */
+  eraseNoop = false;
+  /** F2: frames that arrive (late) right before the reply to the next request. */
+  lateFrames: Uint8Array[] = [];
+  flushes = 0;
   private out = new Uint8Array(0);
   constructor(name: string | null) {
     this.flash.fill(0x11, 0, 0x1000); // bootloader
@@ -533,8 +580,22 @@ class FakeEsc implements ByteLink {
       this.flash.set(new TextEncoder().encode(name.padEnd(12, ' ')), AM32_EEPROM_OFFSET + AM32_EEPROM_NAME_INDEX);
     }
   }
-  flush(): void {}
+  flush(): void {
+    this.flushes++;
+    this.out = new Uint8Array(0);
+  }
+  /** A complete, CRC-valid 4-way reply frame. */
+  static frame(cmd: number, addr: number, reply: Uint8Array, ack = 0): Uint8Array {
+    const body = Uint8Array.from([0x2e, cmd, addr >> 8, addr & 0xff, reply.length & 0xff, ...reply, ack]);
+    const crc = crc16Xmodem(body);
+    return Uint8Array.from([...body, crc >> 8, crc & 0xff]);
+  }
+  /** Bytes already in the receive buffer (arrived before the next request). */
+  queue(frame: Uint8Array): void {
+    this.out = Uint8Array.from([...this.out, ...frame]);
+  }
   async write(req: Uint8Array): Promise<void> {
+    for (const f of this.lateFrames.splice(0)) this.queue(f);
     const cmd = req[1]!;
     const addr = (req[2]! << 8) | req[3]!;
     const len = req[4] || 256;
@@ -552,22 +613,34 @@ class FakeEsc implements ByteLink {
       }
       case FOURWAY_CMD.DevicePageErase:
         this.erases.push(params[0]! * AM32_PAGE_SIZE);
-        this.flash.fill(0xff, params[0]! * AM32_PAGE_SIZE, (params[0]! + 1) * AM32_PAGE_SIZE);
+        if (!this.eraseNoop) this.flash.fill(0xff, params[0]! * AM32_PAGE_SIZE, (params[0]! + 1) * AM32_PAGE_SIZE);
         break;
       case FOURWAY_CMD.DeviceWrite:
         this.writes.push(addr);
         this.flash.set(params, addr);
         break;
     }
-    const body = Uint8Array.from([0x2e, cmd, addr >> 8, addr & 0xff, reply.length & 0xff, ...reply, 0]);
-    const crc = crc16Xmodem(body);
-    this.out = Uint8Array.from([...this.out, ...body, crc >> 8, crc & 0xff]);
+    this.queue(FakeEsc.frame(cmd, addr, reply));
   }
   async readFrame<T>(decode: (buf: Uint8Array) => Decoded<T>): Promise<T> {
     const hit = decode(this.out);
     if (!hit) throw new Error('no reply');
     this.out = this.out.slice(hit.consumed);
     return hit.value;
+  }
+}
+
+/**
+ * Opens the Node-only test seam (am32-layout.ts) around `fn`, so the simulated
+ * ESC can exercise the real erase/write path while every shipped
+ * AM32_*_VERIFIED constant stays false. Not reachable from a browser.
+ */
+async function withSimulatedWrites<T>(fn: () => Promise<T>): Promise<T> {
+  process.env[AM32_TEST_SEAM_ENV] = AM32_TEST_SEAM_VALUE;
+  try {
+    return await fn();
+  } finally {
+    delete process.env[AM32_TEST_SEAM_ENV];
   }
 }
 
@@ -598,25 +671,94 @@ describe('AM32 write procedure (simulated ESC)', () => {
   });
   it('with the shipped flags it refuses before touching flash', async () => {
     const esc = new FakeEsc('OpenESC_20');
-    await assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop), Am32Error);
+    await assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop), Am32WriteDisabledError);
     assert.equal(esc.writes.length + esc.erases.length, 0);
   });
-  it('refuses a blank, mismatched or unknown ESC even with all flags on', async () => {
-    for (const esc of [new FakeEsc(null), new FakeEsc('OpenESC_30')]) {
-      await assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn), /Not writing/);
-      assert.equal(esc.writes.length + esc.erases.length, 0);
-    }
-    const other = new FakeEsc('OpenESC_20');
-    other.sig = 0x1234;
-    await assert.rejects(flashAm32(new FourWay(other), 0, image(), ESC20, release, noop, allOn), /Not writing/);
-    assert.equal(other.writes.length, 0);
+  it('F1: the shipped constants are hard-checked; an all-true gates argument cannot unlock a write', async () => {
+    assert.equal(am32WritesEnabled(), false);
+    const esc = new FakeEsc('OpenESC_20');
+    await assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn), Am32WriteDisabledError);
+    assert.equal(esc.writes.length + esc.erases.length, 0);
   });
-  it('with all flags on: first page erased first and written last, bootloader and EEPROM untouched', async () => {
+  it('F1: the 4-way erase and write primitives refuse on their own while any flag is false', async () => {
+    const esc = new FakeEsc('OpenESC_20');
+    const fw = new FourWay(esc);
+    await assert.rejects(fw.pageEraseUnchecked(AM32_APP_START / AM32_PAGE_SIZE), Am32WriteDisabledError);
+    await assert.rejects(fw.writeUnchecked(AM32_APP_START, new Uint8Array(16)), Am32WriteDisabledError);
+    assert.equal(esc.writes.length + esc.erases.length, 0);
+  });
+  it('F1: a wrong value in the seam variable does not open it', async () => {
+    process.env[AM32_TEST_SEAM_ENV] = '1';
+    try {
+      assert.equal(am32WritesEnabled(), false);
+    } finally {
+      delete process.env[AM32_TEST_SEAM_ENV];
+    }
+  });
+  it('refuses a blank, mismatched or unknown ESC even with all flags on', async () => {
+    await withSimulatedWrites(async () => {
+      for (const esc of [new FakeEsc(null), new FakeEsc('OpenESC_30')]) {
+        await assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn), /Not writing/);
+        assert.equal(esc.writes.length + esc.erases.length, 0);
+      }
+      const other = new FakeEsc('OpenESC_20');
+      other.sig = 0x1234;
+      await assert.rejects(flashAm32(new FourWay(other), 0, image(), ESC20, release, noop, allOn), /Not writing/);
+      assert.equal(other.writes.length, 0);
+    });
+  });
+  it('F4: an ESC whose page erase is a no-op aborts before any write, old vector table intact', async () => {
+    const esc = new FakeEsc('OpenESC_20');
+    esc.flash.fill(0x5a, AM32_APP_START, AM32_EEPROM_OFFSET); // old app
+    esc.eraseNoop = true;
+    const before = esc.flash.slice();
+    await withSimulatedWrites(() =>
+      assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn), /did not erase/),
+    );
+    assert.equal(esc.writes.length, 0);
+    assert.deepEqual(esc.erases, [AM32_APP_START]);
+    assert.deepEqual(esc.flash, before);
+  });
+  it('F2: flushes before each command; a stale frame already buffered is dropped', async () => {
+    const esc = new FakeEsc('OpenESC_20');
+    esc.queue(FakeEsc.frame(FOURWAY_CMD.DeviceInitFlash, 0, Uint8Array.of(0x34, 0x12, 0, FOURWAY_MODE_ARM_BLB)));
+    const id = await identifyEsc(new FourWay(esc), 1);
+    assert.deepEqual(id.mcu, {status: 'ok', value: 'AT32F421'});
+    assert.ok(esc.flushes >= 2);
+  });
+  it('F2: a late reply for another address is rejected and the link refuses commands until testAlive', async () => {
+    const esc = new FakeEsc('OpenESC_20');
+    const fw = new FourWay(esc);
+    esc.lateFrames.push(FakeEsc.frame(FOURWAY_CMD.DeviceRead, 0x1000, new Uint8Array(17)));
+    await assert.rejects(fw.read(AM32_EEPROM_OFFSET, 17), /does not match the request/);
+    assert.equal(fw.isDesynced, true);
+    await assert.rejects(fw.initFlash(0), /out of step/);
+    await fw.testAlive();
+    assert.equal(fw.isDesynced, false);
+    assert.equal((await fw.read(AM32_EEPROM_OFFSET, 17)).length, 17);
+  });
+  it('F2: a timeout desyncs the link; identifyEsc resyncs before the next ESC', async () => {
+    const esc = new FakeEsc('OpenESC_20');
+    const fw = new FourWay(esc);
+    esc.dead = true;
+    assert.equal((await identifyEsc(fw, 0)).mcu.status, 'unreadable');
+    assert.equal(fw.isDesynced, true);
+    esc.dead = false;
+    const id = await identifyEsc(fw, 1);
+    assert.equal(fw.isDesynced, false);
+    assert.deepEqual(id.firmwareName, {status: 'ok', value: 'OpenESC_20'});
+  });
+  it('F2: a device-info reply of the wrong length is rejected', async () => {
+    const esc = new FakeEsc('OpenESC_20');
+    esc.lateFrames.push(FakeEsc.frame(FOURWAY_CMD.DeviceInitFlash, 0, Uint8Array.of(0x06, 0x47)));
+    assert.equal((await identifyEsc(new FourWay(esc), 0)).mcu.status, 'unreadable');
+  });
+  it('with all flags on (simulated): first page erased first and written last, bootloader and EEPROM untouched', async () => {
     const esc = new FakeEsc('OpenESC_20');
     const bootBefore = esc.flash.slice(0, 0x1000);
     const eepromBefore = esc.flash.slice(AM32_EEPROM_OFFSET, AM32_EEPROM_OFFSET + AM32_PAGE_SIZE);
     const img = image();
-    await flashAm32(new FourWay(esc), 0, img, ESC20, release, noop, allOn);
+    await withSimulatedWrites(() => flashAm32(new FourWay(esc), 0, img, ESC20, release, noop, allOn));
     assert.equal(esc.erases[0], AM32_APP_START);
     assert.equal(esc.writes[esc.writes.length - 4], AM32_APP_START);
     for (const a of [...esc.writes, ...esc.erases]) assert.ok(a >= AM32_APP_START && a < AM32_EEPROM_OFFSET);
