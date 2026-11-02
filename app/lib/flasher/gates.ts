@@ -176,7 +176,9 @@ export function fcDirectWriteGate(i: FcDirectWriteInput): GateResult {
     const other = i.installed.find((t) => t !== i.chosen.target);
     if (other) reasons.push(`The board currently runs firmware for ${other}.`);
     else if (!i.installed.includes(i.chosen.target)) {
-      reasons.push('The firmware on the board does not name this board (blank or third-party).');
+      reasons.push(
+        `Can't identify the firmware on this board. If you're sure it's an ${i.chosen.displayName.replace(/ \(.*\)$/, '')}, use the copy method (Other ways).`,
+      );
     }
   }
   return result(reasons);
