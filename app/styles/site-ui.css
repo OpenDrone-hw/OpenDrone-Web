@@ -1996,6 +1996,15 @@ body:has(.test-banner) .site-header {
 .app-shop-note a { color: var(--color-gold-text); }
 .app-shop-state { color: var(--color-text); font-size: 1.125rem; }
 .app-shop-problem { border: 1px solid var(--color-error); color: var(--color-error); border-radius: 8px; padding: 0.625rem 0.875rem; margin: 0 0 1rem; }
+/* Cart mismatch warning: advisory, so gold rather than error red; the icon and heading carry it, not the colour alone. */
+.co-compat { border: 1px solid var(--color-gold); border-left-width: 4px; background: var(--color-gold-soft); border-radius: 8px; padding: 0.75rem 1rem; margin: 0 0 1.25rem; color: var(--color-text); font-size: 0.9375rem; }
+.co-compat-title { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.5rem; font-size: 1rem; font-weight: 600; }
+.co-compat-title svg { flex: none; color: var(--color-gold-text); }
+.co-compat-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.625rem; }
+.co-compat-list p { margin: 0; }
+.co-compat-list a { color: var(--color-gold-text); text-decoration: underline; text-underline-offset: 2px; }
+.co-compat-list a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: 2px; }
+.co-compat-note { margin: 0.625rem 0 0; color: var(--color-text-muted); font-size: 0.8125rem; }
 .app-shop-cart, .app-shop-order { display: grid; gap: 1.5rem; }
 .app-shop-lines { width: 100%; border-collapse: collapse; }
 .app-shop-lines td { padding: 0.75rem 0; border-bottom: 1px solid var(--color-border); }
