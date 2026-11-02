@@ -8,7 +8,7 @@
  * structured data can never disagree.
  *
  * Strings use the site's inline markup (`app/lib/rich-text.ts`: `[label](/path)`,
- * `**strong**`, `*em*`) plus backticks for code. Links to `/flash` are rendered
+ * `**strong**`, `*em*`) plus backticks for code. Links to `/guides/flash` are rendered
  * as full document loads by the route, because that page's Permissions-Policy
  * (USB, serial) only applies to a freshly loaded document.
  *
@@ -135,7 +135,7 @@ const ESC_BROWSER_NOTE: Callout = {
 const FC_NOT_PUBLISHED: Callout = {
   kind: 'note',
   title: 'The firmware file is not published yet',
-  text: 'Today the [firmware page](/flash) shows "firmware not published yet" for both boards, so there is no file to download. The download will appear there once the firmware is released. Until then, read this guide to know what to expect, and do not use firmware files from other places.',
+  text: 'Today the [firmware page](/guides/flash) shows "firmware not published yet" for both boards, so there is no file to download. The download will appear there once the firmware is released. Until then, read this guide to know what to expect, and do not use firmware files from other places.',
 };
 
 /** The status every ESC page that mentions installing carries. Tested in guides.test.ts. */
@@ -144,7 +144,7 @@ export const ESC_COMING_STATUS = 'Coming after bench verification';
 const ESC_COMING: Callout = {
   kind: 'note',
   title: ESC_COMING_STATUS,
-  text: 'Installing AM32 on an OpenESC from the [firmware page](/flash) is **coming after bench verification**. Right now the page switches it off, and there is no published AM32 release for the OpenESC yet. You can still connect and read what your ESCs run today. Do not flash third-party AM32 files onto an OpenESC: they are not built for this board.',
+  text: 'Installing AM32 on an OpenESC from the [firmware page](/guides/flash) is **coming after bench verification**. Right now the page switches it off, and there is no published AM32 release for the OpenESC yet. You can still connect and read what your ESCs run today. Do not flash third-party AM32 files onto an OpenESC: they are not built for this board.',
 };
 
 const FC_TOOLS = [
@@ -214,7 +214,7 @@ const OPENFC: GuideFamily = {
         {
           heading: 'Other ways in',
           paragraphs: [
-            'If the board is running Betaflight, you may not need the button. In the Betaflight app\'s **CLI** tab, type `bl rom` and press Enter: the board should restart straight into bootloader mode. The [firmware page](/flash) also has a button meant to do the same in Chrome or Edge. Neither is checked on OpenFC boards yet: if no RP2350 drive appears and the board just restarts into Betaflight, use the BOOT button.',
+            'If the board is running Betaflight, you may not need the button. In the Betaflight app\'s **CLI** tab, type `bl rom` and press Enter: the board should restart straight into bootloader mode. The [firmware page](/guides/flash) also has a button meant to do the same in Chrome or Edge. Neither is checked on OpenFC boards yet: if no RP2350 drive appears and the board just restarts into Betaflight, use the BOOT button.',
           ],
         },
         {
@@ -261,7 +261,7 @@ const OPENFC: GuideFamily = {
       steps: [
         {
           title: 'Open the firmware page and pick your board',
-          text: 'Go to [the firmware page](/flash) and choose your board. The name is printed on the board: OpenFC-Lite or OpenFC-Lite Mini.',
+          text: 'Go to [the firmware page](/guides/flash) and choose your board. The name is printed on the board: OpenFC-Lite or OpenFC-Lite Mini.',
           see: `Once released, the page shows the firmware version, whether it is a stable release or a pre-release (alpha) build, and the target name: \`${LITE_TARGET}\` for the OpenFC-Lite, \`${MINI_TARGET}\` for the Mini. Write the version down; you will check it later. Until then it says "Firmware not published yet": come back later.`,
         },
         {
@@ -354,7 +354,7 @@ const OPENFC: GuideFamily = {
         },
         {
           title: 'Compare with the firmware page',
-          text: 'Check that the version matches the one the [firmware page](/flash) listed for the file you installed, and that the board name matches the board printed on yours. If the page labelled the file a pre-release (alpha) build, the version ends in `-alpha`: that is expected, not an error.',
+          text: 'Check that the version matches the one the [firmware page](/guides/flash) listed for the file you installed, and that the board name matches the board printed on yours. If the page labelled the file a pre-release (alpha) build, the version ends in `-alpha`: that is expected, not an error.',
           see: 'Both match. The firmware update is done.',
         },
         {
@@ -370,7 +370,7 @@ const OPENFC: GuideFamily = {
         },
         {
           problem: 'The board name in `version` is not the board you have.',
-          fix: 'The firmware for the other board went on. Go back to the [firmware page](/flash), pick the board printed on yours and install again. Bootloader mode always works, so this is fixable.',
+          fix: 'The firmware for the other board went on. Go back to the [firmware page](/guides/flash), pick the board printed on yours and install again. Bootloader mode always works, so this is fixable.',
         },
         {
           problem: 'The version is not the one the firmware page showed.',
@@ -410,7 +410,7 @@ const OPENFC: GuideFamily = {
         },
         {
           title: 'Get a fresh, checked file',
-          text: 'Once the firmware is released, go to the [firmware page](/flash), pick the board printed on yours and download the file again. Do not reuse a file from an interrupted download. If the page still says "Firmware not published yet", stop here: the board is safe in bootloader mode, and you can leave it unplugged until the file is out.',
+          text: 'Once the firmware is released, go to the [firmware page](/guides/flash), pick the board printed on yours and download the file again. Do not reuse a file from an interrupted download. If the page still says "Firmware not published yet", stop here: the board is safe in bootloader mode, and you can leave it unplugged until the file is out.',
           see: 'The page reports the file as checked, and a `.uf2` file is saved.',
         },
         {
@@ -459,7 +459,7 @@ const OPENESC: GuideFamily = {
         'The OpenESC has four small processors, one per motor, each running AM32. Each one has an AM32 **bootloader** that can receive new firmware. Unlike the flight controller, there is no button to press: the tool wakes the bootloader up through the motor signal wire.',
         'This guide covers connecting and reading, which works today. Installing new AM32 from our firmware page is **coming after bench verification**; see [Install AM32 on your OpenESC](/guides/flash-openesc/flash).',
         'The usual way in is **through the flight controller** (called passthrough): the browser talks to the flight controller over USB, and the flight controller passes the data on to the ESC over the 8-pin cable. The flight controller does not have to be an OpenFC: any board running Betaflight can do this. A USB link adapter is an alternative, covered at the end.',
-        'Two tools can read the ESCs. The [firmware page](/flash) shows the chip and the firmware name of each ESC. [esc-configurator.com](https://esc-configurator.com) also shows the AM32 version and the ESC settings. Both only read when you use them as described here.',
+        'Two tools can read the ESCs. The [firmware page](/guides/flash) shows the chip and the firmware name of each ESC. [esc-configurator.com](https://esc-configurator.com) also shows the AM32 version and the ESC settings. Both only read when you use them as described here.',
       ],
       tools: ESC_TOOLS,
       callouts: [ESC_SAFETY, ESC_BROWSER_NOTE],
@@ -485,7 +485,7 @@ const OPENESC: GuideFamily = {
         },
         {
           title: 'Read the ESCs',
-          text: 'On the [firmware page](/flash), choose OpenESC and click **Read ESC info** in its "Check your ESCs" step, then pick the flight controller\'s port in the list Chrome or Edge shows. That one click connects, switches the flight controller to ESC passthrough and reads every motor output. In esc-configurator instead, click **Connect**, then **Read Settings**. Either way, only read: do not flash anything.',
+          text: 'On the [firmware page](/guides/flash), choose OpenESC and click **Read ESC info** in its "Check your ESCs" step, then pick the flight controller\'s port in the list Chrome or Edge shows. That one click connects, switches the flight controller to ESC passthrough and reads every motor output. In esc-configurator instead, click **Connect**, then **Read Settings**. Either way, only read: do not flash anything.',
           see: 'On the firmware page: one row per motor output Betaflight has set up (four on a quad), each with the chip and the firmware name. In esc-configurator: one entry per ESC with AM32 and its version. Write down what you see.',
         },
         {
@@ -536,7 +536,7 @@ const OPENESC: GuideFamily = {
       description:
         'Installing AM32 on an OpenESC from the firmware page is coming after bench verification. What works today, and what to do and not do until then.',
       intro: [
-        '**Coming after bench verification.** The [firmware page](/flash) cannot flash an OpenESC yet. Its install code is switched off until it has been checked on real hardware, and there is no published AM32 release for the OpenESC. Nothing on this page is something to do to your ESC today.',
+        '**Coming after bench verification.** The [firmware page](/guides/flash) cannot flash an OpenESC yet. Its install code is switched off until it has been checked on real hardware, and there is no published AM32 release for the OpenESC. Nothing on this page is something to do to your ESC today.',
         'What you can do now is connect and read what your ESCs run (see [Connect your OpenESC and read its firmware](/guides/flash-openesc/connect)), and keep your current firmware. Right now the firmware page lists only the OpenESC-20x20; the 30x30 is not listed yet.',
       ],
       tools: ESC_TOOLS,
@@ -544,7 +544,7 @@ const OPENESC: GuideFamily = {
       steps: [
         {
           title: 'Check the status on the firmware page',
-          text: 'On the [firmware page](/flash), choose OpenESC and the model printed on your board. Only the 20×20 is listed.',
+          text: 'On the [firmware page](/guides/flash), choose OpenESC and the model printed on your board. Only the 20×20 is listed.',
           see: 'The page says "Firmware not published yet". That means there is nothing to install: this is expected today.',
         },
         {
@@ -606,7 +606,7 @@ const OPENESC: GuideFamily = {
         },
         {
           title: 'Compare the versions',
-          text: 'In esc-configurator, compare the four version numbers with each other. Once an OpenESC release is published on the [firmware page](/flash), compare them with its version too.',
+          text: 'In esc-configurator, compare the four version numbers with each other. Once an OpenESC release is published on the [firmware page](/guides/flash), compare them with its version too.',
           see: 'All four show the same version.',
         },
         {
@@ -654,7 +654,7 @@ const OPENESC: GuideFamily = {
       description:
         'An OpenESC channel misbehaving after an AM32 flash: power-cycle and reconnect to read it. Reflashing from our page is coming after bench verification.',
       intro: [
-        '**Coming after bench verification:** reflashing an OpenESC from the [firmware page](/flash) is not available yet. This page covers what you can do today: reconnect and read the ESCs, and get help. It is also for an ESC that was flashed with another tool.',
+        '**Coming after bench verification:** reflashing an OpenESC from the [firmware page](/guides/flash) is not available yet. This page covers what you can do today: reconnect and read the ESCs, and get help. It is also for an ESC that was flashed with another tool.',
         'A failed or interrupted ESC flash is almost always fixable. The AM32 bootloader sits in its own part of each processor\'s memory and is not overwritten by a firmware update. After a failed flash, that motor\'s processor stays in its bootloader and waits for firmware. Its motor will not spin, but the processor can be flashed again.',
       ],
       tools: ESC_TOOLS,
@@ -676,7 +676,7 @@ const OPENESC: GuideFamily = {
         },
         {
           title: 'Reflashing: coming after bench verification',
-          text: 'Flashing again from the [firmware page](/flash) is not available yet; see [Install AM32 on your OpenESC](/guides/flash-openesc/flash). Do not flash third-party AM32 files onto the OpenESC. Leave the failed channel as it is and open a [support ticket](/support) with the ESC model, the channel and what the tool showed.',
+          text: 'Flashing again from the [firmware page](/guides/flash) is not available yet; see [Install AM32 on your OpenESC](/guides/flash-openesc/flash). Do not flash third-party AM32 files onto the OpenESC. Leave the failed channel as it is and open a [support ticket](/support) with the ESC model, the channel and what the tool showed.',
           see: 'Nothing changes on the ESC. The other channels keep working.',
         },
         {

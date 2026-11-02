@@ -202,7 +202,7 @@ infer status from prose anywhere else.
 ## Firmware guides
 
 Beginner step-by-step guides for updating board firmware; the checked
-firmware files themselves are on ${origin}/flash. Index: ${origin}/guides
+firmware files themselves are on ${origin}/guides/flash. Index: ${origin}/guides
 
 ${guides}
 

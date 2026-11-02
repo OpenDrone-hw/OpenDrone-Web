@@ -75,7 +75,7 @@ test('meta descriptions fit a search snippet and titles are unique', () => {
 });
 
 test('internal links point at real routes', () => {
-  const known = new Set([...guidePaths(), '/flash', '/support']);
+  const known = new Set([...guidePaths(), '/guides/flash', '/support']);
   for (const s of strings()) {
     for (const m of s.matchAll(/\]\((\/[^)\s#]*)/g)) {
       assert.ok(known.has(m[1]), `unknown internal link ${m[1]} in: ${s.slice(0, 60)}`);

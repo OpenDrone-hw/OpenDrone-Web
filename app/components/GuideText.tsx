@@ -1,5 +1,6 @@
 import {Fragment, type ReactNode} from 'react';
 import {Link} from 'react-router';
+import {isFlashHref} from '~/lib/flash-path';
 import {parseRich} from '~/lib/rich-text';
 
 /**
@@ -7,7 +8,7 @@ import {parseRich} from '~/lib/rich-text';
  * <code>, the rest goes through the site's inline markup (links, strong, em).
  * Built as nodes, never as an HTML string, so there is no innerHTML here.
  *
- * Links to /flash are plain anchors on purpose: that page's Permissions-Policy
+ * Links to /guides/flash are plain anchors on purpose: that page's Permissions-Policy
  * (USB, serial) only applies to a freshly loaded document, and a client-side
  * navigation would keep this page's policy and block the device pickers.
  */
@@ -27,7 +28,7 @@ export function GuideText({value}: {value: string}): ReactNode {
               </a>
             );
           }
-          if (n.href === '/flash' || n.href.startsWith('/flash/') || n.href.startsWith('/flash#')) {
+          if (isFlashHref(n.href)) {
             return (
               <a key={j} href={n.href}>
                 {n.v}

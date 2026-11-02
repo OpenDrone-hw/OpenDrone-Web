@@ -1,6 +1,7 @@
 import {flatRoutes} from '@react-router/fs-routes';
 import {type RouteConfig, route} from '@react-router/dev/routes';
 import {LEGAL_SLUGS} from './lib/legal-slugs';
+import {LEGACY_FLASH_PATHS} from './lib/flash-path';
 
 /**
  * Legal pages are served under `/en/…` and `/nl/…`, in addition to the
@@ -68,4 +69,9 @@ if (isProd) {
   }
 }
 
-export default [...routes, ...localeRoutes] satisfies RouteConfig;
+/** The web flasher moved to /guides/flash; the old URLs 301 there (app/redirects/flash.tsx). */
+const flashRedirects = LEGACY_FLASH_PATHS.map((path) =>
+  route(path, 'redirects/flash.tsx', {id: `flash-redirect${path.replaceAll('/', '-')}`}),
+);
+
+export default [...routes, ...localeRoutes, ...flashRedirects] satisfies RouteConfig;
