@@ -19081,3 +19081,71 @@ summary,
   min-height: 4.5rem;
   padding: var(--sp-4) var(--sp-5);
 }
+
+/* /flash readability (2026-11-02, "quite unreadable"). Unlayered like the rest of .flash-*: the global
+   reset's `code { background: #ddd }` and the p/li resets beat utilities. Wider column, site body size,
+   brighter secondary text, dark code chips, visible secondary-button states. */
+.flash-column {
+  max-width: 780px;
+}
+.flash-page {
+  --color-text-muted: color-mix(in srgb, var(--color-text) 78%, transparent);
+}
+.flash-page :where(.flash-step) :where(p, li, dd, dt, label, summary, legend) {
+  font-size: 16px;
+  line-height: 1.55;
+}
+.flash-page .flash-step :is(p, li, dd, label, summary).text-\[15px\],
+.flash-page .flash-step :is(p, li, dd, label, summary).text-\[14px\] {
+  font-size: 16px;
+}
+.flash-page code {
+  background: color-mix(in srgb, var(--color-text) 10%, var(--color-bg-card));
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 1px 6px;
+}
+.flash-page .btn-secondary {
+  width: auto;
+  border: 1px solid var(--color-border-strong);
+}
+.flash-page .btn-secondary:hover:not(:disabled) {
+  border-color: var(--color-text);
+}
+.flash-page :is(.btn-secondary, .btn-primary):focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+.flash-page .btn-primary {
+  width: auto;
+  white-space: nowrap;
+}
+.flash-page input[type='file'] {
+  font-size: 15px;
+  color: var(--color-text);
+}
+.flash-page input[type='file']::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.flash-page input[type='file']::file-selector-button:hover {
+  border-color: var(--color-text);
+}
+.flash-filename {
+  display: block;
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}

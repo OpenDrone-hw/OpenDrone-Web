@@ -60,8 +60,8 @@ export default function FlashRoute() {
   }, []);
 
   return (
-    <article className="page-shell">
-      <div className="reading-column">
+    <article className="page-shell flash-page">
+      <div className="reading-column flash-column">
         <StagingBenchNotice />
         <header className="page-header">
           <p className="page-eyebrow">Firmware</p>

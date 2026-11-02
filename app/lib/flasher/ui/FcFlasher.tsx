@@ -328,8 +328,9 @@ export function FcFlasher({
               <ol className="mt-2 list-decimal pl-6 text-[16px]">
                 <li>
                   <button type="button" className="btn-secondary btn-sm" onClick={download}>
-                    Save {verifiedForBoard.fileName}
+                    Save firmware (.uf2)
                   </button>
+                  <span className="flash-filename">{verifiedForBoard.fileName}</span>
                 </li>
                 <li>Copy it onto the RP2350 drive. The board restarts when the copy finishes.</li>
               </ol>

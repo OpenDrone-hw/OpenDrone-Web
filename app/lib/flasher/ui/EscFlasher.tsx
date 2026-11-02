@@ -322,8 +322,9 @@ export function EscFlasher({
             <li>Take the propellers off. The ESC needs the flight battery connected to talk to the computer.</li>
             <li>
               <button type="button" className="btn-primary btn-sm" onClick={() => saveBytes(verifiedForEsc.bytes, verifiedForEsc.fileName)}>
-                Save {verifiedForEsc.fileName}
+                Save firmware (.{verifiedForEsc.fileName.split('.').pop()})
               </button>
+              <span className="flash-filename">{verifiedForEsc.fileName}</span>
             </li>
             <li>
               Open{' '}
