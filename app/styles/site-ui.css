@@ -2010,7 +2010,7 @@ body:has(.test-banner) .site-header {
   will-change: transform;
   z-index: 900;
   /* A fixed width, not content-sized: the font swap (Inter) must not resize the card and move its button. */
-  width: min(28rem, calc(100vw - 2rem));
+  width: min(30rem, calc(100vw - 2rem));
   display: flex;
   align-items: flex-start;
   gap: 0.25rem;
@@ -2033,9 +2033,10 @@ body:has(.test-banner) .site-header {
    label's font swaps in (no layout shift). */
 .avail-banner[data-lines="2"] .avail-banner-line {
   display: grid;
-  grid-template-columns: 8.75rem 1fr;
+  grid-template-columns: 10.5rem 1fr;
   column-gap: 0.4rem;
 }
+.avail-banner[data-lines="2"] .avail-banner-line strong { white-space: nowrap; }
 .avail-banner-line strong {
   color: var(--color-gold-text);
   font-family: var(--font-mono);
@@ -2080,7 +2081,7 @@ body:has(.test-banner) .site-header {
 .avail-banner.avail-banner--inline {
   position: static;
   /* Fixed width (not fit-content) for the same no-shift reason as the floating card. */
-  width: min(28rem, var(--rail-width));
+  width: min(30rem, var(--rail-width));
   max-width: min(40rem, var(--rail-width));
   margin: 0 auto 0 calc((100% - var(--rail-width)) / 2);
 }

@@ -90,7 +90,7 @@ test('no footer jump: the lazily loaded footer drawing has its box reserved with
 test('no shift from the font swap: both cards have a fixed width and two-line labels a fixed column', () => {
   const css = read('../styles/site-ui.css');
   const fixed = css.slice(css.indexOf('.avail-banner {'), css.indexOf('}', css.indexOf('.avail-banner {')));
-  assert.match(fixed, /width: min\(28rem, calc\(100vw - 2rem\)\);/);
+  assert.match(fixed, /width: min\(30rem, calc\(100vw - 2rem\)\);/);
   assert.doesNotMatch(css.slice(css.indexOf('.avail-banner.avail-banner--inline {')), /^\s*width: fit-content;/m);
-  assert.match(css, /\.avail-banner\[data-lines="2"\] \.avail-banner-line \{\s+display: grid;\s+grid-template-columns: 8\.75rem 1fr;/);
+  assert.match(css, /\.avail-banner\[data-lines="2"\] \.avail-banner-line \{\s+display: grid;\s+grid-template-columns: 10\.5rem 1fr;/);
 });
