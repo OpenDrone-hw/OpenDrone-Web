@@ -565,6 +565,8 @@
   "firmware_freedom_title": "Flash what you want",
   "firmware_freedom_body": "Ships with {project}, no activation, no locked bootloader. Flashing other firmware does not by itself void the 2-year warranty.",
   "firmware_freedom_link": "Warranty",
+  "firmware_flash_link": "Flash firmware",
+  "firmware_flash_unavailable": "Firmware download: not available yet",
   "teardown_render_note": "Render from the design files. Silkscreen may differ.",
   "board_role_component_side": "Component side",
   "board_role_signal_components": "Signal + components",

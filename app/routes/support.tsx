@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState, type FormEvent} from 'react';
 import {data, Form, Link, redirect, useActionData, useLoaderData, useNavigate, useRouteLoaderData} from 'react-router';
-import {Search, Sparkles} from 'lucide-react';
+import {Search, Sparkles, Zap} from 'lucide-react';
 import type {Route} from './+types/support';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
@@ -497,6 +497,13 @@ export default function SupportRoute() {
         <Link to="/support/find" className="sp-tile">
           <Search size={18} className="sp-tile-icon" aria-hidden="true" />
           <span className="sp-tile-title">{t('find_cta')}</span>
+        </Link>
+
+        {/* A full document load: /flash has its own Permissions-Policy. */}
+        <Link to="/flash" reloadDocument className="sp-tile">
+          <Zap size={18} className="sp-tile-icon" aria-hidden="true" />
+          <span className="sp-tile-title">{t('flash_title')}</span>
+          <span className="sp-tile-line">{t('flash_line')}</span>
         </Link>
 
         {/* Community help, not order support: orders go through the ticket above. */}
