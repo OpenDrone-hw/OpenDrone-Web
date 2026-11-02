@@ -6,8 +6,10 @@ import {
   findGuide,
   guidePath,
   jsonLd,
+  resolveGuidePage,
   type Callout,
 } from '~/lib/guides';
+import {useDirectInstallEnabled} from '~/lib/flasher/ui/use-direct-install';
 import {GuideText} from '~/components/GuideText';
 import {Txt} from '~/components/Txt';
 import {copyFill, copyText} from '~/lib/copy';
@@ -69,7 +71,10 @@ function CalloutBox({callout}: {callout: Callout}) {
 }
 
 export default function GuideStepRoute() {
-  const {family, page, index, prev, next, total, howTo} = useLoaderData<typeof loader>();
+  const {family, page: basePage, index, prev, next, total, howTo} = useLoaderData<typeof loader>();
+  // The firmware page's one-button install (same gate as FcFlasher), read after mount: the server
+  // render and production show the base copy; the direct variant only while the gate is on.
+  const page = resolveGuidePage(basePage, useDirectInstallEnabled());
   const seeLabel = copyText('guides.see_label') ?? 'You should see:';
 
   return (

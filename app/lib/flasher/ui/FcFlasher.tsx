@@ -33,10 +33,9 @@ import {fcTargetProblems, knownFcNamesIn} from '../gates.ts';
 import {fetchVerifiedFirmware, isPublished, releaseFileName, type FirmwareRelease} from '../manifest.ts';
 import {MspConnection} from '../msp.ts';
 import {Picoboot} from '../picoboot.ts';
+import {directInstallEnabled} from '../direct-install.ts';
 import {
-  CHIP_PACKAGE_VERIFIED,
   FLASHER_TARGETS,
-  PICOBOOT_WRITE_VERIFIED,
   RP2350_BOOTSEL_PID,
   RPI_VID,
   type FlasherTarget,
@@ -93,9 +92,9 @@ export function FcFlasher({
   say: (t: string) => void;
   onBusyChange: (busy: boolean) => void;
 }) {
-  // CONST || staging switch, read after mount (hydration-safe). The gate itself runs in fc-update.ts.
+  // directInstallEnabled (shared with the guides): staging switch read after mount (hydration-safe) || verify flags. The gate itself runs in fc-update.ts.
   const staging = useStagingBench();
-  const writesOn = staging || (CHIP_PACKAGE_VERIFIED && PICOBOOT_WRITE_VERIFIED);
+  const writesOn = directInstallEnabled(staging);
   const browserOk = hasUsb && hasSerial;
   const canRun = browserOk && writesOn;
 

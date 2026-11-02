@@ -62,7 +62,24 @@ export type GuidePage = {
   troubleshooting: Trouble[];
   /** false: do not emit HowTo JSON-LD (the steps cannot be carried out yet). */
   howTo?: false;
+  /**
+   * The page as it reads while the firmware page's one-button install is on
+   * (directInstallEnabled, app/lib/flasher/direct-install.ts). Replaces the
+   * listed fields; the rest is shared. The server render always uses the base
+   * page, so production copy never claims the one-button install.
+   */
+  direct?: GuidePageDirect;
 };
+
+export type GuidePageDirect = Partial<Pick<GuidePage, 'intro' | 'callouts' | 'steps' | 'sections' | 'troubleshooting'>>;
+
+/** The page a reader sees: its `direct` variant while the one-button install is on. */
+export function resolveGuidePage(page: GuidePage, directInstall: boolean): GuidePage {
+  return directInstall && page.direct ? {...page, ...page.direct} : page;
+}
+
+/** A link to the firmware page listed first in a family on the /guides index. */
+export type GuideToolLink = {href: string; title: string; directTitle: string};
 
 export type GuideFamily = {
   /** URL segment, e.g. `flash-openfc`. */
@@ -72,6 +89,8 @@ export type GuideFamily = {
   firmware: string;
   /** One line for the /guides index. */
   blurb: string;
+  /** Listed before the steps on the /guides index (directTitle while the one-button install is on). */
+  tool?: GuideToolLink;
   pages: GuidePage[];
 };
 
@@ -165,15 +184,141 @@ SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000f", MODE="0660"
 
 const UDEV_RELOAD = 'sudo udevadm control --reload-rules && sudo udevadm trigger';
 
+const VERIFY_STEPS: GuideStep[] = [
+    {
+      title: 'Plug the board in normally',
+      text: 'Unplug the USB cable, then plug it back in without touching any button.',
+      see: 'No RP2350 drive this time. The board is running Betaflight.',
+    },
+    {
+      title: 'Connect in the Betaflight app',
+      text: 'Open [the Betaflight app](https://app.betaflight.com) in Chrome or Edge, click **Connect** and choose the board in the list.',
+      see: 'The app connects and opens its setup screen.',
+    },
+    {
+      title: 'Run the version command',
+      text: 'Open the **CLI** tab, type `version` and press Enter.',
+      see: `A few lines that name Betaflight, its version number and the board: \`${LITE_TARGET}\` on an OpenFC-Lite, \`${MINI_TARGET}\` on a Mini.`,
+    },
+    {
+      title: 'Compare with the firmware page',
+      text: 'Check that the version matches the one the [firmware page](/guides/flash) listed for the file you installed, and that the board name matches the board printed on yours. If the page labelled the file a pre-release (alpha) build, the version ends in `-alpha`: that is expected, not an error.',
+      see: 'Both match. The firmware update is done.',
+    },
+    {
+      title: 'Check your settings',
+      text: 'Settings usually survive an update, but do not count on it. If your ports, modes or rates are back to defaults, paste the `diff all` file you saved into the CLI, press Enter, then type `save` and press Enter.',
+      see: 'The board restarts and your settings are back.',
+    },
+];
+
+/**
+ * One-button install on the firmware page (FcFlasher, gated by directInstallEnabled).
+ * Facts: BENCH-SHEET.md run log 2026-11-02 (OpenFC-Lite, Chrome, config reset), FIRMWARE-SHIPPED.md.
+ */
+const BOOT_MODE_DIRECT: GuidePageDirect = {
+  intro: [
+    'Clicking **Update firmware** on the [firmware page](/guides/flash) restarts the board into bootloader mode for you, so usually you can skip this page. Use it when that step fails, or for the copy method.',
+    'In bootloader mode the board shows up as a drive called **RP2350**. The bootloader is built into the chip and cannot be erased, so you can always get back to it.',
+  ],
+  sections: [
+    {
+      heading: 'Other ways in',
+      paragraphs: [
+        "If the board runs Betaflight, type `bl rom` in the Betaflight app's **CLI** tab and press Enter. That is what the firmware page does for you. If no RP2350 drive appears, use the BOOT button.",
+      ],
+    },
+  ],
+};
+
+const INSTALL_DIRECT: GuidePageDirect = {
+  intro: [
+    'In Chrome or Edge, the [firmware page](/guides/flash) installs Betaflight with one button. It checks the file and the board before it writes anything.',
+    "Installing resets the board's settings, so save them first.",
+  ],
+  callouts: [FC_SAFETY, NEVER_UNPLUG],
+  steps: [
+    {
+      title: 'Save your settings',
+      text: 'In [the Betaflight app](https://app.betaflight.com), open the **CLI** tab, type `diff all`, press Enter and click **Save to File**. Then click **Disconnect**.',
+      see: 'A text file with your settings. Skip this on a brand-new board.',
+    },
+    {
+      title: 'Click Update firmware',
+      text: 'Plug in USB, open [the firmware page](/guides/flash), choose **Flight controller** and click **Update firmware**.',
+    },
+    {
+      title: 'Choose the serial port',
+      text: "Pick your board's serial port in the window that opens.",
+      see: 'The board restarts into bootloader mode.',
+    },
+    {
+      title: 'Click Continue, then choose RP2350 Boot',
+      text: 'Click **Continue** and choose **RP2350 Boot** in the second window. Do not unplug anything until the page says Done.',
+      see: 'The page checks the file and the board, installs, restarts the board and says **Done**.',
+    },
+  ],
+  sections: [
+    {
+      heading: 'Other ways, or if it fails',
+      paragraphs: [
+        'If a step fails, hold the BOOT button while you plug in USB, then click **Continue**. See [Put your OpenFC in bootloader mode](/guides/flash-openfc/boot-mode).',
+        'Copy method, in any browser: open **Other ways** on the firmware page and save the file. Put the board in bootloader mode, then drag the `.uf2` file onto the **RP2350** drive. The drive disappears when the board restarts. Check the board name first: this method cannot stop a wrong file.',
+      ],
+    },
+    {
+      heading: 'Linux',
+      paragraphs: ['For the Update firmware button, Chrome or Edge has to open the RP2350 device. Add this udev rule once, then unplug and replug the board.'],
+      code: `${UDEV_RULE}\n\n${UDEV_RELOAD}`,
+    },
+  ],
+  troubleshooting: [
+    {
+      problem: 'There is no RP2350 Boot in the second window.',
+      fix: 'The board did not restart into bootloader mode. Hold BOOT while you plug in USB, then click **Continue**.',
+    },
+    {
+      problem: 'The page cannot identify the firmware on the board.',
+      fix: 'It refuses rather than guess. If you are sure the board is an OpenFC-Lite or Lite Mini, use the copy method above.',
+    },
+    {
+      problem: 'The page says the file failed its check.',
+      fix: 'Do not use that file. Reload the page and try again. If it keeps failing, open a [support ticket](/support).',
+    },
+    {
+      problem: 'The install stopped halfway, or the cable came out.',
+      fix: 'Follow [Recover a failed update](/guides/flash-openfc/recovery).',
+    },
+    {
+      problem: 'The page says this browser cannot reach USB.',
+      fix: 'Use Chrome or Edge on a computer, or the copy method above, which works in every browser.',
+    },
+  ],
+};
+
+const VERIFY_DIRECT: GuidePageDirect = {
+  intro: ['Once the firmware page says **Done**, confirm that the board runs the firmware you meant to install, and put your settings back.'],
+  steps: VERIFY_STEPS.map((step) =>
+    step.title === 'Check your settings'
+      ? {
+          ...step,
+          text: 'Installing from the firmware page resets the settings. Paste the `diff all` file you saved into the CLI, press Enter, then type `save` and press Enter.',
+        }
+      : step,
+  ),
+};
+
 const OPENFC: GuideFamily = {
   id: 'flash-openfc',
   board: 'OpenFC',
   firmware: 'Betaflight',
   blurb:
     'Put Betaflight on an OpenFC-Lite or OpenFC-Lite Mini flight controller over USB, check it worked, and recover from a failed update.',
+  tool: {href: '/guides/flash', title: 'Open the firmware page', directTitle: 'Update firmware in one click'},
   pages: [
     {
       slug: 'boot-mode',
+      direct: BOOT_MODE_DIRECT,
       label: 'Bootloader mode',
       title: 'Put your OpenFC in bootloader mode',
       description:
@@ -249,6 +394,7 @@ const OPENFC: GuideFamily = {
       slug: 'flash',
       label: 'Install',
       title: 'Install Betaflight on your OpenFC',
+      direct: INSTALL_DIRECT,
       description:
         'Step 2 of updating an OpenFC: once released, download the verified Betaflight file from the firmware page and drag it onto the RP2350 drive.',
       intro: [
@@ -327,6 +473,7 @@ const OPENFC: GuideFamily = {
     },
     {
       slug: 'verify',
+      direct: VERIFY_DIRECT,
       label: 'Check',
       title: 'Check the firmware on your OpenFC',
       description:
@@ -336,33 +483,7 @@ const OPENFC: GuideFamily = {
       ],
       tools: FC_TOOLS,
       callouts: [FC_SAFETY, BROWSER_NOTE],
-      steps: [
-        {
-          title: 'Plug the board in normally',
-          text: 'Unplug the USB cable, then plug it back in without touching any button.',
-          see: 'No RP2350 drive this time. The board is running Betaflight.',
-        },
-        {
-          title: 'Connect in the Betaflight app',
-          text: 'Open [the Betaflight app](https://app.betaflight.com) in Chrome or Edge, click **Connect** and choose the board in the list.',
-          see: 'The app connects and opens its setup screen.',
-        },
-        {
-          title: 'Run the version command',
-          text: 'Open the **CLI** tab, type `version` and press Enter.',
-          see: `A few lines that name Betaflight, its version number and the board: \`${LITE_TARGET}\` on an OpenFC-Lite, \`${MINI_TARGET}\` on a Mini.`,
-        },
-        {
-          title: 'Compare with the firmware page',
-          text: 'Check that the version matches the one the [firmware page](/guides/flash) listed for the file you installed, and that the board name matches the board printed on yours. If the page labelled the file a pre-release (alpha) build, the version ends in `-alpha`: that is expected, not an error.',
-          see: 'Both match. The firmware update is done.',
-        },
-        {
-          title: 'Check your settings',
-          text: 'Settings usually survive an update, but do not count on it. If your ports, modes or rates are back to defaults, paste the `diff all` file you saved into the CLI, press Enter, then type `save` and press Enter.',
-          see: 'The board restarts and your settings are back.',
-        },
-      ],
+      steps: VERIFY_STEPS,
       troubleshooting: [
         {
           problem: 'The Betaflight app does not list the board.',

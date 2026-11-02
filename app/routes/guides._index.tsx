@@ -4,6 +4,7 @@ import {buildBreadcrumbJsonLd, buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {GUIDE_FAMILIES, guidePath, jsonLd} from '~/lib/guides';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
+import {useDirectInstallEnabled} from '~/lib/flasher/ui/use-direct-install';
 
 /**
  * /guides - index of the beginner firmware guides. Content lives in
@@ -24,6 +25,8 @@ export async function loader(_args: Route.LoaderArgs) {
 }
 
 export default function GuidesIndex() {
+  // Same gate as the firmware page's Update firmware button, read after mount (server render = gate off).
+  const direct = useDirectInstallEnabled();
   return (
     <article className="page-shell">
       <script
@@ -70,7 +73,7 @@ export default function GuidesIndex() {
             <h2 className="text-[22px]">
               <Txt id="guides.flasher_heading" fallback="Update firmware" />
             </h2>
-            <Txt id="guides.flash_cta_note" as="p" />
+            <Txt id={direct ? 'guides.flash_cta_note_direct' : 'guides.flash_cta_note'} as="p" />
             {/* Full document load: /guides/flash's USB/serial Permissions-Policy
                 only applies to a freshly loaded document. */}
             <a href="/guides/flash" className="btn-primary btn-sm mt-3 inline-block">
@@ -85,6 +88,13 @@ export default function GuidesIndex() {
               </h2>
               <p className="text-[var(--color-text-muted)]">{family.blurb}</p>
               <ol className="list-decimal">
+                {family.tool ? (
+                  // Unnumbered (display:block, so no list counter): the steps keep their 1..n.
+                  // A full document load, for /guides/flash's USB/serial Permissions-Policy.
+                  <li className="block">
+                    <a href={family.tool.href}>{direct ? family.tool.directTitle : family.tool.title}</a>
+                  </li>
+                ) : null}
                 {family.pages.map((p) => (
                   <li key={p.slug}>
                     <Link prefetch="intent" to={guidePath(family.id, p.slug)}>

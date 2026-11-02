@@ -1026,7 +1026,6 @@ const HEADER_MENU = {
     {id: 'menu-wholesale', title: 'Wholesale', url: '/wholesale'},
     {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
     {id: 'menu-owners', title: 'Owners map', url: '/owners'},
-    {id: 'menu-flash', title: 'Flash firmware', url: '/guides/flash'},
     {id: 'menu-guides', title: 'Firmware guides', url: '/guides'},
     // Mobile drawer only: desktop shows Support as the Contact link.
     {id: 'menu-support', title: 'Support', url: '/support'},

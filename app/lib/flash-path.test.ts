@@ -91,9 +91,8 @@ describe('links to the flasher', () => {
     }
   });
 
-  it('the nav, footer, support tile, PDP and guides point at /guides/flash with a full document load', () => {
-    assert.match(read('./header-menu.ts'), /\{to: '\/guides\/flash',/);
-    assert.match(read('../components/Header.tsx'), /url: '\/guides\/flash'\}/);
+  it('the footer, support tile, PDP and guides point at /guides/flash with a full document load', () => {
+    // The header menu and phone drawer no longer list the firmware page (header-menu.test.ts).
     const footer = read('../components/Footer.tsx');
     assert.match(footer, /\{to: '\/guides\/flash', copy: 'nav_flash'\}/);
     assert.match(footer, /reloadDocument=\{to === '\/guides\/flash'\}/);
