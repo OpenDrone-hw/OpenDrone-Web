@@ -9,15 +9,8 @@ export type Status =
   | {kind: 'ok'; text: string}
   | {kind: 'error'; text: string};
 
-export function errText(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
-
-/** Only for device-picker errors: there NotFoundError means "nothing chosen". Elsewhere it means unplugged (R4). */
-export function pickerErrText(e: unknown): string {
-  if (e instanceof DOMException && e.name === 'NotFoundError') return 'No device was selected.';
-  return errText(e);
-}
+// Plain-TS copies live in fc-reboot.ts so the step-3 flow is unit-testable; the page imports them from here.
+export {errText, pickerErrText} from '../fc-reboot.ts';
 
 /**
  * Whether the staging bench switch is on, read after mount so the server

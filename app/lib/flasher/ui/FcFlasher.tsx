@@ -25,6 +25,7 @@ import {ChoiceLadder} from '~/components/ChoiceLadder';
 import {FIRMWARE_MANIFEST, releasesFor} from '../firmware-manifest.ts';
 import {fcDirectWriteGate, fcInstallEnabled, fcTargetProblems, knownFcNamesIn, type MspReport} from '../gates.ts';
 import {fetchVerifiedFirmware, isPublished, releaseFileName, type FirmwareRelease} from '../manifest.ts';
+import {rebootFcToBootsel} from '../fc-reboot.ts';
 import {MspConnection, type BoardInfo} from '../msp.ts';
 import {Picoboot, chipPackageResult, type ChipInfo, type FlashPhase} from '../picoboot.ts';
 import {CHIP_PACKAGE_VERIFIED, FLASHER_TARGETS, PICOBOOT_WRITE_VERIFIED, type FlasherTarget} from '../targets.ts';
@@ -163,24 +164,12 @@ export function FcFlasher({
     }
   };
 
+  // Every outcome, including "no board chosen", ends in visible status text (fc-reboot.ts, tested).
   const rebootToBootsel = async () => {
-    if (!board) return;
-    setRebootStatus({kind: 'busy', text: 'Restarting the board into bootloader mode.'});
-    let conn: MspConnection | null = null;
-    try {
-      conn = await MspConnection.request();
-      const info = await conn.identify();
-      const problems = fcTargetProblems({chosen: board, reported: toReport(info)});
-      if (problems.length) throw new Error(`${problems.join(' ')} Not restarting it.`);
-      await conn.rebootToBootloader();
-      const msg = 'Restart command sent. If a drive named RP2350 appears, the board is in bootloader mode. If the board just restarts into Betaflight, use the BOOT button instead.';
-      setRebootStatus({kind: 'ok', text: msg});
-      say(msg);
-    } catch (e) {
-      setRebootStatus({kind: 'error', text: pickerErrText(e)});
-    } finally {
-      await conn?.close().catch(() => {});
-    }
+    setRebootStatus({kind: 'busy', text: 'Pick the board in the browser prompt.'});
+    const result = await rebootFcToBootsel(board);
+    setRebootStatus(result);
+    say(result.text);
   };
 
   const download = () => {
@@ -283,17 +272,9 @@ export function FcFlasher({
       </Step>
 
       <Step id="fc" n={3} title="Put the board in bootloader mode" open={!!verifiedForBoard}>
-        <ol className="list-decimal pl-6 text-[16px]">
-          <li>Unplug the flight battery. Keep only USB connected.</li>
-          <li>
-            Save your settings first: in the Betaflight app, CLI tab, run <code>diff all</code> and save the output.
-          </li>
-          <li>
-            Then hold the BOOT button while plugging in USB. Running <code>bl rom</code> in the CLI or the button below
-            should do the same, but that is not yet checked on these boards: if no RP2350 drive appears, use the BOOT
-            button.
-          </li>
-        </ol>
+        <p className="text-[16px]">
+          Battery off, USB only. Save your settings first (CLI: <code>diff all</code>).
+        </p>
         {hasSerial ? (
           <>
             <button type="button" className="btn-secondary btn-sm mt-3" onClick={() => void rebootToBootsel()} disabled={deviceBusy}>
@@ -302,39 +283,46 @@ export function FcFlasher({
             <StatusLine status={rebootStatus} />
           </>
         ) : null}
-        <p className="mt-3 text-[15px]">
-          In bootloader mode the board appears as a USB drive named <strong>RP2350</strong>.
-        </p>
+        <details className="mt-3 text-[15px]" open={!hasSerial}>
+          <summary className="cursor-pointer">Button didn&apos;t work? Hold BOOT while plugging in USB.</summary>
+          <p className="mt-1">The board then shows up as a USB drive named <strong>RP2350</strong>.</p>
+        </details>
       </Step>
 
       <Step id="fc" n={4} title="Install" open={!!verifiedForBoard && !!board}>
-        <InfoCallout>
-          If anything goes wrong, nothing is lost for good: hold the BOOT button while plugging in USB and the board
-          always comes back in bootloader mode.
-        </InfoCallout>
         {verifiedForBoard && board ? (
           <>
-            <h3 className="text-[17px] font-semibold">Copy the file (any browser)</h3>
-            <ol className="mt-2 list-decimal pl-6 text-[16px]">
-              <li>
-                <button type="button" className="btn-primary btn-sm" onClick={download}>
-                  Save {verifiedForBoard.fileName}
+            {/* Direct install only where the gates allow it (directInstallEnabled = flags || staging switch);
+                otherwise a disabled button with the reason, and the copy method open. */}
+            {hasUsb && directInstallEnabled ? (
+              <DirectInstall target={board} verified={verifiedForBoard} say={say} onBusyChange={setDeviceBusy} />
+            ) : (
+              <div>
+                <button type="button" className="btn-primary btn-sm" disabled>
+                  Install {verifiedForBoard.release.version} on {board.displayName}
                 </button>
-              </li>
-              <li>Copy the saved file onto the RP2350 drive. The board restarts on its own when the copy finishes.</li>
-              <li>Reconnect in the Betaflight app and check your settings.</li>
-            </ol>
-            <InfoUf2Check onFile={checkInfoUf2} status={infoUf2Status} />
-            {hasUsb ? (
-              directInstallEnabled ? (
-                <DirectInstall target={board} verified={verifiedForBoard} say={say} onBusyChange={setDeviceBusy} />
-              ) : (
-                <p className="mt-6 text-[15px]">
-                  <strong>Direct install from the browser is switched off</strong> until it has been checked on real
-                  boards. The copy method above is the supported way to install.
+                <p className="mt-2 text-[15px]">
+                  {hasUsb
+                    ? 'Direct install is off until it has been checked on real boards. Use the copy method below.'
+                    : 'Direct install needs Chrome or Edge. Use the copy method below.'}
                 </p>
-              )
-            ) : null}
+              </div>
+            )}
+            <details className="mt-4 text-[15px]" open={!(hasUsb && directInstallEnabled)}>
+              <summary className="cursor-pointer font-semibold">Other ways (copy the file, any browser)</summary>
+              <ol className="mt-2 list-decimal pl-6 text-[16px]">
+                <li>
+                  <button type="button" className="btn-secondary btn-sm" onClick={download}>
+                    Save {verifiedForBoard.fileName}
+                  </button>
+                </li>
+                <li>Copy it onto the RP2350 drive. The board restarts when the copy finishes.</li>
+              </ol>
+              <InfoUf2Check onFile={checkInfoUf2} status={infoUf2Status} />
+            </details>
+            <p className="mt-4 text-[14px] text-[var(--color-text-muted)]">
+              Stuck? Hold BOOT while plugging in USB: the board always comes back. Then check your settings in Betaflight.
+            </p>
           </>
         ) : null}
       </Step>
@@ -347,7 +335,7 @@ function InfoUf2Check({onFile, status}: {onFile: (f: File | undefined) => Promis
   return (
     <div className="mt-4">
       <label htmlFor={id} className="text-[15px]">
-        Not sure the drive is the board? Pick <code>INFO_UF2.TXT</code> from the drive to check it:
+        Check the drive: pick <code>INFO_UF2.TXT</code> from it.
       </label>
       <input id={id} type="file" accept=".txt,text/plain" className="mt-2 block text-[15px]" onChange={(e) => void onFile(e.target.files?.[0])} />
       <StatusLine status={status} />
@@ -482,7 +470,7 @@ function DirectInstall({
     } catch (e) {
       setStatus({
         kind: 'error',
-        text: `${errText(e)} The board did not get a complete image, so it will stay in bootloader mode. Nothing is damaged: reconnect and try again, or use the copy method above.`,
+        text: `${errText(e)} The board did not get a complete image, so it will stay in bootloader mode. Nothing is damaged: reconnect and try again, or use Other ways below.`,
       });
     } finally {
       setFlashing(false);
@@ -493,9 +481,8 @@ function DirectInstall({
   };
 
   return (
-    <div className="mt-8">
-      <h3 className="text-[17px] font-semibold">Or install directly (Chrome, Edge)</h3>
-      <button type="button" className="btn-secondary btn-sm mt-2" onClick={() => void connect()} disabled={flashing || connecting}>
+    <div>
+      <button type="button" className="btn-secondary btn-sm" onClick={() => void connect()} disabled={flashing || connecting}>
         Connect to board in bootloader mode
       </button>
       {conn ? (
@@ -510,7 +497,7 @@ function DirectInstall({
           </li>
         </ul>
       ) : null}
-      {conn ? <BlockedReasons title="Direct install not available. Use the copy method above:" reasons={gate.reasons} /> : null}
+      {conn ? <BlockedReasons title="Direct install not available. Use Other ways below:" reasons={gate.reasons} /> : null}
       {conn && gate.allowed ? (
         <fieldset className="mt-4" disabled={flashing || finished}>
           <legend className="text-[15px] font-semibold">Before installing</legend>
