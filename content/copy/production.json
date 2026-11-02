@@ -8,7 +8,7 @@
   "lead": "As Incutec we aim to be as transparent as possible, so that you know who and what you are supporting when buying the products.",
   "s2_title": "Today",
   "s2_body": [
-    "Fabrication and assembly happen in China. The BOM is written around parts you can actually order, so a self-build is a real option, not a theoretical one.",
+    "Fabrication and assembly happen in China. The BOM is written around parts you can actually order, so a self-build is a real option, not a theoretical one. Each board's KiCad project is published in its GitHub repository, linked from its product page.",
     "Manufacturing, quality control and sales are Incutec's side of the project: the things a community cannot do alone. [Finished products](/collections/all) are tested, inspected and packed before they ship to you."
   ],
   "s3_title": "The future",
