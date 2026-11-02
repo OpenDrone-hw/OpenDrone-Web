@@ -100,8 +100,13 @@ describe('findConflicts', () => {
   it('flags props that do not fit the frame or the motor shaft', () => {
     assert.deepEqual(rules(['ACC-PROP-5-GF-51466', 'OPENFRAME-3']), ['prop-size']);
     const [c] = findConflicts(['ACC-PROP-3-HQ-T3X3X3', 'OPENMOTOR-2306'], 'BE');
-    assert.equal(c.rule, 'prop-shaft');
+    assert.equal(c.rule, 'prop-motor-size');
     assert.ok(c.alt?.startsWith('ACC-PROP-5-'));
+    // Same size, wrong shaft: 1.5 mm T-mount props on a hypothetical 5 mm-shaft 1604.
+    const shafted: Record<string, CompatPart> = {...COMPAT_PARTS, 'TEST-MOTOR': {...(COMPAT_PARTS['OPENMOTOR-1604'] as Extract<CompatPart, {kind: 'motor'}>), shaft: '5mm'}};
+    assert.deepEqual(findConflicts(['ACC-PROP-3-HQ-T3X3X3', 'TEST-MOTOR'], 'BE', shafted).map((x) => x.rule), ['prop-shaft']);
+    // An unpublished prop mount is not judged.
+    assert.deepEqual(findConflicts(['ACC-PROP-3-GF-3020', 'TEST-MOTOR'], 'BE', shafted), []);
   });
 
   it('flags an antenna the receiver cannot take, and suggests a receiver that can', () => {
@@ -114,7 +119,7 @@ describe('findConflicts', () => {
     const [c] = findConflicts(['ACC-ANT-T', 'OPENRX-MONO'], 'BE');
     assert.equal(c.rule, 'antenna-band');
     assert.equal(c.alt, 'ACC-ANT-DUAL-T');
-    assert.match(c.bValue, /868 MHz/);
+    assert.equal(c.bValue, 'sub-GHz');
     // A dual-band antenna on a 2.4 GHz receiver works.
     assert.deepEqual(findConflicts(['ACC-ANT-DUAL-T', 'OPENRX-LITE-UFL'], 'BE'), []);
   });
