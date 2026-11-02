@@ -7,6 +7,9 @@ import {
 } from '~/lib/geo-availability';
 import type {Locale} from '~/lib/i18n';
 
+/** Space (px) kept between the end of the page and the card's top edge. */
+const GAP = 12;
+
 /** Remember the dismissal (if storage allows) and hide the card; focus that
  *  was on the card moves to the main content instead of falling to <body>. */
 function dismiss(setDismissed: (v: boolean) => void, card: HTMLElement | null) {
@@ -50,7 +53,8 @@ export function AvailabilityBanner({geo}: {geo: {region: GeoAvailabilityRegion; 
     el.addEventListener('keydown', onKey);
     return () => el.removeEventListener('keydown', onKey);
   }, [dismissed]);
-  // Reserve the room the card covers at the bottom of the viewport (card height + its bottom offset) as
+  // Reserve the room the card covers at the bottom of the viewport (card height + its bottom offset
+  // --avail-banner-offset + a GAP so content ends clearly above it) as
   // --avail-banner-space on <html>, so the page can always be scrolled clear of it. 0 while it is hidden
   // (display:none from the pre-paint dismissal style, or on phones behind a bottom bar); removed on unmount.
   useEffect(() => {
@@ -59,7 +63,7 @@ export function AvailabilityBanner({geo}: {geo: {region: GeoAvailabilityRegion; 
     const root = document.documentElement;
     const measure = () => {
       const r = el.getBoundingClientRect();
-      const space = r.height > 0 ? Math.max(0, Math.ceil(window.innerHeight - r.top)) : 0;
+      const space = r.height > 0 ? Math.max(0, Math.ceil(window.innerHeight - r.top + GAP)) : 0;
       root.style.setProperty('--avail-banner-space', `${space}px`);
     };
     measure();

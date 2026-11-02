@@ -1993,9 +1993,12 @@ body:has(.test-banner) .site-header {
    moves; the ChatFPV button keeps the bottom-right corner, also on phones. Hidden on phones while a bottom bar (pinned buy rail, cart
    bar) holds that edge. Labels are text, not colour. */
 .avail-banner {
+  /* Lifted off the bottom edge so it clears the footer's bottom-left board drawing; the page padding
+     below (--avail-banner-space) is measured from the card's top, so it follows this offset. */
+  --avail-banner-offset: 2rem;
   position: fixed;
   left: 1rem;
-  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--avail-banner-offset) + env(safe-area-inset-bottom, 0px));
   z-index: 900;
   max-width: min(28rem, calc(100vw - 2rem));
   display: flex;
@@ -2041,7 +2044,7 @@ body:has(.test-banner) .site-header {
    buttons) scrolls clear of it. On the body, not main: the footer follows main. 0 when hidden. */
 body:has(.avail-banner) { padding-bottom: var(--avail-banner-space, 0px); }
 @media (max-width: 959px) {
-  .avail-banner { left: 0.75rem; right: 5rem; max-width: none; bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); }
+  .avail-banner { --avail-banner-offset: 1.5rem; left: 0.75rem; right: 5rem; max-width: none; bottom: calc(var(--avail-banner-offset) + env(safe-area-inset-bottom, 0px)); }
   body:has(.buy-rail.is-pinned) .avail-banner,
   body:has(.cart-bar) .avail-banner { display: none; }
 }
