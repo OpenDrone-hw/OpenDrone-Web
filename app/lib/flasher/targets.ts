@@ -54,11 +54,13 @@ export function targetByName(name: string): FlasherTarget | undefined {
 }
 
 /**
- * ESC targets (AM32). `target` is AM32's FILE_NAME (the release file name);
- * `firmwareName` is AM32's FIRMWARE_NAME, which the firmware keeps in its
- * EEPROM page and which the flasher reads back to identify what an ESC runs.
- * Both come from the OpenDrone AM32 fork (branch feat/openesc-20-target,
- * Inc/targets.h, target OPENESC_20_F421).
+ * ESC targets (AM32). `target` is AM32's FILE_NAME (the release file name).
+ * `firmwareName` is the identity string the flasher reads back from the ESC
+ * and from the image: the AM32 name slot at flash 0x08007BE0, which holds
+ * FILE_NAME, NUL padded (derivation in am32-layout.ts, AM32_NAME_SLOT_OFFSET).
+ * It is NOT AM32's FIRMWARE_NAME ("OpenESC_20"): that string is not in the
+ * built app, and EEPROM bytes 5..16 are settings in EEPROM v4. Source: OpenDrone
+ * AM32 fork (branch feat/openesc-20-target, Inc/targets.h, OPENESC_20_F421).
  *
  * OpenESC-30x30 has no AM32 target of its own yet, so it is not listed: the
  * page cannot pin firmware for it and offers nothing rather than guessing.
@@ -76,7 +78,7 @@ export type EscTarget = {
 export const ESC_TARGETS: readonly EscTarget[] = [
   {
     target: 'OPENESC_20_F421',
-    firmwareName: 'OpenESC_20',
+    firmwareName: 'OPENESC_20_F421',
     product: 'openesc-20x20',
     displayName: 'OpenESC-20x20 (AT32F421)',
     mcu: 'AT32F421',

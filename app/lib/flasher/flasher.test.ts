@@ -4,9 +4,10 @@ import {join} from 'node:path';
 import {describe, it} from 'node:test';
 import {
   AM32_APP_START,
-  AM32_EEPROM_NAME_INDEX,
   AM32_EEPROM_OFFSET,
   AM32_GATES,
+  AM32_NAME_SLOT_OFFSET,
+  AM32_NAME_SLOT_SIZE,
   AM32_PAGE_SIZE,
   AM32_SIGNATURE_AT32F421,
   AM32_TEST_SEAM_ENV,
@@ -19,8 +20,8 @@ import {
   assertAm32Writable,
   type Am32Gates,
 } from './am32-layout.ts';
-import {classifyMcu, flashAm32, identifyEsc, parseEepromFirmwareName, prepareAm32Image} from './am32.ts';
-import {FIRMWARE_MANIFEST} from './firmware-manifest.ts';
+import {classifyMcu, flashAm32, identifyEsc, parseAm32NameSlot, prepareAm32Image} from './am32.ts';
+import {FIRMWARE_MANIFEST, PINNED, pinToRelease, type FirmwarePin} from './firmware-manifest.ts';
 import {ACK_TEXT, FOURWAY_CMD, FourWay, crc16Xmodem, decodeFourWay, encodeFourWay, parseDeviceInfo} from './fourway.ts';
 import {
   FC_GATES,
@@ -38,6 +39,7 @@ import {
   ManifestError,
   PLACEHOLDER_SHA256,
   fetchVerifiedFirmware,
+  isAllowedFirmwareUrl,
   isPublished,
   resolveRelease,
   sha256Hex,
@@ -104,13 +106,30 @@ function makeHex(start: number, bytes: Uint8Array): string {
   return lines.join('\r\n') + '\r\n';
 }
 
-/** A small AM32-like app image: 3 KB from the app start, carrying the padded firmware name. */
-function makeAm32App(name = 'OpenESC_20  ', size = 3 * 1024): Uint8Array {
+/**
+ * SYNTHETIC AM32 name slot (32 bytes): name, NUL terminator, NUL padding. Mirrors
+ * the documented AM32 F421 layout (am32-layout.ts); no bytes from any real image.
+ */
+function nameSlot(name: string): Uint8Array {
+  const slot = new Uint8Array(AM32_NAME_SLOT_SIZE); // 0x00 padding
+  slot.set(new TextEncoder().encode(name), 0);
+  return slot;
+}
+
+/**
+ * A SYNTHETIC AM32-like app image in the QC-image layout: app from 0x08001000
+ * up to the EEPROM page (27 KB), non-text filler, and the name slot at flash
+ * 0x08007BE0 (app offset 0x6BE0). `slot` overrides the 32 slot bytes.
+ */
+function makeAm32App(name = 'OPENESC_20_F421', slot: Uint8Array = nameSlot(name)): Uint8Array {
+  const size = AM32_EEPROM_OFFSET - AM32_APP_START;
   const b = new Uint8Array(size);
-  for (let i = 0; i < size; i++) b[i] = (i * 7) & 0xff;
-  b.set(new TextEncoder().encode(name), 0x200);
+  for (let i = 0; i < size; i++) b[i] = ((i * 7 + 1) & 0x7f) | 0x80; // never ASCII
+  b.set(slot, AM32_NAME_SLOT_OFFSET - AM32_APP_START);
   return b;
 }
+
+const TEST_RELEASE_URL = 'https://github.com/OpenDrone-hw/OpenFC-Lite-Mini/releases/download/v0.0.0-test/test.uf2';
 
 const published = (over: Partial<FirmwareRelease> = {}): FirmwareRelease => ({
   target: MINI.target,
@@ -119,7 +138,7 @@ const published = (over: Partial<FirmwareRelease> = {}): FirmwareRelease => ({
   firmware: 'test',
   channel: 'stable',
   released: '2026-11-02',
-  url: '/firmware/test.uf2',
+  url: TEST_RELEASE_URL,
   size: 4,
   sha256: 'a'.repeat(64),
   published: true,
@@ -244,15 +263,98 @@ describe('pinned manifest and hash verification', () => {
     assert.equal((await fetchVerifiedFirmware(r, 'https://opendrone.be/flash', fake)).sha256, r.sha256);
     assert.ok(!isPublished({...r, url: 'https://evil.example/x.uf2'}));
     assert.ok(!isPublished({...r, url: '//evil.example/x.uf2'}));
+    assert.ok(!isPublished({...r, url: '/firmware/test.uf2'}), 'same-origin paths are not on the allowlist');
   });
   it('F11: alpha builds are channel alpha, never stable', () => {
     for (const r of FIRMWARE_MANIFEST) {
-      if (/alpha/i.test(r.firmware)) assert.equal(r.channel, 'alpha', r.target);
+      if (/alpha/i.test(r.firmware) || /alpha/i.test(r.version)) assert.equal(r.channel, 'alpha', r.target);
     }
   });
   it('uppercase or short hashes are placeholders', () => {
     assert.ok(!isPublished(published({sha256: 'A'.repeat(64)})));
     assert.ok(!isPublished(published({sha256: 'a'.repeat(63)})));
+  });
+});
+
+describe('PINNED release assets (one line per board)', () => {
+  const goodPin: FirmwarePin = {
+    version: 'v1.0.0',
+    url: 'https://github.com/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/AM32_OPENESC_20_F421_2.21.hex',
+    sha256: 'ab'.repeat(32),
+    size: 76543,
+    channel: 'stable',
+  };
+  it('ships with every board unpinned, so nothing is offered', () => {
+    for (const v of Object.values(PINNED)) assert.equal(v, null);
+    assert.equal(FIRMWARE_MANIFEST.length, Object.keys(PINNED).length);
+    for (const r of FIRMWARE_MANIFEST) assert.ok(!isPublished(r), r.target);
+    for (const t of ['OPENFC_LITE_RP2350B', 'OPENFC_LITE_MINI_RP2350A'] as const) {
+      const r = FIRMWARE_MANIFEST.find((x) => x.target === t)!;
+      assert.equal(r.published, false);
+      assert.equal(r.channel, 'alpha', 'FC builds stay labelled alpha');
+    }
+  });
+  it('a null pin is blocked as not published and never fetched', async () => {
+    const r = pinToRelease('OPENESC_20_F421', null);
+    assert.equal(r.published, false);
+    assert.ok(!isPublished(r));
+    await assert.rejects(verifyFirmwareBytes(r, new Uint8Array(1)), FirmwareNotPublishedError);
+    let fetched = false;
+    const spy = (async () => {
+      fetched = true;
+      return new Response(new Uint8Array(1));
+    }) as unknown as typeof fetch;
+    await assert.rejects(fetchVerifiedFirmware(r, 'https://opendrone.be/flash', spy), /not published yet/);
+    assert.equal(fetched, false);
+  });
+  it('a complete pin passes structural validation', () => {
+    const r = pinToRelease('OPENESC_20_F421', goodPin);
+    assert.ok(isPublished(r));
+    assert.equal(r.kind, 'am32-hex');
+    assert.doesNotThrow(() => resolveRelease(r));
+  });
+  it('a malformed pin is blocked', () => {
+    const bad: Partial<FirmwarePin>[] = [
+      {sha256: 'AB'.repeat(32)},
+      {sha256: 'ab'.repeat(31)},
+      {sha256: 'zz'.repeat(32)},
+      {size: 0},
+      {size: -1},
+      {size: 1.5},
+      {size: 5 * 1024 * 1024},
+      {version: ''},
+      {version: '   '},
+      {url: ''},
+      {channel: 'nightly' as FirmwarePin['channel']},
+    ];
+    for (const over of bad) {
+      assert.ok(!isPublished(pinToRelease('OPENESC_20_F421', {...goodPin, ...over})), JSON.stringify(over));
+    }
+  });
+  it('a non-allowlisted URL is blocked', () => {
+    const urls = [
+      'http://github.com/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex',
+      'https://evil.example/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex',
+      'https://github.com.evil.example/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex',
+      'https://github.com/someone-else/OpenESC-20x20/releases/download/v1.0.0/a.hex',
+      'https://github.com/OpenDrone-hw/OpenESC-20x20/raw/main/firmware/a.hex',
+      'https://github.com/OpenDrone-hw/OpenESC-20x20/blob/main/a.hex',
+      'https://raw.githubusercontent.com/OpenDrone-hw/OpenESC-20x20/main/a.hex',
+      'https://objects.githubusercontent.com/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex',
+      'https://github.com:8443/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex',
+      'https://user@github.com/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex',
+      'https://github.com/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex?x=1',
+      'https://github.com/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex#f',
+      'https://github.com/OpenDrone-hw/x/releases/download/../../../evil/a.hex',
+      'https://GITHUB.com/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex',
+      '/firmware/openfc/a.uf2',
+      '//github.com/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex',
+    ];
+    assert.ok(isAllowedFirmwareUrl(goodPin.url));
+    for (const url of urls) {
+      assert.ok(!isAllowedFirmwareUrl(url), url);
+      assert.ok(!isPublished(pinToRelease('OPENESC_20_F421', {...goodPin, url})), url);
+    }
   });
 });
 
@@ -295,6 +397,7 @@ describe('target matching', () => {
     assert.equal(escTargetProblems({chosen: ESC20, manifestTarget: 'OTHER'}).length, 1);
     assert.equal(escTargetProblems({chosen: ESC20, imageNames: []}).length, 1);
     assert.equal(escTargetProblems({chosen: ESC20, escFirmwareName: {status: 'ok', value: 'OpenESC_30'}}).length, 1);
+    assert.equal(escTargetProblems({chosen: ESC20, escFirmwareName: {status: 'ok', value: 'OpenESC_20'}}).length, 1);
   });
 });
 
@@ -520,18 +623,31 @@ describe('AM32 address guard', () => {
     assert.throws(() => prepareAm32Image(makeHex(AT32F421_FLASH_BASE, app), ESC20), Am32AddressError);
     assert.throws(() => prepareAm32Image(makeHex(AT32F421_FLASH_BASE + AM32_EEPROM_OFFSET - 512, app), ESC20), Am32AddressError);
   });
-  it('prepareAm32Image checks the embedded firmware name', () => {
-    const img = prepareAm32Image(makeHex(AT32F421_FLASH_BASE + AM32_APP_START, makeAm32App()), ESC20);
-    assert.equal(img.pages.length, 3);
+  it('prepareAm32Image checks the name slot of the pinned image at 0x08007BE0', () => {
+    const at = (app: Uint8Array) => makeHex(AT32F421_FLASH_BASE + AM32_APP_START, app);
+    const img = prepareAm32Image(at(makeAm32App()), ESC20);
+    assert.equal(img.pages.length, 27);
     assert.equal(img.pages[0]!.offset, AM32_APP_START);
-    assert.throws(() => prepareAm32Image(makeHex(AT32F421_FLASH_BASE + AM32_APP_START, makeAm32App('SomeOther   ')), ESC20), /firmware name/);
+    assert.throws(() => prepareAm32Image(at(makeAm32App('OPENESC_30_F421')), ESC20), /0x8007be0 is "OPENESC_30_F421"/);
+    assert.throws(() => prepareAm32Image(at(makeAm32App('OPENESC_20_F42')), ESC20), /not OPENESC_20_F421/);
+    assert.throws(() => prepareAm32Image(at(makeAm32App('', new Uint8Array(32).fill(0xff))), ESC20), /blank/);
+    // Right name, but not where the bootloader-side read looks: refused.
+    const elsewhere = makeAm32App('', new Uint8Array(32).fill(0xff));
+    elsewhere.set(nameSlot('OPENESC_20_F421'), 0x200);
+    assert.throws(() => prepareAm32Image(at(elsewhere), ESC20), /blank/);
+    // Name with non-zero padding (no exact terminator/padding match): refused.
+    const pad = nameSlot('OPENESC_20_F421');
+    pad[20] = 0x20;
+    assert.throws(() => prepareAm32Image(at(makeAm32App('', pad)), ESC20), /padding/);
+    // An image that ends before the slot carries no identity: refused.
+    assert.throws(() => prepareAm32Image(at(makeAm32App().subarray(0, 3 * 1024)), ESC20), /blank/);
   });
   it('F9: refuses an image that does not start exactly at the app address', () => {
-    const app = makeAm32App();
+    const app = makeAm32App().subarray(0, 3 * 1024);
     assert.throws(() => prepareAm32Image(makeHex(AT32F421_FLASH_BASE + AM32_APP_START + 4, app), ESC20), /app address/);
   });
   it('F9: pages without data inside the image are still erased and written (0xFF)', () => {
-    const app = makeAm32App('OpenESC_20  ', 4 * 1024);
+    const app = makeAm32App();
     app.fill(0xff, 1024, 2048); // second page has no meaningful data; drop it from the hex entirely
     const text = makeHex(AT32F421_FLASH_BASE + AM32_APP_START, app)
       .split('\r\n')
@@ -542,17 +658,35 @@ describe('AM32 address guard', () => {
       })
       .join('\r\n');
     const img = prepareAm32Image(text, ESC20);
-    assert.deepEqual(img.pages.map((p) => p.offset), [0x1000, 0x1400, 0x1800, 0x1c00]);
+    assert.deepEqual(img.pages.slice(0, 4).map((p) => p.offset), [0x1000, 0x1400, 0x1800, 0x1c00]);
+    assert.equal(img.pages.length, 27);
     assert.ok(img.pages[1]!.data.every((b) => b === 0xff));
   });
-  it('reads the EEPROM firmware name: ok, blank, not text', () => {
-    const e = new Uint8Array(32).fill(0xff);
-    assert.equal(parseEepromFirmwareName(e).status, 'blank');
-    e.set(new TextEncoder().encode('OpenESC_20  '), AM32_EEPROM_NAME_INDEX);
-    assert.deepEqual(parseEepromFirmwareName(e), {status: 'ok', value: 'OpenESC_20'});
-    e[AM32_EEPROM_NAME_INDEX] = 0x01;
-    assert.equal(parseEepromFirmwareName(e).status, 'unreadable');
-    assert.equal(parseEepromFirmwareName(new Uint8Array(4)).status, 'unreadable');
+  it('identity slot is flash 0x08007BE0, 32 bytes, right before the EEPROM page', () => {
+    assert.equal(AM32_NAME_SLOT_OFFSET, 0x7be0);
+    assert.equal(AT32F421_FLASH_BASE + AM32_NAME_SLOT_OFFSET, 0x08007be0);
+    assert.equal(AM32_NAME_SLOT_OFFSET + AM32_NAME_SLOT_SIZE, AM32_EEPROM_OFFSET);
+    assert.doesNotThrow(() => assertAm32Writable(AM32_NAME_SLOT_OFFSET, AM32_NAME_SLOT_SIZE));
+  });
+  it('parses the name slot strictly: name + NUL terminator + NUL padding', () => {
+    assert.deepEqual(parseAm32NameSlot(nameSlot('OPENESC_20_F421')), {status: 'ok', value: 'OPENESC_20_F421'});
+    assert.equal(parseAm32NameSlot(new Uint8Array(32).fill(0xff)).status, 'blank');
+    assert.equal(parseAm32NameSlot(new Uint8Array(32)).status, 'blank');
+    assert.equal(parseAm32NameSlot(new Uint8Array(32).fill(0x41)).status, 'unreadable'); // no terminator
+    const tail = nameSlot('OPENESC_20_F421');
+    tail.fill(0xff, 16);
+    assert.equal(parseAm32NameSlot(tail).status, 'unreadable'); // padding not 0x00
+    const sp = nameSlot('OPENESC_20_F421 ');
+    assert.equal(parseAm32NameSlot(sp).status, 'unreadable'); // space is not part of a name
+    const ctl = nameSlot('OPENESC_20_F421');
+    ctl[3] = 0x01;
+    assert.equal(parseAm32NameSlot(ctl).status, 'unreadable');
+    const late = new Uint8Array(32).fill(0x41);
+    late[30] = 0;
+    late[31] = 0;
+    assert.equal(parseAm32NameSlot(late).status, 'unreadable'); // terminator outside filename[30]
+    assert.equal(parseAm32NameSlot(new Uint8Array(4)).status, 'unreadable');
+    assert.equal(parseAm32NameSlot(nameSlot('OPENESC_20_F421').subarray(0, 31)).status, 'unreadable');
   });
 });
 
@@ -573,11 +707,20 @@ class FakeEsc implements ByteLink {
   lateFrames: Uint8Array[] = [];
   flushes = 0;
   private out = new Uint8Array(0);
-  constructor(name: string | null) {
+  /**
+   * SYNTHETIC QC-layout ESC: bootloader filler at 0x0000, `name` in the name
+   * slot at 0x7BE0 (null = erased app, slot 0xFF), and an EEPROM v4-style
+   * header at 0x7C00 whose bytes 5..16 are settings (`eepromText` lets a test
+   * put text there to prove it is never used as the identity).
+   */
+  constructor(name: string | null, eepromText = '') {
     this.flash.fill(0x11, 0, 0x1000); // bootloader
+    this.flash.set([0x01, 0x04, 0x01, 0x02, 0x15], AM32_EEPROM_OFFSET); // v4 header, fw 2.21
+    this.flash.set([0xa0, 0x04, 0x00, 0x0a, 0x64, 0x00, 0x32, 0x02, 0x00, 0x00, 0x00, 0x00], AM32_EEPROM_OFFSET + 5);
+    if (eepromText) this.flash.set(new TextEncoder().encode(eepromText.slice(0, 12)), AM32_EEPROM_OFFSET + 5);
     if (name !== null) {
-      this.flash.set([0x01, 0x02, 0x0e, 0x02, 0x10], AM32_EEPROM_OFFSET);
-      this.flash.set(new TextEncoder().encode(name.padEnd(12, ' ')), AM32_EEPROM_OFFSET + AM32_EEPROM_NAME_INDEX);
+      this.flash.fill(0x5a, AM32_APP_START, AM32_NAME_SLOT_OFFSET);
+      this.flash.set(nameSlot(name), AM32_NAME_SLOT_OFFSET);
     }
   }
   flush(): void {
@@ -656,32 +799,65 @@ describe('AM32 write procedure (simulated ESC)', () => {
   const noop = () => {};
 
   it('identifies MCU and firmware name read-only', async () => {
-    const esc = new FakeEsc('OpenESC_20');
+    const esc = new FakeEsc('OPENESC_20_F421');
     const id = await identifyEsc(new FourWay(esc), 0);
     assert.deepEqual(id.mcu, {status: 'ok', value: 'AT32F421'});
-    assert.deepEqual(id.firmwareName, {status: 'ok', value: 'OpenESC_20'});
+    assert.deepEqual(id.firmwareName, {status: 'ok', value: 'OPENESC_20_F421'});
     assert.equal(esc.writes.length + esc.erases.length, 0);
   });
+  it('QC-layout identity: OPENESC_20_F421 in the 0x7BE0 slot passes the target check', async () => {
+    const id = await identifyEsc(new FourWay(new FakeEsc('OPENESC_20_F421')), 0);
+    assert.deepEqual(escTargetProblems({chosen: ESC20, escMcu: id.mcu, escFirmwareName: id.firmwareName}), []);
+    assert.equal(escDirectWriteGate({gates: allOn, chosen: ESC20, release, verifiedFor: ESC20.target, mcu: id.mcu, firmwareName: id.firmwareName}).allowed, true);
+  });
+  it('QC-layout identity: a wrong name in the slot is refused', async () => {
+    for (const name of ['OPENESC_30_F421', 'OPENESC_20_F051', 'OpenESC_20', 'OPENESC_20_F42']) {
+      const id = await identifyEsc(new FourWay(new FakeEsc(name)), 0);
+      assert.deepEqual(id.firmwareName, {status: 'ok', value: name});
+      assert.equal(escTargetProblems({chosen: ESC20, escFirmwareName: id.firmwareName}).length, 1, name);
+    }
+  });
+  it('QC-layout identity: text in EEPROM settings bytes 5..16 is never used', async () => {
+    // Blank app, but EEPROM bytes 5..16 spell the old expected name or the target: still blank, refused.
+    for (const text of ['OpenESC_20  ', 'OPENESC_20_F']) {
+      const id = await identifyEsc(new FourWay(new FakeEsc(null, text)), 0);
+      assert.equal(id.firmwareName.status, 'blank', text);
+      assert.equal(escTargetProblems({chosen: ESC20, escFirmwareName: id.firmwareName}).length, 1);
+    }
+    // Right slot, unrelated text in the settings: the slot decides.
+    const id = await identifyEsc(new FourWay(new FakeEsc('OPENESC_20_F421', 'OPENESC_30_F')), 0);
+    assert.deepEqual(id.firmwareName, {status: 'ok', value: 'OPENESC_20_F421'});
+  });
+  it('QC-layout identity: a blank (0xFF) or zeroed name slot is refused', async () => {
+    const ff = new FakeEsc(null);
+    const zero = new FakeEsc('OPENESC_20_F421');
+    zero.flash.fill(0x00, AM32_NAME_SLOT_OFFSET, AM32_EEPROM_OFFSET);
+    for (const esc of [ff, zero]) {
+      const id = await identifyEsc(new FourWay(esc), 0);
+      assert.equal(id.firmwareName.status, 'blank');
+      assert.equal(escDirectWriteGate({gates: allOn, chosen: ESC20, release, verifiedFor: ESC20.target, mcu: id.mcu, firmwareName: id.firmwareName}).allowed, false);
+    }
+  });
   it('an unresponsive ESC is unreadable, not an error', async () => {
-    const esc = new FakeEsc('OpenESC_20');
+    const esc = new FakeEsc('OPENESC_20_F421');
     esc.dead = true;
     const id = await identifyEsc(new FourWay(esc), 0);
     assert.equal(id.mcu.status, 'unreadable');
     assert.equal(id.firmwareName.status, 'unreadable');
   });
   it('with the shipped flags it refuses before touching flash', async () => {
-    const esc = new FakeEsc('OpenESC_20');
+    const esc = new FakeEsc('OPENESC_20_F421');
     await assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop), Am32WriteDisabledError);
     assert.equal(esc.writes.length + esc.erases.length, 0);
   });
   it('F1: the shipped constants are hard-checked; an all-true gates argument cannot unlock a write', async () => {
     assert.equal(am32WritesEnabled(), false);
-    const esc = new FakeEsc('OpenESC_20');
+    const esc = new FakeEsc('OPENESC_20_F421');
     await assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn), Am32WriteDisabledError);
     assert.equal(esc.writes.length + esc.erases.length, 0);
   });
   it('F1: the 4-way erase and write primitives refuse on their own while any flag is false', async () => {
-    const esc = new FakeEsc('OpenESC_20');
+    const esc = new FakeEsc('OPENESC_20_F421');
     const fw = new FourWay(esc);
     await assert.rejects(fw.pageEraseUnchecked(AM32_APP_START / AM32_PAGE_SIZE), Am32WriteDisabledError);
     await assert.rejects(fw.writeUnchecked(AM32_APP_START, new Uint8Array(16)), Am32WriteDisabledError);
@@ -697,19 +873,19 @@ describe('AM32 write procedure (simulated ESC)', () => {
   });
   it('refuses a blank, mismatched or unknown ESC even with all flags on', async () => {
     await withSimulatedWrites(async () => {
-      for (const esc of [new FakeEsc(null), new FakeEsc('OpenESC_30')]) {
+      for (const esc of [new FakeEsc(null), new FakeEsc('OPENESC_30_F421')]) {
         await assert.rejects(flashAm32(new FourWay(esc), 0, image(), ESC20, release, noop, allOn), /Not writing/);
         assert.equal(esc.writes.length + esc.erases.length, 0);
       }
-      const other = new FakeEsc('OpenESC_20');
+      const other = new FakeEsc('OPENESC_20_F421');
       other.sig = 0x1234;
       await assert.rejects(flashAm32(new FourWay(other), 0, image(), ESC20, release, noop, allOn), /Not writing/);
       assert.equal(other.writes.length, 0);
     });
   });
   it('F4: an ESC whose page erase is a no-op aborts before any write, old vector table intact', async () => {
-    const esc = new FakeEsc('OpenESC_20');
-    esc.flash.fill(0x5a, AM32_APP_START, AM32_EEPROM_OFFSET); // old app
+    const esc = new FakeEsc('OPENESC_20_F421');
+    esc.flash.fill(0x5a, AM32_APP_START, AM32_NAME_SLOT_OFFSET); // old app (name slot kept)
     esc.eraseNoop = true;
     const before = esc.flash.slice();
     await withSimulatedWrites(() =>
@@ -720,14 +896,14 @@ describe('AM32 write procedure (simulated ESC)', () => {
     assert.deepEqual(esc.flash, before);
   });
   it('F2: flushes before each command; a stale frame already buffered is dropped', async () => {
-    const esc = new FakeEsc('OpenESC_20');
+    const esc = new FakeEsc('OPENESC_20_F421');
     esc.queue(FakeEsc.frame(FOURWAY_CMD.DeviceInitFlash, 0, Uint8Array.of(0x34, 0x12, 0, FOURWAY_MODE_ARM_BLB)));
     const id = await identifyEsc(new FourWay(esc), 1);
     assert.deepEqual(id.mcu, {status: 'ok', value: 'AT32F421'});
     assert.ok(esc.flushes >= 2);
   });
   it('F2: a late reply for another address is rejected and the link refuses commands until testAlive', async () => {
-    const esc = new FakeEsc('OpenESC_20');
+    const esc = new FakeEsc('OPENESC_20_F421');
     const fw = new FourWay(esc);
     esc.lateFrames.push(FakeEsc.frame(FOURWAY_CMD.DeviceRead, 0x1000, new Uint8Array(17)));
     await assert.rejects(fw.read(AM32_EEPROM_OFFSET, 17), /does not match the request/);
@@ -738,7 +914,7 @@ describe('AM32 write procedure (simulated ESC)', () => {
     assert.equal((await fw.read(AM32_EEPROM_OFFSET, 17)).length, 17);
   });
   it('F2: a timeout desyncs the link; identifyEsc resyncs before the next ESC', async () => {
-    const esc = new FakeEsc('OpenESC_20');
+    const esc = new FakeEsc('OPENESC_20_F421');
     const fw = new FourWay(esc);
     esc.dead = true;
     assert.equal((await identifyEsc(fw, 0)).mcu.status, 'unreadable');
@@ -746,21 +922,24 @@ describe('AM32 write procedure (simulated ESC)', () => {
     esc.dead = false;
     const id = await identifyEsc(fw, 1);
     assert.equal(fw.isDesynced, false);
-    assert.deepEqual(id.firmwareName, {status: 'ok', value: 'OpenESC_20'});
+    assert.deepEqual(id.firmwareName, {status: 'ok', value: 'OPENESC_20_F421'});
   });
   it('F2: a device-info reply of the wrong length is rejected', async () => {
-    const esc = new FakeEsc('OpenESC_20');
+    const esc = new FakeEsc('OPENESC_20_F421');
     esc.lateFrames.push(FakeEsc.frame(FOURWAY_CMD.DeviceInitFlash, 0, Uint8Array.of(0x06, 0x47)));
     assert.equal((await identifyEsc(new FourWay(esc), 0)).mcu.status, 'unreadable');
   });
   it('with all flags on (simulated): first page erased first and written last, bootloader and EEPROM untouched', async () => {
-    const esc = new FakeEsc('OpenESC_20');
+    const esc = new FakeEsc('OPENESC_20_F421');
     const bootBefore = esc.flash.slice(0, 0x1000);
     const eepromBefore = esc.flash.slice(AM32_EEPROM_OFFSET, AM32_EEPROM_OFFSET + AM32_PAGE_SIZE);
     const img = image();
     await withSimulatedWrites(() => flashAm32(new FourWay(esc), 0, img, ESC20, release, noop, allOn));
     assert.equal(esc.erases[0], AM32_APP_START);
     assert.equal(esc.writes[esc.writes.length - 4], AM32_APP_START);
+    assert.equal(esc.erases[1], 0x7800, 'the name-slot page is rewritten right after the first erase');
+    assert.equal(esc.writes[0], 0x7800);
+    assert.deepEqual(esc.flash.slice(AM32_NAME_SLOT_OFFSET, AM32_EEPROM_OFFSET), nameSlot('OPENESC_20_F421'));
     for (const a of [...esc.writes, ...esc.erases]) assert.ok(a >= AM32_APP_START && a < AM32_EEPROM_OFFSET);
     assert.deepEqual(esc.flash.slice(0, 0x1000), bootBefore);
     assert.deepEqual(esc.flash.slice(AM32_EEPROM_OFFSET, AM32_EEPROM_OFFSET + AM32_PAGE_SIZE), eepromBefore);

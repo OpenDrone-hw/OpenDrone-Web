@@ -7,11 +7,13 @@
  *
  * Write order (flashAm32), chosen so an interruption leaves the AM32
  * bootloader in charge rather than a half-written app:
- *   1. re-identify the ESC (MCU + firmware name) and refuse on any mismatch;
+ *   1. re-identify the ESC (MCU + name slot at 0x7BE0) and refuse on any mismatch;
  *   2. read the EEPROM/settings page as a backup for the after-check;
  *   3. erase the FIRST app page (vector table) so a partial app cannot start,
  *      and read it back: it must be all 0xFF before anything else is written;
- *   4. erase (+ blank check) + write + read-back-verify every other app page;
+ *   4. erase (+ blank check) + write + read-back-verify every other app page,
+ *      the page holding the name slot first, so an interrupted update almost
+ *      never leaves the ESC without an identity to retry against;
  *   5. write + verify the first app page LAST;
  *   6. read the EEPROM page again and require it unchanged; reset the ESC.
  * Every erase/write offset goes through assertAm32Writable, so the
@@ -23,12 +25,13 @@
 
 import {
   AM32_APP_START,
-  AM32_EEPROM_NAME_INDEX,
-  AM32_EEPROM_NAME_LENGTH,
   AM32_EEPROM_OFFSET,
   AM32_EEPROM_SIZE,
   AM32_GATES,
   AM32_MCU_SIGNATURES,
+  AM32_NAME_ARRAY_SIZE,
+  AM32_NAME_SLOT_OFFSET,
+  AM32_NAME_SLOT_SIZE,
   AM32_PAGE_SIZE,
   AT32F421_FLASH_BASE,
   FOURWAY_MAX_CHUNK,
@@ -62,21 +65,28 @@ export function classifyMcu(info: FourWayDeviceInfo): ReadResult<EscMcu> {
   return {status: 'ok', value: mcu as EscMcu};
 }
 
-/** Firmware name from the AM32 EEPROM page bytes (at least NAME_INDEX + NAME_LENGTH long). */
-export function parseEepromFirmwareName(eeprom: Uint8Array): ReadResult<string> {
-  if (eeprom.length < AM32_EEPROM_NAME_INDEX + AM32_EEPROM_NAME_LENGTH) {
-    return {status: 'unreadable', detail: 'short EEPROM read'};
+/**
+ * Parse the AM32 name slot (32 bytes at AM32_NAME_SLOT_OFFSET, see
+ * am32-layout.ts). Strict: printable ASCII name, a NUL terminator within the
+ * 30-byte `filename` array, and every byte after the name 0x00. All-0xFF or
+ * all-0x00 is 'blank'; anything else malformed is 'unreadable'. The caller
+ * compares the name to the target exactly, so an unknown name never matches.
+ */
+export function parseAm32NameSlot(slot: Uint8Array): ReadResult<string> {
+  if (slot.length !== AM32_NAME_SLOT_SIZE) {
+    return {status: 'unreadable', detail: `name slot read returned ${slot.length} bytes, not ${AM32_NAME_SLOT_SIZE}`};
   }
-  const raw = eeprom.subarray(AM32_EEPROM_NAME_INDEX, AM32_EEPROM_NAME_INDEX + AM32_EEPROM_NAME_LENGTH);
-  if (raw.every((b) => b === 0xff) || raw.every((b) => b === 0x00)) {
-    return {status: 'blank', detail: 'no firmware name stored (blank or erased EEPROM)'};
+  if (slot.every((b) => b === 0xff) || slot.every((b) => b === 0x00)) {
+    return {status: 'blank', detail: 'no firmware name in flash (blank or erased app)'};
   }
-  // Printable ASCII, optionally space/NUL padded at the end. Anything else is not an AM32 name.
-  let end = raw.length;
-  while (end > 0 && (raw[end - 1] === 0x20 || raw[end - 1] === 0x00)) end--;
-  const body = raw.subarray(0, end);
-  if (!body.length || body.some((b) => b < 0x20 || b > 0x7e)) {
-    return {status: 'unreadable', detail: 'EEPROM name bytes are not text'};
+  const nul = slot.indexOf(0x00);
+  if (nul <= 0 || nul >= AM32_NAME_ARRAY_SIZE) {
+    return {status: 'unreadable', detail: 'name slot has no terminated name'};
+  }
+  const body = slot.subarray(0, nul);
+  if (body.some((b) => b < 0x21 || b > 0x7e)) return {status: 'unreadable', detail: 'name slot bytes are not text'};
+  if (slot.subarray(nul).some((b) => b !== 0x00)) {
+    return {status: 'unreadable', detail: 'name slot padding is not all 0x00'};
   }
   return {status: 'ok', value: new TextDecoder().decode(body)};
 }
@@ -88,7 +98,7 @@ export type EscIdentity = {
   firmwareName: ReadResult<string>;
 };
 
-/** Read-only: bootloader device info + EEPROM firmware name of ESC `index`. Never throws for a bad read. */
+/** Read-only: bootloader device info + flash name slot of ESC `index`. Never throws for a bad read. */
 export async function identifyEsc(fw: FourWay, index: number): Promise<EscIdentity> {
   let deviceInfo: FourWayDeviceInfo | null = null;
   let mcu: ReadResult<EscMcu>;
@@ -107,9 +117,7 @@ export async function identifyEsc(fw: FourWay, index: number): Promise<EscIdenti
   }
   let firmwareName: ReadResult<string>;
   try {
-    firmwareName = parseEepromFirmwareName(
-      await fw.read(AM32_EEPROM_OFFSET, AM32_EEPROM_NAME_INDEX + AM32_EEPROM_NAME_LENGTH),
-    );
+    firmwareName = parseAm32NameSlot(await fw.read(AM32_NAME_SLOT_OFFSET, AM32_NAME_SLOT_SIZE));
   } catch (e) {
     firmwareName = {status: 'unreadable', detail: (e as Error).message};
   }
@@ -128,8 +136,9 @@ export type Am32Image = {
 
 /**
  * Parse and check a verified AM32 .hex for one ESC target. Rejects: data in
- * the bootloader, in the EEPROM page or past the app area; an image that does
- * not carry the target's firmware name or carries another ESC's name.
+ * the bootloader, in the EEPROM page or past the app area; an image whose
+ * name slot (0x08007BE0, same parser as the ESC read) is not exactly the
+ * target's name; an image that also carries another ESC's name anywhere.
  */
 export function prepareAm32Image(hexText: string, target: EscTarget): Am32Image {
   const hex = parseIntelHex(hexText);
@@ -142,10 +151,15 @@ export function prepareAm32Image(hexText: string, target: EscTarget): Am32Image 
   if (start !== AM32_APP_START) {
     throw new Am32Error(`The image must start at the AM32 app address 0x${(AT32F421_FLASH_BASE + AM32_APP_START).toString(16)}.`);
   }
-  const names = knownEscNamesIn((n) => hexContainsAscii(hex, n));
-  if (!names.includes(target.firmwareName)) {
-    throw new Am32Error(`The file does not contain the firmware name ${target.firmwareName}; it is not for this ESC.`);
+  const slotAbs = AT32F421_FLASH_BASE + AM32_NAME_SLOT_OFFSET;
+  const slot = parseAm32NameSlot(hexSlice(hex, slotAbs, slotAbs + AM32_NAME_SLOT_SIZE));
+  if (slot.status !== 'ok' || slot.value !== target.firmwareName) {
+    const found = slot.status === 'ok' ? `"${slot.value}"` : `${slot.status} (${slot.detail})`;
+    throw new Am32Error(
+      `The file's firmware name at 0x${slotAbs.toString(16)} is ${found}, not ${target.firmwareName}; it is not for this ESC.`,
+    );
   }
+  const names = knownEscNamesIn((n) => hexContainsAscii(hex, n));
   const others = names.filter((n) => n !== target.firmwareName);
   if (others.length) throw new Am32Error(`The file also names ${others.join(', ')}; refusing an ambiguous image.`);
   // F9: every page from the app start to the image end is erased and written,
@@ -203,8 +217,11 @@ export async function flashAm32(
   onProgress('backup', 0, total);
   const eepromBefore = await fw.readRange(AM32_EEPROM_OFFSET, AM32_EEPROM_SIZE);
 
-  const [firstPage, ...rest] = image.pages;
+  const [firstPage, ...others] = image.pages;
   if (!firstPage || firstPage.offset !== AM32_APP_START) throw new Am32Error('Image has no first app page.');
+  // The page holding the name slot goes first, so the identity is rewritten right away.
+  const slotPage = AM32_NAME_SLOT_OFFSET - (AM32_NAME_SLOT_OFFSET % AM32_PAGE_SIZE);
+  const rest = [...others.filter((p) => p.offset === slotPage), ...others.filter((p) => p.offset !== slotPage)];
   onProgress('erase-first', 0, total);
   await erasePage(fw, firstPage.offset);
 

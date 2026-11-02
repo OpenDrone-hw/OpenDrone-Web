@@ -12,6 +12,7 @@
  *
  *   0x0000 .. 0x0FFF  AM32 bootloader (4 KB)             NEVER written
  *   0x1000 .. 0x7BFF  AM32 application                   written + verified
+ *     0x7BE0 .. 0x7BFF  name slot (AM32 FILE_NAME), last 32 bytes of the app area: ESC identity
  *   0x7C00 .. 0x7FFF  EEPROM / settings page (1 KB)      NEVER written, compared before/after
  *   0x8000 ..         rest of a 64 KB part               NEVER written
  *
@@ -43,16 +44,50 @@ export const AM32_EEPROM_SIZE = AM32_PAGE_SIZE;
 export const AM32_APP_END = AM32_EEPROM_OFFSET;
 
 /**
- * AM32 EEPROM byte layout (settings page): byte 1 = EEPROM layout version,
- * byte 2 = bootloader version, bytes 3..4 = firmware major/minor, bytes
- * 5..16 = firmware name (12 ASCII bytes, space padded, AM32 FIRMWARE_NAME).
+ * AM32 EEPROM byte layout (settings page, EEPROM v4): byte 1 = EEPROM layout
+ * version, byte 2 = bootloader version, bytes 3..4 = firmware major/minor.
+ * Bytes 5.. are SETTINGS (max ramp, min duty, PID, brake, ...), NOT a name:
+ * the configurator's DEFAULT v4 page has binary settings there (and a stray
+ * "51 " at 14..16). Never read the ESC identity from this page.
  */
 export const AM32_EEPROM_LAYOUT_VERSION_INDEX = 1;
 export const AM32_EEPROM_BOOTLOADER_VERSION_INDEX = 2;
 export const AM32_EEPROM_FW_MAJOR_INDEX = 3;
 export const AM32_EEPROM_FW_MINOR_INDEX = 4;
-export const AM32_EEPROM_NAME_INDEX = 5;
-export const AM32_EEPROM_NAME_LENGTH = 12;
+
+/**
+ * ESC IDENTITY: the AM32 name slot (FILE_NAME), 32 bytes right before the
+ * EEPROM page.
+ *
+ * Derivation (2026-11-02):
+ *   - AM32 upstream (am32-firmware/AM32 @ 86cf1e5), Mcu/f421/AT32F421x6_FLASH.ld:
+ *       FLASH     ORIGIN = 0x08001000, LENGTH = 27K   (app linked at 0x08001000)
+ *       EEPROM    ORIGIN = 0x08007C00, LENGTH = 1K
+ *       FILE_NAME ORIGIN = ORIGIN(EEPROM) - 32, LENGTH = 32   => 0x08007BE0
+ *     and the `.file_name` output section is ALIGN(4)-padded into FILE_NAME.
+ *   - Src/main.c: `const char filename[30] AM32_FLASH_SECTION(".file_name") = FILE_NAME;`
+ *     so the slot holds the target name (here "OPENESC_20_F421", the AM32
+ *     FILE_NAME = release file target), NUL terminated, NUL padded to 30 bytes,
+ *     plus 2 alignment bytes (0x00) to 32.
+ *   - The OpenESC-20x20 QC bench image (private, hashed only) is a FULL image
+ *     based at 0x08000000: bootloader at 0x0000, app binary from 0x1000 (its
+ *     vector table's reset vector points into 0x08001000+), settings at 0x7C00.
+ *     Image offset 0x7BE0 = app-binary offset 0x6BE0 = flash 0x08007BE0, and
+ *     it holds "OPENESC_20_F421" followed by 17 x 0x00. The fork's
+ *     FIRMWARE_NAME ("OpenESC_20") does not appear anywhere in that binary.
+ *   - The 4-way interface addresses ESC flash by offset from 0x08000000
+ *     (toFourWayOffset), so the read is offset 0x7BE0, length 32.
+ * This sits inside the app area, so it is part of every app image and is
+ * rewritten by every update (am32.ts writes that page right after the first
+ * erase, so an interrupted update rarely leaves it blank).
+ *
+ * Gated: AM32_LAYOUT_VERIFIED (address) and AM32_EEPROM_LAYOUT_VERIFIED
+ * (slot contents/padding read over 4-way vs SWD). Bench item B8.
+ */
+export const AM32_NAME_SLOT_OFFSET = AM32_EEPROM_OFFSET - 32; // 0x7BE0
+export const AM32_NAME_SLOT_SIZE = 32;
+/** `filename[30]`: name + NUL terminator must fit in the first 30 bytes; the rest is alignment. */
+export const AM32_NAME_ARRAY_SIZE = 30;
 
 /**
  * 4-way cmd_DeviceInitFlash reply (4 bytes) on an ARM bootloader: signature
@@ -83,7 +118,12 @@ export const FOURWAY_MAX_CHUNK = 256;
 export const AM32_LAYOUT_VERIFIED = false;
 /** cmd_DeviceInitFlash reply byte order and the AT32F421 signature value, checked on an OpenESC. */
 export const AM32_SIGNATURE_VERIFIED = false;
-/** EEPROM byte layout (firmware name offset/length), checked against a read of a flashed OpenESC. */
+/**
+ * ESC identity read: the name slot at 0x7BE0..0x7BFF (AM32_NAME_SLOT_OFFSET)
+ * holds "OPENESC_20_F421" NUL padded on a QC'd OpenESC (4-way read vs SWD
+ * dump, bench B8/B9), and the EEPROM v4 header bytes 1..4. The flag keeps its
+ * historical name; it no longer covers a name inside the EEPROM page.
+ */
 export const AM32_EEPROM_LAYOUT_VERIFIED = false;
 /**
  * The write procedure on the AM32 bootloader: cmd_DevicePageErase takes a

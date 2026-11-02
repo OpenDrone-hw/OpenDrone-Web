@@ -83,7 +83,7 @@ export function knownFcNamesIn(contains: (name: string) => boolean): string[] {
   return FLASHER_TARGETS.map((t) => t.target).filter(contains);
 }
 
-/** Same for ESC firmware names (AM32 FIRMWARE_NAME). */
+/** Same for ESC identity names (the AM32 name slot string, EscTarget.firmwareName). */
 export function knownEscNamesIn(contains: (name: string) => boolean): string[] {
   return ESC_TARGETS.map((t) => t.firmwareName).filter(contains);
 }
@@ -205,14 +205,14 @@ export type EscDirectWriteInput = {
   verifiedFor: string | null;
   /** From the bootloader signature (cmd_DeviceInitFlash). */
   mcu: ReadResult<EscMcu> | null;
-  /** From the AM32 EEPROM firmware name. */
+  /** From the AM32 name slot at flash 0x08007BE0 (am32-layout.ts AM32_NAME_SLOT_OFFSET). */
   firmwareName: ReadResult<string> | null;
 };
 
 /**
  * The ESC direct-write gate. Allowed only if every AM32_*_VERIFIED flag is
  * true, the release is published, the verified image is for the chosen ESC,
- * and BOTH the MCU (bootloader signature) and the firmware name (EEPROM) were
+ * and BOTH the MCU (bootloader signature) and the name slot (flash 0x08007BE0) were
  * read and match the pinned target. Otherwise: esc-configurator fallback.
  */
 export function escDirectWriteGate(i: EscDirectWriteInput): GateResult {

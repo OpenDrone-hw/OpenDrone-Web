@@ -3,14 +3,16 @@
  *
  * The manifest is PINNED: it is compiled into the page from
  * firmware-manifest.ts, so a firmware file can only be offered if a reviewed
- * commit put its size and SHA-256 here. Each file is fetched same-origin,
- * hashed with crypto.subtle (SHA-256) and compared before it is parsed,
- * handed to the user, or written.
+ * commit put its URL, size and SHA-256 there. Each file is fetched only from
+ * an allowlisted release URL (FIRMWARE_URL_ALLOWLIST), hashed with
+ * crypto.subtle (SHA-256) and compared before it is parsed, handed to the
+ * user, or written.
  *
- * Placeholders: an entry with `published: false`, a missing URL, or a
- * SHA-256 that is not 64 lowercase hex characters is a placeholder. A
- * placeholder is never fetched, never passes verification, and the page says
- * "firmware not published yet".
+ * Placeholders: an entry with `published: false`, a URL that is not on the
+ * allowlist, a size that is not a positive integer, or a SHA-256 that is not
+ * 64 lowercase hex characters is a placeholder. A placeholder is never
+ * fetched, never passes verification, and the page says "firmware not
+ * published yet".
  *
  * Pure module (WebCrypto only), so it runs under `node --test`.
  */
@@ -28,11 +30,11 @@ export type FirmwareRelease = {
   /** Release channel. Anything but 'stable' is labelled as a pre-release on /flash (F11). */
   channel: 'stable' | 'beta' | 'alpha';
   released: string;
-  /** Same-origin path on opendrone.be, or null while not hosted. */
+  /** Allowlisted release-asset URL (isAllowedFirmwareUrl), or null while not pinned. */
   url: string | null;
   size: number;
   sha256: string;
-  /** False until the file is hosted at `url` and the hash was taken from that exact file. */
+  /** True only for an entry built from a non-null pin (firmware-manifest.ts PINNED). */
   published: boolean;
   notes?: string;
 };
@@ -58,13 +60,40 @@ export class FirmwareNotPublishedError extends ManifestError {
 const SHA256_RE = /^[0-9a-f]{64}$/;
 const MAX_FILE = 4 * 1024 * 1024;
 
+/**
+ * Where pinned firmware may come from. Only GitHub release assets of the
+ * OpenDrone-hw organisation: https://github.com/OpenDrone-hw/<repo>/releases/download/<tag>/<file>.
+ * Add another host only as an explicit entry here, in a reviewed PR.
+ * NOTE: the site CSP (app/lib/csp.ts connect-src) must allow the host, and
+ * the host must answer a browser fetch with CORS, before a pin can download.
+ */
+export const FIRMWARE_URL_ALLOWLIST: readonly {host: string; path: RegExp}[] = [
+  {host: 'github.com', path: /^\/OpenDrone-hw\/[A-Za-z0-9._-]+\/releases\/download\/[A-Za-z0-9._+-]+\/[A-Za-z0-9._+-]+$/},
+];
+
+/** Structural URL check: https, allowlisted host + path, no credentials, port, query, fragment or dot segments. */
+export function isAllowedFirmwareUrl(raw: unknown): raw is string {
+  if (typeof raw !== 'string' || !raw.startsWith('https://')) return false;
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== 'https:' || u.username || u.password || u.port || u.search || u.hash) return false;
+  if (u.href !== raw) return false; // no normalisation tricks (case, dot segments, encodings)
+  if (u.pathname.split('/').some((seg) => seg === '.' || seg === '..')) return false;
+  return FIRMWARE_URL_ALLOWLIST.some((a) => u.hostname === a.host && a.path.test(u.pathname));
+}
+
 /** True only for a complete, published entry. Everything else is a placeholder. */
 export function isPublished(r: FirmwareRelease): r is FirmwareRelease & {url: string} {
   return (
     r.published === true &&
-    typeof r.url === 'string' &&
-    r.url.startsWith('/') &&
-    !r.url.startsWith('//') &&
+    isAllowedFirmwareUrl(r.url) &&
+    typeof r.version === 'string' &&
+    r.version.trim().length > 0 &&
+    (r.channel === 'stable' || r.channel === 'beta' || r.channel === 'alpha') &&
     Number.isInteger(r.size) &&
     r.size > 0 &&
     r.size <= MAX_FILE &&
@@ -120,7 +149,7 @@ export async function verifyFirmwareBytes(release: FirmwareRelease, bytes: Uint8
   return digest;
 }
 
-/** Download a release file (same origin only) and verify it. Placeholders are never fetched. */
+/** Download a release file (allowlisted URL only) and verify it. Placeholders are never fetched. */
 export async function fetchVerifiedFirmware(
   release: FirmwareRelease,
   baseUrl: string,
@@ -128,7 +157,7 @@ export async function fetchVerifiedFirmware(
 ): Promise<{bytes: Uint8Array; sha256: string}> {
   if (!isPublished(release)) throw new FirmwareNotPublishedError(release);
   const url = new URL(release.url, baseUrl);
-  if (url.origin !== new URL(baseUrl).origin) throw new ManifestError('Firmware URL is not on this site.');
+  if (!isAllowedFirmwareUrl(url.href)) throw new ManifestError('Firmware URL is not an allowlisted release URL.');
   const res = await fetcher(url.toString(), {cache: 'no-store'});
   if (!res.ok) throw new ManifestError(`Firmware download failed (HTTP ${res.status}).`);
   const bytes = new Uint8Array(await res.arrayBuffer());
