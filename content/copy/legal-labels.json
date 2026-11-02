@@ -221,7 +221,7 @@
         ],
         [
           "Shipping cost",
-          "Flat rate per order, VAT included: from €8.50 (Belgium). Full table below"
+          "EU: flat rate per order, VAT included, from €8.50 (Belgium), table below. Outside the EU and US: shipping shown before payment; import charges may be due on delivery"
         ],
         [
           "United States",
@@ -250,7 +250,7 @@
         ],
         [
           "Verzendkosten",
-          "Vast tarief per bestelling, incl. btw: vanaf € 8,50 (België). Volledige tabel hieronder"
+          "EU: vast tarief per bestelling, incl. btw, vanaf € 8,50 (België), tabel hieronder. Buiten de EU en de VS: verzendkosten getoond vóór betaling; invoerkosten mogelijk bij levering"
         ],
         [
           "Verenigde Staten",
@@ -279,7 +279,7 @@
         ],
         [
           "Frais de port",
-          "Tarif fixe par commande, TVA comprise : à partir de 8,50 € (Belgique). Tableau complet ci-dessous"
+          "UE : tarif fixe par commande, TVA comprise, à partir de 8,50 € (Belgique), tableau ci-dessous. Hors UE et États-Unis : frais de port affichés avant paiement ; frais d’importation possibles à la livraison"
         ],
         [
           "États-Unis",

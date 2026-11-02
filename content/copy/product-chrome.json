@@ -611,7 +611,7 @@
   "buy_cta_line_total": "{cta} {quantity}, {price}",
   "build_block_label": "Build with this",
   "ch_build_title": "What you need to fly",
-  "build_intro": "This part is one piece of a self-built quad. It does not fly on its own and nothing arrives assembled: a build takes soldering, wiring and setup on a computer. Not a toy: not for persons under 14; minors only under adult supervision. The card lists every part of the build we sell, added to the cart in one go.",
+  "build_intro": "This part is one piece of a self-built quad. It does not fly on its own and nothing arrives assembled: a build takes soldering, wiring and setup on a computer. Not a toy. Not for persons under 14; minors only under adult supervision. The card lists every part of the build we sell, added to the cart in one go.",
   "build_bring_label": "You also need (not sold here)",
   "build_bring_radio": "A radio controller (the handset you fly with) with ExpressLRS 2.4 GHz, built in or as a plug-in module. A DJI remote controller does not work.",
   "build_bring_video": "An FPV camera and video transmitter on the quad, plus goggles of the same video system (DJI goggles with a DJI air unit, analog goggles with an analog camera and transmitter), to see from the quad",

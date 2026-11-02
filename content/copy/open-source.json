@@ -5,7 +5,7 @@
   "meta_description": "OpenDrone is a community project, Incutec is a Belgian startup that started the initiative and hosts this website, sells the products here, and does what the community can't do on their own. Why everything is Open Source, and how the bills get paid.",
   "eyebrow": "Open Source",
   "title": "We sell hardware. The designs are yours.",
-  "lead": "Every OpenDrone board comes with its full source on GitHub, and the frames are published there too. The motors are the exception: OEM motors we test and sell, not open hardware. Incutec is the Belgian startup that started the initiative, hosts this website, sells the products here, and does what the community can't do on their own.",
+  "lead": "Every OpenDrone board comes with its full source on GitHub, and the frames are published there too. The motors are the exception: OEM motors we sell, not open hardware. Incutec is the Belgian startup that started the initiative, hosts this website, sells the products here, and does what the community can't do on their own.",
   "s1_title": "Job one: the community designs it",
   "s1_body": [
     "The direction of OpenDrone belongs to the people who fly. The community designs, reviews, tests and decides. We try to support where we can.",
@@ -33,7 +33,7 @@
   "s6_title": "Why CERN-OHL-S",
   "s6_body": [
     "CERN-OHL-S v2 is a reciprocal, copyleft open-hardware licence. It keeps the design open: modify an OpenDrone board, ship your own version, and if someone asks for your sources, you hand them over on the same terms. The point isn't to stop clones. We can't, and we wouldn't want to. The point is that every clone carries its sources forward to the next person.",
-    "Eight boards are certified by the Open Source Hardware Association: BE000026 through BE000033, both flight controllers, both ESCs and all four receivers. Each product page links its own certificate, repository and issues."
+    "Eight boards are certified by the Open Source Hardware Association: BE000026 through BE000033, both flight controllers, both ESCs and all four receivers. Each board's product page links its own certificate, repository and issues."
   ],
   "s7_title": "What this means for you",
   "s7_list": [
