@@ -54,6 +54,7 @@ const HELP_LINKS: Array<{to: string; copy: string}> = [
   {to: '/herroepingsrecht', copy: 'nav_returns'},
   {to: '/warranty', copy: 'nav_warranty'},
   {to: '/support/find', copy: 'nav_find_ticket'},
+  {to: '/guides', copy: 'nav_guides'},
 ];
 
 const COMPANY_LINKS: Array<{to: string; copy: string}> = [
