@@ -75,3 +75,11 @@ test('the guide pages, the index and the flasher read the gate from the same hel
   assert.match(fc, /const writesOn = directInstallEnabled\(staging\);/);
   assert.doesNotMatch(fc, /CHIP_PACKAGE_VERIFIED && PICOBOOT_WRITE_VERIFIED/, 'no second copy of the expression');
 });
+
+test('guide pages reuse the firmware page\'s dark code chip (no light-on-light code)', () => {
+  const css = read('../styles/app.css');
+  assert.match(css, /\.flash-page code,\s*\.guide-page code \{\s*background: color-mix\(in srgb, var\(--color-text\) 10%, var\(--color-bg-card\)\);\s*color: var\(--color-text\);/);
+  assert.match(css, /\.guide-page pre code \{\s*background: none;/);
+  assert.match(read('../routes/guides.$family.$step.tsx'), /<article className="page-shell guide-page">/);
+  assert.match(read('../routes/guides._index.tsx'), /<article className="page-shell guide-page">/);
+});

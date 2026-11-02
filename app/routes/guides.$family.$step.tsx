@@ -78,7 +78,7 @@ export default function GuideStepRoute() {
   const seeLabel = copyText('guides.see_label') ?? 'You should see:';
 
   return (
-    <article className="page-shell">
+    <article className="page-shell guide-page">
       {howTo ? <script type="application/ld+json" dangerouslySetInnerHTML={{__html: jsonLd(howTo)}} /> : null}
       <script
         type="application/ld+json"

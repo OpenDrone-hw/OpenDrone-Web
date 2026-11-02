@@ -28,7 +28,7 @@ export default function GuidesIndex() {
   // Same gate as the firmware page's Update firmware button, read after mount (server render = gate off).
   const direct = useDirectInstallEnabled();
   return (
-    <article className="page-shell">
+    <article className="page-shell guide-page">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
