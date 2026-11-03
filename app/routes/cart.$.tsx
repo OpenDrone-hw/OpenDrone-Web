@@ -50,6 +50,7 @@ import '../styles/cart-checkout-bar.css';
 import {usSalesRate} from '~/lib/us-sales';
 import {ShipToSelect} from '~/components/ShipToSelect';
 import {usePendingShipTo} from '~/lib/pending-ship-to';
+import {cartReplannedFor, planCartPage} from '~/lib/cart-replan';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {cartWholesaleCode} from '~/lib/wholesale-codes';
@@ -135,35 +136,36 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   // how many paid-batch units are left. The cart still renders without it.
   let info: Record<string, CartLineInfo> = {};
   let replanned: string | null = null;
+  let payments: string[] = [];
   const country = shipCountryForRequest(request);
   if (cart?.lines.length) {
-    let catalog = null;
-    try {
-      const plan = await replanCart(cart, shippingQuote(country, undefined, usSalesRate(context.env)), context.env, {
-        fetchCatalog: (region, destination) => context.catalog.fresh.forRegion(region, destination),
+    // Re-plan and read the payment methods together. Right after a Ship to
+    // switch (its marker cookie names this country and the cart carries it)
+    // the re-plan reuses the catalog that switch just read instead of a
+    // second Shopify read (lib/cart-replan.ts).
+    const plan = await planCartPage(
+      cart,
+      shippingQuote(country, undefined, usSalesRate(context.env)),
+      context.env,
+      cartReplannedFor(request.headers.get('Cookie')),
+      {
+        fresh: (region, destination) => context.catalog.fresh.forRegion(region, destination),
+        recent: (region, destination) => context.catalog.recent.forRegion(region, destination),
         setCountry: (id, code) => setCartCountry(context.env, id, code),
         getCart: (id) => getCart(context.env, id),
         updateCartLines: (id, lines) => updateCartLines(context.env, id, lines),
+        fetchPaymentMethods: () => fetchPaymentMethods(context.env),
         // EU stock wording only for a country the page's `geo` knows too.
         euStockKnown: geoCountryForRequest(request) != null,
-      });
-      cart = plan.cart;
-      catalog = plan.catalog;
-      replanned = replanCheck(plan.change);
-    } catch (error) {
-      console.error('[shopify-cart] cart replan failed', error instanceof Error ? error.message : 'unknown error');
-    }
-    info = cartLineInfo(cart, catalog);
+        logError: (message, error) => console.error(`[shopify-cart] ${message}`, error instanceof Error ? error.message : 'unknown error'),
+      },
+    );
+    cart = plan.cart;
+    replanned = replanCheck(plan.change);
+    payments = plan.payments;
+    info = cartLineInfo(cart, plan.catalog);
   }
   const check = new URL(request.url).searchParams.get('check') ?? replanned;
-  let payments: string[] = [];
-  if (cart?.lines.length) {
-    try {
-      payments = await fetchPaymentMethods(context.env);
-    } catch (error) {
-      console.error('[shopify-cart] payment settings read failed', error instanceof Error ? error.message : 'unknown error');
-    }
-  }
   // International shipping is priced by Shopify from weight-based rates:
   // the same rate read from Shopify, for this cart, or null to keep
   // "calculated at checkout" (`international-shipping.ts`).

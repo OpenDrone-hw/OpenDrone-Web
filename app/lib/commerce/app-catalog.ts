@@ -163,5 +163,5 @@ export function mapAppCatalog(wire: AppCatalogWire, now: Date = new Date()): Cat
 export function appCatalogClient(env: AppEnv): CatalogClient {
   const read = async () => mapAppCatalog(await snapshot<AppCatalogWire>(env, 'storefront.catalog', edgeCache()));
   const reader = (load: () => Promise<Catalog>): CatalogReader => ({get: load, forBuyer: load, forRegion: load, region: 'EU'});
-  return {...reader(() => memoCatalog('app', read)), fresh: reader(read)};
+  return {...reader(() => memoCatalog('app', read)), fresh: reader(read), recent: reader(read)};
 }

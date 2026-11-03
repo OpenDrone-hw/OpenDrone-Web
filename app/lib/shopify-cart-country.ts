@@ -11,6 +11,7 @@ import {
 } from './shopify-cart-action.ts';
 import type {CartLineUpdate, ShopifyCart} from './shopify-storefront.ts';
 import {usSalesRate} from './us-sales.ts';
+import {cartReplannedCookie} from './cart-replan.ts';
 
 type CartCountryEnv = Pick<Env, 'SHOPIFY_CHECKOUT_WRITE_ENABLED' | 'PUBLIC_COMING_SOON' | 'PUBLIC_US_SALES'>;
 
@@ -123,7 +124,11 @@ export async function handleCartCountry(
     await dependencies.setCountry(cartId, quote.country);
     changed = true;
     const summary = await repriceCart(cartId, regionForDestination(quote), env, dependencies, quote.country);
-    return remember({country: quote.country, applied: true, ...(summary ? {summary} : {})});
+    const response = remember({country: quote.country, applied: true, ...(summary ? {summary} : {})});
+    // The cart was just re-planned on a fresh catalog: the cart loader that
+    // React Router runs next may re-plan on that read (cart-replan.ts).
+    if (summary) response.headers.append('Set-Cookie', cartReplannedCookie(quote.country, cartId, new URL(request.url).protocol === 'https:'));
+    return response;
   } catch (error) {
     dependencies.logError?.(
       `cart country ${quote.country} not set: ${error instanceof Error ? error.message : 'unknown error'}`,
