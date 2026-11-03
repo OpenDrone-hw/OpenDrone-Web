@@ -11,6 +11,9 @@ import {Txt} from '~/components/Txt';
 import {CartAddedDialog} from '~/components/CartAddedDialog';
 import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
 import type {CommerceHandoff} from '~/lib/shop-links';
+import {AvailabilityBar} from '~/components/AvailabilityBanner';
+import {availabilityBannerHiddenOn, type GeoAvailabilityRegion} from '~/lib/geo-availability';
+import type {Locale} from '~/lib/i18n';
 
 interface PageLayoutProps {
   commerceHandoff: CommerceHandoff;
@@ -20,6 +23,8 @@ interface PageLayoutProps {
   /** Both commerce gates are open (root loader). */
   shopOpen?: boolean;
   familyProducts?: HeaderFamilyProduct[];
+  /** The visitor's batch region and language (root loader), for the availability card. */
+  geo?: {region: GeoAvailabilityRegion; locale: Locale};
   children?: React.ReactNode;
 }
 
@@ -31,6 +36,7 @@ export function PageLayout({
   turnstileSiteKey,
   shopOpen = false,
   familyProducts,
+  geo,
 }: PageLayoutProps) {
   const {pathname} = useLocation();
   const isHomepage = pathname === '/';
@@ -42,11 +48,16 @@ export function PageLayout({
             is its own overlay, opened by every AddToCartButton. */}
         <MobileMenuAside accountUrl={accountUrl} />
         <CartAddedDialog />
-        <div className={isHomepage ? 'homepage-layout' : ''}>
+        <div
+          className={isHomepage ? 'site-layout homepage-layout' : 'site-layout'}
+        >
           <a className="skip-link" href="#main-content">
             <Txt id="chrome.skip_link" />
           </a>
           <RouteProgress />
+          {/* Ordering is open: the batch line for the visitor's country, a bar at the very top (under the
+              staging strip on staging). Never on /flash or /guides/*. */}
+          {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBar geo={geo} /> : null}
           <Header
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}
@@ -54,6 +65,7 @@ export function PageLayout({
             shopOpen={shopOpen}
           />
           <main id="main-content" className="site-main">
+            {/* The card in the flow, all widths; the phone homepage places it under its hero instead. */}
             {children}
           </main>
           {/* The home scene is one pinned viewport; the footer sits under it,

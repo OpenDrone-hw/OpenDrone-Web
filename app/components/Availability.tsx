@@ -6,7 +6,7 @@ import {
   type Words,
 } from '~/lib/availability';
 import {campaignDate, latestShipDate, parseCampaignConfig, type CampaignState, type Region} from '~/lib/preorder-campaign';
-import {leadProduct} from '~/components/ShipChip';
+import {leadProduct, useGeoShipText} from '~/components/ShipChip';
 import preorders from '../../content/preorders.json';
 
 const CAMPAIGN = parseCampaignConfig(preorders);
@@ -41,17 +41,26 @@ export function Availability({
     campaign.latestShip ?? latestShipDate(CAMPAIGN),
   );
   const rows = availabilityRows(campaign, dates, region, preorderWords);
+  const current = campaign.batches.find((b) => b.batch === campaign.batch);
+  // The buyer's own batch 1 row reads the visitor's line (geo-availability.ts).
+  const geoText = useGeoShipText(current?.paid ? current.shipPromise : null);
   if (!rows.length) return null;
   // An accessory whose batch is another product's funding target says so, as
   // its ship line does, so a buyer of a capacitor does not wonder what "the
   // target" is.
-  const current = campaign.batches.find((b) => b.batch === campaign.batch);
   const lead = current && !current.paid && !campaign.targetReached ? leadProduct(campaign.shipsWith) : null;
   return (
     <>
       <ul className={`avail ${className}`.trim()} data-batches={rows.length}>
         {rows.map((row) => (
-          <AvailabilityRow key={row.batch} row={countShown && row.state === 'current' ? {...row, note: null} : row} />
+          <AvailabilityRow
+            key={row.batch}
+            row={
+              row.state === 'current'
+                ? {...row, ...(countShown ? {note: null} : {}), ...(geoText ? {detail: geoText} : {})}
+                : row
+            }
+          />
         ))}
       </ul>
       {lead ? (

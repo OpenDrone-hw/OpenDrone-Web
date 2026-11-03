@@ -977,6 +977,10 @@
   opacity: 0.85;
   pointer-events: none;
 }
+/* The drawing loads lazily (DrawingView); its box is reserved from the first paint so the label under it
+   and the footer never move when it arrives. = (w + 0.36w) / (h + 0.432w) of board-lite.svg's viewBox
+   (37.9424 x 37.9425), the margins DrawingView adds; checked by app/lib/avail-banner-layout.test.ts. */
+.footer-view-art { aspect-ratio: 51.602 / 54.334; }
 .footer-view svg { display: block; width: 100%; height: auto; overflow: visible; }
 .footer-view-outline { fill: none; stroke: currentColor; stroke-width: 1.25; }
 .footer-view-dim { fill: none; stroke: currentColor; stroke-width: 0.75; opacity: 0.8; }
@@ -1958,13 +1962,16 @@ a.hero-build-add { text-decoration: none; }
   }
 }
 
-/* Test shop banner (Worker var TEST_BANNER): a slim fixed strip above the page, nothing when unset. The floating
-   header and the page start below it through --test-banner-h. */
-.test-banner {
+/* Top strips: thin full-width bars above the page, one shared look (gold, dark mono uppercase).
+   .test-banner (Worker var TEST_BANNER, staging only) and .avail-bar (the availability line, AvailabilityBar).
+   Both are fixed at the top and server-rendered, and their heights are CSS variables set from the markup
+   (--test-banner-h, --avail-bar-h), so the page and the floating header start below them from the first
+   paint: no layout shift. The pre-paint dismissal style in root.tsx sets --avail-bar-h to 0 and hides a
+   dismissed bar. The availability bar sits under the staging strip, with a 1px divider. */
+.top-strip {
   position: fixed;
-  inset: 0 0 auto 0;
-  z-index: 1000;
-  height: var(--test-banner-h);
+  left: 0;
+  right: 0;
   margin: 0;
   display: flex;
   align-items: center;
@@ -1981,12 +1988,73 @@ a.hero-build-add { text-decoration: none; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-body:has(.test-banner) {
-  --test-banner-h: 26px;
-  padding-top: var(--test-banner-h);
+.test-banner {
+  top: 0;
+  z-index: 1000;
+  height: var(--test-banner-h);
 }
-body:has(.test-banner) .site-header {
-  top: var(--test-banner-h);
+.avail-bar {
+  top: var(--test-banner-h, 0px);
+  z-index: 999;
+  height: var(--avail-bar-h);
+  padding-right: 2.25rem;
+}
+body:has(.test-banner) .avail-bar {
+  border-top: 1px solid color-mix(in srgb, var(--color-on-accent) 35%, transparent);
+}
+.avail-bar-text {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.avail-bar-short { display: none; }
+@media (max-width: 768px) {
+  .avail-bar-long { display: none; }
+  .avail-bar-short { display: inline; }
+}
+.avail-bar-close {
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.avail-bar-close:focus-visible { outline: 2px solid var(--color-on-accent); outline-offset: -2px; }
+body:has(.test-banner) { --test-banner-h: 26px; }
+body:has(.avail-bar) { --avail-bar-h: 26px; }
+body:has(.test-banner),
+body:has(.avail-bar) {
+  padding-top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px));
+}
+body:has(.test-banner) .site-header,
+body:has(.avail-bar) .site-header {
+  top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px));
+}
+
+/* Sticky footer: the layout fills the viewport below the top strips, <main> grows, and the footer is the
+   last thing on the page: flush with the bottom on short pages, nothing under it on long ones. */
+.site-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--test-banner-h, 0px) - var(--avail-bar-h, 0px));
+  min-height: calc(100dvh - var(--test-banner-h, 0px) - var(--avail-bar-h, 0px));
+}
+.site-layout > .site-main {
+  flex: 1 0 auto;
+}
+.site-layout > footer {
+  flex: none;
+  margin-bottom: 0;
 }
 
 /* App-backed shop pages (cart, order status, news): the site's rail, type and gold, no framework classes. */

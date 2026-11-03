@@ -104,6 +104,7 @@ import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
 import {reachableSteps, stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
+import {geoOfferAvailability, hasBatchOne, offerAvailability} from '~/lib/geo-availability';
 import {isInternationalQuote, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
 import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
@@ -1658,13 +1659,24 @@ function ProductPage() {
   const offerBase = productJsonLd.offers as Record<string, unknown> | undefined;
   if (offerBase && preorder) delete offerBase.priceValidUntil;
   const offerNodes = product.variants.nodes;
+  // A batch 1 offer says what the visitor's ship line says (geo-availability.ts);
+  // with no known country it keeps its PreOrder availability.
+  const geoOffer = geoOfferAvailability(rootData?.geo?.region ?? 'fallback');
+  if (offerBase && !content.bundle && selectedVariant && hasBatchOne(selectedVariant.campaign)) {
+    Object.assign(offerBase, {
+      availabilityStarts: undefined,
+      ...offerAvailability(
+        {availableForSale: selectedVariant.availableForSale, preorder: selectedVariant.availability === 'preorder', batchOne: true},
+        geoOffer,
+      ),
+    });
+  }
   if (offerBase && !content.bundle && offerNodes.length > 1) {
     const availabilityOf = (v: (typeof offerNodes)[number]) =>
-      !v.availableForSale
-        ? 'https://schema.org/OutOfStock'
-        : v.availability === 'preorder'
-          ? 'https://schema.org/PreOrder'
-          : 'https://schema.org/InStock';
+      offerAvailability(
+        {availableForSale: v.availableForSale, preorder: v.availability === 'preorder', batchOne: hasBatchOne(v.campaign)},
+        geoOffer,
+      );
     const amounts = offerNodes.map((v) => Number(v.price.amount));
     const currency = offerNodes[0].price.currencyCode;
     productJsonLd.offers = {
@@ -1679,7 +1691,8 @@ function ProductPage() {
         sku: isInternalSku(product.handle, v.title) ? undefined : (v.sku ?? undefined),
         price: v.price.amount,
         priceCurrency: v.price.currencyCode,
-        availability: availabilityOf(v),
+        availabilityStarts: undefined,
+        ...availabilityOf(v),
         url: v.selectedOptions.length
           ? `${SITE_ORIGIN}/products/${product.handle}?${new URLSearchParams(
               v.selectedOptions.map((o) => [o.name, o.value]),
