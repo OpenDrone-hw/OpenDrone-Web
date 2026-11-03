@@ -63,9 +63,20 @@ function CalloutBox({callout}: {callout: Callout}) {
         {safety ? `${copyText('guides.callout_safety') ?? 'Safety'}: ` : ''}
         {callout.title}
       </p>
-      <p className="mt-1 text-[var(--color-text-muted)]">
-        <GuideText value={callout.text} />
-      </p>
+      {callout.text ? (
+        <p className="mt-1 text-[var(--color-text-muted)]">
+          <GuideText value={callout.text} />
+        </p>
+      ) : null}
+      {callout.items?.length ? (
+        <ol className="mt-1 list-decimal pl-5 text-[var(--color-text-muted)]">
+          {callout.items.map((item) => (
+            <li key={item}>
+              <GuideText value={item} />
+            </li>
+          ))}
+        </ol>
+      ) : null}
     </aside>
   );
 }

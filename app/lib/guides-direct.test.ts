@@ -95,3 +95,95 @@ test('guide pages reuse the firmware page\'s dark code chip (no light-on-light c
   assert.match(read('../routes/guides.$family.$step.tsx'), /<article className="page-shell guide-page">/);
   assert.match(read('../routes/guides._index.tsx'), /<article className="page-shell guide-page">/);
 });
+
+const CHECKLIST = [
+  /Back up your config: save `diff all` in the Betaflight CLI\. Flashing resets settings\./,
+  /Props off, battery out, USB only\./,
+  /Computer only \(Chrome\/Edge\), data-capable USB cable\./,
+  /On a new board: test on USB before soldering\./,
+];
+
+test('firmware page: numbered 4-item pre-flash checklist directly above Update firmware', () => {
+  const fc = read('./flasher/ui/FcFlasher.tsx');
+  const ol = /<ol className="flash-checklist">([\s\S]*?)<\/ol>/.exec(fc);
+  assert.ok(ol, 'checklist is an <ol>');
+  const items = ol[1].replace(/<code>(.*?)<\/code>/g, '`$1`').replace(/\s+/g, ' ');
+  assert.equal(ol[1].match(/<li>/g)?.length, 4);
+  let at = -1;
+  for (const re of CHECKLIST) {
+    const m = re.exec(items);
+    assert.ok(m, String(re));
+    assert.ok(m.index > at, 'in order');
+    at = m.index;
+  }
+  const olEnd = fc.indexOf('</ol>');
+  const btn = fc.indexOf('Update firmware', olEnd);
+  assert.ok(btn > olEnd);
+  const between = fc.slice(olEnd, btn);
+  assert.match(between, /<button/);
+  assert.doesNotMatch(between, /<p|<h\d|<details|<div/, 'nothing but the backup checkbox between checklist and button');
+  const css = read('../styles/app.css');
+  const rule = /\.flash-checklist \{([^}]*)\}/.exec(css)![1];
+  assert.match(rule, /list-style: decimal/);
+  assert.match(rule, /border-left: 2px solid var\(--color-accent\)/);
+});
+
+test('backup checkbox gates only the disabled state; the click handler still starts with startUpdate', () => {
+  const fc = read('./flasher/ui/FcFlasher.tsx');
+  assert.match(fc, /<label htmlFor=\{backupId\}[\s\S]*?<input id=\{backupId\} type="checkbox"[\s\S]*?I&apos;ve backed up my config\s*<\/label>/);
+  // Locked or not backed up: aria-disabled (still focusable), described by the visible reason; never the disabled attribute.
+  assert.match(fc, /aria-disabled=\{locked \|\| needsBackup \|\| undefined\}\s+aria-describedby=\{needsBackup \? backupReasonId : lockText \? lockReasonId : locked \? statusId : undefined\}/);
+  assert.doesNotMatch(fc, /disabled=\{!canRun/);
+  assert.match(fc, /<p id=\{lockReasonId\} className="flash-note">\s+\{lockText\}/);
+  assert.match(fc, /onClick=\{\(\) => \(board \? void save\(\) : say\(PICK_BOARD_TEXT\)\)\}\s+aria-disabled=\{!board \|\| undefined\}\s+aria-describedby=\{board \? undefined : pickBoardId\}/);
+  assert.match(fc, /flag: published\(t\) \? undefined : 'Not published yet'/);
+  assert.match(fc, /<p id=\{backupReasonId\} className="flash-note">\s+\{BACKUP_REASON\}/);
+  assert.match(fc, /const BACKUP_REASON = 'Confirm your config backup first\.';/);
+  assert.match(fc, /onClick=\{onUpdate\}/);
+  // The decision itself is tested behaviourally in flasher/ui/update-click.test.ts.
+  const onUpdate = /const onUpdate = \(\) => \{([\s\S]*?)\n {2}\};/.exec(fc)![1];
+  assert.doesNotMatch(onUpdate, /await|async/, 'no await before the serial picker');
+  assert.match(onUpdate, /^\s*const flow = updateClick\(\{locked, backedUp, lockText, backupReason: BACKUP_REASON\}, say, deps\);/);
+});
+
+test('firmware page: one line for the second device picker, at the Continue step', () => {
+  const fc = read('./flasher/ui/FcFlasher.tsx');
+  const needUsb = /\{run\.kind === 'need-usb' \? \(([\s\S]*?)\) : null\}/.exec(fc)![1];
+  assert.match(needUsb, /Your browser asks a second time: click Continue, then pick RP2350 Boot\./);
+  assert.ok(needUsb.indexOf('second time') < needUsb.indexOf('onClick={resume}'));
+});
+
+test('firmware page: version + short SHA next to the offered file, via firmwareIdText', () => {
+  const fc = read('./flasher/ui/FcFlasher.tsx');
+  assert.match(fc, /\{short\(t\)\}: \{firmwareIdText\(r\)\}/, 'under Update firmware (install)');
+  assert.match(fc, /\{boardRelease \? <span className="flash-filename">\{firmwareIdText\(boardRelease\)\}<\/span> : null\}/, 'under Save (download)');
+  assert.ok(fc.indexOf('firmwareIdText(boardRelease)') > fc.indexOf('Save firmware (.uf2)'));
+});
+
+test('guide flash step (base and one-button) carries the checklist as a numbered list, props/battery left to FC_SAFETY', () => {
+  for (const on of [false, true]) {
+    const p = resolveGuidePage(page('flash'), on);
+    const c = p.callouts.find((x) => x.title === 'Before you flash');
+    assert.ok(c, `callout present (direct=${on})`);
+    // Same items minus props/battery, which FC_SAFETY already says on the same page.
+    const expected = CHECKLIST.filter((_, i) => i !== 1);
+    assert.equal(c.items?.length, expected.length);
+    expected.forEach((re, i) => assert.match(c.items![i], new RegExp(`^${re.source}$`), `item ${i + 1} (direct=${on})`));
+    assert.equal(c.text, '');
+    assert.ok(p.callouts.some((x) => x.title === 'Propellers off, battery unplugged'), 'FC_SAFETY carries props/battery');
+  }
+});
+
+test('one live region for the flasher status; the file input reflows at 320px', () => {
+  const fc = read('./flasher/ui/FcFlasher.tsx');
+  assert.doesNotMatch(fc, /aria-live/, 'FcFlasher announces through say() only');
+  assert.match(read('../routes/guides.flash.tsx'), /<div aria-live="polite" aria-atomic="true" className="sr-only">/);
+  assert.doesNotMatch(fc, /say\(`\$\{r\.text\} \$\{BOOT_HINT\}`\)/, 'failures are announced by role="alert" only');
+  assert.match(fc, /type="file"[^>]*className="mt-2 block w-full max-w-full"/);
+});
+
+test('guide callouts with items render a real <ol>; the firmware page names the supported boards', () => {
+  const step = read('../routes/guides.$family.$step.tsx');
+  assert.match(step, /\{callout\.items\?\.length \? \(\s*<ol className="mt-1 list-decimal pl-5[^"]*">/);
+  assert.match(read('./flasher/ui/FcFlasher.tsx'), /<p className="flash-note">For OpenFC-Lite and Lite Mini\.<\/p>\s*<ol className="flash-checklist">/);
+});

@@ -22,7 +22,7 @@
 
 import {FLASHER_TARGETS} from './flasher/targets.ts';
 
-export type Callout = {kind: 'safety' | 'note'; title: string; text: string};
+export type Callout = {kind: 'safety' | 'note'; title: string; text: string; /** Rendered as a numbered list under the text. */ items?: string[]};
 
 export type GuideStep = {
   title: string;
@@ -119,6 +119,18 @@ const FC_SAFETY: Callout = {
   kind: 'safety',
   title: 'Propellers off, battery unplugged',
   text: 'Take the propellers off the motors and unplug the flight battery before you start. The flight controller gets all the power it needs from the USB cable for this. Keep the battery unplugged for the whole update.',
+};
+
+/** The firmware page's pre-flash checklist (FcFlasher), minus props/battery: FC_SAFETY sits next to it. */
+const PRE_FLASH: Callout = {
+  kind: 'safety',
+  title: 'Before you flash',
+  text: '',
+  items: [
+    'Back up your config: save `diff all` in the Betaflight CLI. Flashing resets settings.',
+    'Computer only (Chrome/Edge), data-capable USB cable.',
+    'On a new board: test on USB before soldering.',
+  ],
 };
 
 const NEVER_UNPLUG: Callout = {
@@ -239,6 +251,7 @@ const INSTALL_DIRECT: GuidePageDirect = {
     "Installing resets the board's settings, so save them first.",
   ],
   callouts: [
+    PRE_FLASH,
     FC_SAFETY,
     {
       kind: 'safety',
@@ -416,7 +429,7 @@ const OPENFC: GuideFamily = {
         'The firmware page checks the file before you get it: its size and checksum must match the release list built into the page, and it must be built for the board you picked.',
       ],
       tools: FC_TOOLS,
-      callouts: [FC_NOT_PUBLISHED, FC_SAFETY, NEVER_UNPLUG, BROWSER_NOTE],
+      callouts: [FC_NOT_PUBLISHED, PRE_FLASH, FC_SAFETY, NEVER_UNPLUG, BROWSER_NOTE],
       steps: [
         {
           title: 'Open the firmware page and pick your board',
