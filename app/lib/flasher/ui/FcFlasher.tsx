@@ -230,13 +230,14 @@ export function FcFlasher({
       <h2 id="fc-update-title" className="flash-update-title">
         Before you start
       </h2>
+      <p className="flash-note">For OpenFC-Lite and Lite Mini.</p>
       <ol className="flash-checklist">
         <li>
-          Back up your config: save <code>diff all</code>, because flashing resets settings.
+          Back up your config: save <code>diff all</code> in the Betaflight CLI. Flashing resets settings.
         </li>
         <li>Props off, battery out, USB only.</li>
-        <li>Computer only (Chrome/Edge), with a data-capable USB cable.</li>
-        <li>Test on USB before soldering.</li>
+        <li>Computer only (Chrome/Edge), data-capable USB cable.</li>
+        <li>On a new board: test on USB before soldering.</li>
       </ol>
 
       <label htmlFor={backupId} className="mb-3 flex items-center gap-2">

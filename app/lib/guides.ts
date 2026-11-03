@@ -22,7 +22,7 @@
 
 import {FLASHER_TARGETS} from './flasher/targets.ts';
 
-export type Callout = {kind: 'safety' | 'note'; title: string; text: string};
+export type Callout = {kind: 'safety' | 'note'; title: string; text: string; /** Rendered as a numbered list under the text. */ items?: string[]};
 
 export type GuideStep = {
   title: string;
@@ -121,11 +121,16 @@ const FC_SAFETY: Callout = {
   text: 'Take the propellers off the motors and unplug the flight battery before you start. The flight controller gets all the power it needs from the USB cable for this. Keep the battery unplugged for the whole update.',
 };
 
-/** The firmware page's pre-flash checklist (FcFlasher), same four items. */
+/** The firmware page's pre-flash checklist (FcFlasher), minus props/battery: FC_SAFETY sits next to it. */
 const PRE_FLASH: Callout = {
   kind: 'safety',
   title: 'Before you flash',
-  text: '1. Back up your config: save `diff all`, because flashing resets settings. 2. Props off, battery out, USB only. 3. Computer only (Chrome/Edge), with a data-capable USB cable. 4. Test on USB before soldering.',
+  text: '',
+  items: [
+    'Back up your config: save `diff all` in the Betaflight CLI. Flashing resets settings.',
+    'Computer only (Chrome/Edge), data-capable USB cable.',
+    'On a new board: test on USB before soldering.',
+  ],
 };
 
 const NEVER_UNPLUG: Callout = {

@@ -85,10 +85,10 @@ test('guide pages reuse the firmware page\'s dark code chip (no light-on-light c
 });
 
 const CHECKLIST = [
-  /Back up your config: save `diff all`, because flashing resets settings\./,
+  /Back up your config: save `diff all` in the Betaflight CLI\. Flashing resets settings\./,
   /Props off, battery out, USB only\./,
-  /Computer only \(Chrome\/Edge\), with a data-capable USB cable\./,
-  /Test on USB before soldering\./,
+  /Computer only \(Chrome\/Edge\), data-capable USB cable\./,
+  /On a new board: test on USB before soldering\./,
 ];
 
 test('firmware page: numbered 4-item pre-flash checklist directly above Update firmware', () => {
@@ -148,18 +148,17 @@ test('firmware page: version + short SHA next to the offered file, via firmwareI
   assert.ok(fc.indexOf('firmwareIdText(boardRelease)') > fc.indexOf('Save firmware (.uf2)'));
 });
 
-test('guide flash step (base and one-button) carries the same 4 checklist items', () => {
+test('guide flash step (base and one-button) carries the checklist as a numbered list, props/battery left to FC_SAFETY', () => {
   for (const on of [false, true]) {
     const p = resolveGuidePage(page('flash'), on);
     const c = p.callouts.find((x) => x.title === 'Before you flash');
     assert.ok(c, `callout present (direct=${on})`);
-    let at = -1;
-    for (const [i, re] of CHECKLIST.entries()) {
-      const m = new RegExp(`${i + 1}\. ${re.source}`).exec(c.text);
-      assert.ok(m, `${re} (direct=${on})`);
-      assert.ok(m.index > at);
-      at = m.index;
-    }
+    // Same items minus props/battery, which FC_SAFETY already says on the same page.
+    const expected = CHECKLIST.filter((_, i) => i !== 1);
+    assert.equal(c.items?.length, expected.length);
+    expected.forEach((re, i) => assert.match(c.items![i], new RegExp(`^${re.source}$`), `item ${i + 1} (direct=${on})`));
+    assert.equal(c.text, '');
+    assert.ok(p.callouts.some((x) => x.title === 'Propellers off, battery unplugged'), 'FC_SAFETY carries props/battery');
   }
 });
 
@@ -169,4 +168,10 @@ test('one live region for the flasher status; the file input reflows at 320px', 
   assert.match(read('../routes/guides.flash.tsx'), /<div aria-live="polite" aria-atomic="true" className="sr-only">/);
   assert.doesNotMatch(fc, /say\(`\$\{r\.text\} \$\{BOOT_HINT\}`\)/, 'failures are announced by role="alert" only');
   assert.match(fc, /type="file"[^>]*className="mt-2 block w-full max-w-full"/);
+});
+
+test('guide callouts with items render a real <ol>; the firmware page names the supported boards', () => {
+  const step = read('../routes/guides.$family.$step.tsx');
+  assert.match(step, /\{callout\.items\?\.length \? \(\s*<ol className="mt-1 list-decimal pl-5[^"]*">/);
+  assert.match(read('./flasher/ui/FcFlasher.tsx'), /<p className="flash-note">For OpenFC-Lite and Lite Mini\.<\/p>\s*<ol className="flash-checklist">/);
 });
