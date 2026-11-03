@@ -98,6 +98,7 @@ import {
   ACCESSORY_SPECS,
 } from '~/lib/product-content';
 import {useProductStatus} from '~/lib/coming-soon';
+import {StagingBenchText} from '~/lib/flasher/ui/status';
 import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
@@ -3013,6 +3014,25 @@ function ProductPage() {
                 {say('product-chrome.firmware_freedom_link', 'Warranty')}
               </Link>
             </p>
+            {/* Flasher links: FC and ESC only. The 20x20 tier (OpenFC-Lite
+                Mini, OpenESC 20x20) has firmware; the 30x30 tier (OpenFC-Lite,
+                OpenESC 30x30) has none yet outside the staging bench build. /guides/flash has its own
+                Permissions-Policy, so this is a full document load. */}
+            {product.handle === 'openfc-lite' || product.handle === 'openesc' ? (
+              <p>
+                <Link prefetch="none" reloadDocument to="/guides/flash">
+                  {/^20/.test(activeTier.trim()) ? (
+                    say('product-chrome.firmware_flash_link', 'Flash firmware')
+                  ) : (
+                    // The staging bench build offers the 30x30 tier too (OpenFC-Lite, OpenESC 30x30).
+                    <StagingBenchText
+                      normal={say('product-chrome.firmware_flash_unavailable', 'Firmware download: not available yet')}
+                      bench={say('product-chrome.firmware_flash_link', 'Flash firmware')}
+                    />
+                  )}
+                </Link>
+              </p>
+            ) : null}
           </div>
           <FirmwareSupport
             firmwareProject={content.firmware.project}

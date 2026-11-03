@@ -1,0 +1,56 @@
+# LOCAL BENCH ONLY: `wrangler dev --local` for the /flash staging bench
+# (review 3, F1/F2). NEVER deploy this file; no workflow references it.
+# A `wrangler deploy --config wrangler.bench.toml` would fail anyway: the R2
+# bucket below exists only in the local simulator (.wrangler/state).
+#
+# The same Worker and assets as wrangler.toml (staging), plus ONE extra
+# binding: FIRMWARE_STAGING, a local R2 bucket holding the unreleased bench
+# firmware. server.ts serves it at /firmware-staging/<file> only in a
+# VITE_FLASH_STAGING_GATES=1 build, only with STAGING_PASSWORD set (.dev.vars),
+# and always behind the staging basic auth. The files are never static assets
+# (dist/client): the build fails if public/firmware-staging/ exists.
+#
+# Run (see the bench sheet):
+#   VITE_FLASH_STAGING_GATES=1 npx react-router build
+#   npx wrangler r2 object put opendrone-firmware-staging-bench/<file> --file .firmware-staging/<file> --local --config wrangler.bench.toml
+#   npx wrangler dev --local --config wrangler.bench.toml
+# Keep the settings below in step with wrangler.toml.
+name = "opendrone-web-bench"
+main = "dist/server/index.js"
+compatibility_date = "2025-04-01"
+
+[assets]
+directory = "dist/client"
+
+[vars]
+SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
+PUBLIC_COMING_SOON = "0"
+PUBLIC_US_SALES = "0"
+CHATFPV_URL = "https://chatfpv.sales-ee0.workers.dev"
+CHATFPV_DRAFTS_ENABLED = "1"
+CHATFPV_ASK_ENABLED = "1"
+CHATFPV_WIDGET_ENABLED = "1"
+CHATFPV_SYNTHETIC = "1"
+HANDOFF_ENABLED = "1"
+ACCOUNTS_ENABLED = "0"
+CHATFPV_OAUTH_REDIRECTS = "https://chatfpv.sales-ee0.workers.dev/auth/callback"
+CHATFPV_POST_LOGOUT_REDIRECTS = "https://chatfpv.sales-ee0.workers.dev/"
+PILOT_MAP_ENABLED = "0"
+SUPPORT_MAIL_INTAKE_ENABLED = "0"
+SUPPORT_CRM_API = "0"
+SUPPORT_COMMUNITY_ROUTE = "0"
+
+[[d1_databases]]
+binding = "SUPPORT_DB"
+database_name = "opendrone-support-preview"
+database_id = "3ef6d8ce-e1f4-4d38-8306-c9afc0418b6d"
+migrations_dir = "migrations"
+
+[[services]]
+binding = "CHATFPV"
+service = "chatfpv"
+
+# Bench firmware: local simulator only. Seed it with `wrangler r2 object put ... --local`.
+[[r2_buckets]]
+binding = "FIRMWARE_STAGING"
+bucket_name = "opendrone-firmware-staging-bench"
