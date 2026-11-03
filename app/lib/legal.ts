@@ -165,6 +165,8 @@ export function mdToHtml(src: string): string {
   const lines = src.split(/\r?\n/);
   const out: string[] = [];
   let i = 0;
+  // Text of the last heading, the accessible name of the next table's scroll box.
+  let lastHeading = '';
 
   while (i < lines.length) {
     const line = lines[i];
@@ -180,6 +182,7 @@ export function mdToHtml(src: string): string {
     const h = /^(#{1,6})\s+(.*)$/.exec(line);
     if (h) {
       const level = h[1].length;
+      lastHeading = h[2].replace(/[*_`]/g, '').trim();
       // "Article 7bis: ..." / "Artikel 7bis: ..." gets id="art-7bis" so a
       // link can land on it in every language.
       const art = /^(?:Article|Artikel)\s+(\d+[a-z]*)\b/i.exec(h[2].trim());
@@ -217,7 +220,14 @@ export function mdToHtml(src: string): string {
       // A key/value table has no header text (`| | |`): an empty header row
       // renders as a blank band, so leave it out.
       const thead = header.some((c) => c !== '') ? `<thead><tr>${headHtml}</tr></thead>` : '';
-      out.push(`<table>${thead}<tbody>${bodyHtml}</tbody></table>`);
+      // A wide table scrolls sideways inside its own box; the box is a named,
+      // focusable region so keyboard users can scroll it (WCAG 2.1.1).
+      const name = escapeHtml(
+        lastHeading || header.filter((c) => c !== '').join(', ') || rows[0]?.[0] || '',
+      );
+      out.push(
+        `<div class="table-scroll" role="region" tabindex="0"${name ? ` aria-label="${name}"` : ''}><table>${thead}<tbody>${bodyHtml}</tbody></table></div>`,
+      );
       continue;
     }
 

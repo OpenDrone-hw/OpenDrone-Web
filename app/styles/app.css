@@ -6876,7 +6876,11 @@ section.chapter[data-centered] .chapter-body-col {
   justify-content: center;
   /* 16:9 bubble - uniform across the resource row. */
   aspect-ratio: 16 / 9;
-  overflow: hidden;
+  /* Not overflow:hidden: that removed the automatic minimum height, so the
+     fixed ratio clipped the text under WCAG 1.4.12 text spacing. Visible lets
+     the card grow with its content; long tokens wrap instead. */
+  overflow: visible;
+  overflow-wrap: anywhere;
   padding: 1.15rem 1.35rem;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
@@ -9952,19 +9956,21 @@ a.what-chain-chip:hover {
 
 /* Wide tables (rate tables, processor lists) scroll inside their own box
    on a phone instead of widening the page. */
-.legal-body table {
-  width: 100%;
+.legal-body .table-scroll {
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  border-collapse: collapse;
   margin: 1rem 0;
-  font-size: 0.9rem;
 }
-@media (max-width: 47.99em) {
-  .legal-body table {
-    display: block;
-  }
+.legal-body .table-scroll:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.legal-body table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
 }
 
 .legal-body th,
@@ -10752,6 +10758,7 @@ a[target='_blank']::after {
 .series-rail-num {
   font-size: 12px;
   letter-spacing: 0.1em;
+  /* --color-text-muted #9a9a9a on --color-bg #0d0d10 = 6.90:1 (text-dim would be 5.73:1). */
   color: var(--color-text-muted);
 }
 
@@ -12138,6 +12145,16 @@ a[target='_blank']::after {
   outline-offset: 2px;
 }
 
+/* /testing: a full-bleed iframe on a light page. Dark inset ring, because the
+   gold focus token is ~1.5:1 on #FBFBFA. */
+.testing-main:focus {
+  outline: none;
+}
+.testing-frame:focus-visible {
+  outline: 3px solid #0d0d10;
+  outline-offset: -3px;
+}
+
 /* =========================================================
    od-* primitives. Token aliases below map the od-* names onto the
    project's existing variables; no new tokens are introduced.
@@ -12148,7 +12165,9 @@ a[target='_blank']::after {
   --od-bg-2: var(--color-bg-card);
   --od-ink: var(--color-text);
   --od-ink-dim: var(--color-text-muted);
-  --od-ink-faint: #4a4d44;
+  /* 5.6:1 on --color-bg (was #4a4d44, 2.25:1, failing WCAG 1.4.3 for the
+     newsletter index/post meta text). */
+  --od-ink-faint: var(--color-text-dim);
   --od-line: #2a2e26;
   --od-line-strong: #3a3f33;
   --od-pcb-gold: var(--color-gold);
@@ -13912,7 +13931,7 @@ a[target='_blank']::after {
   font-size: clamp(2rem, 5vw, 3rem);
   letter-spacing: 0.06em;
   line-height: 1;
-  color: color-mix(in srgb, var(--color-text) 22%, transparent);
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
   margin: 0 0 var(--sp-4);
 }
 .tl-events {
@@ -13924,9 +13943,10 @@ a[target='_blank']::after {
 }
 .tl-event {
   position: relative;
-  opacity: 0.35;
+  /* No opacity fade: 0.35 dropped the date and detail text to 1.7:1. The pad
+     and trace already mark passed events. */
   transform: translateY(6px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition: transform 0.4s ease;
 }
 .tl-event.is-passed {
   opacity: 1;
