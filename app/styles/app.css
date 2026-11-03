@@ -15296,9 +15296,11 @@ button[data-waiting] {
     width: calc(100% - 2rem);
   }
 }
-.cart-line-quantity .cart-sheet-stepper button:disabled {
+.cart-line-quantity .cart-sheet-stepper button:disabled,
+.cart-line-quantity .cart-sheet-stepper button[aria-disabled='true'] {
   opacity: 0.4;
   border-color: var(--color-border-strong);
+  cursor: not-allowed;
 }
 body:has(main.cart) footer .footer-note--newsletter {
   display: none;
