@@ -1116,7 +1116,8 @@ function LineForm({line, quantity, disabled, label, onSubmit, children}: {line: 
       <input type="hidden" name="intent" value="update" />
       <input type="hidden" name="lineId" value={line.id} />
       <input type="hidden" name="quantity" value={quantity} />
-      <button type="submit" aria-disabled={disabled || undefined} aria-label={label}>{children}</button>
+      {/* At the limit it stays focusable (aria-disabled) but is not a submit button: no JavaScript, no post. */}
+      <button type={disabled ? 'button' : 'submit'} aria-disabled={disabled || undefined} aria-label={label}>{children}</button>
     </Form>
   );
 }

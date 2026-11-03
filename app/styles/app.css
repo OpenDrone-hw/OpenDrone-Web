@@ -15302,6 +15302,11 @@ button[data-waiting] {
   border-color: var(--color-border-strong);
   cursor: not-allowed;
 }
+.cart-line-quantity--sheet .cart-sheet-stepper button[aria-disabled='true']:hover {
+  background: transparent;
+  color: var(--color-text-muted);
+  border-color: var(--color-border-strong);
+}
 body:has(main.cart) footer .footer-note--newsletter {
   display: none;
 }
