@@ -2937,7 +2937,8 @@ button.reset {
   align-items: center;
   gap: 0.5rem;
   padding: 0.35rem 0.5rem;
-  background: rgba(13, 13, 16, 0.7);
+  /* Sits over arbitrary photos: near-opaque so the counter stays >= 4.5:1 on light renders. */
+  background: rgba(13, 13, 16, 0.88);
   border: 1px solid var(--color-border);
   border-radius: var(--r-pill);
   backdrop-filter: blur(6px);
@@ -2964,7 +2965,7 @@ button.reset {
   font-size: 11px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   padding: 0 0.25rem;
 }
 
