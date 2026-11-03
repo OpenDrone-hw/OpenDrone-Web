@@ -213,11 +213,14 @@ export default function CartPage() {
     storeSplitItems(items);
   };
   const notice = checkNotice(check);
+  const [announcement, setAnnouncement] = useState('');
   return (
+    <AnnounceContext.Provider value={setAnnouncement}>
     <div className="cart page-shell">
       <header className="page-header">
-        <h1 className="page-title"><Txt id="cart.title" /></h1>
+        <h1 className="page-title" id={CART_HEADING_ID} tabIndex={-1}><Txt id="cart.title" /></h1>
       </header>
+      <div className="sr-only" role="status">{announcement}</div>
       {notice ? <p className="cart-alert" role="alert">{notice}</p> : null}
       {removed.length ? (
         <SplitReminder items={removed} cartHasLines={Boolean(cart?.lines.length)} onChange={updateRemoved} />
@@ -234,9 +237,10 @@ export default function CartPage() {
           onSplit={(items) => updateRemoved([...removed.filter((r) => !items.some((i) => i.id === r.id)), ...items])}
         />
       ) : (
-        <EmptyCart />
+        <div role="status"><EmptyCart /></div>
       )}
     </div>
+    </AnnounceContext.Provider>
   );
 }
 
@@ -521,6 +525,20 @@ function lineName(line: ShopifyCartLine): string {
 /** Quantity changes in flight anywhere in the cart: totals are stale and
  *  checkout waits until Shopify has confirmed them. */
 const PendingContext = createContext<(delta: number) => void>(() => {});
+
+/** Polite announcements that outlive the control that caused them (a
+ *  removed line unmounts). */
+const AnnounceContext = createContext<(message: string) => void>(() => {});
+const CART_HEADING_ID = 'cart-heading';
+
+/** After a line is removed its row is gone and focus fell to <body>: move it
+ *  to the next (else previous) row's Remove button, else the cart heading. */
+function focusAfterRemove(sibling: Element | null) {
+  const target =
+    sibling?.querySelector<HTMLElement>('.cart-line-remove') ??
+    document.getElementById(CART_HEADING_ID);
+  target?.focus();
+}
 
 function PopulatedCart({
   cart,
@@ -964,6 +982,8 @@ function CartLine({
 function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; max: number}) {
   const revalidator = useRevalidator();
   const onPending = useContext(PendingContext);
+  const announce = useContext(AnnounceContext);
+  const neighbourRef = useRef<Element | null>(null);
   const [quantity, setQuantity] = useState(line.quantity);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -988,6 +1008,8 @@ function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; m
   };
 
   const send = async (fields: Array<[string, string]>) => {
+    const removing = fields.some(([key, value]) => key === 'intent' && value === 'remove');
+    let failed = false;
     setBusy(true);
     setError(null);
     try {
@@ -999,6 +1021,7 @@ function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; m
           ? caught.message
           : (copyText('cart.line_update_failed') ?? 'Could not update. Try again.'),
       );
+      failed = true;
       setQuantity(line.quantity);
     } finally {
       pending.current = false;
@@ -1007,6 +1030,10 @@ function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; m
         await revalidator.revalidate();
       } finally {
         onPending(-1);
+      }
+      if (removing && !failed) {
+        announce(t('line_removed', 'Removed {name}', {name}));
+        focusAfterRemove(neighbourRef.current);
       }
     }
   };
@@ -1037,6 +1064,9 @@ function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; m
   const remove = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     window.clearTimeout(timer.current);
+    // The row unmounts and is gone after the reload: keep the neighbour.
+    const row = event.currentTarget.closest('li');
+    neighbourRef.current = row?.nextElementSibling ?? row?.previousElementSibling ?? null;
     begin();
     void send([['intent', 'remove'], ['lineId', line.id]]);
   };
@@ -1044,9 +1074,10 @@ function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; m
   return (
     <div className="cart-line-quantity cart-line-quantity--sheet" aria-busy={busy || undefined}>
       <div className="cart-sheet-stepper">
-        <LineForm line={line} quantity={quantity - 1} disabled={quantity <= 1} onSubmit={(e) => step(e, quantity - 1)} label={copyText('cart.line_decrease_aria') ?? 'Decrease quantity'}>−</LineForm>
-        <span className="cart-sheet-qty-value" aria-live="polite">{quantity}</span>
-        <LineForm line={line} quantity={quantity + 1} disabled={quantity >= max} onSubmit={(e) => step(e, quantity + 1)} label={copyText('cart.line_increase_aria') ?? 'Increase quantity'}>+</LineForm>
+        <LineForm line={line} quantity={Math.max(1, quantity - 1)} disabled={quantity <= 1} onSubmit={(e) => step(e, quantity - 1)} label={copyText('cart.line_decrease_aria') ?? 'Decrease quantity'}>−</LineForm>
+        <span className="cart-sheet-qty-value" aria-hidden="true">{quantity}</span>
+        <span className="sr-only" role="status">{t('line_qty_announce', 'Quantity {count}, {name}', {count: quantity, name})}</span>
+        <LineForm line={line} quantity={Math.min(max, quantity + 1)} disabled={quantity >= max} onSubmit={(e) => step(e, quantity + 1)} label={copyText('cart.line_increase_aria') ?? 'Increase quantity'}>+</LineForm>
       </div>
       <Form method="post" action="/api/shopify/cart" onSubmit={remove}>
         <input type="hidden" name="intent" value="remove" />
@@ -1085,7 +1116,8 @@ function LineForm({line, quantity, disabled, label, onSubmit, children}: {line: 
       <input type="hidden" name="intent" value="update" />
       <input type="hidden" name="lineId" value={line.id} />
       <input type="hidden" name="quantity" value={quantity} />
-      <button type="submit" disabled={disabled} aria-label={label}>{children}</button>
+      {/* At the limit it stays focusable (aria-disabled) but is not a submit button: no JavaScript, no post. */}
+      <button type={disabled ? 'button' : 'submit'} aria-disabled={disabled || undefined} aria-label={label}>{children}</button>
     </Form>
   );
 }
