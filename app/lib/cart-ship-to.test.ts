@@ -6,6 +6,8 @@ import {applyCampaign, datedShipParts, parseCampaignConfig, shipLabelFromPromise
 import {shipCountryFromCookie} from './shipping-rates.ts';
 import {forwardedCountry, handleShopifyCartAction, withCountry, type ShopifyCartDependencies} from './shopify-cart-action.ts';
 import {handleCartCountry} from './shopify-cart-country.ts';
+import {cartReplannedFor, planCartPage} from './cart-replan.ts';
+import {shippingQuote} from './shipping-rates.ts';
 import type {CartLineInput, CartLineUpdate, ShopifyCart, ShopifyCartLine} from './shopify-storefront.ts';
 
 const CAMPAIGN = parseCampaignConfig(
@@ -520,4 +522,63 @@ it('a NEAR product add reprices the existing EU cart and moves its paid-stock li
   assert.match(summary.lines[0].shipPromise,/31 March 2027/);
   assert.match(summary.lines[1].shipPromise,/31 March 2027/);
   assert.ok(fake.state.lines.every(line=>line.shipRegion==='NEAR'));
+});
+
+describe('the cart loader right after a Ship to switch (cart-replan.ts)', () => {
+  const setCookies = (res: Response) => (res.headers.getSetCookie?.() ?? [res.headers.get('Set-Cookie') ?? '']).join('\n');
+  it('the switch leaves the marker for the country it re-planned the cart for', async () => {
+    const res = await handleCartCountry(switchRequest('BE'), ENV, switcher(shopify('US', [euLine()])));
+    const cookies = setCookies(res);
+    assert.match(cookies, /od_ship_country=BE;/);
+    assert.match(cookies, /od_cart_replanned=BE; Path=\/; Max-Age=15; HttpOnly; SameSite=Lax; Secure/);
+  });
+  it('no marker for a country not sold direct, or without a cart', async () => {
+    const shops = await handleCartCountry(switchRequest('FR'), ENV, switcher(shopify('BE', [euLine()])));
+    assert.doesNotMatch(setCookies(shops), /od_cart_replanned/);
+    const empty = await handleCartCountry(switchRequest('BE'), ENV, {...switcher(shopify('US', [euLine()])), getCartId: () => undefined});
+    assert.doesNotMatch(setCookies(empty), /od_cart_replanned/);
+  });
+  it('re-plans on the switch catalog, never reading Shopify again, with the same result as a fresh read', async () => {
+    const fake = shopify('US', [euLine()]);
+    const res = await handleCartCountry(switchRequest('BE'), ENV, switcher(fake));
+    const marker = cartReplannedFor(setCookies(res).split('\n').find((c) => c.startsWith('od_cart_replanned'))!.split(';')[0]);
+    assert.equal(marker, 'BE');
+    const cart = (await fake.getCart())!;
+    let freshReads = 0;
+    let recentReads = 0;
+    const deps = {
+      fresh: async (region: Region) => { freshReads += 1; return catalogFor(region); },
+      recent: async (region: Region) => { recentReads += 1; return catalogFor(region); },
+      setCountry: fake.setCountry, getCart: fake.getCart, updateCartLines: fake.updateCartLines,
+      fetchPaymentMethods: async () => ['visa'],
+    };
+    const quote = shippingQuote('BE', REGISTRATIONS, 12);
+    const reused = await planCartPage(cart, quote, ENV, marker, deps);
+    assert.equal(reused.reused, true);
+    assert.equal(freshReads, 0);
+    assert.equal(recentReads, 1);
+    const fresh = await planCartPage(cart, quote, ENV, null, deps);
+    assert.equal(fresh.reused, false);
+    assert.equal(freshReads, 1);
+    // Same lines, same promises, no change to report, nothing written.
+    assert.deepEqual(reused.cart, fresh.cart);
+    assert.equal(reused.change, fresh.change);
+    assert.deepEqual(reused.payments, ['visa']);
+  });
+  it('still rewrites a stale promise on the reused catalog (replanCart is unchanged)', async () => {
+    // The cart says BE but a line still carries the US promise: the re-plan writes it back.
+    const fake = shopify('US', [euLine()]);
+    await handleCartCountry(switchRequest('US'), ENV, switcher(fake));
+    fake.state.country = 'BE';
+    const cart = (await fake.getCart())!;
+    const plan = await planCartPage(cart, shippingQuote('BE', REGISTRATIONS, 12), ENV, 'BE', {
+      fresh: async () => { throw new Error('no fresh read expected'); },
+      recent: async (region: Region) => catalogFor(region),
+      setCountry: fake.setCountry, getCart: fake.getCart, updateCartLines: fake.updateCartLines,
+      fetchPaymentMethods: async () => [],
+    });
+    assert.equal(plan.reused, true);
+    assert.equal(plan.cart.lines[0].shipPromise, EU_PROMISE);
+    assert.equal(fake.state.lines[0].shipRegion, undefined);
+  });
 });

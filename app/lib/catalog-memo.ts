@@ -31,6 +31,28 @@ export async function memoCatalog(
   return structuredClone(catalog);
 }
 
+/** Keep a catalog read fresh from Shopify (the cart's `fresh` path), so a
+ *  read moments later in this isolate can reuse it (`recentCatalog`). */
+export function rememberCatalog(market: string, catalog: Catalog, now: () => number = Date.now): void {
+  catalogMemo.set(market, {catalog: structuredClone(catalog), fetchedAt: now()});
+}
+
+/** The memoised catalog for `market` when it is younger than `maxAgeMs`,
+ *  else a new read (kept in the memo). The cart loader right after a Ship to
+ *  switch reads the catalog the switch's POST just read (cart-replan.ts). */
+export async function recentCatalog(
+  market: string,
+  maxAgeMs: number,
+  load: () => Promise<Catalog>,
+  now: () => number = Date.now,
+): Promise<Catalog> {
+  const hit = catalogMemo.get(market);
+  if (hit && now() - hit.fetchedAt < maxAgeMs) return structuredClone(hit.catalog);
+  const catalog = await load();
+  rememberCatalog(market, catalog, now);
+  return structuredClone(catalog);
+}
+
 /** For tests: forget every memoised catalog. */
 export function clearCatalogMemo(): void {
   catalogMemo.clear();
