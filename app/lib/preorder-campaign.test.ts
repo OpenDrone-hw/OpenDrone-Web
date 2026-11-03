@@ -891,12 +891,13 @@ describe('reserved units on a paid batch', () => {
     const config = parseCampaignConfig(
       JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')),
     );
-    // 35 per SKU (commerce seed 80); OPENESC-3030 holds 5 more for order #1504 until it is paid.
+    // Batch 1 sells 200 per SKU (founder 2026-11-03, 200 to be confirmed): 50
+    // held back; OPENESC-3030 holds 5 more for order #1504 until it is paid.
     const reserved: Record<string, number> = {
-      'OPENFC-LITE-2020': 35,
-      'OPENFC-LITE-3030': 35,
-      'OPENESC-2020': 35,
-      'OPENESC-3030': 40,
+      'OPENFC-LITE-2020': 50,
+      'OPENFC-LITE-3030': 50,
+      'OPENESC-2020': 50,
+      'OPENESC-3030': 55,
     };
     for (const [sku, held] of Object.entries(reserved)) {
       const [paid, funding] = config.skus[sku].batches;

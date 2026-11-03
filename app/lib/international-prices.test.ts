@@ -42,7 +42,7 @@ test('international destinations take batch 1 FC stock, never the Belgian access
   // International and EU units fill batch 1 together; a US unit never does.
   const eu = campaignState(config.skus['OPENFC-LITE-2020'].batches, [{region:'INT', units:3}, {region:'US', units:2}], config.pendingShips, [], null, 'EU');
   assert.equal(eu.batch, 1);
-  assert.equal(eu.paidLeft, 212);
+  assert.equal(eu.paidLeft, 197); // 200 sellable (250 less 50 reserved, to be confirmed) less 3 INT
   assert.equal(eu.targetOrdered, 2); // only the US units reach the funding target; INT units sit in paid batch 1
 });
 
@@ -81,12 +81,46 @@ test('an international arrival date must be supplied separately from existing EU
 test('checkout states distinct paid-stock, EU funding and international arrival deadlines without changing dispatch promises', () => {
   const priced = {...base,products:base.products.map(p=>({...p,variants:p.variants.map(v=>({...v,price:25,availability:v.sku==='OPENFC-LITE-2020' ? 'preorder' as const : v.availability}))}))};
   // Batch 1 names no international arrival date; once it is full an international unit takes the March date.
-  for (const [region, units, date] of [['EU',0,'30 November 2026'],['EU',250,'15 April 2027'],['INT',0,undefined],['INT',250,'30 April 2027']] as const) {
+  // EU batch 1 is Belgian stock: no delivery date and no Preorder line, the promise hidden.
+  for (const [region, units, date] of [['EU',0,undefined],['EU',250,'15 April 2027'],['INT',0,undefined],['INT',250,'30 April 2027']] as const) {
     const catalog=applyCampaign(priced,config,{'OPENFC-LITE-2020':units},new Date('2026-10-01'),region);
     const variant=catalog.products.flatMap(p=>p.variants).find(v=>v.sku==='OPENFC-LITE-2020')!;
     const attributes=lineAttributes(variant,region)!;
+    const stock=region==='EU'&&units===0;
     assert.equal(attributes.find(a=>a.key==='Delivery by')?.value,date);
-    assert.equal(attributes.find(a=>a.key==='Preorder')?.value,variant.ship_promise);
+    assert.equal(attributes.find(a=>a.key===(stock?'_ship_promise':'Preorder'))?.value,variant.ship_promise);
+    assert.equal(attributes.find(a=>a.key==='Preorder')?.value,stock?undefined:variant.ship_promise);
+    assert.equal(attributes.find(a=>a.key==='Shipping')?.value,stock?'In stock in Belgium, ships in a few days.':undefined);
     assert.doesNotMatch(variant.ship_promise??'',/delivered|30 April|15 April/);
   }
+});
+
+test('EU batch 1 cart lines say in stock in Belgium with no preorder date; INT and US lines are unchanged', () => {
+  const priced = {...base,products:base.products.map(p=>({...p,variants:p.variants.map(v=>({...v,price:25,availability:v.sku==='OPENFC-LITE-2020' ? 'preorder' as const : v.availability}))}))};
+  const attrs = (region: 'EU' | 'INT' | 'US') => {
+    const catalog=applyCampaign(priced,config,{},new Date('2026-10-01'),region);
+    const variant=catalog.products.flatMap(p=>p.variants).find(v=>v.sku==='OPENFC-LITE-2020')!;
+    return lineAttributes(variant,region)!;
+  };
+  const eu = attrs('EU');
+  assert.deepEqual(eu, [
+    {key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'},
+    {key: '_ship_promise', value: 'ships late November 2026'},
+    {key: '_batch', value: 'OPENFC-LITE-2020:1'},
+  ]);
+  // Nothing visible (no leading underscore) says preorder or names the November date.
+  for (const a of eu.filter((x) => !x.key.startsWith('_'))) {
+    assert.doesNotMatch(`${a.key}: ${a.value}`, /preorder|30 November|late November/i);
+  }
+  assert.deepEqual(attrs('INT'), [
+    {key: 'Preorder', value: 'ships late November 2026'},
+    {key: '_ship_region', value: 'INT'},
+    {key: '_batch', value: 'OPENFC-LITE-2020:1'},
+  ]);
+  assert.deepEqual(attrs('US'), [
+    {key: 'Preorder', value: config.pendingShips},
+    {key: 'Delivery by', value: '30 April 2027'},
+    {key: '_ship_region', value: 'US'},
+    {key: '_batch', value: 'OPENFC-LITE-2020:2'},
+  ]);
 });
