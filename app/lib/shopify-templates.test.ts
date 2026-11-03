@@ -106,9 +106,9 @@ describe('Shopify notification templates', async () => {
     const uk = fixtures.find((f) => f.id === 'uk-gross-receipt')!;
     // A UK line still recorded INT now differs from the NEAR address region: flagged for review.
     assert.match(renderLiquid(tpl.html, uk.context).output, /Stock from Belgium ships only to the EU\./);
-    for (const country_code of ['CH', 'NO']) {
-      const ctx = asNear({...uk.context, shipping_address: {country: country_code, country_code, province_code: null}});
-      assert.doesNotMatch(renderLiquid(tpl.html, ctx).output, /Delivery address review/, country_code);
+    for (const code of ['CH', 'NO']) {
+      const ctx = asNear({...uk.context, shipping_address: {country: code, country_code: code, province_code: null}});
+      assert.doesNotMatch(renderLiquid(tpl.html, ctx).output, /Delivery address review/, code);
     }
     // An INT line to a NEAR address is flagged.
     const intToCh = {...uk.context, shipping_address: {country: 'Switzerland', country_code: 'CH', province_code: null}};
