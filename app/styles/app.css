@@ -6847,7 +6847,11 @@ section.chapter[data-centered] .chapter-body-col {
   justify-content: center;
   /* 16:9 bubble - uniform across the resource row. */
   aspect-ratio: 16 / 9;
-  overflow: hidden;
+  /* Not overflow:hidden: that removed the automatic minimum height, so the
+     fixed ratio clipped the text under WCAG 1.4.12 text spacing. Visible lets
+     the card grow with its content; long tokens wrap instead. */
+  overflow: visible;
+  overflow-wrap: anywhere;
   padding: 1.15rem 1.35rem;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
