@@ -1882,7 +1882,10 @@ function ProductPage() {
     : usBuyer && buyPrice?.currencyCode === 'USD'
       ? say('product-chrome.buy_us_price_note', 'Duties included')
       : internationalBuyer
-        ? say('product-chrome.buy_international_price_note', 'Shipping and applicable sale taxes confirmed at checkout. Import charges may be payable on delivery.')
+        ? dutiesNote
+          // UK, CH, NO: the duties note under the button says who pays import charges; this line does not repeat it.
+          ? say('product-chrome.buy_near_price_note', 'Shipping confirmed at checkout.')
+          : say('product-chrome.buy_international_price_note', 'Shipping and applicable sale taxes confirmed at checkout. Import charges may be payable on delivery.')
         : null;
   // The destination gate decides whether the buy button is available.
   // Blocked destinations and an EU country not open

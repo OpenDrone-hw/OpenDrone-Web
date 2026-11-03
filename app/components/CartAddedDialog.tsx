@@ -449,7 +449,11 @@ export function CartAddedDialog() {
             <p className="cart-added-parcel">{t('us_price_note', 'Duties included')}</p>
           ) : null}
           {quote?.kind === 'direct' && quote.zone === 'international' ? (
-            <p className="cart-added-parcel">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p>
+            <p className="cart-added-parcel">
+              {dutiesNote
+                ? t('international_note_near', 'Shipping is confirmed at checkout.')
+                : t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}
+            </p>
           ) : null}
           {mixed ? (
             <p className="cart-added-parcel" role="note">{t('parcel_note', 'Your order ships in one parcel, when its last item is ready.')}</p>

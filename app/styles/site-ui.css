@@ -2337,15 +2337,18 @@ body:has(.avail-bar) .site-header {
 }
 .location-notice-close:hover { color: var(--color-text); }
 .location-notice-close:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 0; }
+/* Phones: at the top, under the header and its strips, so it never covers
+   the buy button or the cart's checkout bar at the bottom. */
 @media (max-width: 640px) {
   .location-notice {
     right: 16px;
     left: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom));
+    top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px) + var(--header-height) + 1.5rem);
+    bottom: auto;
     max-width: none;
   }
 }
-@media (max-width: 1023px) {
+@media (min-width: 641px) and (max-width: 1023px) {
   body:has(.cart-bar:not(.is-hidden)) .location-notice {
     bottom: calc(5.5rem + env(safe-area-inset-bottom));
   }

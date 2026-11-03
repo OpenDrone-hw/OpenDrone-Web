@@ -650,7 +650,13 @@ function PopulatedCart({
             <p className="cart-summary-note">{t('shipping_at_checkout', 'Shipping calculated at checkout')}</p>
           )}
           {dutiesNote ? <p className="cart-summary-note">{dutiesNote}</p> : null}
-          {international ? <p className="cart-summary-note">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p> : null}
+          {international ? (
+            <p className="cart-summary-note">
+              {dutiesNote
+                ? t('international_note_near', 'Shipping is confirmed at checkout.')
+                : t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}
+            </p>
+          ) : null}
           {/* One parcel, one date: said once here, not under every line. */}
           <ParcelPanel lines={cart.lines} />
           {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}

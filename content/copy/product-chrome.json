@@ -607,6 +607,7 @@
   "buy_us_eu_only": "Ships from stock in Belgium, not to the US",
   "buy_shops_only_us": "Consumer checkout unavailable for this destination",
   "buy_international_price_note": "Shipping and any sales tax confirmed at checkout. You may pay import charges on delivery.",
+  "buy_near_price_note": "Shipping confirmed at checkout.",
   "discord_row": "Questions about the {product}?",
   "discord_row_cta": "Ask in the Discord",
   "related_add_quantity": "{cta} {quantity}",

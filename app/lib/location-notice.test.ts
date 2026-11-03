@@ -108,12 +108,20 @@ describe('wiring', () => {
     const css = read('../styles/site-ui.css');
     assert.match(css, /\.location-notice \{\s*position: fixed;/);
     assert.match(css, /body:has\(\.cart-bar:not\(\.is-hidden\)\) \.location-notice/);
+    // Phones: under the header at the top, never over the buy button or the checkout bar.
+    const phone = css.match(/@media \(max-width: 640px\) \{\s*\.location-notice \{([^}]*)\}/);
+    assert.ok(phone, 'phone rule for .location-notice');
+    assert.match(phone[1], /top: calc\(var\(--test-banner-h, 0px\) \+ var\(--avail-bar-h, 0px\) \+ var\(--header-height\)/);
+    assert.match(phone[1], /bottom: auto/);
   });
   it('cart and dialog read the parcel date, early bird note and duties note by region', () => {
     for (const file of ['../routes/cart.$.tsx', '../components/CartAddedDialog.tsx']) {
       const src = read(file);
       assert.match(src, /latestDeliveryBy\(\w*(?:\.|\(\)\.)?deliveryLines\(|latestDeliveryBy\(useGeoParcel\(\)\.deliveryLines\(/, file);
-      assert.match(src, /useAnyEarlySku\(\w*(?:\(\))?\.preorderSkus\(/, file);
+      // Early bird prices stay on stock lines (hotfix), and the note's
+      // "preorder" wording follows the visitor's pre-order lines.
+      assert.match(src, /new Set\(\w*(?:\(\))?\.?preorderSkus\(|new Set\(useGeoParcel\(\)\.preorderSkus\(/, file);
+      assert.match(src, /const stockEarly = useAnyEarlySku\([^;]*!preorderSkus\.has\(/, file);
       assert.match(src, /useGeoDutiesNote\(\)/, file);
       assert.doesNotMatch(src, /latestDeliveryBy\((lines|summary\.lines)\)/, file);
     }

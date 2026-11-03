@@ -82,18 +82,18 @@ describe('Shopify notification templates', async () => {
 
   it('separates international import charges from sale taxes and retains the delivery promise', () => {
     const tpl = templates.find((t) => t.key === 'order-confirmation')!;
-    // GB, CH and NO are NEAR since 2026-11-03: a UK line records _ship_region NEAR and the duties notice.
-    // The uk-gross-receipt fixture still records INT (the old rule), so it is rendered here as a NEAR line.
-    const asNear = (context: Record<string, unknown>) => ({
+    // GB, CH and NO are NEAR since 2026-11-03: a UK line records _ship_region NEAR and the duties notice
+    // (the uk-gross-receipt fixture). `asInt` is the same order as the cart recorded it before.
+    const asInt = (context: Record<string, unknown>) => ({
       ...context,
-      line_items: (context.line_items as Array<{properties: Record<string, string>}>).map((line) => ({
-        ...line,
-        properties: {...line.properties, _ship_region: 'NEAR', 'Import VAT and duties': 'Paid by you on delivery'},
-      })),
+      line_items: (context.line_items as Array<{properties: Record<string, string>}>).map((line) => {
+        const {'Import VAT and duties': _duties, ...properties} = line.properties;
+        return {...line, properties: {...properties, _ship_region: 'INT'}};
+      }),
     });
     for (const id of ['international-ca', 'international-nz-gst', 'uk-gross-receipt']) {
       const fx = fixtures.find((f) => f.id === id)!;
-      const {output, errors} = renderLiquid(tpl.html, id === 'uk-gross-receipt' ? asNear(fx.context) : fx.context);
+      const {output, errors} = renderLiquid(tpl.html, fx.context);
       assert.deepEqual(errors, []);
       assert.match(output, /Delivery by 30 April 2027/);
       assert.match(output, /You pay import duties, import VAT\/GST and carrier clearance fees/);
@@ -105,15 +105,15 @@ describe('Shopify notification templates', async () => {
     assert.match(renderLiquid(tpl.html, nz.context).output, /Tax recorded at checkout/);
     const uk = fixtures.find((f) => f.id === 'uk-gross-receipt')!;
     // A UK line still recorded INT now differs from the NEAR address region: flagged for review.
-    assert.match(renderLiquid(tpl.html, uk.context).output, /Stock from Belgium ships only to the EU\./);
+    assert.match(renderLiquid(tpl.html, asInt(uk.context)).output, /Stock from Belgium ships only to the EU\./);
     for (const code of ['CH', 'NO']) {
-      const ctx = asNear({...uk.context, shipping_address: {country: code, country_code: code, province_code: null}});
+      const ctx = {...uk.context, shipping_address: {country: code, country_code: code, province_code: null}};
       assert.doesNotMatch(renderLiquid(tpl.html, ctx).output, /Delivery address review/, code);
     }
     // An INT line to a NEAR address is flagged.
-    const intToCh = {...uk.context, shipping_address: {country: 'Switzerland', country_code: 'CH', province_code: null}};
+    const intToCh = {...asInt(uk.context), shipping_address: {country: 'Switzerland', country_code: 'CH', province_code: null}};
     assert.match(renderLiquid(tpl.html, intToCh).output, /Delivery address review/);
-    const withPendingVat = {...asNear(uk.context), tax_price: 1937};
+    const withPendingVat = {...uk.context, tax_price: 1937};
     const receipt = renderLiquid(tpl.html, withPendingVat).output;
     assert.doesNotMatch(receipt, /Includes VAT|Tax recorded at checkout/);
     assert.match(receipt, /Payment received/);
