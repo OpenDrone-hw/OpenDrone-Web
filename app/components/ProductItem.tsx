@@ -14,7 +14,7 @@ import {useProductStatus, useRoadmapStatus} from '~/lib/coming-soon';
 import {PRODUCT_CONTENT, imagesAreRenders, isPurchasableStatus} from '~/lib/product-content';
 import {AddToCartButton} from './AddToCartButton';
 import {plausibleRevenue} from '~/lib/growth/plausible';
-import {ShipChip} from './ShipChip';
+import {ShipChip, useGeoInStock} from './ShipChip';
 import {copyText} from '~/lib/copy';
 
 /** Hover quick-add for catalog cards: the card's own hand-off link, so
@@ -138,6 +138,10 @@ export function ProductItem({
   const roadmapStatus = useRoadmapStatus(product.handle);
   const launchPending = !isPurchasableStatus(status);
   const showPrice = !launchPending;
+  // The quick-add SKU is batch 1 stock in the EU: "Add to cart", not "Pre-order" (ShipChip `useGeoInStock`).
+  const quickAddInStock = useGeoInStock(
+    quickAdd ? product.variants.nodes.find((v) => v.cartAddUrl === quickAdd.href)?.campaign : null,
+  );
 
   // Quick-add overlay: revealed on card hover (always visible on touch).
   // Rendered as a SIBLING of the card link, never inside it - a form inside
@@ -156,7 +160,7 @@ export function ProductItem({
           >
             {!quickAdd.available
               ? (copyText('product-chrome.buy_stock_out') ?? 'Sold out')
-              : status === 'preorder'
+              : status === 'preorder' && !quickAddInStock
                 ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
                 : copyText('product-chrome.card_add_to_cart')}
           </AddToCartButton>

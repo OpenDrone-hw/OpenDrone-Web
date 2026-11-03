@@ -6,6 +6,7 @@ import type {BuildsConfig} from '~/lib/build-recommendations';
 import {formatPrice} from '~/lib/catalog';
 import {SmoothImage} from '~/components/SmoothImage';
 import {AddToCartButton} from '~/components/AddToCartButton';
+import {useGeoInStock} from '~/components/ShipChip';
 import {plausibleRevenue} from '~/lib/growth/plausible';
 import {
   useComingSoon,
@@ -214,8 +215,10 @@ function RelatedCard({
   const only = comingSoon
     ? null
     : (variant ?? (product.variants.nodes.length === 1 ? product.variants.nodes[0] : null));
+  // Batch 1 stock in the EU is added to the cart, not pre-ordered (ShipChip `useGeoInStock`).
+  const inStock = useGeoInStock(only?.campaign);
   const ctaLabel =
-    status === 'preorder'
+    status === 'preorder' && !inStock
       ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
       : (copyText('product-chrome.card_add_to_cart') ?? 'Add to cart');
 

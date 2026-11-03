@@ -11,6 +11,7 @@ import {
   geoAvailabilityRegion,
   geoBannerLines,
   geoOfferAvailability,
+  geoInStock,
   geoShipText,
   hasBatchOne,
   offerAvailability,
@@ -158,5 +159,40 @@ describe('availability card route exclusion', () => {
     ]) {
       assert.equal(availabilityBannerHiddenOn(p), false, p);
     }
+  });
+});
+
+describe('geoInStock (the buy button says "Add to cart", not "Pre-order")', () => {
+  const batchOne = batchOnePromises(PREORDERS);
+  const promise = [...batchOne][0];
+  it('is true only for batch 1 stock in the EU region', () => {
+    assert.ok(promise, 'preorders.json has a batch 1 promise');
+    assert.equal(geoInStock('eu', {paidStock: true, shipPromise: promise}, batchOne), true);
+    assert.equal(geoInStock('intl', {paidStock: true, shipPromise: promise}, batchOne), false);
+    assert.equal(geoInStock('fallback', {paidStock: true, shipPromise: promise}, batchOne), false);
+    assert.equal(geoInStock(null, {paidStock: true, shipPromise: promise}, batchOne), false);
+  });
+  it('stays a pre-order for a funding-target unit or another promise', () => {
+    assert.equal(geoInStock('eu', {paidStock: false, shipPromise: promise}, batchOne), false);
+    assert.equal(geoInStock('eu', {paidStock: true, shipPromise: PREORDERS.pendingShips}, batchOne), false);
+    assert.equal(geoInStock('eu', null, batchOne), false);
+  });
+});
+
+describe('every buy CTA asks the geo hook before saying "Pre-order"', () => {
+  const read = (rel: string) => fs.readFileSync(new URL(rel, import.meta.url), 'utf8');
+  for (const file of ['../components/ProductForm.tsx', '../components/ProductItem.tsx', '../components/RelatedProducts.tsx']) {
+    it(file, () => {
+      const src = read(file);
+      assert.match(src, /useGeoInStock\(/);
+      assert.match(src, /[sS]tatus === 'preorder' && !\w+/);
+    });
+  }
+  it('the PDP drops the pre-order terms link for EU stock', () => {
+    assert.match(read('../routes/products.$handle.tsx'), /preorder && !isBundle && !notDirect && !geoInStock/);
+  });
+  it('the root loader takes the ship line country from geoCountryForRequest', () => {
+    assert.match(read('../root.tsx'), /geoAvailabilityRegion\(country\)/);
+    assert.match(read('../root.tsx'), /geoCountryForRequest\(args\.request\)/);
   });
 });

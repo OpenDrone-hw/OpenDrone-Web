@@ -115,7 +115,7 @@ import {ProductGhostTile} from '~/components/ProductGhostTile';
 import {StepBar} from '~/components/PreorderMeter';
 import {Availability, preorderWords} from '~/components/Availability';
 import {batchPhrase, currentBatch} from '~/lib/availability';
-import {ShipLine} from '~/components/ShipChip';
+import {ShipLine, useGeoInStock} from '~/components/ShipChip';
 import {CART_COUNTRY_ACTION} from '~/lib/cart-client';
 import type {
   ChapterPin,
@@ -1802,6 +1802,9 @@ function ProductPage() {
   // Preorder campaign of the selected variant: the price ladder, the ship
   // terms and the quantity cap all read it.
   const campaign = !isBundle && preorder ? (selectedVariant?.campaign ?? null) : null;
+  // Batch 1 stock in the EU is sold as stock (the bar's "in stock in
+  // Belgium"): "Add to cart" (ProductForm) and no pre-order terms link.
+  const geoInStock = useGeoInStock(campaign);
   // An early bird preorder price names the retail price it rises to.
   const earlyPrice = campaign ? (selectedVariant?.earlyPrice ?? null) : null;
   const retail = selectedVariant?.sku ? (retailBySku[selectedVariant.sku] ?? null) : null;
@@ -2076,7 +2079,7 @@ function ProductPage() {
         </p>
       )}
       {notDirect ? null : usNotice}
-      {preorder && !isBundle && !notDirect ? (
+      {preorder && !isBundle && !notDirect && !geoInStock ? (
         <p className="product-buy-ship">
           {targetMissed ? <>{targetMissed}{' '}</> : null}
           <Link prefetch="intent" to="/preorder" className="product-buy-terms-link">
