@@ -10755,10 +10755,10 @@ a[target='_blank']::after {
   color: var(--color-text);
 }
 
+/* --color-text-muted #9a9a9a on --color-bg #0d0d10 = 6.90:1 (text-dim would be 5.73:1). */
 .series-rail-num {
   font-size: 12px;
   letter-spacing: 0.1em;
-  /* --color-text-muted #9a9a9a on --color-bg #0d0d10 = 6.90:1 (text-dim would be 5.73:1). */
   color: var(--color-text-muted);
 }
 
