@@ -111,6 +111,28 @@ describe('Shopify notification templates', async () => {
     assert.match(output, /Ships late November 2026/);
     assert.match(output, /Delivery by 30 November 2026/);
   });
+
+  it('prints an EU stock line as in stock in Belgium, no preorder box, and flags it shipped outside the EU', () => {
+    const tpl = templates.find((t) => t.key === 'order-confirmation')!;
+    const eu = fixtures.find((f) => f.id === 'eu-preorder-be')!;
+    const stockLine = {
+      Shipping: 'In stock in Belgium, ships in a few days.',
+      _ship_promise: 'ships late November 2026',
+      _batch: 'OPENFC-LITE-2020:1',
+    };
+    const lines = (eu.context.line_items as Array<Record<string, unknown>>).map((l) => ({...l, properties: stockLine}));
+    const be = renderLiquid(tpl.html, {...eu.context, line_items: lines});
+    assert.deepEqual(be.errors, []);
+    assert.match(be.output, /In stock in Belgium, ships in a few days\./);
+    assert.doesNotMatch(be.output, /Preorder, paid in full|Delivery by|Delivery address review|late November/);
+    const ch = renderLiquid(tpl.html, {
+      ...eu.context,
+      line_items: lines,
+      shipping_address: {...(eu.context.shipping_address as object), country: 'Switzerland', country_code: 'CH'},
+    });
+    assert.deepEqual(ch.errors, []);
+    assert.match(ch.output, /Delivery address review/);
+  });
 });
 
 describe('email preview catalog', () => {

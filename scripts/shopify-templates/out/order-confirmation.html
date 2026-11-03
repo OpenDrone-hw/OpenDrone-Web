@@ -71,7 +71,7 @@
 {% assign destination_needs_review = false %}
 {% for line in line_items %}
 {% assign recorded_region = 'EU' %}{% assign recorded_preorder = false %}
-{% for p in line.properties %}{% if p.first == '_ship_region' and p.last != blank %}{% assign recorded_region = p.last %}{% elsif p.first == 'Preorder' and p.last != blank %}{% assign recorded_preorder = true %}{% endif %}{% endfor %}
+{% for p in line.properties %}{% if p.first == '_ship_region' and p.last != blank %}{% assign recorded_region = p.last %}{% elsif p.first == 'Preorder' and p.last != blank %}{% assign recorded_preorder = true %}{% elsif p.first == '_ship_promise' and p.last != blank %}{% assign recorded_preorder = true %}{% endif %}{% endfor %}
 {% if recorded_preorder and recorded_region != delivery_region %}{% assign destination_needs_review = true %}{% endif %}
 {% endfor %}
 {% comment %}
@@ -175,6 +175,9 @@
                         {{ note | slice: 0 | upcase | escape }}{{ note | slice: 1, 1000 | escape }}
                       </p>
                       {% endif %}{% endfor %}{% endif %}
+                      {% for p in line.properties %}{% if p.first == 'Shipping' and p.last != blank %}
+                      <p style="margin: 0 0 2px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #a0a0a0;">{{ p.last | escape }}</p>
+                      {% endif %}{% endfor %}
                       {% if deliveries_differ %}{% for p in line.properties %}{% if p.first == 'Delivery by' and p.last != blank %}
                       <p style="margin: 0 0 2px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #a0a0a0;">Delivery by {{ p.last | escape }}</p>
                       {% endif %}{% endfor %}{% endif %}
