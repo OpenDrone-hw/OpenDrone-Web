@@ -104,7 +104,7 @@ import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
 import {reachableSteps, stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
-import {geoOfferAvailability, hasBatchOne, offerAvailability} from '~/lib/geo-availability';
+import {geoOfferAvailability, geoShipText, hasBatchOne, offerAvailability, offerRegionRestriction} from '~/lib/geo-availability';
 import {isInternationalQuote, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
 import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
@@ -115,7 +115,7 @@ import {ProductGhostTile} from '~/components/ProductGhostTile';
 import {StepBar} from '~/components/PreorderMeter';
 import {Availability, preorderWords} from '~/components/Availability';
 import {batchPhrase, currentBatch} from '~/lib/availability';
-import {ShipLine, useGeoInStock} from '~/components/ShipChip';
+import {ShipLine, useGeoDutiesNote, useGeoInStock} from '~/components/ShipChip';
 import {CART_COUNTRY_ACTION} from '~/lib/cart-client';
 import type {
   ChapterPin,
@@ -1662,6 +1662,8 @@ function ProductPage() {
   // A batch 1 offer says what the visitor's ship line says (geo-availability.ts);
   // with no known country it keeps its PreOrder availability.
   const geoOffer = geoOfferAvailability(rootData?.geo?.region ?? 'fallback');
+  // US sales on hold: every offer says it is not sold to the US.
+  if (offerBase) Object.assign(offerBase, offerRegionRestriction(rootData?.usShippingRate != null));
   if (offerBase && !content.bundle && selectedVariant && hasBatchOne(selectedVariant.campaign)) {
     Object.assign(offerBase, {
       availabilityStarts: undefined,
@@ -1804,7 +1806,9 @@ function ProductPage() {
   const campaign = !isBundle && preorder ? (selectedVariant?.campaign ?? null) : null;
   // Batch 1 stock in the EU is sold as stock (the bar's "in stock in
   // Belgium"): "Add to cart" (ProductForm) and no pre-order terms link.
-  const geoInStock = useGeoInStock(campaign);
+  const geoInStock = useGeoInStock(campaign, isBundle || !preorder ? null : selectedVariant?.shipPromise);
+  // UK, CH, NO: the duties note under the ship line (root data, SSR: no CLS).
+  const dutiesNote = useGeoDutiesNote();
   // An early bird preorder price names the retail price it rises to.
   const earlyPrice = campaign ? (selectedVariant?.earlyPrice ?? null) : null;
   const retail = selectedVariant?.sku ? (retailBySku[selectedVariant.sku] ?? null) : null;
@@ -1880,7 +1884,10 @@ function ProductPage() {
     : usBuyer && buyPrice?.currencyCode === 'USD'
       ? say('product-chrome.buy_us_price_note', 'Duties included')
       : internationalBuyer
-        ? say('product-chrome.buy_international_price_note', 'Shipping and applicable sale taxes confirmed at checkout. Import charges may be payable on delivery.')
+        ? dutiesNote
+          // UK, CH, NO: the duties note under the button says who pays import charges; this line does not repeat it.
+          ? say('product-chrome.buy_near_price_note', 'Shipping confirmed at checkout.')
+          : say('product-chrome.buy_international_price_note', 'Shipping and applicable sale taxes confirmed at checkout. Import charges may be payable on delivery.')
         : null;
   // The destination gate decides whether the buy button is available.
   // Blocked destinations and an EU country not open
@@ -2037,6 +2044,10 @@ function ProductPage() {
         </p>
       ) : notDirect ? (
         <>
+          {/* US sales on hold: say so in the bar's words, with no ship promise. */}
+          {notDirect === 'shops' && rootData?.geo?.region === 'us' ? (
+            <p className="product-buy-ship" role="note">{geoShipText('us', rootData.geo.locale)}</p>
+          ) : null}
           {notDirect === 'shops' ? (
             <p className="product-buy-ship">
               <Link prefetch="intent" to="/wholesale" className="product-buy-terms-link">
@@ -2079,6 +2090,7 @@ function ProductPage() {
         </p>
       )}
       {notDirect ? null : usNotice}
+      {notDirect || !dutiesNote ? null : <p className="product-buy-ship">{dutiesNote}</p>}
       {preorder && !isBundle && !notDirect && !geoInStock ? (
         <p className="product-buy-ship">
           {targetMissed ? <>{targetMissed}{' '}</> : null}

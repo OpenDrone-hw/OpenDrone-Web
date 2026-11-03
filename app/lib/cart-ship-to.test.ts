@@ -383,8 +383,8 @@ describe('blocked visitors, half-applied switches, checkout country', () => {
 
 
 describe('international cart country switches', () => {
-  it('moves FC and an in-stock line EU to international and back, with real destination handoffs and refreshed promises', async () => {
-    for (const [country,currency] of [['CA','CAD'],['AU','AUD'],['GB','GBP'],['CH','CHF'],['NO','EUR']]) {
+  it('moves FC and an in-stock line EU to INT and back: batch 1 FC stock no longer serves INT, both lines take the March batch', async () => {
+    for (const [country,currency] of [['CA','CAD'],['AU','AUD'],['JP','EUR']]) {
       const rx=cartLine('gid://shopify/CartLine/2',RX,'OPENRX-LITE',[]);
       const fake=shopify('BE',[euLine(),rx]);
       const requested:Array<[Region,string|undefined]>=[];
@@ -395,12 +395,11 @@ describe('international cart country switches', () => {
       assert.equal(summary.summary.subtotal.currencyCode,currency);
       assert.equal(fake.state.country,country);
       assert.ok(fake.state.lines.every(line=>line.shipRegion==='INT'));
-      // Batch 1 FC stock now serves international addresses: it keeps its November promise and
-      // names no delivery date (batch 1 has no deliveryByINT). The preorder line takes the March batch.
-      assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
-      assert.ok(!fake.state.lines[0].deliveryBy);
-      assert.equal(fake.state.lines[1].deliveryBy,'30 April 2027');
-      assert.match(fake.state.lines[1].shipPromise??'',/31 March 2027/);
+      // INT buyers take the March funding batch only (founder 2026-11-03), with the international arrival date.
+      for (const line of fake.state.lines) {
+        assert.match(line.shipPromise??'',/31 March 2027/,String(line.sku));
+        assert.equal(line.deliveryBy,'30 April 2027',String(line.sku));
+      }
       await handleCartCountry(switchRequest('BE'),ENV,dependencies);
       assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
       // Back in the EU it is Belgian stock again: no delivery date.
@@ -411,22 +410,74 @@ describe('international cart country switches', () => {
     }
   });
 
-  it('keeps the batch 1 stock promise for an international checkout and re-checks the cart once', async () => {
+  it('moves FC and an in-stock line EU to NEAR (GB, CH, NO) and back: both lines take the March batch, with the duties notice', async () => {
+    for (const [country,currency] of [['GB','GBP'],['CH','CHF'],['NO','EUR']]) {
+      const rx=cartLine('gid://shopify/CartLine/2',RX,'OPENRX-LITE',[]);
+      const fake=shopify('BE',[euLine(),rx]);
+      const requested:Array<[Region,string|undefined]>=[];
+      const written:CartLineUpdate[]=[];
+      const dependencies={
+        ...switcher(fake),
+        fetchCatalog:async(region:Region,destination?:string)=>{requested.push([region,destination]);return catalogFor(region);},
+        updateCartLines:async(id:string,updates:CartLineUpdate[])=>{written.push(...updates);return fake.updateCartLines(id,updates);},
+      };
+      const result=await handleCartCountry(switchRequest(country),ENV,dependencies);
+      const summary=(await result.json()) as {summary:{subtotal:{currencyCode:string}}};
+      assert.deepEqual(requested,[['NEAR',country]]);
+      assert.equal(summary.summary.subtotal.currencyCode,currency);
+      assert.equal(fake.state.country,country);
+      assert.ok(fake.state.lines.every(line=>line.shipRegion==='NEAR'));
+      // Batch 1 is EU only: NEAR takes the March batch with the international arrival date, like INT.
+      for (const line of fake.state.lines) {
+        assert.match(line.shipPromise??'',/31 March 2027/,String(line.sku));
+        assert.equal(line.deliveryBy,'30 April 2027',String(line.sku));
+      }
+      assert.ok(written.length>0);
+      for (const update of written) {
+        assert.equal(update.attributes?.find(a=>a.key==='Import VAT and duties')?.value,'Paid by you on delivery, unless collected at checkout',update.id);
+      }
+      written.length=0;
+      await handleCartCountry(switchRequest('BE'),ENV,dependencies);
+      assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
+      // Back in the EU the FC is batch 1 stock again: no delivery date (hotfix a9b758b).
+      assert.equal(fake.state.lines[0].deliveryBy,undefined);
+      assert.equal(fake.state.lines[1].shipPromise,null);
+      assert.ok(fake.state.lines.every(line=>line.shipRegion===undefined));
+      assert.ok(written.every(update=>!update.attributes?.some(a=>a.key==='Import VAT and duties')));
+    }
+  });
+
+  it('moves batch 1 FC stock to the March batch for an INT checkout and re-checks the cart once', async () => {
     const fake=shopify('BE',[euLine()]);
     const regions:Region[]=[];
     const first=await handleShopifyCartAction(checkoutRequest('CA'),ENV,actionDeps(fake,regions));
     assert.equal(first.headers.get('Location'),'/cart?check=market');
     assert.equal(fake.state.country,'CA');
     assert.equal(fake.state.lines[0].shipRegion,'INT');
-    assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
+    assert.match(fake.state.lines[0].shipPromise??'',/31 March 2027/);
+    assert.equal(fake.state.lines[0].deliveryBy,'30 April 2027');
     const second=await handleShopifyCartAction(checkoutRequest('CA'),ENV,actionDeps(fake,regions));
     assert.equal(second.headers.get('Location'),CHECKOUT);
     assert.deepEqual(regions,['INT','INT']);
   });
+
+  it('moves batch 1 FC stock to the March batch for a NEAR checkout and re-checks the cart once', async () => {
+    const fake=shopify('BE',[euLine()]);
+    const regions:Region[]=[];
+    const first=await handleShopifyCartAction(checkoutRequest('GB'),ENV,actionDeps(fake,regions));
+    assert.equal(first.headers.get('Location'),'/cart?check=market');
+    assert.equal(fake.state.country,'GB');
+    assert.equal(fake.state.lines[0].shipRegion,'NEAR');
+    assert.match(fake.state.lines[0].shipPromise??'',/31 March 2027/);
+    assert.equal(fake.state.lines[0].deliveryBy,'30 April 2027');
+    const second=await handleShopifyCartAction(checkoutRequest('GB'),ENV,actionDeps(fake,regions));
+    assert.equal(second.headers.get('Location'),CHECKOUT);
+    assert.deepEqual(regions,['NEAR','NEAR']);
+  });
 });
 
 
-it('an international product add reprices the existing EU cart and refreshes its paid-stock promise', async () => {
+it('an INT product add reprices the existing EU cart and moves its paid-stock line to the March batch', async () => {
   const fake=shopify('BE',[euLine()]);
   const req=new Request('https://opendrone.be/api/shopify/cart',{
     method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Origin:'https://opendrone.be','CF-IPCountry':'BE'},
@@ -443,7 +494,30 @@ it('an international product add reprices the existing EU cart and refreshes its
   assert.equal(summary.subtotal.currencyCode,'CAD');
   assert.equal(fake.state.country,'CA');
   assert.equal(summary.lines.length,2);
-  assert.equal(summary.lines[0].shipPromise,EU_PROMISE);
+  // INT takes the March batch only: the batch 1 FC line is refreshed to the March promise.
+  assert.match(summary.lines[0].shipPromise,/31 March 2027/);
   assert.match(summary.lines[1].shipPromise,/31 March 2027/);
   assert.ok(fake.state.lines.every(line=>line.shipRegion==='INT'));
+});
+
+it('a NEAR product add reprices the existing EU cart and moves its paid-stock line to the March batch', async () => {
+  const fake=shopify('BE',[euLine()]);
+  const req=new Request('https://opendrone.be/api/shopify/cart',{
+    method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Origin:'https://opendrone.be','CF-IPCountry':'BE'},
+    body:new URLSearchParams({sku:'OPENRX-LITE',qty:'1',country:'GB',response:'summary'}),
+  });
+  const result=await handleShopifyCartAction(req,ENV,{
+    ...actionDeps(fake),
+    addCartLines:async(_id,lines)=>{
+      for(const line of lines) fake.state.lines.push(cartLine('added',line.merchandiseId,'OPENRX-LITE',line.attributes??[]));
+      return fake.getCart();
+    },
+  });
+  const summary=(await result.json()) as {subtotal:{currencyCode:string};lines:Array<{shipPromise:string}>};
+  assert.equal(summary.subtotal.currencyCode,'GBP');
+  assert.equal(fake.state.country,'GB');
+  assert.equal(summary.lines.length,2);
+  assert.match(summary.lines[0].shipPromise,/31 March 2027/);
+  assert.match(summary.lines[1].shipPromise,/31 March 2027/);
+  assert.ok(fake.state.lines.every(line=>line.shipRegion==='NEAR'));
 });

@@ -27,9 +27,9 @@ import {
 } from './preorder-fulfilment.ts';
 import {reconcilePreorders} from './preorder-ops.ts';
 import {opsStatus, resetOpsStatus} from './preorder-ops-status.ts';
-import {parseCampaignConfig} from './preorder-campaign.ts';
+import {batchFill, parseCampaignConfig} from './preorder-campaign.ts';
 import {BATCH_ATTRIBUTE, PREORDER_ATTRIBUTE, PREORDER_OWN_ATTRIBUTE, SHIP_PROMISE_ATTRIBUTE, SHIP_REGION_ATTRIBUTE} from './shopify-storefront.ts';
-import {resetPaidUnitsMemo} from './shopify-orders.ts';
+import {fetchPaidUnitRuns, resetPaidUnitsMemo} from './shopify-orders.ts';
 
 afterEach(() => {
   resetOpsStatus();
@@ -68,6 +68,7 @@ function order(partial: {
   /** Lines added for a US destination carry `_ship_region: US`. */
   usPromise?: boolean;
   intPromise?: boolean;
+  nearPromise?: boolean;
   /** The `Preorder` text; the default names no configured batch. */
   promise?: string;
   /** The hidden `_batch` attribute, `SKU:N`. */
@@ -97,6 +98,7 @@ function order(partial: {
               ...(partial.batch ? [{key: '_batch', value: partial.batch}] : []),
               ...(partial.usPromise ? [{key: '_ship_region', value: 'US'}] : []),
               ...(partial.intPromise ? [{key: '_ship_region', value: 'INT'}] : []),
+              ...(partial.nearPromise ? [{key: '_ship_region', value: 'NEAR'}] : []),
             ]
           : [],
       })),
@@ -744,6 +746,30 @@ describe('international allocation and checkout address changes', () => {
     assert.equal(planPreorderHolds([changed],config).length,0);
   });
 
+  it('allocates a NEAR order (GB, CH, NO) recorded NEAR from March with no review, like INT', () => {
+    for (const country of ['GB', 'CH', 'NO']) {
+      const near = order({country, nearPromise:true, lines:[['OPENFC-LITE-2020',1],['OPENRX-LITE',1]]});
+      const tags = planPreorderHolds([near],config)[0].tags;
+      assert.ok(tags.includes('batch:OPENFC-LITE-2020:2'), country);
+      assert.ok(!tags.includes('batch:OPENFC-LITE-2020:1'), country);
+      assert.ok(!tags.includes(INT_REVIEW_TAG) && !tags.includes(US_REVIEW_TAG), country);
+    }
+  });
+
+  it('puts a NEAR order whose lines were recorded for the EU on the international review tag, never the US one', () => {
+    const changed = order({country:'CH', lines:[['OPENFC-LITE-2020',1]]});
+    const tags = planPreorderHolds([changed],config)[0].tags;
+    assert.ok(tags.includes(INT_REVIEW_TAG));
+    assert.ok(!tags.includes(US_REVIEW_TAG));
+  });
+
+  it('accepts a line recorded INT on a GB/CH/NO order: the cart recorded them INT before NEAR existed', () => {
+    const old = order({country:'CH', intPromise:true, lines:[['OPENFC-LITE-2020',1]]});
+    const tags = planPreorderHolds([old],config)[0].tags;
+    assert.ok(!tags.includes(INT_REVIEW_TAG));
+    assert.ok(!tags.includes(PROMISE_MISMATCH_TAG));
+  });
+
   it('retains an international accessory lead tag after its original lead line is removed', () => {
     const held = order({country:'NO',intPromise:true,lines:[['OTHER-ACCESSORY',1]],tags:['preorder','batch:OPENFC-LITE-2020:2'],holds:[{id:'hold',handle:PREORDER_HOLD_HANDLE}]});
     assert.deepEqual(planRelease([held],'OPENFC-LITE-2020',2,new Set(),{},config.usStock)[0].waitsFor,[]);
@@ -751,7 +777,7 @@ describe('international allocation and checkout address changes', () => {
 
   it('flags actual UK orders for payment review regardless of their preorder source attributes', () => {
     for (const intPromise of [true, false]) {
-      const uk = order({country:'GB',intPromise,lines:[['OPENFC-LITE-2020',1]]});
+      const uk = (order({country:'GB',intPromise,lines:[['OPENFC-LITE-2020',1]]}));
       const plan = planPreorderHolds([uk],config)[0];
       assert.ok(plan.tags.includes(UK_VAT_REVIEW_TAG));
       assert.equal(plan.hold.length,1);
@@ -831,7 +857,11 @@ describe('EU batch 1 stock ships now (founder 2026-11-03)', () => {
     assert.deepEqual(plan.hold, [mixed.fulfillmentOrders.nodes[0].id]);
   });
 
-  it('holds and tags INT and US batch 1 orders exactly as before', () => {
+  // Batch 1 is EU only since 2026-11-03 (paidRegions). A non-EU order that
+  // recorded a batch 1 promise is now allocated to the March batch, so it is
+  // held with the international review and promise-mismatch tags for a
+  // manual decision (the order keeps its recorded promise until then).
+  it('keeps a non-EU line that recorded batch 1 in batch 1 (grandfathered), reviews EU lines shipped abroad, US as before', () => {
     const make = () => [
       order({lines: [['OPENFC-LITE-2020', 1]], country: 'CH', intPromise: true, promise: 'ships late November 2026', batch: 'OPENFC-LITE-2020:1'}),
       order({lines: [['OPENFC-LITE-2020', 1]], country: 'US', usPromise: true, promise: 'ships by 31 March 2027 if funded', batch: 'OPENFC-LITE-2020:2'}),
@@ -842,7 +872,7 @@ describe('EU batch 1 stock ships now (founder 2026-11-03)', () => {
     const plans = new Map(planPreorderHolds([intLine, usLine, euPromiseToInt, euStockToInt], LIVE).map((p) => [p.orderId, p]));
     assert.deepEqual(plans.get(intLine.id)?.tags, ['preorder', 'batch:OPENFC-LITE-2020:1']);
     assert.deepEqual(plans.get(usLine.id)?.tags, ['preorder', 'batch:OPENFC-LITE-2020:2']);
-    assert.deepEqual(plans.get(euPromiseToInt.id)?.tags, ['preorder', 'batch:OPENFC-LITE-2020:1', INT_REVIEW_TAG, PROMISE_MISMATCH_TAG]);
+    assert.deepEqual(plans.get(euPromiseToInt.id)?.tags, ['preorder', 'batch:OPENFC-LITE-2020:2', INT_REVIEW_TAG, PROMISE_MISMATCH_TAG]);
     // An EU stock line shipped outside the EU reads `_ship_promise` as the
     // old `Preorder`: the same review and mismatch tags, held.
     assert.deepEqual(plans.get(euStockToInt.id)?.tags, plans.get(euPromiseToInt.id)?.tags);
@@ -907,5 +937,102 @@ describe('EU batch 1 stock ships now (founder 2026-11-03)', () => {
     assert.deepEqual([plan.orderId, plan.tags, plan.hold], [next.id, [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1'], []]);
     next.tags = plan.tags;
     assert.deepEqual(overfullBatches([filler, next], LIVE), []);
+  });
+});
+
+describe('non-EU lines sold batch 1 before it became EU only keep it (recorded _batch / promise, grandfatheredPaidLine)', () => {
+  const NOW = parseCampaignConfig({
+    countFrom: '2026-09-21',
+    endsOn: '2026-12-31', shipsBy: '2027-03-31',
+    priceTiers: [{upTo: 100, off: 0.2}],
+    pendingShips: 'ships by 31 March 2027 if funded',
+    paidRegions: ['EU'],
+    skus: {'OPENFC-LITE-2020': {batches: [{units: 250, reserved: 50, paid: true, ships: 'ships late November 2026'}, {units: 250}]}},
+    usStock: {sku: 'OPENFC-LITE-2020', batch: 2},
+  });
+  it('an old GB order with batch 1 attributes (_batch, INT) stays in batch 1, no promise-mismatch or review', () => {
+    const old = order({country: 'GB', intPromise: true, promise: 'ships late November 2026', batch: 'OPENFC-LITE-2020:1', lines: [['OPENFC-LITE-2020', 1]]});
+    const plan = planPreorderHolds([old], NOW)[0];
+    assert.ok(plan.tags.includes('batch:OPENFC-LITE-2020:1'), plan.tags.join(','));
+    assert.ok(!plan.tags.includes(PROMISE_MISMATCH_TAG));
+    assert.ok(!plan.tags.includes(INT_REVIEW_TAG));
+  });
+  it('an old line without _batch is kept by its paid-batch promise', () => {
+    const old = order({country: 'CA', intPromise: true, promise: 'ships late November 2026', lines: [['OPENFC-LITE-2020', 1]]});
+    assert.ok(planPreorderHolds([old], NOW)[0].tags.includes('batch:OPENFC-LITE-2020:1'));
+  });
+  it('a new GB order (NEAR, March promise) takes the March batch, whatever its date', () => {
+    const fresh = order({country: 'GB', nearPromise: true, promise: 'ships by 31 March 2027 if funded', batch: 'OPENFC-LITE-2020:2', lines: [['OPENFC-LITE-2020', 1]]});
+    fresh.createdAt = '2026-09-01T00:00:00Z';
+    const plan = planPreorderHolds([fresh], NOW)[0];
+    assert.ok(plan.tags.includes('batch:OPENFC-LITE-2020:2'), plan.tags.join(','));
+    assert.ok(!plan.tags.includes(PROMISE_MISMATCH_TAG));
+  });
+  it('an EU batch 1 line shipped to GB is not grandfathered: it is reviewed', () => {
+    const moved = order({country: 'GB', promise: 'ships late November 2026', batch: 'OPENFC-LITE-2020:1', lines: [['OPENFC-LITE-2020', 1]]});
+    const plan = planPreorderHolds([moved], NOW)[0];
+    assert.ok(plan.tags.includes('batch:OPENFC-LITE-2020:2'), plan.tags.join(','));
+    assert.ok(plan.tags.includes(INT_REVIEW_TAG));
+  });
+  it('a grandfathered unit fills batch 1 ahead of later EU units', () => {
+    const old = order({country: 'GB', intPromise: true, promise: 'ships late November 2026', batch: 'OPENFC-LITE-2020:1', lines: [['OPENFC-LITE-2020', 200]]});
+    const eu = order({lines: [['OPENFC-LITE-2020', 1]]});
+    const plans = new Map(planPreorderHolds([old, eu], NOW).map((p) => [p.orderId, p]));
+    // 200 sellable in batch 1: the old GB order took them all, the EU unit goes to March.
+    assert.ok(plans.get(eu.id)!.tags.includes('batch:OPENFC-LITE-2020:2'), plans.get(eu.id)!.tags.join(','));
+  });
+});
+
+describe('grandfathered lines: mixed orders, and the storefront count agrees with the planner', () => {
+  const NOW = parseCampaignConfig({
+    countFrom: '2026-09-21',
+    endsOn: '2026-12-31', shipsBy: '2027-03-31',
+    priceTiers: [{upTo: 100, off: 0.2}],
+    pendingShips: 'ships by 31 March 2027 if funded',
+    paidRegions: ['EU'],
+    skus: {
+      'OPENFC-LITE-2020': {batches: [{units: 250, reserved: 50, paid: true, ships: 'ships late November 2026'}, {units: 250}]},
+      'OPENESC-2020': {batches: [{units: 250, reserved: 50, paid: true, ships: 'ships late November 2026'}, {units: 250}]},
+    },
+    usStock: {sku: 'OPENFC-LITE-2020', batch: 2},
+  });
+  const OLD = [{key: 'Preorder', value: 'ships late November 2026'}, {key: '_ship_region', value: 'INT'}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}];
+  const NEW = [{key: 'Preorder', value: 'ships by 31 March 2027 if funded'}, {key: '_ship_region', value: 'NEAR'}, {key: '_batch', value: 'OPENESC-2020:2'}];
+  const mixed = () => {
+    const o = order({country: 'GB', lines: [['OPENFC-LITE-2020', 1], ['OPENESC-2020', 1]]});
+    o.lineItems.nodes[0].customAttributes = OLD;
+    o.lineItems.nodes[1].customAttributes = NEW;
+    return o;
+  };
+  it('an order mixing a grandfathered line and a new line keeps each line on its own batch, no mismatch', () => {
+    const plan = planPreorderHolds([mixed()], NOW)[0];
+    assert.ok(plan.tags.includes('batch:OPENFC-LITE-2020:1'), plan.tags.join(','));
+    assert.ok(plan.tags.includes('batch:OPENESC-2020:2'), plan.tags.join(','));
+    assert.ok(!plan.tags.includes(PROMISE_MISMATCH_TAG));
+    assert.ok(!plan.tags.includes(INT_REVIEW_TAG));
+  });
+  it('fetchPaidUnitRuns and assignBatches put the same units in the same batches', async () => {
+    const refunded = order({country: 'CA', intPromise: true, promise: 'ships late November 2026', batch: 'OPENFC-LITE-2020:1', lines: [['OPENFC-LITE-2020', 3]]});
+    refunded.displayFinancialStatus = 'PARTIALLY_REFUNDED';
+    refunded.lineItems.nodes[0].currentQuantity = 2;
+    const orders = [
+      order({lines: [['OPENFC-LITE-2020', 4], ['OPENESC-2020', 2]]}),
+      mixed(),
+      refunded,
+      order({country: 'GB', nearPromise: true, promise: 'ships by 31 March 2027 if funded', batch: 'OPENFC-LITE-2020:2', lines: [['OPENFC-LITE-2020', 2]]}),
+      order({country: 'AU', intPromise: true, promise: 'ships by 31 March 2027 if funded', batch: 'OPENESC-2020:2', lines: [['OPENESC-2020', 1]]}),
+    ];
+    const runs = await fetchPaidUnitRuns(ENV, '2026-09-21', new Set(Object.keys(NOW.skus)), async () =>
+      Response.json({data: {orders: {pageInfo: {hasNextPage: false, endCursor: null}, nodes: orders}}}),
+    NOW);
+    const planned = assignBatches(orders, NOW);
+    for (const sku of Object.keys(NOW.skus)) {
+      const fromPlanner = [0, 0];
+      for (const lines of planned.values()) for (const b of lines) if (b.sku === sku && !b.item) fromPlanner[b.batch - 1] += b.units;
+      const fromCounts = batchFill(NOW.skus[sku].batches, runs[sku] ?? []);
+      assert.deepEqual(fromCounts.slice(0, 2), fromPlanner, sku);
+    }
+    // FC batch 1: 4 EU + 1 grandfathered GB + 2 grandfathered CA (after the refund).
+    assert.equal(batchFill(NOW.skus['OPENFC-LITE-2020'].batches, runs['OPENFC-LITE-2020'])[0], 7);
   });
 });

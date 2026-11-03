@@ -1,6 +1,6 @@
 import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
 import {appCommerceEnabled} from './commerce/app-api.ts';
-import {campaignDate, mixedShipPromise, regionOf, shipGroupKey, shipLabelFromPromise, shipOrderDay, type Region} from './preorder-campaign.ts';
+import {campaignDate, internationalRegion, isInternationalRegion, mixedShipPromise, regionOf, shipGroupKey, shipLabelFromPromise, shipOrderDay, type Region} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
 import {destinationForRequest, geoCountryForRequest, isInternationalQuote, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
@@ -15,6 +15,8 @@ import {
   PREORDER_ATTRIBUTE,
   DELIVERY_BY_ATTRIBUTE,
   DELIVERY_BY_OWN_ATTRIBUTE,
+  DUTIES_ATTRIBUTE,
+  DUTIES_VALUE,
   PREORDER_OWN_ATTRIBUTE,
   SHIP_PROMISE_ATTRIBUTE,
   SHIP_REGION_ATTRIBUTE,
@@ -318,6 +320,8 @@ export function lineAttributes(variant: CatalogVariant, destination: Region | bo
     {key: PREORDER_ATTRIBUTE, value: promise},
     ...(deliveryDay ? [{key: DELIVERY_BY_ATTRIBUTE, value: campaignDate(deliveryDay)}] : []),
     ...(region !== 'EU' ? [{key: SHIP_REGION_ATTRIBUTE, value: region}] : []),
+    // UK, CH, NO (March batch): the buyer pays import VAT and duties on delivery (shown at checkout and on the order).
+    ...(region === 'NEAR' ? [{key: DUTIES_ATTRIBUTE, value: DUTIES_VALUE}] : []),
     ...(batch ? [{key: BATCH_ATTRIBUTE, value: batch}] : []),
   ];
 }
@@ -609,7 +613,7 @@ export function rederiveLines(
 
 /** The allocation region of a consumer destination. */
 export function regionForDestination(destination: ShippingQuote | null): Region {
-  return isUsQuote(destination) ? 'US' : isInternationalQuote(destination) ? 'INT' : 'EU';
+  return isUsQuote(destination) ? 'US' : isInternationalQuote(destination) ? internationalRegion(destination?.country) : 'EU';
 }
 
 /** Where the checkout intent sends the buyer back to the cart, and why. */
@@ -909,7 +913,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         // added. Reprice the session cart and refresh its earlier promises,
         // so the drawer shows the selected country's totals and batch.
         if (destination?.kind === 'direct' && dependencies.setCountry &&
-          existing.country !== destination.country && (existing.country != null || region === 'INT')) {
+          existing.country !== destination.country && (existing.country != null || isInternationalRegion(region))) {
           await dependencies.setCountry(existingId, destination.country);
           const {refresh} = rederiveLines(existing, catalog, region, globalComingSoon, euStockKnown);
           if (refresh.length) {

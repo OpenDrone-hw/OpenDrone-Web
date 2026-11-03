@@ -1260,6 +1260,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
 describe('international cart destination handoffs', () => {
   const config = parseCampaignConfig(JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')));
   const international = applyCampaign(CATALOG, config, {}, new Date('2026-10-01'), 'INT');
+  const near = applyCampaign(CATALOG, config, {}, new Date('2026-10-01'), 'NEAR');
 
   it('adds an international preorder with the exact destination and INT promise metadata', async () => {
     for (const destination of ['CA', 'XK']) {
@@ -1269,9 +1270,30 @@ describe('international cart destination handoffs', () => {
         createCart: async (lines,country) => {
           chosen = country!;
           assert.equal(lines[0].attributes?.find(a=>a.key==='_ship_region')?.value,'INT');
+          assert.equal(lines[0].attributes?.find(a=>a.key==='Import VAT and duties'),undefined);
           assert.equal(lines[0].attributes?.find(a=>a.key==='Delivery by')?.value,'30 April 2027');
           assert.match(lines[0].attributes?.find(a=>a.key==='Preorder')?.value??'',/31 March 2027/);
           assert.doesNotMatch(lines[0].attributes?.find(a=>a.key==='Preorder')?.value??'',/15 April|30 April/);
+          return cart();
+        },
+      });
+      assert.equal(chosen,destination);
+    }
+  });
+
+  it('adds a NEAR preorder (GB, CH, NO) with the exact destination, NEAR region and the import duties notice', async () => {
+    for (const destination of ['GB', 'CH', 'NO']) {
+      let chosen = '';
+      await handleShopifyCartAction(request({sku:'OPENRX-LITE', country:destination}), ENABLED_ENV, {
+        fetchCatalog: async (region,country) => { assert.equal(region,'NEAR'); assert.equal(country,destination); return near; },
+        createCart: async (lines,country) => {
+          chosen = country!;
+          const attr = (key: string) => lines[0].attributes?.find(a=>a.key===key)?.value;
+          assert.equal(attr('_ship_region'),'NEAR');
+          assert.equal(attr('Import VAT and duties'),'Paid by you on delivery, unless collected at checkout');
+          // A funding-batch line takes the international arrival date.
+          assert.equal(attr('Delivery by'),'30 April 2027');
+          assert.match(attr('Preorder')??'',/31 March 2027/);
           return cart();
         },
       });
@@ -1295,16 +1317,19 @@ describe('international cart destination handoffs', () => {
   });
 
   it('shows another international country market even when both currencies are EUR', async () => {
-    const promise = international.products[0].variants[0].ship_promise;
-    const previous = {...cart([line({shipPromise:promise,shipRegion:'INT',deliveryBy:'30 April 2027'})]), country:'CH'};
-    const destinations: string[] = [];
-    const result = await handleShopifyCartAction(request({intent:'checkout',country:'NO'}), ENABLED_ENV, {
-      getCartId:()=>previous.id,getCart:async()=>previous,
-      fetchCatalog:async(region,country)=>{assert.equal(region,'INT');assert.equal(country,'NO');return international;},
-      setCountry:async(_id,country)=>{destinations.push(country);}, ...MUST_NOT,
-    });
-    assert.equal(result.headers.get('Location'),'/cart?check=market');
-    assert.deepEqual(destinations,['NO']);
+    // INT to INT (Montenegro to Kosovo, both EUR) and NEAR to NEAR (Switzerland to Norway).
+    for (const [region, catalog, from, to] of [['INT', international, 'ME', 'XK'], ['NEAR', near, 'CH', 'NO']] as const) {
+      const promise = catalog.products[0].variants[0].ship_promise;
+      const previous = {...cart([line({shipPromise:promise,shipRegion:region,deliveryBy:'30 April 2027'})]), country:from};
+      const destinations: string[] = [];
+      const result = await handleShopifyCartAction(request({intent:'checkout',country:to}), ENABLED_ENV, {
+        getCartId:()=>previous.id,getCart:async()=>previous,
+        fetchCatalog:async(r,country)=>{assert.equal(r,region);assert.equal(country,to);return catalog;},
+        setCountry:async(_id,country)=>{destinations.push(country);}, ...MUST_NOT,
+      });
+      assert.equal(result.headers.get('Location'),'/cart?check=market',region);
+      assert.deepEqual(destinations,[to],region);
+    }
   });
 
   it('allows native checkout once the international country and promise have been reviewed', async () => {

@@ -139,9 +139,8 @@ export function ProductItem({
   const launchPending = !isPurchasableStatus(status);
   const showPrice = !launchPending;
   // The quick-add SKU is batch 1 stock in the EU: "Add to cart", not "Pre-order" (ShipChip `useGeoInStock`).
-  const quickAddInStock = useGeoInStock(
-    quickAdd ? product.variants.nodes.find((v) => v.cartAddUrl === quickAdd.href)?.campaign : null,
-  );
+  const quickAddVariant = quickAdd ? product.variants.nodes.find((v) => v.cartAddUrl === quickAdd.href) : undefined;
+  const quickAddInStock = useGeoInStock(quickAddVariant?.campaign, quickAddVariant?.shipPromise);
 
   // Quick-add overlay: revealed on card hover (always visible on touch).
   // Rendered as a SIBLING of the card link, never inside it - a form inside

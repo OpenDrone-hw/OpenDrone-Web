@@ -9,6 +9,7 @@ import {RegionSwitch} from '~/components/RegionSwitch';
 import {RouteProgress} from '~/components/RouteProgress';
 import {Txt} from '~/components/Txt';
 import {CartAddedDialog} from '~/components/CartAddedDialog';
+import {LocationNotice} from '~/components/LocationNotice';
 import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
 import type {CommerceHandoff} from '~/lib/shop-links';
 import {AvailabilityBar} from '~/components/AvailabilityBanner';
@@ -48,6 +49,10 @@ export function PageLayout({
             is its own overlay, opened by every AddToCartButton. */}
         <MobileMenuAside accountUrl={accountUrl} />
         <CartAddedDialog />
+        {/* The ship time for a new destination, once per change: a fixed
+            toast, out of the flow, filled from an effect (no CLS, no
+            hydration mismatch). Only while ordering is open, as the bar. */}
+        {shopOpen ? <LocationNotice /> : null}
         <div
           className={isHomepage ? 'site-layout homepage-layout' : 'site-layout'}
         >

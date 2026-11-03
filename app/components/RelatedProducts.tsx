@@ -216,7 +216,7 @@ function RelatedCard({
     ? null
     : (variant ?? (product.variants.nodes.length === 1 ? product.variants.nodes[0] : null));
   // Batch 1 stock in the EU is added to the cart, not pre-ordered (ShipChip `useGeoInStock`).
-  const inStock = useGeoInStock(only?.campaign);
+  const inStock = useGeoInStock(only?.campaign, only?.shipPromise);
   const ctaLabel =
     status === 'preorder' && !inStock
       ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')

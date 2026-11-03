@@ -23,6 +23,8 @@ import {
   campaignSkus,
   needsCampaignCounts,
   countedSkus,
+  internationalRegion,
+  isInternationalRegion,
   parseCampaignConfig,
   type Region,
 } from './preorder-campaign.ts';
@@ -58,7 +60,7 @@ export type CatalogClient = CatalogReader & {fresh: CatalogReader};
 export function buyerRegion(request: Request | undefined, env: Pick<Env, 'PUBLIC_US_SALES'>): Region {
   if (!request) return 'EU';
   const quote = shippingQuote(shipCountryForRequest(request), undefined, usSalesRate(env));
-  return isUsQuote(quote) ? 'US' : isInternationalQuote(quote) ? 'INT' : 'EU';
+  return isUsQuote(quote) ? 'US' : isInternationalQuote(quote) ? internationalRegion(quote?.country) : 'EU';
 }
 
 async function withCampaign(env: Env, catalog: Catalog, region: Region): Promise<Catalog> {
@@ -101,7 +103,7 @@ function catalogReader(
   const get = async () => withCampaign(env, await load('default'), 'EU');
   const forRegion = async (target: Region, destination = country): Promise<Catalog> => {
     if (target === 'EU') return get();
-    if (target === 'INT' && !destination) throw new Error('catalog: international destination missing');
+    if (isInternationalRegion(target) && !destination) throw new Error('catalog: international destination missing');
     const [catalog, market] = await Promise.all([
       load('default'),
       load(target === 'US' ? 'US' : destination!).catch((error: unknown) => {

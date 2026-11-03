@@ -83,7 +83,7 @@ export function ProductForm({
   const productStatus = useProductStatus(selectedVariant?.product?.handle);
   // Batch 1 stock reads as stock where the bar says "in stock" (the EU): the
   // buyer adds it to the cart, they do not pre-order it.
-  const geoInStock = useGeoInStock(selectedVariant?.campaign);
+  const geoInStock = useGeoInStock(selectedVariant?.campaign, selectedVariant?.shipPromise);
   const ctaLabelAvailable =
     productStatus === 'preorder' && !geoInStock
       ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')

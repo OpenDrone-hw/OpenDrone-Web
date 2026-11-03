@@ -58,6 +58,8 @@ import {
   allocateUnit,
   batchOfUnit,
   configSoldUnder,
+  grandfatheredPaidLine,
+  lineAllocationRegion,
   REGIONS,
   regionOf,
   sellableUnits,
@@ -355,7 +357,19 @@ function lineRegion(line: PreorderOrder['lineItems']['nodes'][number]): Region {
  *  than the order ships to. */
 export function promiseMismatch(order: PreorderOrder): boolean {
   const region = orderRegion(order);
-  return order.lineItems.nodes.some((line) => hasPromise(line) && lineRegion(line) !== region);
+  return order.lineItems.nodes.some((line) => hasPromise(line) && !recordedFor(lineRegion(line), region));
+}
+
+/** True when a line recorded for `recorded` may ship to `region`: the same
+ *  region, or an INT line to GB/CH/NO (NEAR), which the cart recorded as INT
+ *  before NEAR existed and which ships through the same international market. */
+function recordedFor(recorded: Region, region: Region): boolean {
+  return recorded === region || (recorded === 'INT' && region === 'NEAR');
+}
+
+/** The region a line's units fill the batches in (`lineAllocationRegion`). */
+function lineFillRegion(config: CampaignConfig, line: PreorderOrder['lineItems']['nodes'][number], region: Region): Region {
+  return lineAllocationRegion(region, grandfatheredPaidLine(config, {sku: line.sku, attributes: line.customAttributes}));
 }
 
 /** Parse a `_batch` line attribute, `SKU:N`, or null. */
@@ -486,7 +500,8 @@ export function assignBatches(
           else found.push({sku: rule.sku, batch, units, shipPromise: ships, item: sku});
         };
         // The batch the lead's next unit for this region fell into.
-        const leadNext = () => nextBatchFromFill(lead, before[rule.sku], region, march);
+        // A non-EU line sold batch 1 before it became EU only keeps it (`grandfatheredPaidLine`).
+        const leadNext = () => nextBatchFromFill(lead, before[rule.sku], lineFillRegion(config, line, region), march);
         if (march) {
           // Pinned to paid stock or not, the parcel ships with the March batch.
           const pinned = rule.batch ? lead[rule.batch - 1] : undefined;
@@ -509,7 +524,7 @@ export function assignBatches(
       if (!sku || !entry || !(line.currentQuantity > 0)) continue;
       const fill = (fills[sku] ??= []);
       for (let unit = 0; unit < line.currentQuantity; unit += 1) {
-        const {batch, entry: batchEntry} = allocateUnit(entry.batches, fill, region, march);
+        const {batch, entry: batchEntry} = allocateUnit(entry.batches, fill, lineFillRegion(config, line, region), march);
         const existing = found.find((b) => b.sku === sku && b.batch === batch && !b.item);
         if (existing) existing.units += 1;
         else {
@@ -559,14 +574,16 @@ export function needsDestinationReview(order: PreorderOrder, orderBatches: LineB
   if (region === 'EU') return false;
   return order.lineItems.nodes.some((line) => {
     if (!(line.currentQuantity > 0)) return false;
-    if (!hasPromise(line) || lineRegion(line) !== region) return true;
+    if (!hasPromise(line) || !recordedFor(lineRegion(line), region)) return true;
+    // A grandfathered paid line is checked in the region it was allocated in.
+    const served = lineFillRegion(config, line, region);
     const sku = line.sku?.trim();
     if (!sku) return true;
     const mine = orderBatches.filter((b) => (b.item ?? b.sku) === sku);
     if (!mine.length) return true;
     return mine.some((b) => {
       const entry = config.skus[b.sku]?.batches[b.batch - 1];
-      return entry ? !servesRegion(entry, region) : false;
+      return entry ? !servesRegion(entry, served) : false;
     });
   });
 }
@@ -616,7 +633,8 @@ export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfi
     // `overfullBatches` and is never re-planned), never held.
     const euStock = pending && shipsFromEuStock(order, orderBatches, config);
     const preorder = pending && !euStock;
-    const reviewTag = orderRegion(order) === 'INT' ? INT_REVIEW_TAG : US_REVIEW_TAG;
+    // NEAR (GB, CH, NO) was INT before it had a region of its own: it keeps the international review tag.
+    const reviewTag = orderRegion(order) === 'US' ? US_REVIEW_TAG : INT_REVIEW_TAG;
     const review = !order.tags.includes(reviewTag) && needsDestinationReview(order, orderBatches, config);
     // The batch promise is checked when the batch tags are written: later
     // drift between tags and allocation is `overfullBatches`.

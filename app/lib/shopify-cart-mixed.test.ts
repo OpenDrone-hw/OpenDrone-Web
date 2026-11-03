@@ -61,6 +61,7 @@ const RAW: Catalog = {
 const CATALOGS: Record<Region, Catalog> = {
   EU: applyCampaign(RAW, CONFIG, {}, NOW, 'EU'),
   US: applyCampaign(RAW, CONFIG, {}, NOW, 'US'),
+  NEAR: applyCampaign(RAW, CONFIG, {}, NOW, 'NEAR'),
   INT: applyCampaign(RAW, CONFIG, {}, NOW, 'INT'),
 };
 

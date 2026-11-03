@@ -1078,7 +1078,7 @@ Both gates must be open for checkout; closing either one closes it.
 |---|---|---|---|
 | `PUBLIC_COMING_SOON` | `wrangler.production.toml` `[vars]` | `"0"` | anything else: coming-soon pages, no prices |
 | `SHOPIFY_CHECKOUT_WRITE_ENABLED` | `wrangler.production.toml` `[vars]` | `"1"` | anything else: cart POSTs refused, `/cart` redirects |
-| `PUBLIC_US_SALES` | `wrangler.production.toml` `[vars]` | `"1"` and a number in `content/us-sales.json` `rate` | anything else: the US buys through shops, as before |
+| `PUBLIC_US_SALES` | `wrangler.production.toml` `[vars]` | `"1"` and a number in `content/us-sales.json` `rate` (production is `"0"` since 2026-11-03: US sales on hold) | anything else: the US buys through shops and reads "Not shipping to the US yet." |
 | `SHOPIFY_PREVIEW_POLICY_JSON` | Worker secret | `preorder` (campaign SKUs, `shipPromise: null`) or `in_stock` per SKU for sale | `sold_out` with `shipPromise: null` |
 | `SHOPIFY_CHECKOUT_DOMAIN` | Worker secret | the host of Shopify's checkout links | not needed |
 | `SHOPIFY_PRICE_TIER_WRITE_ENABLED` | Worker secret | `"1"` while a campaign steps prices | anything else |
@@ -1170,14 +1170,14 @@ rate, and HS codes and country of origin on every variant.
 
 ### International preorders
 
-Other permitted destinations use allocation region `INT`. Batch-1 paid stock
-of FC and ESC serves the EU and `INT` but not the US (founder 2026-10-29), with
-the late November promise and no international delivery date; international
-products, accessories and a full batch 1 use the March batch, including the
-existing `usStock` rule for otherwise unlisted accessories. The Shopify
-shipping rates of the international zones are still named for the March ship
-date: add a batch-1 rate per zone, with the same price and the November ship
-date, before this reaches production (`docs/batch1-shipping-rates.md`).
+Other permitted destinations use allocation region `INT`; GB, CH and NO use
+`NEAR` (`IMPORT_COUNTRY_CODES`), the same March batch with the duties line.
+Batch-1 paid stock of FC and ESC serves the EU only (`paidRegions` in
+`content/preorders.json`, founder 2026-11-03); `NEAR`, `INT` and US buyers
+take the March batch, including the existing `usStock` rule for otherwise
+unlisted accessories. A non-EU line that recorded batch 1 before then keeps
+it (`grandfatheredPaidLine`, read from its `_batch`/promise and `_ship_region`
+line attributes).
 The selected country supplies Shopify's catalog prices, cart market and currency.
 A null shipping preview means the charge is confirmed at checkout, never free.
 Before checkout, the cart and the added-to-cart drawer show "from X, confirmed
