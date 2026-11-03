@@ -1707,7 +1707,7 @@ html:root .site-header-categories .site-header-cat-group a:not(:hover):not(.acti
   background: var(--color-bg);
   border-radius: var(--r-xs);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-muted);
   letter-spacing: 0.02em;
 }
@@ -2790,7 +2790,7 @@ button.reset {
 
 .product-facts dt {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
@@ -2941,7 +2941,8 @@ button.reset {
   align-items: center;
   gap: 0.5rem;
   padding: 0.35rem 0.5rem;
-  background: rgba(13, 13, 16, 0.7);
+  /* Sits over arbitrary photos: near-opaque so the counter stays >= 4.5:1 on light renders. */
+  background: rgba(13, 13, 16, 0.88);
   border: 1px solid var(--color-border);
   border-radius: var(--r-pill);
   backdrop-filter: blur(6px);
@@ -2965,10 +2966,10 @@ button.reset {
 
 .product-gallery-counter {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   padding: 0 0.25rem;
 }
 
@@ -4904,7 +4905,7 @@ button.reset {
 .chapter-subhead {
   margin: 1.75rem 0 0.75rem;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -5627,7 +5628,7 @@ section.chapter[data-centered] .chapter-body-col {
   border: 1px solid color-mix(in srgb, var(--color-gold) 40%, transparent);
   border-radius: var(--r-pill);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
@@ -6112,6 +6113,9 @@ section.chapter[data-centered] .chapter-body-col {
 .board-folder-rail:focus-visible,
 .schematic-rail:focus-visible {
   border-color: color-mix(in srgb, var(--color-gold) 45%, transparent);
+  /* The base rule sets outline: none; keyboard focus needs a real ring (2.4.7). */
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 .board-folder-rail-head,
 .schematic-rail-head {
@@ -6437,7 +6441,7 @@ section.chapter[data-centered] .chapter-body-col {
   justify-content: space-between;
   margin-top: 0.7rem;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
@@ -6466,7 +6470,7 @@ section.chapter[data-centered] .chapter-body-col {
 }
 .board-art-fallback {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-dim);
 }
 @media (max-width: 879px) {
@@ -6650,7 +6654,7 @@ section.chapter[data-centered] .chapter-body-col {
 .teardown-pin-cost {
   flex: none;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   padding: 0.1rem 0.45rem;
   border-radius: var(--r-pill);
@@ -6663,6 +6667,27 @@ section.chapter[data-centered] .chapter-body-col {
    gold accent bar wipes in on the left for a bit of life. */
 .teardown-pin-hoverable {
   cursor: pointer;
+}
+/* The row's keyboard stop is a button filling the <li>; it carries the padding
+   so the whole row stays clickable, and shows its own ring (inset, so the
+   row's overflow never clips it). */
+.teardown-pins li.teardown-pin-hoverable {
+  padding: 0;
+}
+.teardown-pin-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem 0.55rem 0.95rem;
+  cursor: pointer;
+}
+.teardown-pin-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 .teardown-pin-hoverable::before {
   content: '';
@@ -6677,7 +6702,7 @@ section.chapter[data-centered] .chapter-body-col {
   transition: transform 0.14s ease;
 }
 .teardown-pin-hoverable:hover,
-.teardown-pin-hoverable:focus-visible {
+.teardown-pin-hoverable:has(.teardown-pin-btn:focus-visible) {
   background: color-mix(in srgb, var(--color-gold) 13%, transparent);
   /* extend the tint 1px upward to fill where the divider above used to sit (the
      :has rule below turns it transparent), so the whole row reads as one gold
@@ -6720,7 +6745,7 @@ section.chapter[data-centered] .chapter-body-col {
 }
 .teardown-io-chip {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   padding: 0.2rem 0.55rem;
   border-radius: var(--r-pill);
@@ -6743,11 +6768,11 @@ section.chapter[data-centered] .chapter-body-col {
   outline-offset: 2px;
 }
 .teardown-pin-hoverable:hover .teardown-pin-part,
-.teardown-pin-hoverable:focus-visible .teardown-pin-part {
+.teardown-pin-hoverable:has(.teardown-pin-btn:focus-visible) .teardown-pin-part {
   color: var(--color-gold-text);
 }
 .teardown-pin-hoverable:hover::before,
-.teardown-pin-hoverable:focus-visible::before {
+.teardown-pin-hoverable:has(.teardown-pin-btn:focus-visible)::before {
   transform: scaleY(1);
 }
 
@@ -7132,7 +7157,7 @@ section.chapter[data-centered] .chapter-body-col {
   flex-wrap: wrap;
   gap: 0.6rem;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -7197,7 +7222,7 @@ section.chapter[data-centered] .chapter-body-col {
   padding-bottom: var(--sp-2);
   border-bottom: 2px solid var(--color-gold);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
@@ -7226,7 +7251,7 @@ section.chapter[data-centered] .chapter-body-col {
 
 .provenance-row-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text);
@@ -7747,7 +7772,7 @@ a.what-chain-chip:hover {
 
 .spec-table dt {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -7903,7 +7928,7 @@ a.what-chain-chip:hover {
 }
 .board-art-skeleton-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -7999,7 +8024,7 @@ a.what-chain-chip:hover {
   }
   .board-deck-hint {
     margin-left: auto;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.04em;
     /* muted (not dim) so the gesture cue stays legible on bright light-mode
        displays; it's the primary "how to explore" affordance now. */
@@ -8142,6 +8167,12 @@ a.what-chain-chip:hover {
     display: block;
   }
   .specs-parts .teardown-pins li {
+    padding: 0.4rem 0.6rem 0.4rem 0.75rem;
+  }
+  .specs-parts .teardown-pins li.teardown-pin-hoverable {
+    padding: 0;
+  }
+  .specs-parts .teardown-pin-btn {
     padding: 0.4rem 0.6rem 0.4rem 0.75rem;
   }
   .specs-parts .teardown-pin-part {
@@ -17281,7 +17312,7 @@ html.hero-header-in .homepage-layout .site-header {
 }
 .spec-table dt {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -17289,7 +17320,7 @@ html.hero-header-in .homepage-layout .site-header {
 }
 .board-art-skeleton-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -17348,6 +17379,10 @@ html.hero-header-in .homepage-layout .site-header {
   color: var(--color-text);
 }
 .spec-table dd a {
+  /* 24px minimum target (WCAG 2.5.8) */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   color: var(--color-gold-text);
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -18611,7 +18646,7 @@ summary,
 .build-chapter-bring-label {
   margin: 0 0 0.75rem;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-gold-text);

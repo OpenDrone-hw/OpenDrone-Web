@@ -165,7 +165,7 @@ export function EditorialShell({
         {children}
         <EditorialNext slug={slug} />
       </div>
-      {aside ? <aside className="editorial-aside">{aside}</aside> : null}
+      {aside ? <div className="editorial-aside">{aside}</div> : null}
       {rail ? <SeriesRail slug={slug} /> : null}
     </div>
   );
