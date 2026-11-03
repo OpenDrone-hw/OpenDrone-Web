@@ -3,8 +3,8 @@ import {useStagingBench} from './status.tsx';
 
 /**
  * directInstallEnabled() with the staging switch read after mount
- * (hydration-safe): false in the server render and the first client render,
- * then the real value. Used by FcFlasher and the firmware guides.
+ * (hydration-safe; the per-board part is static). Used by FcFlasher and the
+ * firmware guides.
  */
 export function useDirectInstallEnabled(): boolean {
   return directInstallEnabled(useStagingBench());

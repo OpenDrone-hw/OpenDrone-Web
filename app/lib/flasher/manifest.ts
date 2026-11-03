@@ -23,6 +23,9 @@ import {escTargetByName, targetByName, type EscTarget, type FlasherTarget} from 
 /** am32-bin: a raw app binary that starts at the AM32 app address (staging bench build only). */
 export type FirmwareKind = 'betaflight-uf2' | 'am32-hex' | 'am32-bin';
 
+/** GPL source for a pinned build: the exact firmware and config commits. */
+export type FirmwareSource = {firmwareUrl: string; configUrl: string; configRef: string; buildTarget: string};
+
 /** A second pinned file that belongs to a release (the ESC EEPROM v4 defaults). */
 export type PinnedAsset = {url: string; size: number; sha256: string};
 
@@ -43,6 +46,8 @@ export type FirmwareRelease = {
   published: boolean;
   /** AM32 only: the pinned EEPROM v4 defaults written after the app. Must itself be a valid pinned asset. */
   eepromDefaults?: PinnedAsset;
+  /** GPL source links for this build. */
+  source?: FirmwareSource;
   notes?: string;
 };
 
@@ -94,6 +99,16 @@ export function isAllowedFirmwareUrl(raw: unknown): raw is string {
 }
 
 /**
+ * Published same-origin files: a relative path /firmware/<board>/<file>,
+ * shipped in public/firmware/ (Workers assets). Covered by connect-src 'self';
+ * resolveUrl also checks the resolved origin equals the page's.
+ * Not to be confused with the bench-only /firmware-staging/ (below).
+ */
+export function isSameOriginFirmwareUrl(raw: unknown): raw is string {
+  return typeof raw === 'string' && /^\/firmware\/[a-z0-9-]+\/[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(raw);
+}
+
+/**
  * Same-origin bench files, ONLY while the staging bench switch is on
  * (staging.ts). A relative path under /firmware-staging/ with a plain file
  * name. With the switch off this is always false, so production stays on
@@ -103,7 +118,7 @@ export function isStagingFirmwareUrl(raw: unknown): raw is string {
   return stagingBenchEnabled() && typeof raw === 'string' && /^\/firmware-staging\/[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(raw);
 }
 
-const urlOk = (raw: unknown): raw is string => isAllowedFirmwareUrl(raw) || isStagingFirmwareUrl(raw);
+const urlOk = (raw: unknown): raw is string => isAllowedFirmwareUrl(raw) || isSameOriginFirmwareUrl(raw) || isStagingFirmwareUrl(raw);
 
 function assetOk(a: PinnedAsset | undefined): boolean {
   return !!a && urlOk(a.url) && Number.isInteger(a.size) && a.size > 0 && a.size <= MAX_FILE && SHA256_RE.test(a.sha256);
@@ -178,12 +193,12 @@ export async function verifyFirmwareBytes(release: FirmwareRelease, bytes: Uint8
   return checkBytes('Firmware', release.size, release.sha256, bytes);
 }
 
-/** Allowlisted https URL as before; a staging path only when the switch is on and it stays on the page's own origin. */
+/** Allowlisted https URL; a published same-origin /firmware/ path; a staging path only when the switch is on and it stays on the page's own origin. */
 function resolveUrl(raw: string, baseUrl: string): URL {
-  if (isStagingFirmwareUrl(raw)) {
+  if (isSameOriginFirmwareUrl(raw) || isStagingFirmwareUrl(raw)) {
     const base = new URL(baseUrl);
     const u = new URL(raw, base);
-    if (u.origin !== base.origin) throw new ManifestError('Staging firmware must come from the same origin as this page.');
+    if (u.origin !== base.origin) throw new ManifestError('Firmware must come from the same origin as this page.');
     return u;
   }
   const u = new URL(raw, baseUrl);
