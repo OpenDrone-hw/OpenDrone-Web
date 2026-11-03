@@ -29,3 +29,11 @@ export function directInstallEnabled(stagingBench: boolean, target?: string): bo
       boardDirectInstallVerified(r),
   );
 }
+
+/**
+ * FlowDeps.gatesOn as FcFlasher wires it: `canRun` (the button's own gate, which
+ * includes WebUSB/Web Serial support) and, once the board is identified, that board.
+ */
+export function flowGatesOn(canRun: boolean, stagingBench: boolean): (board?: {target: string}) => boolean {
+  return (board) => canRun && (!board || directInstallEnabled(stagingBench, board.target));
+}

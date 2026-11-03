@@ -234,10 +234,11 @@ export async function continueUpdate(
     if (!gate.allowed) return {kind: 'refused', text: refusalText(board, pkg, installed, gate.reasons)};
     deps.onStage('install', 0);
     try {
+      // The gate gets the digest computed from the downloaded bytes (already checked against the pin), not the pin itself.
       await pb.flashImage(prepared.image, (phase, done, total) => {
         if (phase === 'reboot') deps.onStage('restart');
         else deps.onStage('install', Math.round((done / Math.max(1, total)) * 100));
-      }, prepared.release);
+      }, {target: prepared.release.target, sha256: prepared.sha256});
     } catch (e) {
       return failed('install', errText(e), board, prepared);
     }

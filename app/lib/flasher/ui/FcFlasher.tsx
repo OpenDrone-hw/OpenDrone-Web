@@ -32,7 +32,7 @@ import {fcTargetProblems, knownFcNamesIn} from '../gates.ts';
 import {fetchVerifiedFirmware, isPublished, releaseFileName, type FirmwareRelease} from '../manifest.ts';
 import {MspConnection} from '../msp.ts';
 import {Picoboot} from '../picoboot.ts';
-import {directInstallEnabled} from '../direct-install.ts';
+import {directInstallEnabled, flowGatesOn} from '../direct-install.ts';
 import {
   FLASHER_TARGETS,
   RP2350_BOOTSEL_PID,
@@ -127,7 +127,7 @@ export function FcFlasher({
   useEffect(() => onBusyChange(running), [running, onBusyChange]);
 
   const deps: FlowDeps = {
-    gatesOn: (board) => canRun && (!board || directInstallEnabled(staging, board.target)),
+    gatesOn: flowGatesOn(canRun, staging),
     openSerial: () => MspConnection.request(),
     prepare: prepareFor,
     findBootsel: findPermittedBootsel,
@@ -244,7 +244,16 @@ export function FcFlasher({
                 ariaLabel="Which board is it?"
                 tabbableKey={resumeBoard?.target ?? FLASHER_TARGETS[0]?.target}
                 onSelect={(key) => setResumeBoard(FLASHER_TARGETS.find((t) => t.target === key) ?? null)}
-                items={FLASHER_TARGETS.map((t) => ({key: t.target, name: short(t), selected: resumeBoard?.target === t.target}))}
+                items={FLASHER_TARGETS.map((t) => {
+                  const off = !directInstallEnabled(staging, t.target);
+                  return {
+                    key: t.target,
+                    name: short(t),
+                    selected: resumeBoard?.target === t.target,
+                    disabled: off,
+                    tag: off ? 'No direct install yet: use Other ways' : undefined,
+                  };
+                })}
               />
             ) : null}
             <button type="button" className="btn-primary mt-2" onClick={resume} disabled={needsBoardForResume && !resumeBoard}>

@@ -5,10 +5,11 @@
  */
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {readFileSync} from 'node:fs';
+import {existsSync, readdirSync, readFileSync, statSync} from 'node:fs';
+import {sep} from 'node:path';
 import {describe, it} from 'node:test';
-import {directInstallEnabled} from './direct-install.ts';
-import {boardGatedText, startUpdate, type FlowDeps, type PicobootLike, type Prepared} from './fc-update.ts';
+import {directInstallEnabled, flowGatesOn} from './direct-install.ts';
+import {boardGatedText, continueUpdate, startUpdate, type FlowDeps, type PicobootLike, type Prepared} from './fc-update.ts';
 import type {RebootConnection} from './fc-reboot.ts';
 import {FIRMWARE_MANIFEST, LITE_PIN, pinToRelease, targetPublished} from './firmware-manifest.ts';
 import {fcDirectWriteGate, fcTargetProblems, knownFcNamesIn} from './gates.ts';
@@ -92,6 +93,24 @@ describe('the asset and its pin', () => {
     }
   });
 
+  it('every same-origin pin has its file in public/, matching size and SHA-256; every file there is pinned', () => {
+    const pinned = FIRMWARE_MANIFEST.filter((r) => isSameOriginFirmwareUrl(r.url));
+    assert.ok(pinned.length > 0);
+    for (const r of pinned) {
+      const path = new URL(`../../../public${r.url}`, import.meta.url);
+      assert.ok(existsSync(path), `${r.target}: ${r.url} is missing from public/`);
+      const bytes = readFileSync(path);
+      assert.equal(bytes.length, r.size, r.url!);
+      assert.equal(createHash('sha256').update(bytes).digest('hex'), r.sha256, `${r.url}: a new build needs a new file name and a new pin`);
+    }
+    const root = new URL('../../../public/firmware/', import.meta.url);
+    const files = (readdirSync(root, {recursive: true}) as string[])
+      .map((f) => f.split(sep).join('/'))
+      .filter((f) => statSync(new URL(f, root)).isFile())
+      .map((f) => `/firmware/${f}`);
+    assert.deepEqual(files.sort(), pinned.map((r) => r.url).sort(), 'every file under public/firmware/ is pinned');
+  });
+
   it('the static assets get immutable caching for /firmware/*', () => {
     assert.match(read('../../../public/_headers').toString(), /\/firmware\/\*\r?\n\s+Cache-Control: public, max-age=31536000, immutable/);
   });
@@ -119,13 +138,15 @@ describe('size + SHA-256 before any parse or write', () => {
 // A minimal flow rig: prepare runs the real fetch + verify + parse, like FcFlasher's prepareFor.
 function rig(o: {board: string; bytes: Uint8Array; installed?: string[]; pkg?: 'QFN60' | 'QFN80'}) {
   const log: string[] = [];
+  const flashedWith: unknown[] = [];
   const pb: PicobootLike = {
     chipInfo: async () => ({chipPackage: o.pkg ?? 'QFN80', deviceId: 1, flashBytes: null}),
     exclusive: async () => {},
     exitXip: async () => {},
     findInstalledTargets: async () => o.installed ?? [LITE.target],
-    flashImage: async (_img, cb) => {
+    flashImage: async (_img, cb, release) => {
       log.push('flash');
+      flashedWith.push(release);
       cb('reboot', 1, 1);
     },
     close: async () => {},
@@ -137,7 +158,7 @@ function rig(o: {board: string; bytes: Uint8Array; installed?: string[]; pkg?: '
   };
   const deps: FlowDeps = {
     // As FcFlasher wires it, with the browser able to reach USB and the staging switch off.
-    gatesOn: (board) => directInstallEnabled(false) && (!board || directInstallEnabled(false, board.target)),
+    gatesOn: flowGatesOn(directInstallEnabled(false), false),
     openSerial: async () => conn,
     prepare: async (t: FlasherTarget): Promise<Prepared> => {
       log.push(`prepare:${t.target}`);
@@ -152,7 +173,7 @@ function rig(o: {board: string; bytes: Uint8Array; installed?: string[]; pkg?: '
     openPicoboot: async () => pb,
     onStage: () => {},
   };
-  return {deps, log};
+  return {deps, log, flashedWith};
 }
 
 describe('per-board direct install', () => {
@@ -211,10 +232,36 @@ describe('per-board direct install', () => {
     await assert.rejects(pb.flashImage({start: 0} as never, () => {}, miniPinned), /disabled until it is verified/);
   });
 
-  it('flow: Lite board + correct file installs', async () => {
+  it('flow: Lite board + correct file installs; the write gate gets the computed digest', async () => {
     const r = rig({board: LITE.target, bytes: asset});
     assert.deepEqual(await startUpdate(r.deps), {kind: 'done'});
     assert.deepEqual(r.log, [`prepare:${LITE.target}`, 'verified', 'bl rom', 'flash']);
+    assert.deepEqual(r.flashedWith, [{target: LITE.target, sha256: SHA}]);
+  });
+
+  it('gatesOn wiring (flowGatesOn, as FcFlasher uses it)', () => {
+    assert.equal(flowGatesOn(false, false)(), false, 'no USB support: nothing');
+    assert.equal(flowGatesOn(false, true)(LITE), false);
+    const prod = flowGatesOn(true, false);
+    assert.equal(prod(), true, 'the button shows');
+    assert.equal(prod(LITE), true);
+    assert.equal(prod(MINI), false);
+    for (const t of ['OPENESC_20_F421', 'OPENESC_30X30']) assert.equal(prod({target: t}), false, t);
+    assert.equal(flowGatesOn(true, true)(MINI), true, 'staging bench: every board');
+  });
+
+  it('continueUpdate (resume) with the Mini chosen: refused with boardGatedText, nothing prepared or written', async () => {
+    const r = rig({board: MINI.target, bytes: asset, pkg: 'QFN60', installed: [MINI.target]});
+    assert.deepEqual(await continueUpdate(r.deps, {board: MINI, prepared: null, device: {id: 'boot'}}), {kind: 'refused', text: boardGatedText(MINI)});
+    assert.deepEqual(r.log, []);
+  });
+
+  it('fallback flow: Lite chosen, but a QFN60 chip with no firmware installed: refused, no write', async () => {
+    const r = rig({board: LITE.target, bytes: asset, pkg: 'QFN60', installed: []});
+    const res = await continueUpdate(r.deps, {board: LITE, prepared: null, device: {id: 'boot'}});
+    assert.equal(res.kind, 'refused');
+    assert.ok(!r.log.includes('flash'));
+    assert.deepEqual(r.flashedWith, []);
   });
 
   it('flow: SHA mismatch refuses before parse, restart or write', async () => {
