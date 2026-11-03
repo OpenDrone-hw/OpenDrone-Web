@@ -17675,6 +17675,15 @@ html.hero-header-in .homepage-layout .site-header {
 .related-card-media {
   background: #ece9e3;
 }
+/* Imageless tiles sit on that light photo backdrop, where the dark-theme dim
+   ink was 2.79:1 (1.76:1 with the ghost's opacity). #55555b on #ece9e3 is
+   6.11:1 (WCAG 1.4.3). */
+.product-card-media.is-empty .ghost-tile,
+.product-card-media.is-empty .product-card-media-ghost,
+.related-card-media.is-empty .product-card-media-ghost {
+  color: #55555b;
+  opacity: 1;
+}
 
 /* =========================================================
    Support tickets: /support, /support/t/<ref>, /support/find

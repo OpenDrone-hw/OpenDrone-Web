@@ -43,7 +43,6 @@ p {
 
 a {
   color: #000;
-  text-decoration: none;
 }
 
 a:hover {
@@ -106,6 +105,13 @@ form {
     margin-bottom: 0.5rem;
     margin-top: 0.25rem;
     padding: 0.5rem;
+  }
+
+  /* Layered for the same reason: unlayered, it beat Tailwind's `underline`
+     utility, so links marked underline rendered without one (axe
+     link-in-text-block, WCAG 1.4.1). */
+  a {
+    text-decoration: none;
   }
 }
 
