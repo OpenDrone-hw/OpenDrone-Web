@@ -11,7 +11,10 @@ import {
   geoAvailabilityRegion,
   geoBannerLines,
   geoOfferAvailability,
+  geoBarText,
+  geoDutiesNote,
   geoInStock,
+  stockRegion,
   geoShipText,
   hasBatchOne,
   offerAvailability,
@@ -27,7 +30,10 @@ const req = (country?: string) => new Request('https://opendrone.be/products/ope
 describe('geoAvailabilityRegion', () => {
   it('puts every EU member state in the EU and nothing else', () => {
     for (const c of EU_COUNTRY_CODES) assert.equal(geoAvailabilityRegion(c), 'eu', c);
-    for (const c of ['US', 'GB', 'CH', 'NO', 'IS', 'CA', 'AU']) assert.equal(geoAvailabilityRegion(c), 'intl', c);
+    // UK, Switzerland and Norway get batch 1 with duties on delivery; the US is on hold.
+    for (const c of ['GB', 'CH', 'NO']) assert.equal(geoAvailabilityRegion(c), 'import', c);
+    assert.equal(geoAvailabilityRegion('US'), 'us');
+    for (const c of ['IS', 'CA', 'AU', 'JP']) assert.equal(geoAvailabilityRegion(c), 'intl', c);
   });
 
   it('falls back with no header or an unknown country', () => {
@@ -35,7 +41,7 @@ describe('geoAvailabilityRegion', () => {
     assert.equal(geoAvailabilityRegion(visitorCountry(req('XX'))), 'fallback');
     assert.equal(geoAvailabilityRegion(visitorCountry(req('T1'))), 'fallback');
     assert.equal(geoAvailabilityRegion(visitorCountry(req('be'))), 'eu');
-    assert.equal(geoAvailabilityRegion(visitorCountry(req('US'))), 'intl');
+    assert.equal(geoAvailabilityRegion(visitorCountry(req('US'))), 'us');
   });
 });
 
@@ -107,19 +113,21 @@ describe('hasBatchOne', () => {
 describe('geoBannerLines', () => {
   it('shows only the visitor line when the country is known', () => {
     assert.deepEqual(geoBannerLines('eu', 'en'), [{region: 'eu', label: 'EU', text: 'In stock in Belgium, ships in a few days.'}]);
-    assert.deepEqual(geoBannerLines('intl', 'en'), [{region: 'intl', label: 'Outside the EU', text: 'Pre-order, ships March 2027.'}]);
+    assert.deepEqual(geoBannerLines('intl', 'en'), [{region: 'intl', label: 'Elsewhere', text: 'Pre-order, ships March 2027.'}]);
+    assert.deepEqual(geoBannerLines('import', 'en'), [{region: 'import', label: 'UK, CH, NO', text: 'In stock in Belgium, ships in a few days. Import VAT and duties are paid by you on delivery.'}]);
+    assert.deepEqual(geoBannerLines('us', 'en'), [{region: 'us', label: 'US', text: 'Not shipping to the US yet.'}]);
   });
 
   it('shows both lines, labelled, when the country is unknown', () => {
     assert.deepEqual(
       geoBannerLines('fallback', 'en').map((l) => `${l.label}: ${l.text}`),
-      ['EU: In stock in Belgium, ships in a few days.', 'Outside the EU: Pre-order, ships March 2027.'],
+      ['EU: In stock in Belgium, ships in a few days.', 'Elsewhere: Pre-order, ships March 2027.'],
     );
   });
 
   it('has a heading, labels and a dismiss label in every locale', () => {
     for (const [locale, words] of Object.entries(GEO_BANNER_COPY)) {
-      for (const key of ['title', 'eu', 'intl', 'dismiss'] as const) assert.ok(words[key].trim(), `${locale}.${key}`);
+      for (const key of ['title', 'eu', 'import', 'intl', 'us', 'dismiss'] as const) assert.ok(words[key].trim(), `${locale}.${key}`);
       assert.equal(geoBannerLines('fallback', locale as 'en' | 'nl' | 'fr').length, 2);
     }
   });
@@ -194,5 +202,27 @@ describe('every buy CTA asks the geo hook before saying "Pre-order"', () => {
   it('the root loader takes the ship line country from geoCountryForRequest', () => {
     assert.match(read('../root.tsx'), /geoAvailabilityRegion\(country\)/);
     assert.match(read('../root.tsx'), /geoCountryForRequest\(args\.request\)/);
+  });
+});
+
+describe('import and US regions', () => {
+  it('UK, CH and NO read the stock line plus the duties note; nowhere else has the note', () => {
+    for (const locale of ['en', 'nl', 'fr'] as const) {
+      assert.equal(geoShipText('import', locale), geoShipText('eu', locale));
+      assert.ok(geoDutiesNote('import', locale));
+      for (const r of ['eu', 'intl', 'us', 'fallback'] as const) assert.equal(geoDutiesNote(r, locale), null);
+    }
+    assert.equal(geoDutiesNote('import', 'en'), 'Import VAT and duties are paid by you on delivery.');
+  });
+  it('the US line makes no ship promise', () => {
+    for (const locale of ['en', 'nl', 'fr'] as const) assert.doesNotMatch(geoShipText('us', locale) ?? '', /20\d\d|ships? (in|by)/i);
+  });
+  it('stock regions are the EU and import regions only', () => {
+    assert.deepEqual((['eu', 'import', 'intl', 'us', 'fallback'] as const).filter(stockRegion), ['eu', 'import']);
+    assert.deepEqual(geoOfferAvailability('import'), {availability: 'https://schema.org/InStock'});
+    assert.equal(geoOfferAvailability('us'), null);
+  });
+  it('the phone bar has a short line for every region and locale', () => {
+    for (const locale of ['en', 'nl', 'fr'] as const) for (const r of ['eu', 'import', 'intl', 'us'] as const) assert.ok(geoBarText(r, locale, true).length <= 58, `${locale}.${r}`);
   });
 });

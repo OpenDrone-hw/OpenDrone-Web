@@ -1,6 +1,6 @@
 import {useRouteLoaderData} from 'react-router';
 import {copyText} from '~/lib/copy';
-import {GEO_BAR_SHORT, batchOnePromises, geoInStock, geoShipText} from '~/lib/geo-availability';
+import {GEO_BAR_SHORT, batchOnePromises, geoDutiesNote, geoInStock, geoShipText} from '~/lib/geo-availability';
 import type {RootLoader} from '~/root';
 import {shipMonth, shortShipPromise} from '~/lib/product-content';
 import {
@@ -39,6 +39,15 @@ export function useGeoShipLine(short = false): (promise: string | null | undefin
     if (!geo || !promise || !BATCH_ONE.has(promise) || geo.region === 'fallback') return null;
     return short ? GEO_BAR_SHORT[geo.locale][geo.region] : geoShipText(geo.region, geo.locale);
   };
+}
+
+/**
+ * The duties note of the visitor's region ("Import VAT and duties are paid by
+ * you on delivery." for UK, CH, NO), or null. Same source as the bar.
+ */
+export function useGeoDutiesNote(): string | null {
+  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  return geo ? geoDutiesNote(geo.region, geo.locale) : null;
 }
 
 /**
