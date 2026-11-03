@@ -19,6 +19,7 @@ type Order = {
   lines: Array<[string | null, number]>;
   more?: boolean;
   country?: string;
+  createdAt?: string;
 };
 
 function page(orders: Order[], next: string | null = null): Response {
@@ -30,6 +31,7 @@ function page(orders: Order[], next: string | null = null): Response {
           test: o.test ?? false,
           cancelledAt: o.cancelledAt ?? null,
           displayFinancialStatus: o.displayFinancialStatus,
+          ...(o.createdAt ? {createdAt: o.createdAt} : {}),
           shippingAddress: o.country ? {countryCodeV2: o.country} : null,
           lineItems: {
             pageInfo: {hasNextPage: o.more ?? false},
@@ -192,6 +194,21 @@ describe('fetchPaidUnitRuns', () => {
       ]),
     );
     assert.deepEqual(runs, {'OPENESC-2020': [{region: 'EU', units: 4}, {region: 'US', units: 2}, {region:'INT', units:4}, {region: 'EU', units: 1}]});
+  });
+});
+
+describe('fetchPaidUnitRuns across the region cutover (PAID_REGIONS_CUTOVER)', () => {
+  it('counts a non-EU order sold before the cutover as the EU unit it was allocated as; later ones in their own region', async () => {
+    assert.match(PAID_ORDERS_QUERY, /createdAt/);
+    const runs = await fetchPaidUnitRuns(ENV, '2026-09-21', SKUS, async () =>
+      page([
+        {displayFinancialStatus: 'PAID', country: 'GB', createdAt: '2026-10-20T09:00:00Z', lines: [['OPENESC-2020', 2]]},
+        {displayFinancialStatus: 'PAID', country: 'CA', createdAt: '2026-10-21T09:00:00Z', lines: [['OPENESC-2020', 1]]},
+        {displayFinancialStatus: 'PAID', country: 'GB', createdAt: '2026-11-05T09:00:00Z', lines: [['OPENESC-2020', 1]]},
+        {displayFinancialStatus: 'PAID', country: 'CA', createdAt: '2026-11-05T10:00:00Z', lines: [['OPENESC-2020', 1]]},
+      ]),
+    );
+    assert.deepEqual(runs, {'OPENESC-2020': [{region: 'EU', units: 3}, {region: 'NEAR', units: 1}, {region: 'INT', units: 1}]});
   });
 });
 

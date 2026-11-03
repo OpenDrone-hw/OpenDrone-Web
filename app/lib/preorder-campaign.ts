@@ -45,6 +45,31 @@ export function internationalRegion(country: string | null | undefined): Region 
   return regionOf(country) === 'NEAR' ? 'NEAR' : 'INT';
 }
 
+/**
+ * When paid stock became EU only (`paidRegions` ["EU"], founder 2026-11-03).
+ * An order created before it keeps the batch it was sold: then paid batch 1
+ * served the EU and every other non-US destination together (GB, CH and NO
+ * were INT), so such a unit is allocated as an EU unit was (`allocationRegion`)
+ * and its recorded promise stands. ISO 8601, compared as text with Shopify's
+ * `createdAt` (UTC, "Z").
+ * TODO(merge): set to the production deploy time of this change.
+ */
+export const PAID_REGIONS_CUTOVER = '2026-11-04T00:00:00Z';
+
+/** True for an order created before {@link PAID_REGIONS_CUTOVER}. */
+export function soldBeforeRegionCutover(createdAt: string | null | undefined, cutover = PAID_REGIONS_CUTOVER): boolean {
+  return Boolean(createdAt) && createdAt! < cutover;
+}
+
+/**
+ * The region a paid unit is allocated in: its shipping region, except a
+ * NEAR or INT unit sold before the cutover, which fills batches as the EU
+ * does (batch 1 first), the rule it was sold under.
+ */
+export function allocationRegion(region: Region, createdAt: string | null | undefined, cutover = PAID_REGIONS_CUTOVER): Region {
+  return isInternationalRegion(region) && soldBeforeRegionCutover(createdAt, cutover) ? 'EU' : region;
+}
+
 /** True for a region outside the EU and the US: NEAR and INT ship through
  *  Shopify's international market (destination currency, rates at checkout). */
 export function isInternationalRegion(region: Region): boolean {

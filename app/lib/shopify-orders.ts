@@ -37,7 +37,7 @@
  * guessing.
  */
 
-import {regionOf, shipsOnlyWithPaid, type CampaignConfig, type UnitRuns} from './preorder-campaign.ts';
+import {allocationRegion, regionOf, shipsOnlyWithPaid, type CampaignConfig, type UnitRuns} from './preorder-campaign.ts';
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
 const FRESH_MS = 60_000;
@@ -62,6 +62,7 @@ export const PAID_ORDERS_QUERY = `#graphql
         test
         cancelledAt
         displayFinancialStatus
+        createdAt
         shippingAddress { countryCodeV2 }
         lineItems(first: 250) {
           pageInfo { hasNextPage }
@@ -84,6 +85,7 @@ type OrdersPage = {
       test: boolean;
       cancelledAt: string | null;
       displayFinancialStatus: string;
+      createdAt?: string | null;
       shippingAddress?: {countryCodeV2: string | null} | null;
       lineItems: {
         pageInfo: {hasNextPage: boolean};
@@ -198,7 +200,8 @@ export async function fetchPaidUnitRuns(
       if (order.lineItems.pageInfo.hasNextPage) {
         throw new Error('shopify orders: an order exceeds 250 lines');
       }
-      const region = regionOf(order.shippingAddress?.countryCodeV2);
+      // A non-EU order sold before paid stock became EU only keeps its batch 1 units.
+      const region = allocationRegion(regionOf(order.shippingAddress?.countryCodeV2), order.createdAt);
       const lines = order.lineItems.nodes.map((l) => ({sku: l.sku, quantity: l.currentQuantity}));
       const march = config ? !shipsOnlyWithPaid(config, lines, stockUsed) : false;
       if (config && !march) {

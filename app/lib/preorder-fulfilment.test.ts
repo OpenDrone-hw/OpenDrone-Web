@@ -27,7 +27,7 @@ import {
 } from './preorder-fulfilment.ts';
 import {reconcilePreorders} from './preorder-ops.ts';
 import {opsStatus, resetOpsStatus} from './preorder-ops-status.ts';
-import {parseCampaignConfig} from './preorder-campaign.ts';
+import {PAID_REGIONS_CUTOVER, parseCampaignConfig} from './preorder-campaign.ts';
 import {BATCH_ATTRIBUTE, PREORDER_ATTRIBUTE, PREORDER_OWN_ATTRIBUTE, SHIP_PROMISE_ATTRIBUTE, SHIP_REGION_ATTRIBUTE} from './shopify-storefront.ts';
 import {resetPaidUnitsMemo} from './shopify-orders.ts';
 
@@ -167,6 +167,12 @@ function adminDouble(
     }
   }) as typeof fetch;
   return {fetcher, calls};
+}
+
+/** An order created after PAID_REGIONS_CUTOVER: batch 1 is EU only for it. */
+function afterCutover<T extends {createdAt: string}>(o: T): T {
+  o.createdAt = '2026-11-05T10:00:00Z';
+  return o;
 }
 
 describe('preorder fulfilment', () => {
@@ -758,7 +764,7 @@ describe('international allocation and checkout address changes', () => {
 
   it('puts a NEAR order whose lines were recorded for another region on the international review tag, never the US one', () => {
     for (const recorded of [{intPromise:true}, {}] as const) {
-      const changed = order({country:'CH', ...recorded, lines:[['OPENFC-LITE-2020',1]]});
+      const changed = afterCutover(order({country:'CH', ...recorded, lines:[['OPENFC-LITE-2020',1]]}));
       const tags = planPreorderHolds([changed],config)[0].tags;
       assert.ok(tags.includes(INT_REVIEW_TAG), JSON.stringify(recorded));
       assert.ok(!tags.includes(US_REVIEW_TAG), JSON.stringify(recorded));
@@ -772,7 +778,7 @@ describe('international allocation and checkout address changes', () => {
 
   it('flags actual UK orders for payment review regardless of their preorder source attributes', () => {
     for (const intPromise of [true, false]) {
-      const uk = order({country:'GB',intPromise,lines:[['OPENFC-LITE-2020',1]]});
+      const uk = afterCutover(order({country:'GB',intPromise,lines:[['OPENFC-LITE-2020',1]]}));
       const plan = planPreorderHolds([uk],config)[0];
       assert.ok(plan.tags.includes(UK_VAT_REVIEW_TAG));
       assert.equal(plan.hold.length,1);
@@ -856,13 +862,13 @@ describe('EU batch 1 stock ships now (founder 2026-11-03)', () => {
   // recorded a batch 1 promise is now allocated to the March batch, so it is
   // held with the international review and promise-mismatch tags for a
   // manual decision (the order keeps its recorded promise until then).
-  it('holds non-EU orders that recorded batch 1 for review; US orders as before', () => {
+  it('holds non-EU orders placed after the cutover that recorded batch 1 for review; US orders as before', () => {
     const make = () => [
       order({lines: [['OPENFC-LITE-2020', 1]], country: 'CH', intPromise: true, promise: 'ships late November 2026', batch: 'OPENFC-LITE-2020:1'}),
       order({lines: [['OPENFC-LITE-2020', 1]], country: 'US', usPromise: true, promise: 'ships by 31 March 2027 if funded', batch: 'OPENFC-LITE-2020:2'}),
       order({lines: [['OPENFC-LITE-2020', 1]], country: 'NO'}),
       withAttrs(order({lines: [['OPENFC-LITE-2020', 1]], country: 'CH'}), euStockLine),
-    ];
+    ].map(afterCutover);
     const [intLine, usLine, euPromiseToInt, euStockToInt] = make();
     const plans = new Map(planPreorderHolds([intLine, usLine, euPromiseToInt, euStockToInt], LIVE).map((p) => [p.orderId, p]));
     assert.deepEqual(plans.get(intLine.id)?.tags, ['preorder', 'batch:OPENFC-LITE-2020:2', INT_REVIEW_TAG, PROMISE_MISMATCH_TAG]);
@@ -932,5 +938,41 @@ describe('EU batch 1 stock ships now (founder 2026-11-03)', () => {
     assert.deepEqual([plan.orderId, plan.tags, plan.hold], [next.id, [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1'], []]);
     next.tags = plan.tags;
     assert.deepEqual(overfullBatches([filler, next], LIVE), []);
+  });
+});
+
+describe('orders sold before the region cutover keep their batch 1 (grandfathered, PAID_REGIONS_CUTOVER)', () => {
+  const NOW = parseCampaignConfig({
+    countFrom: '2026-09-21',
+    endsOn: '2026-12-31', shipsBy: '2027-03-31',
+    priceTiers: [{upTo: 100, off: 0.2}],
+    pendingShips: 'ships by 31 March 2027 if funded',
+    paidRegions: ['EU'],
+    skus: {'OPENFC-LITE-2020': {batches: [{units: 250, reserved: 50, paid: true, ships: 'ships late November 2026'}, {units: 250}]}},
+    usStock: {sku: 'OPENFC-LITE-2020', batch: 2},
+  });
+  const gbOld = () => {
+    const o = order({country: 'GB', intPromise: true, promise: 'ships late November 2026', batch: 'OPENFC-LITE-2020:1', lines: [['OPENFC-LITE-2020', 1]]});
+    o.createdAt = '2026-10-20T09:00:00Z';
+    return o;
+  };
+  const gbNew = () => afterCutover(order({country: 'GB', lines: [['OPENFC-LITE-2020', 1]]}));
+  it('an old GB order with batch 1 attributes stays in batch 1, with no promise-mismatch or destination review', () => {
+    const old = gbOld();
+    const plan = planPreorderHolds([old], NOW)[0];
+    assert.ok(plan.tags.includes('batch:OPENFC-LITE-2020:1'), plan.tags.join(','));
+    assert.ok(!plan.tags.includes(PROMISE_MISMATCH_TAG));
+    assert.ok(!plan.tags.includes(INT_REVIEW_TAG));
+  });
+  it('a new GB order takes the March batch', () => {
+    const plan = planPreorderHolds([gbNew()], NOW)[0];
+    assert.ok(plan.tags.includes('batch:OPENFC-LITE-2020:2'), plan.tags.join(','));
+  });
+  it('an old INT order (CA) also keeps batch 1; the cutover compares Shopify createdAt as ISO text', () => {
+    const ca = order({country: 'CA', intPromise: true, promise: 'ships late November 2026', batch: 'OPENFC-LITE-2020:1', lines: [['OPENFC-LITE-2020', 1]]});
+    ca.createdAt = '2026-11-03T23:59:59Z';
+    assert.ok(planPreorderHolds([ca], NOW)[0].tags.includes('batch:OPENFC-LITE-2020:1'));
+    ca.createdAt = PAID_REGIONS_CUTOVER;
+    assert.ok(planPreorderHolds([ca], NOW)[0].tags.includes('batch:OPENFC-LITE-2020:2'));
   });
 });
