@@ -13,8 +13,6 @@ import {
   variantDisplayName,
 } from '~/lib/product-content';
 import {usePendingShipTo} from '~/lib/pending-ship-to';
-import {UsHoldNote} from '~/components/UsHoldNote';
-import {usOnHold} from '~/lib/geo-availability';
 import {ShipChip, parcelPromise, soonerMonth, useGeoDutiesNote, useGeoParcel} from './ShipChip';
 import {CompatAlert} from '~/components/commerce/CompatAlert';
 import {compatForLines, compatLocale} from '~/lib/cart-compat';
@@ -483,13 +481,6 @@ export function CartAddedDialog() {
               {t('checkout_blocked', 'Not available in {country}.', {country: countryName(visitor ?? '')})}{' '}
               <Link to="/end-use">{t('checkout_blocked_link', 'End-Use Policy')}</Link>
             </p>
-          ) : notDirect === 'shops' && usOnHold(visitor, usRate) ? (
-            <>
-              <UsHoldNote locale={rootData?.geo?.locale} className="cart-added-parcel" />
-              <p className="cart-added-parcel">
-                <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
-              </p>
-            </>
           ) : notDirect === 'shops' ? (
             <p className="cart-added-parcel" role="note">
               {t('checkout_shops', 'Consumer checkout is not available for this destination.', {country: countryName(visitor ?? '')})}{' '}

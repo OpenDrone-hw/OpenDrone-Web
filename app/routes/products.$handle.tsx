@@ -105,7 +105,7 @@ import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
 import {reachableSteps, stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
-import {geoOfferAvailability, hasBatchOne, usOnHold, offerAvailability, offerRegionRestriction} from '~/lib/geo-availability';
+import {geoOfferAvailability, geoShipText, hasBatchOne, offerAvailability, offerRegionRestriction} from '~/lib/geo-availability';
 import {isInternationalQuote, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
 import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
@@ -116,7 +116,6 @@ import {ProductGhostTile} from '~/components/ProductGhostTile';
 import {StepBar} from '~/components/PreorderMeter';
 import {Availability, preorderWords} from '~/components/Availability';
 import {batchPhrase, currentBatch} from '~/lib/availability';
-import {UsHoldNote} from '~/components/UsHoldNote';
 import {ShipLine, useGeoDutiesNote, useGeoInStock} from '~/components/ShipChip';
 import {CART_COUNTRY_ACTION} from '~/lib/cart-client';
 import type {
@@ -2063,11 +2062,11 @@ function ProductPage() {
         </p>
       ) : notDirect ? (
         <>
-          {/* US sales on hold: "Not shipping to the US yet. Shops and
-              retailers: contact us." in place of the shops/trade link. */}
-          {notDirect === 'shops' && usOnHold(rootData?.visitorCountry, usRate) ? (
-            <UsHoldNote locale={rootData?.geo?.locale} className="product-buy-ship" linkClassName="product-buy-terms-link" />
-          ) : notDirect === 'shops' ? (
+          {/* US sales on hold: say so in the bar's words, with no ship promise. */}
+          {notDirect === 'shops' && rootData?.geo?.region === 'us' ? (
+            <p className="product-buy-ship" role="note">{geoShipText('us', rootData.geo.locale)}</p>
+          ) : null}
+          {notDirect === 'shops' ? (
             <p className="product-buy-ship">
               <Link prefetch="intent" to="/wholesale" className="product-buy-terms-link">
                 {say('product-chrome.buy_shops_trade', 'EU or US retailer enquiries')}

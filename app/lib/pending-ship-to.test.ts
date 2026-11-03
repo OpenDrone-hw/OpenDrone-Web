@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {describe, it, mock} from 'node:test';
-import {geoAvailabilityRegion, usOnHold, US_HOLD_COPY} from './geo-availability.ts';
+import {geoAvailabilityRegion} from './geo-availability.ts';
 import {PENDING_SHIP_TO_TIMEOUT_MS, getPendingShipTo, reconcilePendingShipTo, setPendingShipTo, withPendingShipTo} from './pending-ship-to.ts';
 import {cartQuoteCountry} from './shipping-rates.ts';
 
@@ -82,31 +82,5 @@ describe('pending Ship to (optimistic destination while a switch is in flight)',
     assert.equal(dialog.match(/withCountry\([^;]*, confirmed\)/g)?.length, 2);
     assert.doesNotMatch(dialog, /withCountry\([^;]*, visitor\)/);
     assert.match(dialog, /<input type="hidden" name="country" value=\{confirmed\} \/>/);
-  });
-});
-
-describe('US on hold: neutral no-checkout wording', () => {
-  it('only a US destination while US sales are closed', () => {
-    assert.equal(usOnHold('US', null), true);
-    assert.equal(usOnHold('us', undefined), true);
-    assert.equal(usOnHold('US', 12), false);
-    for (const country of ['GB', 'AQ', 'CA', 'BE', null]) assert.equal(usOnHold(country, null), false, String(country));
-  });
-  it('says "Not shipping to the US yet. Shops and retailers: contact us." in every locale', () => {
-    assert.deepEqual(US_HOLD_COPY.en, {line: 'Not shipping to the US yet.', trade: 'Shops and retailers:', link: 'contact us'});
-    for (const copy of Object.values(US_HOLD_COPY)) for (const v of Object.values(copy)) assert.ok(v.trim());
-    const note = read('../components/UsHoldNote.tsx');
-    assert.match(note, /\{copy\.line\} \{copy\.trade\}\{' '\}\s+<Link prefetch="intent" to="\/wholesale"/);
-  });
-  it('the PDP, cart and drawer show it for the US and keep the shops/trade text for other destinations', () => {
-    const pdp = read('../routes/products.$handle.tsx');
-    assert.match(pdp, /notDirect === 'shops' && usOnHold\(rootData\?\.visitorCountry, usRate\) \? \(\s+<UsHoldNote/);
-    assert.match(pdp, /\) : notDirect === 'shops' \? \(\s+<p className="product-buy-ship">[\s\S]{0,200}product-chrome\.buy_shops_trade/);
-    const cart = read('../routes/cart.$.tsx');
-    assert.match(cart, /throughShops && usOnHold\(country, usRate\) \? \(\s+<>\s+<UsHoldNote/);
-    assert.match(cart, /\) : throughShops \? \([\s\S]{0,600}checkout_shops_trade/);
-    const dialog = read('../components/CartAddedDialog.tsx');
-    assert.match(dialog, /notDirect === 'shops' && usOnHold\(visitor, usRate\) \? \(\s+<>\s+<UsHoldNote/);
-    assert.match(dialog, /\) : notDirect === 'shops' \? \([\s\S]{0,400}checkout_shops_trade/);
   });
 });
