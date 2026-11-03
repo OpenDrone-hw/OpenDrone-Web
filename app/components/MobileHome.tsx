@@ -171,6 +171,7 @@ export function MobileHome({
         </div>
       </section>
 
+
       <section
         className="home-mobile-build"
         id="build-guide"

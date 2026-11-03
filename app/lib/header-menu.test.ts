@@ -12,8 +12,14 @@ describe('header menu button', () => {
   it('lists every destination the bar used to show as text', () => {
     assert.deepEqual(
       HEADER_MENU_LINKS.map((l) => l.to),
-      ['/preorder', '/wholesale', '/newsletter', '/owners', '/support'],
+      ['/preorder', '/wholesale', '/newsletter', '/owners', '/guides', '/support'],
     );
+  });
+
+  it('does not list the firmware page (reached from Firmware guides and the footer)', () => {
+    assert.ok(!HEADER_MENU_LINKS.some((l) => l.to === '/guides/flash' || l.to === '/flash'));
+    assert.ok(!header.includes("url: '/guides/flash'"), 'phone drawer');
+    assert.ok(!header.includes("id: 'menu-flash'"), 'phone drawer');
   });
 
   it('has copy for each link', () => {

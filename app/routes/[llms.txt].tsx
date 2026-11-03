@@ -15,6 +15,7 @@ import {askEnabled, widgetEnabled} from '~/lib/support/chatfpv';
 import {copyText} from '~/lib/copy';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {servesRegion} from '~/lib/preorder-campaign';
+import {GUIDE_FAMILIES, guidePath} from '~/lib/guides';
 
 /**
  * A ship promise of a batch that serves EU addresses only (Belgian stock)
@@ -114,6 +115,13 @@ export async function loader({context, request}: Route.LoaderArgs) {
     })
     .join('\n');
 
+  const guides = GUIDE_FAMILIES.map((f) =>
+    [
+      `- ${f.board} (${f.firmware}): ${f.blurb}`,
+      ...f.pages.map((p) => `  - [${p.title}](${origin}${guidePath(f.id, p.slug)})`),
+    ].join('\n'),
+  ).join('\n');
+
   const body = `# OpenDrone
 
 > Open-Source FPV drone hardware, sold as assembled boards. Every OpenDrone
@@ -190,6 +198,13 @@ infer status from prose anywhere else.
 - [Where the boards are made](${origin}/production)
 - [All products](${origin}/products)
 - [Newsletter / release notes](${origin}/newsletter)
+
+## Firmware guides
+
+Beginner step-by-step guides for updating board firmware; the checked
+firmware files themselves are on ${origin}/guides/flash. Index: ${origin}/guides
+
+${guides}
 
 ## Support
 

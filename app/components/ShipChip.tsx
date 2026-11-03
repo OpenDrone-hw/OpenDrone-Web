@@ -1,4 +1,7 @@
+import {useRouteLoaderData} from 'react-router';
 import {copyText} from '~/lib/copy';
+import {batchOnePromises, geoShipText} from '~/lib/geo-availability';
+import type {RootLoader} from '~/root';
 import {shipMonth, shortShipPromise} from '~/lib/product-content';
 import {
   campaignDate,
@@ -12,6 +15,18 @@ import {
 import preorders from '../../content/preorders.json';
 
 const CAMPAIGN = parseCampaignConfig(preorders);
+const BATCH_ONE = batchOnePromises(preorders);
+
+/**
+ * The visitor's line in place of a batch 1 promise ("In stock in Belgium,
+ * ships in a few days." in the EU, "Pre-order, ships March 2027." elsewhere),
+ * or null to show the promise itself: another batch, or no known country
+ * (app/lib/geo-availability.ts).
+ */
+export function useGeoShipText(promise: string | null | undefined): string | null {
+  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  return geo && promise && BATCH_ONE.has(promise) ? geoShipText(geo.region, geo.locale) : null;
+}
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
@@ -100,10 +115,11 @@ export function ShipChip({
   ifFunded?: boolean;
 }) {
   const chip = shipChipText(promise, ifFunded);
+  const geoText = useGeoShipText(promise);
   if (!chip) return null;
   return (
     <small className={`ship-chip ${className}`} data-kind={chip.kind}>
-      {chip.text}
+      {(chip.kind === 'date' && geoText) || chip.text}
     </small>
   );
 }
@@ -178,13 +194,14 @@ export function ShipLine({
   className?: string;
 }) {
   const line = shipLine(campaign, promise);
+  const geoText = useGeoShipText(campaign?.shipPromise ?? promise);
   if (!line) return null;
   // An accessory whose date is another product's funding target says so, so a
   // buyer of props does not wonder why a flight controller sets the date.
   const lead = line.kind === 'target' && !campaign?.targetReached ? leadProduct(campaign?.shipsWith) : null;
   const shipLineEl = (
     <p className={`ship-line ${className}`.trim()} data-kind={line.kind}>
-      {line.text}
+      {(line.kind === 'date' && geoText) || line.text}
     </p>
   );
   if (!lead) return shipLineEl;

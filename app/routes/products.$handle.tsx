@@ -98,11 +98,13 @@ import {
   ACCESSORY_SPECS,
 } from '~/lib/product-content';
 import {useProductStatus} from '~/lib/coming-soon';
+import {StagingBenchText} from '~/lib/flasher/ui/status';
 import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
 import {reachableSteps, stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
+import {geoOfferAvailability, hasBatchOne, offerAvailability} from '~/lib/geo-availability';
 import {isInternationalQuote, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
 import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
@@ -1657,13 +1659,24 @@ function ProductPage() {
   const offerBase = productJsonLd.offers as Record<string, unknown> | undefined;
   if (offerBase && preorder) delete offerBase.priceValidUntil;
   const offerNodes = product.variants.nodes;
+  // A batch 1 offer says what the visitor's ship line says (geo-availability.ts);
+  // with no known country it keeps its PreOrder availability.
+  const geoOffer = geoOfferAvailability(rootData?.geo?.region ?? 'fallback');
+  if (offerBase && !content.bundle && selectedVariant && hasBatchOne(selectedVariant.campaign)) {
+    Object.assign(offerBase, {
+      availabilityStarts: undefined,
+      ...offerAvailability(
+        {availableForSale: selectedVariant.availableForSale, preorder: selectedVariant.availability === 'preorder', batchOne: true},
+        geoOffer,
+      ),
+    });
+  }
   if (offerBase && !content.bundle && offerNodes.length > 1) {
     const availabilityOf = (v: (typeof offerNodes)[number]) =>
-      !v.availableForSale
-        ? 'https://schema.org/OutOfStock'
-        : v.availability === 'preorder'
-          ? 'https://schema.org/PreOrder'
-          : 'https://schema.org/InStock';
+      offerAvailability(
+        {availableForSale: v.availableForSale, preorder: v.availability === 'preorder', batchOne: hasBatchOne(v.campaign)},
+        geoOffer,
+      );
     const amounts = offerNodes.map((v) => Number(v.price.amount));
     const currency = offerNodes[0].price.currencyCode;
     productJsonLd.offers = {
@@ -1678,7 +1691,8 @@ function ProductPage() {
         sku: isInternalSku(product.handle, v.title) ? undefined : (v.sku ?? undefined),
         price: v.price.amount,
         priceCurrency: v.price.currencyCode,
-        availability: availabilityOf(v),
+        availabilityStarts: undefined,
+        ...availabilityOf(v),
         url: v.selectedOptions.length
           ? `${SITE_ORIGIN}/products/${product.handle}?${new URLSearchParams(
               v.selectedOptions.map((o) => [o.name, o.value]),
@@ -3013,6 +3027,25 @@ function ProductPage() {
                 {say('product-chrome.firmware_freedom_link', 'Warranty')}
               </Link>
             </p>
+            {/* Flasher links: FC and ESC only. The 20x20 tier (OpenFC-Lite
+                Mini, OpenESC 20x20) has firmware; the 30x30 tier (OpenFC-Lite,
+                OpenESC 30x30) has none yet outside the staging bench build. /guides/flash has its own
+                Permissions-Policy, so this is a full document load. */}
+            {product.handle === 'openfc-lite' || product.handle === 'openesc' ? (
+              <p>
+                <Link prefetch="none" reloadDocument to="/guides/flash">
+                  {/^20/.test(activeTier.trim()) ? (
+                    say('product-chrome.firmware_flash_link', 'Flash firmware')
+                  ) : (
+                    // The staging bench build offers the 30x30 tier too (OpenFC-Lite, OpenESC 30x30).
+                    <StagingBenchText
+                      normal={say('product-chrome.firmware_flash_unavailable', 'Firmware download: not available yet')}
+                      bench={say('product-chrome.firmware_flash_link', 'Flash firmware')}
+                    />
+                  )}
+                </Link>
+              </p>
+            ) : null}
           </div>
           <FirmwareSupport
             firmwareProject={content.firmware.project}

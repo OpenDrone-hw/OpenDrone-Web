@@ -2547,6 +2547,12 @@ button.reset {
 .rich-content a {
   color: var(--color-gold-text-hover);
 }
+/* A button-styled link inside guide prose keeps the button's own text colour (it was gold on gold). */
+.rich-content a.btn-primary,
+.rich-content a.btn-primary:hover {
+  color: var(--color-on-accent);
+  text-decoration: none;
+}
 
 .rich-content h2,
 .rich-content h3 {
@@ -4032,6 +4038,16 @@ button.reset {
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
+/* A disabled secondary button must look disabled (it looked clickable, /flash 2026-11-02). */
+.btn-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-secondary:disabled:hover {
+  border-color: var(--color-border-strong);
+  background: transparent;
+}
+
 /* Stock indicator: green dot + label, replaces the awkward chip. */
 /* In place of a buy button for a visitor not sold direct ("Available
    through shops", "Opening in Germany soon"): a status line, not a CTA. */
@@ -5484,12 +5500,12 @@ section.chapter[data-centered] .chapter-body-col {
   border-top: 1px solid var(--color-border);
   opacity: 1;
   transform: translateY(0);
-  /* Skip layout+paint for chapters that are far offscreen - the PDP is a very
-     long page and browsers otherwise render every chapter on load. The
-     intrinsic-size placeholder keeps the scrollbar stable; the scroll-reveal
-     IO fires as normal once a chapter approaches the viewport. */
-  content-visibility: auto;
-  contain-intrinsic-size: auto 640px;
+  /* No content-visibility: auto here. Its fixed intrinsic-size placeholder
+     (640px) never matched a chapter's real height (280-1500px), so the
+     first render of a chapter near the viewport moved everything under it:
+     the related strip, the safety block and the footer jumped up to ~290px
+     (CLS 0.19 on /products/openesc, 2026-11-02). Every chapter is laid out
+     on load instead. */
 }
 /* Reading measure: chapter paragraphs never run the full rail. The
    whitespace right of the text is deliberate - it is what directs the eye
@@ -5497,16 +5513,6 @@ section.chapter[data-centered] .chapter-body-col {
    blocks (schematic, teardown, tables, card grids) are untouched. */
 .chapter p {
   max-width: 68ch;
-}
-
-/* content-visibility's paint containment clips descendants at the chapter's
-   box - but the teardown board art bleeds past its media column into the page
-   margin, and the frame-viewer backdrop over-bleeds into the neighbouring
-   sections. Those chapters give up the skip-render optimisation so the bleed
-   stays visible. */
-.chapter:has(.board-art),
-.chapter[data-backdrop] {
-  content-visibility: visible;
 }
 
 @media (min-width: 880px) {
@@ -19028,4 +19034,181 @@ summary,
   .account-hub-order-top .account-hub-btn {
     width: 100%;
   }
+}
+
+/* /flash step cards, hint, options and the staging notice. Unlayered on
+   purpose: the global `section { padding: 1rem 0 }` and the h2/p resets are
+   unlayered too and beat Tailwind's padding and margin utilities. Card padding follows
+   the spacing scale: 16px on phones, 24/32px from tablet up. Locked steps
+   collapse to their header. `.flash-ladder` only widens the shared
+   variant-ladder on /flash; the PDP never sets it. */
+.flash-staging-notice {
+  margin: var(--sp-4) 0 var(--sp-6);
+}
+.flash-staging-notice p + p {
+  margin-top: var(--sp-1);
+}
+.flash-step {
+  margin-top: var(--sp-4);
+  padding: var(--sp-4);
+}
+.flash-step > h2 {
+  margin: 0;
+}
+.flash-step.is-locked {
+  padding-block: var(--sp-3);
+}
+@media (min-width: 768px) {
+  .flash-step {
+    padding: var(--sp-5) var(--sp-6);
+  }
+  .flash-step.is-locked {
+    padding-block: var(--sp-4);
+  }
+}
+.flash-step-hint {
+  margin: 0 0 var(--sp-4);
+}
+.flash-ladder .variant-ladder-track {
+  gap: var(--sp-3);
+}
+.flash-ladder .variant-tier {
+  justify-content: center;
+  min-height: 4.5rem;
+  padding: var(--sp-4) var(--sp-5);
+}
+
+/* /flash readability (2026-11-02, "quite unreadable"). Unlayered like the rest of .flash-*: the global
+   reset's `code { background: #ddd }` and the p/li resets beat utilities. Wider column, site body size,
+   brighter secondary text, dark code chips, visible secondary-button states. */
+.flash-column {
+  max-width: 780px;
+}
+.flash-page {
+  --color-text-muted: color-mix(in srgb, var(--color-text) 78%, transparent);
+}
+.flash-page :where(.flash-step) :where(p, li, dd, dt, label, summary, legend) {
+  font-size: 16px;
+  line-height: 1.55;
+}
+.flash-page .flash-step :is(p, li, dd, label, summary).text-\[15px\],
+.flash-page .flash-step :is(p, li, dd, label, summary).text-\[14px\] {
+  font-size: 16px;
+}
+/* Also the firmware guides (.guide-page): same dark chip, so `diff all` and the targets read on the dark theme. */
+.flash-page code,
+.guide-page code {
+  background: color-mix(in srgb, var(--color-text) 10%, var(--color-bg-card));
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 1px 6px;
+}
+/* A code block keeps its own box: no chip inside it. */
+.guide-page pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+}
+.flash-page .btn-secondary {
+  width: auto;
+  border: 1px solid var(--color-border-strong);
+}
+.flash-page .btn-secondary:hover:not(:disabled) {
+  border-color: var(--color-text);
+}
+.flash-page :is(.btn-secondary, .btn-primary):focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+.flash-page .btn-primary {
+  width: auto;
+  white-space: nowrap;
+}
+.flash-page input[type='file'] {
+  font-size: 15px;
+  color: var(--color-text);
+}
+.flash-page input[type='file']::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.flash-page input[type='file']::file-selector-button:hover {
+  border-color: var(--color-text);
+}
+.flash-filename {
+  display: block;
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* /flash one-button FC flow (F). Unlayered like the other .flash-* rules. */
+.flash-lede {
+  margin: var(--sp-2) 0 0;
+  font-size: 16px;
+}
+.flash-update {
+  margin-top: var(--sp-5);
+  padding: var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+}
+@media (min-width: 768px) {
+  .flash-update {
+    padding: var(--sp-5) var(--sp-6);
+  }
+}
+.flash-update-title {
+  margin: 0 0 var(--sp-2);
+  font-size: 18px;
+}
+.flash-checklist {
+  margin: 0 0 var(--sp-4);
+  padding-left: 1.25rem;
+  list-style: disc;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.flash-note,
+.flash-stage {
+  margin: var(--sp-3) 0 0;
+  font-size: 16px;
+}
+.flash-stage {
+  font-weight: 600;
+}
+.flash-fail {
+  margin: var(--sp-3) 0 0;
+  padding: var(--sp-3);
+  border: 1px solid var(--color-error);
+  border-radius: var(--r-md);
+  font-size: 16px;
+}
+.flash-fail p {
+  margin: 0;
+}
+.flash-more {
+  margin-top: var(--sp-4);
+  font-size: 16px;
+}
+.flash-more > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.flash-more p {
+  margin: 0;
 }
