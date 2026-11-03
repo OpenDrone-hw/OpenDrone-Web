@@ -8,6 +8,7 @@
 
 import {EU_COUNTRY_CODES} from './eu-countries.ts';
 import {REGISTRATIONS, euSaleOpen, type RegistrationsFile} from './registrations.ts';
+import {COUNTRY_NAMES_EN} from './country-names.ts';
 
 /** Countries Incutec does not ship to. */
 export const BLOCKED_COUNTRIES: ReadonlySet<string> = new Set(['RU', 'BY', 'IR', 'KP', 'SY', 'CU']);
@@ -156,8 +157,11 @@ const optionsByLocale = new Map<string, Array<{code: string; name: string}>>();
 export function shipCountryOptions(locale = 'en'): Array<{code: string; name: string}> {
   let options = optionsByLocale.get(locale);
   if (!options) {
+    // A plain comparison on accent-stripped names, not localeCompare: the
+    // order must be the same in the Worker and in the browser (hydration).
+    const key = (name: string) => name.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
     options = SHIP_COUNTRY_CODES.map((code) => ({code, name: countryName(code, locale)})).sort((a, b) =>
-      a.name.localeCompare(b.name, locale),
+      key(a.name) < key(b.name) ? -1 : key(a.name) > key(b.name) ? 1 : 0,
     );
     optionsByLocale.set(locale, options);
   }
@@ -189,8 +193,13 @@ export function shipCountryPicker(
   };
 }
 
-/** The English country name for a code, falling back to the code. */
+/**
+ * The English country name for a code, falling back to the code. English
+ * names come from a fixed table (COUNTRY_NAMES_EN), never from Intl at render:
+ * the Worker's and the browser's ICU disagree on some names (React #418).
+ */
 export function countryName(code: string, locale = 'en'): string {
+  if (locale === 'en' && Object.hasOwn(COUNTRY_NAMES_EN, code)) return COUNTRY_NAMES_EN[code];
   try {
     return new Intl.DisplayNames([locale], {type: 'region'}).of(code) ?? code;
   } catch {
@@ -314,6 +323,24 @@ export function queryCountryCookie(request: Request): string | null {
   const code = isoCode(url.searchParams.get('country'));
   if (!code || shipCountryFromCookie(request.headers.get('Cookie')) === code) return null;
   return shipCountryCookie(code, url.protocol === 'https:');
+}
+
+/**
+ * The country the batch 1 ship line follows (app/lib/geo-availability.ts):
+ * where the visitor orders to. A blocked IP country, else `?country`, else
+ * the picked destination (`od_ship_country`), else `CF-IPCountry`. Unlike
+ * `shipCountryForRequest` it never guesses from `Accept-Language`: a browser
+ * language is no reason to say "in stock in Belgium", so a visitor with no
+ * known country keeps the batch promise (the `fallback` region).
+ */
+export function geoCountryForRequest(request: Request): string | null {
+  const blocked = blockedIpCountry(request);
+  if (blocked) return blocked;
+  return (
+    isoCode(new URL(request.url).searchParams.get('country')) ??
+    shipCountryFromCookie(request.headers.get('Cookie')) ??
+    isoCode(request.headers.get('CF-IPCountry'))
+  );
 }
 
 /**

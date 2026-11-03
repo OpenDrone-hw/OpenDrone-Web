@@ -15,6 +15,7 @@ import {AM32_GATES, type Am32Gates} from './am32-layout.ts';
 import {isPublished, type FirmwareRelease} from './manifest.ts';
 import {stagingBenchEnabled} from './staging.ts';
 import {
+  boardDirectInstallVerified,
   CHIP_PACKAGE_VERIFIED,
   ESC_TARGETS,
   FLASHER_TARGETS,
@@ -149,14 +150,17 @@ export type FcDirectWriteInput = {
 };
 
 /**
- * The direct-write gate. Allowed only if BOTH hardware flags are true, the
+ * The direct-write gate. Allowed only if BOTH hardware flags are true (or the
+ * staging switch, or a DIRECT_INSTALL_VERIFIED entry for this board's pinned SHA-256), the
  * release is published, the verified image belongs to the chosen board, the
  * chip package was read and matches, the image fits, and the firmware on the
  * board names exactly this target. Otherwise: copy method only.
  */
 export function fcDirectWriteGate(i: FcDirectWriteInput): GateResult {
   const gates = i.gates ?? FC_GATES;
-  const staging = stagingBenchEnabled();
+  // Per-board evidence (targets.ts DIRECT_INSTALL_VERIFIED) counts only for the chosen board's own pinned image.
+  const board = i.release.target === i.chosen.target && boardDirectInstallVerified(i.release);
+  const staging = stagingBenchEnabled() || board;
   const reasons: string[] = [];
   if (!(gates.CHIP_PACKAGE_VERIFIED || staging)) reasons.push('Chip package detection is not verified on hardware yet (CHIP_PACKAGE_VERIFIED=false).');
   if (!(gates.PICOBOOT_WRITE_VERIFIED || staging)) reasons.push('The direct write sequence is not verified on hardware yet (PICOBOOT_WRITE_VERIFIED=false).');

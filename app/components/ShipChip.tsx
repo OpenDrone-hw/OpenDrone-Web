@@ -1,6 +1,14 @@
 import {useRouteLoaderData} from 'react-router';
 import {copyText} from '~/lib/copy';
-import {batchOnePromises, geoShipText} from '~/lib/geo-availability';
+import {
+  GEO_BAR_SHORT,
+  batchOnePromises,
+  geoDeliveryLines,
+  geoDutiesNote,
+  geoInStock,
+  geoPreorderLine,
+  geoShipText,
+} from '~/lib/geo-availability';
 import type {RootLoader} from '~/root';
 import {shipMonth, shortShipPromise} from '~/lib/product-content';
 import {
@@ -27,6 +35,66 @@ export function useGeoShipText(promise: string | null | undefined): string | nul
   const geo = useRouteLoaderData<RootLoader>('root')?.geo;
   return geo && promise && BATCH_ONE.has(promise) ? geoShipText(geo.region, geo.locale) : null;
 }
+
+/**
+ * {@link useGeoShipText} as a function of the promise, for a caller that
+ * picks the promise after its hooks ran: `geoLine(promise)`. With `short`,
+ * the bar's phone line ("In stock, ships in days"), for chips.
+ */
+export function useGeoShipLine(short = false): (promise: string | null | undefined) => string | null {
+  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  return (promise) => {
+    if (!geo || !promise || !BATCH_ONE.has(promise) || geo.region === 'fallback') return null;
+    return short ? GEO_BAR_SHORT[geo.locale][geo.region] : geoShipText(geo.region, geo.locale);
+  };
+}
+
+/**
+ * The duties note of the visitor's region ("Import VAT and duties are paid by
+ * you on delivery." for UK, CH, NO), or null. Same source as the bar.
+ */
+export function useGeoDutiesNote(): string | null {
+  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  return geo ? geoDutiesNote(geo.region, geo.locale) : null;
+}
+
+/**
+ * True when the visitor's next unit of this SKU is batch 1 stock and their
+ * region reads it as in stock (the EU line): the buy button says "Add to
+ * cart", not "Pre-order", and the pre-order terms link drops. Same source as
+ * the bar and `useGeoShipText` (root loader `geo`), so the SSR and the
+ * hydrated page agree.
+ */
+export function useGeoInStock(
+  campaign: Pick<CampaignState, 'paidStock' | 'shipPromise'> | null | undefined,
+  promise?: string | null,
+): boolean {
+  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  // A variant without campaign state (a catalog that applies no campaign)
+  // that carries the batch 1 promise is batch 1 stock: the same promise the
+  // ship line reads as "In stock in Belgium", so the button agrees with it.
+  return geoInStock(geo?.region, campaign ?? (promise ? {paidStock: true, shipPromise: promise} : null), BATCH_ONE);
+}
+
+/**
+ * The parcel of a cart, read for the visitor's region (root loader `geo`):
+ * - `deliveryLines(lines)`: the lines whose "Delivery by" date counts
+ *   (`latestDeliveryBy`): not batch 1 stock in a stock region (it ships in a
+ *   few days), none for the US (on hold); other lines keep their own date;
+ * - `preorderSkus(lines)`: the SKUs of the lines that are pre-orders for this
+ *   visitor, for "Early bird preorder prices." (not batch 1 stock read as stock).
+ */
+export function useGeoParcel(): {
+  deliveryLines: <T extends {shipPromise?: string | null}>(lines: readonly T[]) => T[];
+  preorderSkus: (lines: ReadonlyArray<{shipPromise?: string | null; sku?: string | null}>) => Array<string | null | undefined>;
+} {
+  const region = useRouteLoaderData<RootLoader>('root')?.geo?.region ?? null;
+  return {
+    deliveryLines: (lines) => geoDeliveryLines(lines, region, BATCH_ONE),
+    preorderSkus: (lines) => lines.filter((l) => geoPreorderLine(l.shipPromise, region, BATCH_ONE)).map((l) => l.sku),
+  };
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**

@@ -295,13 +295,13 @@ describe('PINNED release assets (one line per board)', () => {
     size: 76543,
     channel: 'stable',
   };
-  it('ships with every board unpinned, so nothing is offered', () => {
-    for (const v of Object.values(PINNED)) assert.equal(v, null);
+  it('ships with only the OpenFC-Lite pinned; every other board offers nothing', () => {
+    for (const [t, v] of Object.entries(PINNED)) if (t !== 'OPENFC_LITE_RP2350B') assert.equal(v, null, t);
     assert.equal(FIRMWARE_MANIFEST.length, Object.keys(PINNED).length);
-    for (const r of FIRMWARE_MANIFEST) assert.ok(!isPublished(r), r.target);
+    for (const r of FIRMWARE_MANIFEST) assert.equal(isPublished(r), r.target === 'OPENFC_LITE_RP2350B', r.target);
+    assert.equal(FIRMWARE_MANIFEST.find((x) => x.target === 'OPENFC_LITE_MINI_RP2350A')!.published, false);
     for (const t of ['OPENFC_LITE_RP2350B', 'OPENFC_LITE_MINI_RP2350A'] as const) {
       const r = FIRMWARE_MANIFEST.find((x) => x.target === t)!;
-      assert.equal(r.published, false);
       assert.equal(r.channel, 'alpha', 'FC builds stay labelled alpha');
     }
   });
@@ -358,12 +358,14 @@ describe('PINNED release assets (one line per board)', () => {
       'https://github.com/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex#f',
       'https://github.com/OpenDrone-hw/x/releases/download/../../../evil/a.hex',
       'https://GITHUB.com/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex',
-      '/firmware/openfc/a.uf2',
+      '/firmware/openfc/a.uf2', // same-origin paths are a separate rule (isSameOriginFirmwareUrl), never isAllowedFirmwareUrl
       '//github.com/OpenDrone-hw/OpenESC-20x20/releases/download/v1.0.0/a.hex',
     ];
     assert.ok(isAllowedFirmwareUrl(goodPin.url));
     for (const url of urls) {
+      const sameOrigin = url.startsWith('/firmware/');
       assert.ok(!isAllowedFirmwareUrl(url), url);
+      if (sameOrigin) continue;
       assert.ok(!isPublished(pinToRelease('OPENESC_20_F421', {...goodPin, url})), url);
     }
   });

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {afterEach, describe, it} from 'node:test';
-import {parseCampaignConfig} from './preorder-campaign.ts';
-import {PAID_ORDERS_QUERY, fetchPaidUnitRuns, fetchPaidUnits, paidUnitRuns, paidUnits, resetPaidUnitsMemo} from './shopify-orders.ts';
+import {campaignState, parseCampaignConfig, type UnitRuns} from './preorder-campaign.ts';
+import {LINE_ITEMS_PAGE, ORDERS_PAGE_SIZE, PAID_ORDERS_QUERY, fetchPaidUnitRuns, fetchPaidUnits, paidUnitRuns, paidUnits, resetPaidUnitsMemo} from './shopify-orders.ts';
 
 afterEach(resetPaidUnitsMemo);
 
@@ -19,6 +19,8 @@ type Order = {
   lines: Array<[string | null, number]>;
   more?: boolean;
   country?: string;
+  /** Line attributes as the cart wrote them, for every line. */
+  attrs?: Array<{key: string; value: string}>;
 };
 
 function page(orders: Order[], next: string | null = null): Response {
@@ -33,7 +35,7 @@ function page(orders: Order[], next: string | null = null): Response {
           shippingAddress: o.country ? {countryCodeV2: o.country} : null,
           lineItems: {
             pageInfo: {hasNextPage: o.more ?? false},
-            nodes: o.lines.map(([sku, currentQuantity]) => ({sku, currentQuantity})),
+            nodes: o.lines.map(([sku, currentQuantity]) => ({sku, currentQuantity, ...(o.attrs ? {customAttributes: o.attrs} : {})})),
           },
         })),
       },
@@ -114,7 +116,7 @@ describe('fetchPaidUnits', () => {
       fetchPaidUnits(ENV, '2026-09-21', SKUS, async () =>
         page([{displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 1]], more: true}]),
       ),
-      /exceeds 250 lines/,
+      /exceeds 50 lines/,
     );
     await assert.rejects(
       fetchPaidUnits(ENV, '2026-09-21', SKUS, async () => Response.json({errors: [{message: 'access denied'}]})),
@@ -195,6 +197,37 @@ describe('fetchPaidUnitRuns', () => {
   });
 });
 
+describe('fetchPaidUnitRuns: non-EU lines sold batch 1 keep it (grandfatheredPaidLine)', () => {
+  const config = parseCampaignConfig({
+    countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-31',
+    priceTiers: [{upTo: 100, off: 0.2}],
+    pendingShips: 'ships by 31 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait',
+    paidRegions: ['EU'],
+    skus: {'OPENESC-2020': {batches: [{units: 250, reserved: 50, paid: true, ships: 'ships late November 2026'}, {units: 250}]}},
+  });
+  const oldInt = [{key: '_ship_region', value: 'INT'}, {key: '_batch', value: 'OPENESC-2020:1'}, {key: 'Preorder', value: 'ships late November 2026'}];
+  const newNear = [{key: '_ship_region', value: 'NEAR'}, {key: '_batch', value: 'OPENESC-2020:2'}, {key: 'Preorder', value: config.pendingShips}];
+  it('reads line attributes and counts a recorded batch 1 non-EU line as EU; new NEAR/INT lines in their own region', async () => {
+    assert.match(PAID_ORDERS_QUERY, /customAttributes \{ key value \}/);
+    const runs = await fetchPaidUnitRuns(ENV, '2026-09-21', SKUS, async () =>
+      page([
+        {displayFinancialStatus: 'PAID', country: 'GB', attrs: oldInt, lines: [['OPENESC-2020', 2]]},
+        {displayFinancialStatus: 'PAID', country: 'CA', attrs: oldInt, lines: [['OPENESC-2020', 1]]},
+        {displayFinancialStatus: 'PAID', country: 'GB', attrs: newNear, lines: [['OPENESC-2020', 1]]},
+        {displayFinancialStatus: 'PAID', country: 'CA', attrs: [{key: '_ship_region', value: 'INT'}, {key: '_batch', value: 'OPENESC-2020:2'}], lines: [['OPENESC-2020', 1]]},
+      ]),
+    config);
+    assert.deepEqual(runs, {'OPENESC-2020': [{region: 'EU', units: 3}, {region: 'NEAR', units: 1}, {region: 'INT', units: 1}]});
+    // The storefront's batch 1 count is EU only: grandfathered units take it, new NEAR/INT units do not.
+    const eu = campaignState(config.skus['OPENESC-2020'].batches, runs['OPENESC-2020'] as UnitRuns, config.pendingShips, [], null, 'EU');
+    assert.equal(eu.batch, 1);
+    assert.equal(eu.paidLeft, 197);
+    const near = campaignState(config.skus['OPENESC-2020'].batches, runs['OPENESC-2020'] as UnitRuns, config.pendingShips, [], null, 'NEAR');
+    assert.equal(near.batch, 2);
+    assert.equal(near.paidStock, false);
+  });
+});
+
 describe('fetchPaidUnitRuns with the campaign rule', () => {
   const config = parseCampaignConfig({
     countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-11',
@@ -228,5 +261,57 @@ describe('fetchPaidUnitRuns with the campaign rule', () => {
     const runs = await fetchPaidUnitRuns(ENV, '2026-09-21', SKUS, async () =>
       page([{displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 3], ['OPENFRAME-5', 1]]}]));
     assert.deepEqual(runs['OPENESC-2020'], [{region: 'EU', units: 3}]);
+  });
+});
+
+describe('PAID_ORDERS_QUERY cost', () => {
+  // Shopify's documented requested cost: a connection 2 + first x node cost,
+  // an object 1, a scalar 0. That formula overstates what Shopify enforces
+  // (the 250 x 250 query without line attributes ran in production under the
+  // 1,000-point cap), so the bound is relative to that query:
+  //   before: 2 + 250 x (1 + 1 + 2 + 250 x 1)       = 63,502
+  //   now:    2 + 250 x (1 + 1 + 2 + 50 x (1 + 1)) = 26,002
+  const cost = (orders: number, lines: number, perLine: number) => 2 + orders * (1 + 1 + 2 + lines * perLine);
+  it('pins the page sizes and never asks for more than the query that ran', () => {
+    assert.equal(ORDERS_PAGE_SIZE, 250);
+    assert.equal(LINE_ITEMS_PAGE, 50);
+    assert.match(PAID_ORDERS_QUERY, /lineItems\(first: 50\)/);
+    assert.match(PAID_ORDERS_QUERY, /nodes \{ sku currentQuantity customAttributes \{ key value \} \}/);
+    assert.equal(cost(250, 250, 1), 63_502);
+    assert.equal(cost(ORDERS_PAGE_SIZE, LINE_ITEMS_PAGE, 2), 26_002);
+    assert.ok(cost(ORDERS_PAGE_SIZE, LINE_ITEMS_PAGE, 2) <= cost(250, 250, 1));
+  });
+});
+
+describe('fetchPaidUnitRuns grandfathering edge cases', () => {
+  const config = parseCampaignConfig({
+    countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-31',
+    priceTiers: [{upTo: 100, off: 0.2}],
+    pendingShips: 'ships by 31 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait',
+    paidRegions: ['EU'],
+    skus: {'OPENESC-2020': {batches: [{units: 250, reserved: 50, paid: true, ships: 'ships late November 2026'}, {units: 250}]}},
+  });
+  it('keeps a line without _batch by its paid-batch promise (Preorder or _ship_promise)', async () => {
+    const runs = await fetchPaidUnitRuns(ENV, '2026-09-21', SKUS, async () =>
+      page([
+        {displayFinancialStatus: 'PAID', country: 'CA', attrs: [{key: '_ship_region', value: 'INT'}, {key: 'Preorder', value: 'ships late November 2026'}], lines: [['OPENESC-2020', 2]]},
+        {displayFinancialStatus: 'PAID', country: 'GB', attrs: [{key: '_ship_region', value: 'INT'}, {key: '_ship_promise', value: 'ships late November 2026'}], lines: [['OPENESC-2020', 1]]},
+        {displayFinancialStatus: 'PAID', country: 'CA', attrs: [{key: '_ship_region', value: 'INT'}, {key: 'Preorder', value: config.pendingShips}], lines: [['OPENESC-2020', 1]]},
+      ]),
+    config);
+    assert.deepEqual(runs, {'OPENESC-2020': [{region: 'EU', units: 3}, {region: 'INT', units: 1}]});
+  });
+  it('counts a partially refunded grandfathered line by its current quantity', async () => {
+    const old = [{key: '_ship_region', value: 'INT'}, {key: '_batch', value: 'OPENESC-2020:1'}];
+    const runs = await fetchPaidUnitRuns(ENV, '2026-09-21', SKUS, async () =>
+      page([
+        {displayFinancialStatus: 'PARTIALLY_REFUNDED', country: 'GB', attrs: old, lines: [['OPENESC-2020', 1]]},
+        {displayFinancialStatus: 'PAID', country: 'BE', lines: [['OPENESC-2020', 2]]},
+      ]),
+    config);
+    // The refunded order keeps 1 unit: batch 1 has 197 of 200 left.
+    assert.deepEqual(runs, {'OPENESC-2020': [{region: 'EU', units: 3}]});
+    const eu = campaignState(config.skus['OPENESC-2020'].batches, runs['OPENESC-2020'] as UnitRuns, config.pendingShips, [], null, 'EU');
+    assert.equal(eu.paidLeft, 197);
   });
 });

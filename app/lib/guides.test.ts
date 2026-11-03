@@ -141,11 +141,14 @@ test('ESC guides never tell a beginner to flash with our tool or a third-party f
   }
 });
 
-test('FC install guide says the firmware is not published yet and direct install is off', () => {
+test('FC install guide: the Lite Mini file is not published yet, direct install is OpenFC-Lite only, never "switched off"', () => {
   const loc = findGuide('flash-openfc', 'flash');
   assert.ok(loc);
   assert.ok(loc.page.callouts.some((c) => /not published yet/i.test(c.title)));
-  assert.ok(loc.page.sections?.some((s) => /switched off/i.test(s.heading)));
+  assert.ok(loc.page.sections?.some((s) => /OpenFC-Lite only/i.test(s.heading)));
+  assert.doesNotMatch(JSON.stringify(loc.page), /switched off/i);
+  assert.doesNotMatch(JSON.stringify(buildHowToJsonLd(loc, 'https://opendrone.be')), /switched off/i);
+  for (const slug of ['boot-mode', 'recovery']) assert.doesNotMatch(JSON.stringify(findGuide('flash-openfc', slug)?.page), /switched off/i, slug);
   assert.ok(findGuide('flash-openfc', 'recovery')?.page.callouts.some((c) => /not published yet/i.test(c.title)));
 });
 

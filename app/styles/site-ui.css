@@ -6,7 +6,7 @@
 /* Wholesale controls override the legacy unlayered form reset. */
 .wholesale-page :where(input, select, textarea) {
   margin: 8px 0 0;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-field-border);
   border-radius: var(--r-xs);
   padding: 10px 12px;
   font-size: 16px;
@@ -693,10 +693,6 @@
     margin-bottom: 0.5rem;
   }
 }
-.catalog-filter-head,
-.collection .page-title {
-  scroll-margin-top: calc(var(--header-height) + 2rem);
-}
 
 /* One wrapping row of quick filters over the grid. */
 .catalog-chips {
@@ -762,10 +758,6 @@
   transition-delay: var(--rv-d, 0ms);
 }
 
-/* /preorder in-page targets (#stack, #targets, #questions) land below the header pill. */
-.preorder-page [id] {
-  scroll-margin-top: calc(var(--header-height) + 2rem);
-}
 
 /* ============================================
    Footer: one sans size for links, company block and language lines
@@ -862,7 +854,7 @@
 .footer-sheet-heading {
   margin-bottom: 8px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--ink);
@@ -910,7 +902,7 @@
   padding: 0 6px;
   background: var(--color-bg);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ink);
@@ -945,7 +937,7 @@
   min-width: 2.6em;
   margin-right: 0.35em;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.04em;
   color: var(--ink);
   opacity: 0.6;
@@ -966,7 +958,7 @@
 }
 .footer-foot-left { display: flex; align-items: flex-end; gap: 28px; min-width: 0; }
 .footer-foot-meta { padding-bottom: 12px; font-size: 12px; color: var(--color-text-muted); }
-.footer-copyright { margin-top: 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; }
+.footer-copyright { margin-top: 4px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; }
 
 /* Drawing view: the board outline in gold ink, sized to the title block. */
 .footer-view {
@@ -1334,7 +1326,7 @@
 .hero-build-part.is-active { background: var(--color-gold-soft); }
 .hero-build-check { position: relative; display: grid; place-items: center; width: 20px; height: 36px; cursor: pointer; }
 .hero-build-check input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.hero-build-check > span { display: grid; place-items: center; width: 16px; height: 16px; border: 1px solid var(--color-border); border-radius: 4px; color: transparent; }
+.hero-build-check > span { display: grid; place-items: center; width: 16px; height: 16px; border: 1px solid var(--color-field-border); border-radius: 4px; color: transparent; }
 .hero-build-check input:checked + span { background: var(--color-gold-fill); border-color: var(--color-gold-fill); color: var(--color-on-accent); }
 .hero-build-check input:focus-visible + span { outline: 2px solid var(--color-focus); outline-offset: 3px; }
 .hero-build-inspect { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 0; color: inherit; background: none; border: 0; text-align: left; cursor: pointer; }
@@ -1356,7 +1348,7 @@ a.hero-build-add { text-decoration: none; }
 .hero-build-add:hover { background: var(--color-gold-fill-hover); }
 .hero-build-add:disabled { opacity: 0.45; cursor: not-allowed; }
 .hero-build-loading { display: block; padding: 20px; background: var(--pod-bg-strong); border-radius: 12px; pointer-events: auto; }
-.home-mobile-build { scroll-margin-top: 90px; padding: 0; }
+.home-mobile-build { padding: 0; }
 .hero-build-sizes { display: flex; gap: 6px; margin-bottom: 12px; }
 .hero-build-sizes button { flex: 1; padding: 10px; border-radius: 999px; border: 1px solid var(--color-border); background: transparent; color: var(--color-text); font-size: 12px; cursor: pointer; }
 .hero-build-sizes button[aria-pressed="true"] { background: var(--color-gold-fill); color: var(--color-on-accent); border-color: var(--color-gold-fill); }
@@ -1426,10 +1418,6 @@ a.hero-build-add { text-decoration: none; }
   padding-bottom: calc(1rem + env(safe-area-inset-bottom));
 }
 
-/* Scrolling the pinned image into view must clear the fixed header. */
-.in-the-box-figure {
-  scroll-margin-top: calc(var(--header-height) + 20px);
-}
 
 /* Phones in portrait, and phones on their side (844px wide, 390px tall). */
 @media (max-width: 767px), (max-height: 500px) and (orientation: landscape) {
@@ -1982,7 +1970,7 @@ a.hero-build-add { text-decoration: none; }
   background: var(--color-gold-fill);
   color: var(--color-on-accent);
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-align: center;
@@ -2020,8 +2008,10 @@ body:has(.test-banner) .avail-bar {
   right: 0.25rem;
   top: 50%;
   transform: translateY(-50%);
-  width: 1.75rem;
-  height: 1.75rem;
+  /* 24px: inside the 26px strip (overflow hidden), so the inset focus ring is never clipped; still the
+     WCAG 2.2 minimum target. */
+  width: 1.5rem;
+  height: 1.5rem;
   display: grid;
   place-items: center;
   padding: 0;
@@ -2032,8 +2022,15 @@ body:has(.test-banner) .avail-bar {
   cursor: pointer;
 }
 .avail-bar-close:focus-visible { outline: 2px solid var(--color-on-accent); outline-offset: -2px; }
-body:has(.test-banner) { --test-banner-h: 26px; }
-body:has(.avail-bar) { --avail-bar-h: 26px; }
+/* On :root, not body: html's scroll-padding-top reads them too. */
+:root:has(.test-banner) { --test-banner-h: 26px; }
+:root:has(.avail-bar) { --avail-bar-h: 26px; }
+/* Focus Not Obscured (2.4.11): anchored and focused elements scroll to below the
+   top strips and the fixed header. */
+/* The one header offset for anchors, scrollIntoView and focus (WCAG 2.4.11):
+   no element adds a scroll-margin-top on top of it. */
+html { scroll-padding-top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px) + var(--header-height, 0px) + 8px); }
+#main-content:focus { outline: none; }
 body:has(.test-banner),
 body:has(.avail-bar) {
   padding-top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px));
@@ -2066,6 +2063,15 @@ body:has(.avail-bar) .site-header {
 .app-shop-note a { color: var(--color-gold-text); }
 .app-shop-state { color: var(--color-text); font-size: 1.125rem; }
 .app-shop-problem { border: 1px solid var(--color-error); color: var(--color-error); border-radius: 8px; padding: 0.625rem 0.875rem; margin: 0 0 1rem; }
+/* Cart mismatch warning: advisory, so gold rather than error red; the icon and heading carry it, not the colour alone. */
+.co-compat { border: 1px solid var(--color-gold); border-left-width: 4px; background: var(--color-gold-soft); border-radius: 8px; padding: 0.75rem 1rem; margin: 0 0 1.25rem; color: var(--color-text); font-size: 0.9375rem; }
+.co-compat-title { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.5rem; font-size: 1rem; font-weight: 600; }
+.co-compat-title svg { flex: none; color: var(--color-gold-text); }
+.co-compat-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.625rem; }
+.co-compat-list p { margin: 0; }
+.co-compat-list a { color: var(--color-gold-text); text-decoration: underline; text-underline-offset: 2px; }
+.co-compat-list a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: 2px; }
+.co-compat-note { margin: 0.625rem 0 0; color: var(--color-text-muted); font-size: 0.8125rem; }
 .app-shop-cart, .app-shop-order { display: grid; gap: 1.5rem; }
 .app-shop-lines { width: 100%; border-collapse: collapse; }
 .app-shop-lines td { padding: 0.75rem 0; border-bottom: 1px solid var(--color-border); }
@@ -2078,7 +2084,7 @@ body:has(.avail-bar) .site-header {
 .app-shop-form { display: grid; gap: 1.25rem; padding: 1.25rem; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: 12px; }
 .app-shop-field { display: grid; gap: 0.5rem; border: 0; padding: 0; margin: 0; }
 .app-shop-field > span, .app-shop-field > legend { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-muted); padding: 0; }
-.app-shop-field input[type="email"] { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: 8px; padding: 0.75rem 0.875rem; font: inherit; }
+.app-shop-field input[type="email"] { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-field-border); border-radius: 8px; padding: 0.75rem 0.875rem; font: inherit; }
 .app-shop-field input[type="email"]:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .app-shop-rail { display: flex; align-items: center; gap: 0.625rem; padding: 0.625rem 0.75rem; border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer; }
 .app-shop-rail:has(input:checked) { border-color: var(--color-gold); background: var(--color-gold-soft); }
@@ -2113,7 +2119,7 @@ body:has(.avail-bar) .site-header {
 .co-field > span em { font-style: normal; color: var(--color-text-dim); }
 .co-field input, .co-field select {
   width: 100%; box-sizing: border-box; min-height: 3rem; padding: 0 0.875rem; font: inherit; font-size: 1rem;
-  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--r-md);
+  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-field-border); border-radius: var(--r-md);
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 .co-field select { appearance: none; padding-right: 2.5rem; cursor: pointer;
@@ -2195,7 +2201,7 @@ body:has(.avail-bar) .site-header {
 .co-combo { position: relative; }
 .co-combo > label > span { font-size: 0.8125rem; color: var(--color-text-muted); }
 .co-combo input { width: 100%; box-sizing: border-box; min-height: 3rem; padding: 0 0.875rem; font: inherit; font-size: 1rem;
-  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--r-md); }
+  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-field-border); border-radius: var(--r-md); }
 .co-combo input:focus-visible { outline: none; border-color: var(--color-gold); box-shadow: 0 0 0 3px var(--color-gold-soft); }
 .co-suggest { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin: 0.25rem 0 0; padding: 0.25rem; list-style: none; max-height: 18rem; overflow-y: auto;
   background: var(--color-bg-card); border: 1px solid var(--color-border-strong); border-radius: var(--r-md); box-shadow: 0 8px 24px rgb(0 0 0 / 0.25); }
@@ -2233,7 +2239,7 @@ body:has(.avail-bar) .site-header {
 @media (max-width: 370px) {
   .acct-sections { mask-image: linear-gradient(to right, #000 85%, transparent); -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); }
 }
-.acct-section { scroll-margin-top: calc(var(--header-height, 5rem) + 1rem); margin: 0 0 2.5rem; }
+.acct-section { margin: 0 0 2.5rem; }
 .acct-section-title { margin: 0 0 1rem; font-size: 1.375rem; font-weight: 600; letter-spacing: -0.01em; }
 .acct-card-title { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .acct-check { display: flex; align-items: flex-start; gap: 0.625rem; min-height: 2.75rem; align-items: center; cursor: pointer; }
@@ -2274,3 +2280,71 @@ body:has(.avail-bar) .site-header {
 .co-changed ul, .co-parcels { margin: 0; padding: 0; list-style: none; }
 .co-parcels { display: grid; gap: 0.375rem; margin-top: 0.75rem; font-size: 0.8125rem; }
 .co-parcels li { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+
+/* Location notice (LocationNotice): the ship time for a new destination, once per change. Fixed, out of
+   the flow, empty until an effect fills it, so no layout shift. Bottom right on wide screens, bottom with
+   16px gutters on phones, lifted above the cart's fixed checkout bar while that bar shows. Calm: the card
+   colour with a gold edge, under the menu drawer and dialogs. No slide or fade (nothing to reduce for
+   prefers-reduced-motion); it wraps within calc(100vw - 32px), so nothing clips at 320px or 200% zoom. */
+.location-notice {
+  position: fixed;
+  right: 1.5rem;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  z-index: 70;
+  max-width: min(24rem, calc(100vw - 32px));
+  pointer-events: none;
+}
+.location-notice[data-open] {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 0.5rem 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+  border-left: 3px solid var(--color-gold);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+.location-notice-text {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.location-notice-close {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  margin: -0.25rem 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.location-notice-close:hover { color: var(--color-text); }
+.location-notice-close:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 0; }
+/* Phones: at the top, under the header and its strips, so it never covers
+   the buy button or the cart's checkout bar at the bottom. */
+@media (max-width: 640px) {
+  .location-notice {
+    right: 16px;
+    left: 16px;
+    top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px) + var(--header-height) + 1.5rem);
+    bottom: auto;
+    max-width: none;
+  }
+}
+@media (min-width: 641px) and (max-width: 1023px) {
+  body:has(.cart-bar:not(.is-hidden)) .location-notice {
+    bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+}

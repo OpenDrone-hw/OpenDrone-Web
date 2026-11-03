@@ -13,6 +13,8 @@
   "line_decrease_aria": "Decrease quantity",
   "line_increase_aria": "Increase quantity",
   "line_remove_named": "Remove {name}",
+  "line_removed": "Removed {name}",
+  "line_qty_announce": "Quantity {count}, {name}",
   "register_subtotal": "Subtotal",
   "checkout_cta": "Checkout",
   "checkout_updating": "Updating cart…",
@@ -86,5 +88,6 @@
   "ship_to_group_world": "Other countries",
   "ship_to_failed": "Could not change the country. Try again.",
   "international_note": "Shipping and any sales tax are confirmed at checkout. You may pay import duties, taxes and customs fees on delivery.",
+  "international_note_near": "Shipping is confirmed at checkout.",
   "check_non_eu_only": "An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country."
 }

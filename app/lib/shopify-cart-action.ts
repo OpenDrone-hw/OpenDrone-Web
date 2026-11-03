@@ -1,21 +1,26 @@
 import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
 import {appCommerceEnabled} from './commerce/app-api.ts';
-import {campaignDate, mixedShipPromise, regionOf, shipGroupKey, shipLabelFromPromise, shipOrderDay, type Region} from './preorder-campaign.ts';
+import {campaignDate, internationalRegion, isInternationalRegion, mixedShipPromise, regionOf, shipGroupKey, shipLabelFromPromise, shipOrderDay, type Region} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
-import {destinationForRequest, isInternationalQuote, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
+import {destinationForRequest, geoCountryForRequest, isInternationalQuote, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
 import {wholesaleCodes, wholesaleMainCode} from './wholesale-codes.ts';
 import {cartAttributesFromForm, ORDER_ATTRIBUTE} from './growth/attribution.ts';
 import {internationalShippingFrom} from './international-shipping.ts';
+import {GEO_AVAILABILITY_COPY, hasBatchOne} from './geo-availability.ts';
 import {
   BATCH_ATTRIBUTE,
   PREORDER_ATTRIBUTE,
   DELIVERY_BY_ATTRIBUTE,
   DELIVERY_BY_OWN_ATTRIBUTE,
+  DUTIES_ATTRIBUTE,
+  DUTIES_VALUE,
   PREORDER_OWN_ATTRIBUTE,
+  SHIP_PROMISE_ATTRIBUTE,
   SHIP_REGION_ATTRIBUTE,
+  SHIPPING_ATTRIBUTE,
   storefrontRequest,
   type CartLineInput,
   type CartLineUpdate,
@@ -288,7 +293,7 @@ export function checkoutOpen(env: CartEnv & Partial<Pick<Env, 'COMMERCE_SOURCE' 
  * promise, so checkout and the order confirmation show the delivery time the
  * product page showed. A preorder without a promise is not sold.
  */
-export function lineAttributes(variant: CatalogVariant, destination: Region | boolean = 'EU'): CartLineInput['attributes'] {
+export function lineAttributes(variant: CatalogVariant, destination: Region | boolean = 'EU', euStockKnown = true): CartLineInput['attributes'] {
   if (variant.availability !== 'preorder') return undefined;
   const promise = variant.ship_promise?.trim();
   if (!promise) throw fail('Product is unavailable.', 409);
@@ -299,12 +304,39 @@ export function lineAttributes(variant: CatalogVariant, destination: Region | bo
   // The batch the promise belongs to (hidden at checkout), so the hold pass
   // can flag a line paid at a batch boundary and allocated the next batch.
   const batch = variant.campaign ? `${variant.campaign.shipsWith ?? variant.sku}:${variant.campaign.batch}` : null;
+  // An EU line from batch 1 stock in Belgium ships now: checkout and the
+  // confirmation read the site's EU line, no preorder promise or delivery
+  // date. The promise stays hidden for the cart and the hold pass. Only for
+  // a known country (`euStockKnown`, `geoCountryForRequest`): the site shows
+  // a visitor with none the batch promise, so checkout does too.
+  if (region === 'EU' && euStockKnown && euStock(variant)) {
+    return [
+      {key: SHIPPING_ATTRIBUTE, value: GEO_AVAILABILITY_COPY.en.eu},
+      {key: SHIP_PROMISE_ATTRIBUTE, value: promise},
+      ...(batch ? [{key: BATCH_ATTRIBUTE, value: batch}] : []),
+    ];
+  }
   return [
     {key: PREORDER_ATTRIBUTE, value: promise},
     ...(deliveryDay ? [{key: DELIVERY_BY_ATTRIBUTE, value: campaignDate(deliveryDay)}] : []),
     ...(region !== 'EU' ? [{key: SHIP_REGION_ATTRIBUTE, value: region}] : []),
+    // UK, CH, NO (March batch): the buyer pays import VAT and duties on delivery (shown at checkout and on the order).
+    ...(region === 'NEAR' ? [{key: DUTIES_ATTRIBUTE, value: DUTIES_VALUE}] : []),
     ...(batch ? [{key: BATCH_ATTRIBUTE, value: batch}] : []),
   ];
+}
+
+/** True for a variant whose next EU unit is paid batch 1 stock in Belgium. */
+export function euStock(variant: Pick<CatalogVariant, 'campaign'>): boolean {
+  return hasBatchOne(variant.campaign);
+}
+
+/** The ship promise a line's attributes carry: `Preorder`, or the hidden
+ *  promise of an EU stock line. */
+function promiseOf(attributes: NonNullable<CartLineInput['attributes']>): string | null {
+  return attributes.find((a) => a.key === PREORDER_ATTRIBUTE)?.value
+    ?? attributes.find((a) => a.key === SHIP_PROMISE_ATTRIBUTE)?.value
+    ?? null;
 }
 
 /** A US destination buys a preorder with a campaign state: the catalog for
@@ -488,10 +520,14 @@ function withOrderPromise(
   orderPromise: string,
   orderDeliveryBy: string | null,
 ): NonNullable<CartLineInput['attributes']> {
-  const own = attributes.find((a) => a.key === PREORDER_ATTRIBUTE)?.value ?? '';
+  const own = promiseOf(attributes) ?? '';
   const ownDeliveryBy = attributes.find((a) => a.key === DELIVERY_BY_ATTRIBUTE)?.value;
+  // An EU stock line in a parcel that waits for a later batch is a preorder
+  // again: it states the order's promise, not "in stock".
+  const stock = !attributes.some((a) => a.key === PREORDER_ATTRIBUTE);
   return [
-    ...attributes.filter(a => !orderDeliveryBy || a.key !== DELIVERY_BY_ATTRIBUTE).map((a) => (a.key === PREORDER_ATTRIBUTE ? {...a, value: orderPromise} : a)),
+    ...(stock ? [{key: PREORDER_ATTRIBUTE, value: orderPromise}] : []),
+    ...attributes.filter(a => (!orderDeliveryBy || a.key !== DELIVERY_BY_ATTRIBUTE) && a.key !== SHIPPING_ATTRIBUTE).map((a) => (a.key === PREORDER_ATTRIBUTE ? {...a, value: orderPromise} : a)),
     ...(orderDeliveryBy ? [{key: DELIVERY_BY_ATTRIBUTE, value: orderDeliveryBy}] : []),
     ...(ownDeliveryBy ? [{key: DELIVERY_BY_OWN_ATTRIBUTE, value: ownDeliveryBy}] : []),
     {key: PREORDER_OWN_ATTRIBUTE, value: own},
@@ -516,6 +552,7 @@ export function rederiveLines(
   catalog: Catalog,
   destination: Region | boolean,
   globalComingSoon: boolean,
+  euStockKnown = true,
 ): {
   refresh: CartLineUpdate[];
   sync: CartLineUpdate[];
@@ -545,12 +582,15 @@ export function rederiveLines(
     }
     const total = totals.get(line.merchandiseId);
     totals.set(line.merchandiseId, {variant, quantity: (total?.quantity ?? 0) + line.quantity});
-    const attributes = lineAttributes(variant, region) ?? [];
-    const promise = attributes.find((a) => a.key === PREORDER_ATTRIBUTE)?.value ?? null;
+    const attributes = lineAttributes(variant, region, euStockKnown) ?? [];
+    const promise = promiseOf(attributes);
     const attributeRegion = attributes.find((a) => a.key === SHIP_REGION_ATTRIBUTE)?.value ?? null;
     const deliveryBy = attributes.find((a) => a.key === DELIVERY_BY_ATTRIBUTE)?.value ?? null;
     const batch = attributes.find((a) => a.key === BATCH_ATTRIBUTE)?.value ?? null;
-    if (promise !== line.shipPromise || attributeRegion !== (line.shipRegion ?? null) || deliveryBy !== (line.deliveryBy ?? null)) {
+    // An EU stock line drops its `Delivery by` but keeps its promise: moving
+    // a line to that form is silent (`sync`), not a changed ship date.
+    const euStockForm = attributes.some((a) => a.key === SHIPPING_ATTRIBUTE);
+    if (promise !== line.shipPromise || attributeRegion !== (line.shipRegion ?? null) || (!euStockForm && deliveryBy !== (line.deliveryBy ?? null))) {
       refresh.push({id: line.id, quantity: line.quantity, attributes});
       continue;
     }
@@ -560,7 +600,7 @@ export function rederiveLines(
     // that names another batch under the same promise (a line without one
     // keeps none: the hold pass then reads its promise text).
     const wantedDeliveryBy = wanted && orderDeliveryBy !== deliveryBy ? orderDeliveryBy : null;
-    if (wanted !== (line.orderPromise ?? null) || wantedDeliveryBy !== (line.orderDeliveryBy ?? null) || line.availability != null || (line.batch != null && batch !== line.batch)) {
+    if (euStockForm !== Boolean(line.euStock) || wanted !== (line.orderPromise ?? null) || wantedDeliveryBy !== (line.orderDeliveryBy ?? null) || line.availability != null || (line.batch != null && batch !== line.batch)) {
       sync.push({
         id: line.id,
         quantity: line.quantity,
@@ -573,7 +613,7 @@ export function rederiveLines(
 
 /** The allocation region of a consumer destination. */
 export function regionForDestination(destination: ShippingQuote | null): Region {
-  return isUsQuote(destination) ? 'US' : isInternationalQuote(destination) ? 'INT' : 'EU';
+  return isUsQuote(destination) ? 'US' : isInternationalQuote(destination) ? internationalRegion(destination?.country) : 'EU';
 }
 
 /** Where the checkout intent sends the buyer back to the cart, and why. */
@@ -679,6 +719,9 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
   );
   const us = isUsQuote(destination);
   const region = regionForDestination(destination);
+  // EU stock wording only where the site shows it: the same country source
+  // as the root loader's `geo` (no `Accept-Language` guess).
+  const euStockKnown = geoCountryForRequest(request) != null;
 
   try {
     const existingId = dependencies.getCartId?.();
@@ -779,7 +822,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       }
       // Every line's promise and region attribute are derived again for the
       // destination region, whatever the cart was built for.
-      const {refresh, sync, totals, unavailable, euOnly} = rederiveLines(cart, catalog, region, globalComingSoon);
+      const {refresh, sync, totals, unavailable, euOnly} = rederiveLines(cart, catalog, region, globalComingSoon, euStockKnown);
       if (unavailable) throw fail('One or more cart items are no longer available.', 409);
       if (region !== 'EU' && euOnly) return redirect(`/cart?check=${CART_CHECK.usEuOnly}`);
       // A cart whose buyer country is not the destination (built for
@@ -856,7 +899,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         : null;
       if (!variant?.merchandise_id) throw fail('Product is unavailable.', 409);
       if (region !== 'EU' && !usSellable(variant)) throw fail(region === 'US' ? US_EU_ONLY_MESSAGE : 'This item ships from stock in Belgium to EU addresses only. International orders use the preorder batch.', 409);
-      const attributes = lineAttributes(variant, region);
+      const attributes = lineAttributes(variant, region, euStockKnown);
       return attributes
         ? {merchandiseId: variant.merchandise_id, quantity, attributes}
         : {merchandiseId: variant.merchandise_id, quantity};
@@ -870,9 +913,9 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         // added. Reprice the session cart and refresh its earlier promises,
         // so the drawer shows the selected country's totals and batch.
         if (destination?.kind === 'direct' && dependencies.setCountry &&
-          existing.country !== destination.country && (existing.country != null || region === 'INT')) {
+          existing.country !== destination.country && (existing.country != null || isInternationalRegion(region))) {
           await dependencies.setCountry(existingId, destination.country);
-          const {refresh} = rederiveLines(existing, catalog, region, globalComingSoon);
+          const {refresh} = rederiveLines(existing, catalog, region, globalComingSoon, euStockKnown);
           if (refresh.length) {
             if (!dependencies.updateCartLines) throw new Error('shopify: update dependency missing');
             await dependencies.updateCartLines(existingId, refresh);
@@ -988,6 +1031,9 @@ export async function replanCart(
     setCountry?: (cartId: string, countryCode: string) => Promise<void>;
     getCart?: (cartId: string) => Promise<ShopifyCart | null>;
     updateCartLines?: (cartId: string, lines: CartLineUpdate[]) => Promise<ShopifyCart>;
+    /** False when the request names no country `geoCountryForRequest` knows:
+     *  lines keep the batch promise, as the page shows. Default true. */
+    euStockKnown?: boolean;
   },
 ): Promise<{cart: ShopifyCart; catalog: Catalog; change: CartReplanChange}> {
   const region = regionForDestination(destination);
@@ -1002,7 +1048,7 @@ export async function replanCart(
     current = (await dependencies.getCart(cart.id)) ?? current;
   }
   const catalog = await dependencies.fetchCatalog(region, destination.country);
-  const {refresh} = rederiveLines(current, catalog, region, env.PUBLIC_COMING_SOON !== '0');
+  const {refresh} = rederiveLines(current, catalog, region, env.PUBLIC_COMING_SOON !== '0', dependencies.euStockKnown ?? true);
   if (refresh.length && dependencies.updateCartLines) {
     current = await dependencies.updateCartLines(cart.id, refresh);
   }

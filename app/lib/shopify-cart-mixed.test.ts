@@ -61,6 +61,7 @@ const RAW: Catalog = {
 const CATALOGS: Record<Region, Catalog> = {
   EU: applyCampaign(RAW, CONFIG, {}, NOW, 'EU'),
   US: applyCampaign(RAW, CONFIG, {}, NOW, 'US'),
+  NEAR: applyCampaign(RAW, CONFIG, {}, NOW, 'NEAR'),
   INT: applyCampaign(RAW, CONFIG, {}, NOW, 'INT'),
 };
 
@@ -81,8 +82,9 @@ function fakeShop() {
       sku,
       image: null,
       selectedOptions: [],
-      shipPromise: attr(input, 'Preorder'),
+      shipPromise: attr(input, 'Preorder') ?? attr(input, '_ship_promise'),
       deliveryBy: attr(input, 'Delivery by'),
+      ...(attr(input, '_ship_promise') ? {euStock: true} : {}),
       shipRegion: attr(input, '_ship_region'),
       batch: attr(input, '_batch'),
       total: {amount: '80.00', currencyCode: 'EUR'},

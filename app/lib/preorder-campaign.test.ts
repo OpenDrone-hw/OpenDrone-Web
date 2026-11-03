@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import {describe, it, test} from 'node:test';
 import type {Catalog} from './catalog.ts';
 import {
+  stackPaidShips,
   allocateUnit,
   applyCampaign,
   batchFill,
@@ -831,7 +832,9 @@ describe('committed dates derive from content/preorders.json', () => {
     assert.equal(funded.deliveryBy, '2027-04-15');
     assert.equal(funded.deliveryByUS, '2027-04-30');
     assert.equal(early.deliveryBy, '2026-11-30');
-    assert.deepEqual(early.regions, ['EU', 'INT']);
+    // Belgian paid stock ships to the EU only, set once in paidRegions (founder 2026-11-03); NEAR and INT take March.
+    assert.deepEqual(config.paidRegions, ['EU']);
+    assert.deepEqual(early.regions, ['EU']);
     assert.equal(early.ships, 'ships late November 2026');
   });
 
@@ -843,7 +846,10 @@ describe('committed dates derive from content/preorders.json', () => {
     for (const file of ['openfc-lite', 'openesc']) {
       assert.equal(json(`content/products/${file}.json`).statusNote, early.ships, file);
     }
-    assert.ok(read('content/copy/timeline.json').includes((early.ships ?? '').replace(/^ships /, 'Ships ')));
+    // The timeline names where batch 1 ships (paidRegions: EU only) and that the rest take the March batch.
+    const batch1 = (JSON.parse(read('content/copy/timeline.json')) as Record<string, string>).event_batch1_paid_detail;
+    assert.ok(batch1.includes('Ships from Belgium to EU addresses; outside the EU, orders take the March 2027 batch.'), batch1);
+    assert.ok(!/international|UK|Switzerland|Norway/i.test(batch1), batch1);
   });
 
   it('states the same dates in the shipping page and the US terms in en, nl and fr', () => {
@@ -891,12 +897,14 @@ describe('reserved units on a paid batch', () => {
     const config = parseCampaignConfig(
       JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')),
     );
-    // 35 per SKU (commerce seed 80), less the units released to order #1507 (DroneFactory, founder 2026-10-30).
+    // Batch 1 sells 200 per SKU (founder 2026-11-03, 200 to be confirmed by
+    // Kristian): 50 held back. Order #1504 counts as a paid order once paid,
+    // so no extra reserve for it (it would count twice); same for #1507 (paid 2026-11-02).
     const reserved: Record<string, number> = {
-      'OPENFC-LITE-2020': 35,
-      'OPENFC-LITE-3030': 23,
-      'OPENESC-2020': 35,
-      'OPENESC-3030': 34,
+      'OPENFC-LITE-2020': 50,
+      'OPENFC-LITE-3030': 50,
+      'OPENESC-2020': 50,
+      'OPENESC-3030': 50,
     };
     for (const [sku, held] of Object.entries(reserved)) {
       const [paid, funding] = config.skus[sku].batches;
@@ -1039,5 +1047,20 @@ describe('batch-1-only orders (founder 2026-11-01)', () => {
     assert.equal(only([['OPENFC-LITE-2020', 2], ['OPENRX-LITE', 0]]), true);
     assert.equal(only([['ACC-ANT-T', 4]]), true);
     assert.equal(only([['ACC-ANT-T', 2]], {'ACC-ANT-T': 3}), false);
+  });
+});
+
+describe('the /preorder page stack lane by region (stackPaidShips)', () => {
+  const live = parseCampaignConfig(JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')));
+  it('shows the paid stack ship date to EU buyers only: UK/CH/NO, INT and US see no November lane', () => {
+    assert.equal(stackPaidShips('EU', 'ships late November 2026', live.paidRegions), 'ships late November 2026');
+    for (const region of ['NEAR', 'INT', 'US'] as const) {
+      assert.equal(stackPaidShips(region, 'ships late November 2026', live.paidRegions), null, region);
+    }
+  });
+  it('the preorder route reads it with the catalog region', () => {
+    const src = fs.readFileSync(new URL('../routes/preorder.tsx', import.meta.url), 'utf8');
+    assert.match(src, /stackPaidShips\(context\.catalog\.region, paidShips, CAMPAIGN\.paidRegions\)/);
+    assert.match(src, /const international = isInternationalRegion\(context\.catalog\.region\)/);
   });
 });

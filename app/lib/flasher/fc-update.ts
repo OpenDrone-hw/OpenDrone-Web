@@ -70,6 +70,8 @@ export function bootselPickErrorText(e: unknown): string {
 }
 export const BOOT_HINT = 'Hold the BOOT button on the board while plugging in USB, then Continue.';
 export const GATED_TEXT = 'Direct install is off for now. Use Other ways.';
+/** A board without direct install (no per-board evidence yet), refused before anything is downloaded or restarted. */
+export const boardGatedText = (t: FlasherTarget) => `Direct install isn't available for the ${short(t)} yet. Use Other ways.`;
 
 export type Prepared = {
   target: FlasherTarget;
@@ -86,13 +88,20 @@ export type PicobootLike = {
   exclusive(on: boolean): Promise<void>;
   exitXip(): Promise<void>;
   findInstalledTargets(start: number, end: number): Promise<string[]>;
-  flashImage(image: Uf2Image, onProgress: (phase: FlashPhase, done: number, total: number) => void): Promise<void>;
+  flashImage(
+    image: Uf2Image,
+    onProgress: (phase: FlashPhase, done: number, total: number) => void,
+    release?: {target: string; sha256: string},
+  ): Promise<void>;
   close(): Promise<void>;
 };
 
 export type FlowDeps = {
-  /** Direct-write gates on (flags || staging switch). The UI disables the button when false; checked again here. */
-  gatesOn: () => boolean;
+  /**
+   * Direct-write gates on (flags || staging switch || per-board evidence). Without a board: for any
+   * OpenFC (the UI disables the button when false). With the identified board: for that board.
+   */
+  gatesOn: (board?: FlasherTarget) => boolean;
   openSerial: () => Promise<RebootConnection>;
   prepare: (target: FlasherTarget) => Promise<Prepared>;
   /** An already-permitted RP2350 Boot device once it appears (up to timeoutMs), or null. */
@@ -144,6 +153,7 @@ export async function startUpdate(deps: FlowDeps): Promise<FlowResult> {
     if (!board) {
       return {kind: 'refused', text: `Not installing: this board is ${info.boardName || info.targetName || 'unknown'}, not an OpenFC-Lite or Lite Mini.`};
     }
+    if (!deps.gatesOn(board)) return {kind: 'refused', text: boardGatedText(board)};
     deps.onStage('check');
     try {
       prepared = await deps.prepare(board);
@@ -173,6 +183,7 @@ export async function continueUpdate(
   if (!deps.gatesOn()) return {kind: 'refused', text: GATED_TEXT};
   const board = ctx.board;
   if (!board) return failed('usb', 'Choose which board it is first.', null, null);
+  if (!deps.gatesOn(board)) return {kind: 'refused', text: boardGatedText(board)};
   // The device comes from the click handler (pickBootsel), never from a picker opened here: by now the
   // click's activation may have expired (bench, 2026-11-02).
   if (ctx.device == null) return failed('usb', 'Click Continue to choose "RP2350 Boot".', board, ctx.prepared);
@@ -223,10 +234,11 @@ export async function continueUpdate(
     if (!gate.allowed) return {kind: 'refused', text: refusalText(board, pkg, installed, gate.reasons)};
     deps.onStage('install', 0);
     try {
+      // The gate gets the digest computed from the downloaded bytes (already checked against the pin), not the pin itself.
       await pb.flashImage(prepared.image, (phase, done, total) => {
         if (phase === 'reboot') deps.onStage('restart');
         else deps.onStage('install', Math.round((done / Math.max(1, total)) * 100));
-      });
+      }, {target: prepared.release.target, sha256: prepared.sha256});
     } catch (e) {
       return failed('install', errText(e), board, prepared);
     }

@@ -31,7 +31,9 @@ import {CAMPAIGN} from '~/lib/catalog-client';
 import {
   campaignDate,
   datedShipParts,
+  isInternationalRegion,
   latestShipDay,
+  stackPaidShips,
   shortCampaignDate,
   tiersFor,
   type CampaignState,
@@ -126,14 +128,16 @@ export async function loader({context}: Route.LoaderArgs) {
   // A US buyer (US sales open): no paid batch ships to the US, so every
   // part waits for its funding target and the page drops the stack lane.
   const us = context.catalog.region === 'US';
-  const international = context.catalog.region === 'INT';
+  // NEAR (UK, CH, NO) and INT read the international terms and get no
+  // paid stock (batch 1 is EU only), so neither sees the stack's paid ship date.
+  const international = isInternationalRegion(context.catalog.region);
   // The stack's paid batch carries the one fixed ship date on this page.
   const paidShips =
     Object.values(CAMPAIGN.skus)
       .flatMap((entry) => entry.batches)
       .find((batch) => batch.paid && batch.ships?.trim())
       ?.ships?.trim() ?? null;
-  const stackShips = us || international ? null : paidShips;
+  const stackShips = stackPaidShips(context.catalog.region, paidShips, CAMPAIGN.paidRegions);
 
   const rows: Row[] = toCards(catalog).flatMap((card) =>
     card.variants.nodes.flatMap((v): Row[] => {

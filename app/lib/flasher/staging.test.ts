@@ -322,21 +322,23 @@ describe('switch ON: flags pass, matching still refuses', () => {
 
 describe('staging manifest exists only with the switch on', () => {
   const MINI_FILE = 'OpenFC-Lite-Mini_betaflight-2026.12.0-alpha-d593400_cfg-a2b6666_OPENFC_LITE_MINI_RP2350A.uf2';
-  it('off: production manifest only, all unpublished, no staging URL accepted', () => {
+  it('off: production manifest only (the Lite same-origin pin, the rest unpublished), no staging URL accepted', () => {
     for (const [h, env] of [
       ['localhost', undefined],
       ['opendrone.be', ON],
     ] as const) {
       setup(h, env);
-      for (const t of ['OPENFC_LITE_MINI_RP2350A', 'OPENESC_20_F421', 'OPENFC_LITE_RP2350B', 'OPENESC_30X30']) {
+      for (const t of ['OPENFC_LITE_MINI_RP2350A', 'OPENESC_20_F421', 'OPENESC_30X30']) {
         assert.ok(fm.releasesFor(t).every((r) => !man.isPublished(r) && r.url === null), `${h} ${t}`);
       }
+      assert.deepEqual(fm.releasesFor('OPENFC_LITE_RP2350B'), [fm.pinToRelease('OPENFC_LITE_RP2350B', fm.LITE_PIN)]);
+      assert.ok(fm.releasesFor('OPENFC_LITE_RP2350B').every((r) => man.isPublished(r) && r.url?.startsWith('/firmware/openfc-lite/')));
       assert.equal(man.isStagingFirmwareUrl('/firmware-staging/' + MINI_FILE), false);
       const leaked = fm.pinToRelease('OPENFC_LITE_MINI_RP2350A', fm.STAGING_PINNED.OPENFC_LITE_MINI_RP2350A!);
       assert.equal(man.isPublished(leaked), false);
     }
     assert.deepEqual(fm.PINNED, {
-      OPENFC_LITE_RP2350B: null,
+      OPENFC_LITE_RP2350B: fm.LITE_PIN,
       OPENFC_LITE_MINI_RP2350A: null,
       OPENESC_20_F421: null,
       OPENESC_30X30: null,

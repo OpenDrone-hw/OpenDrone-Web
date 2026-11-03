@@ -7,8 +7,8 @@
   "title": "Firmware guides",
   "lead": "Step-by-step guides for updating the firmware on your OpenDrone boards, written for a first-timer. Where a step is not available yet, the guide says so. Every step says what you should see, and every page ends with what to do if it does not work.",
   "flash_cta": "Open the firmware page",
-  "flash_cta_note": "The firmware page gives you the checked Betaflight file for your flight controller to drag onto the board, once it is released. ESC install is coming after bench verification.",
-  "flash_cta_note_direct": "In Chrome or Edge, the firmware page installs Betaflight with one button: Update firmware. Copying the file onto the board is the fallback.",
+  "flash_cta_note": "The firmware page gives you the checked Betaflight file for your flight controller to drag onto the board: OpenFC-Lite now, Lite Mini once it is released. ESC install is coming after bench verification.",
+  "flash_cta_note_direct": "In Chrome or Edge, the firmware page installs Betaflight with one button: Update firmware. OpenFC-Lite for now, Lite Mini later. Copying the file onto the board is the fallback.",
   "safety_heading": "Before you start, every time",
   "safety_points": [
     "Take the propellers off.",

@@ -17,7 +17,7 @@ test('the availability bar is server-rendered on every page except /flash and /g
 test('bar text: the visitor line, both lines when unknown, and a shorter phone line', () => {
   assert.equal(geoBarText('eu', 'en', false), 'EU: In stock in Belgium, ships in a few days');
   assert.equal(geoBarText('eu', 'en', true), 'EU: In stock, ships in days');
-  assert.equal(geoBarText('fallback', 'en', false), 'EU: In stock in Belgium, ships in a few days · Outside the EU: Pre-order, ships March 2027');
+  assert.equal(geoBarText('fallback', 'en', false), 'EU: In stock in Belgium, ships in a few days · Elsewhere: Pre-order, ships March 2027');
   assert.ok(geoBarText('eu', 'en', true).length < geoBarText('eu', 'en', false).length);
   const css = read('../styles/site-ui.css');
   assert.match(css, /\.avail-bar-short \{ display: none; \}/);
@@ -26,9 +26,11 @@ test('bar text: the visitor line, both lines when unknown, and a shorter phone l
 
 test('a dismissed bar is never painted and reserves no height (pre-paint style)', () => {
   const root = read('../root.tsx');
-  assert.match(root, /\.avail-bar\{display:none!important\}body\{--avail-bar-h:0px!important\}/);
+  assert.match(root, /\.avail-bar\{display:none!important\}:root\{--avail-bar-h:0px!important\}/);
   const css = read('../styles/site-ui.css');
-  assert.match(css, /body:has\(\.avail-bar\) \{ --avail-bar-h: 26px; \}/);
+  // On :root, so html's scroll-padding-top reads it too.
+  assert.match(css, /:root:has\(\.avail-bar\) \{ --avail-bar-h: 26px; \}/);
+  assert.match(css, /:root:has\(\.test-banner\) \{ --test-banner-h: 26px; \}/);
   assert.match(css, /padding-top: calc\(var\(--test-banner-h, 0px\) \+ var\(--avail-bar-h, 0px\)\);/);
 });
 

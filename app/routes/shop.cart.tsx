@@ -34,6 +34,9 @@ import {billingArgs} from '~/lib/commerce/billing';
 import {addressForCountry, defaultAddress, pickCountry, requestCountry} from '~/lib/commerce/address-fields';
 import {addressProvider} from '~/lib/commerce/address-provider';
 import {expressConfig, type ExpressResult} from '~/lib/commerce/payment-provider';
+import {cartCompatAlert, compatLocale} from '~/lib/cart-compat';
+import {readLocaleCookie} from '~/lib/i18n';
+import {CompatAlert} from '~/components/commerce/CompatAlert';
 
 export const meta: Route.MetaFunction = () => [{title: 'Checkout'}, {name: 'robots', content: 'noindex, nofollow'}];
 
@@ -75,7 +78,15 @@ export async function loader(args: Route.LoaderArgs) {
       headers.append('Set-Cookie', await writeOptions({...options, seen: seenLines(base.quote.lines)}, context.env));
     }
   }
-  return data({...base, changes, accountEmail: account?.email ?? null, prefill: prefill ? {name: prefill.name, line1: prefill.line1, line2: prefill.line2, postal_code: prefill.postal_code, city: prefill.city, phone: prefill.phone} : null}, {headers});
+  // Parts that do not work together: a warning in the visitor's chosen language (the language cookie), never a block.
+  const locale = compatLocale(readLocaleCookie(request.headers.get('Cookie')));
+  let compat: ReturnType<typeof cartCompatAlert> = {locale, heading: '', note: '', issues: []};
+  try {
+    compat = cartCompatAlert((base.quote?.lines ?? []).flatMap((l) => (l.sku ? [l.sku] : [])), base.country, locale);
+  } catch (err) {
+    console.error('cart-compat', err);
+  }
+  return data({...base, changes, compat, accountEmail: account?.email ?? null, prefill: prefill ? {name: prefill.name, line1: prefill.line1, line2: prefill.line2, postal_code: prefill.postal_code, city: prefill.city, phone: prefill.phone} : null}, {headers});
 }
 
 async function cartLoader({context, request}: Route.LoaderArgs, savedCountry: string | null) {
@@ -200,7 +211,7 @@ function fillEmail(value: string) {
 }
 
 export default function ShopCart() {
-  const {lines, country, quote, problem, images, code, suggest, express, accountEmail, prefill, changes} = useLoaderData<typeof loader>();
+  const {lines, country, quote, problem, images, code, suggest, express, accountEmail, prefill, changes, compat} = useLoaderData<typeof loader>();
   const [fill, setFill] = useState<AddressFill | null>(null);
   const actionData = useActionData<{problem?: string}>();
   const navigation = useNavigation();
@@ -228,6 +239,7 @@ export default function ShopCart() {
           {shown}
         </p>
       ) : null}
+      {quote ? <CompatAlert alert={compat} /> : null}
       {quote ? (
         <div className="co">
           <Form method="post" className="co-form" id="checkout" onSubmit={() => trackCheckoutClick({amount: (quote.total_minor / 100).toFixed(2), currencyCode: quote.currency}, 'cart')}>

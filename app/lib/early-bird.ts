@@ -17,7 +17,8 @@
  * Qualifies: placed before the preorder run closes (`endsOn`, end of day in
  * Brussels), paid or partly refunded, not cancelled, and a preorder (the
  * `preorder` tag, or a line with the `Preorder` cart attribute for an order
- * the tag job has not reached yet).
+ * the tag job has not reached yet, or `_ship_promise`: an EU line from batch
+ * 1 stock, which ships unheld and untagged).
  *
  * Nothing is stored here. Kept free of worker APIs and path aliases so
  * node:test can load it directly.
@@ -70,7 +71,7 @@ export function ineligibility(order: EarlyBirdOrder, endsOn: string): Ineligible
   if (!PAID_STATUSES.has(order.displayFinancialStatus ?? '')) return 'not-paid';
   const preorder =
     order.tags.includes('preorder') ||
-    order.lineItems.nodes.some((line) => line.customAttributes.some((a) => a.key === 'Preorder' && a.value));
+    order.lineItems.nodes.some((line) => line.customAttributes.some((a) => (a.key === 'Preorder' || a.key === '_ship_promise') && a.value));
   if (!preorder) return 'not-preorder';
   if (Date.parse(order.createdAt) >= campaignEndsAt(endsOn).getTime()) return 'too-late';
   return null;

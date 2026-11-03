@@ -1,9 +1,13 @@
-import {useEffect, useId, useMemo, useState} from 'react';
+import {useEffect, useId, useMemo, useRef, useState} from 'react';
 import {useRevalidator} from 'react-router';
 import {copyText} from '~/lib/copy';
 import {countryName, shipCountryPicker} from '~/lib/shipping-rates';
 import {groupShipCountries} from '~/lib/ship-to-order';
 import {CART_COUNTRY_ACTION, CART_UPDATED_EVENT, type CartCountryReply} from '~/lib/cart-client';
+
+/** Set while a switch that started on a focused select is in flight: the
+ *  page behind may remount the select, and the new instance takes focus. */
+let restoreFocus = false;
 
 /**
  * The "Ship to" country selector of the cart page and the added-to-cart
@@ -41,6 +45,16 @@ export function ShipToSelect({
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [value, setValue] = useState(country ?? '');
+  const selectRef = useRef<HTMLSelectElement>(null);
+  // Keyboard: a switch must not cost the user their place. A disabled or
+  // remounted select drops focus to <body>, so the select is never
+  // disabled and focus is handed back after the page reads again.
+  useEffect(() => {
+    if (restoreFocus && document.activeElement === document.body) {
+      selectRef.current?.focus({preventScroll: true});
+    }
+    restoreFocus = false;
+  }, []);
   const picker = useMemo(() => shipCountryPicker('en', usRate), [usRate]);
   const groups = useMemo(() => groupShipCountries(picker), [picker]);
 
@@ -52,6 +66,7 @@ export function ShipToSelect({
   const change = async (next: string) => {
     if (!next || next === country || busy) return;
     setValue(next);
+    restoreFocus = document.activeElement === selectRef.current;
     setBusy(true);
     setFailed(false);
     onBusy?.(true);
@@ -77,6 +92,15 @@ export function ShipToSelect({
     } finally {
       setBusy(false);
       onBusy?.(false);
+      // Still mounted: put focus back if the re-render lost it. Remounted:
+      // the new instance does it on mount.
+      window.requestAnimationFrame(() => {
+        const select = selectRef.current;
+        if (restoreFocus && select?.isConnected) {
+          if (document.activeElement === document.body) select.focus({preventScroll: true});
+          restoreFocus = false;
+        }
+      });
     }
   };
 
@@ -96,10 +120,11 @@ export function ShipToSelect({
         {copyText('cart.ship_to_label') ?? 'Ship to'}
       </label>
       <select
+        ref={selectRef}
         id={id}
         className="ship-to-select"
         value={value}
-        disabled={busy}
+        aria-disabled={busy || undefined}
         onChange={(event) => void change(event.target.value)}
       >
         {!value ? <option value="">{copyText('cart.ship_to_pick') ?? 'Choose a country'}</option> : null}

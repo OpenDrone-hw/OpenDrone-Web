@@ -7,8 +7,10 @@ import {Header, HeaderMenu, type HeaderFamilyProduct} from '~/components/Header'
 import {LangToggle} from '~/components/LangToggle';
 import {RegionSwitch} from '~/components/RegionSwitch';
 import {RouteProgress} from '~/components/RouteProgress';
+import {RouteAnnouncer} from '~/components/RouteAnnouncer';
 import {Txt} from '~/components/Txt';
 import {CartAddedDialog} from '~/components/CartAddedDialog';
+import {LocationNotice} from '~/components/LocationNotice';
 import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
 import type {CommerceHandoff} from '~/lib/shop-links';
 import {AvailabilityBar} from '~/components/AvailabilityBanner';
@@ -48,6 +50,10 @@ export function PageLayout({
             is its own overlay, opened by every AddToCartButton. */}
         <MobileMenuAside accountUrl={accountUrl} />
         <CartAddedDialog />
+        {/* The ship time for a new destination, once per change: a fixed
+            toast, out of the flow, filled from an effect (no CLS, no
+            hydration mismatch). Only while ordering is open, as the bar. */}
+        {shopOpen ? <LocationNotice /> : null}
         <div
           className={isHomepage ? 'site-layout homepage-layout' : 'site-layout'}
         >
@@ -55,6 +61,7 @@ export function PageLayout({
             <Txt id="chrome.skip_link" />
           </a>
           <RouteProgress />
+          <RouteAnnouncer />
           {/* Ordering is open: the batch line for the visitor's country, a bar at the very top (under the
               staging strip on staging). Never on /flash or /guides/*. */}
           {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBar geo={geo} /> : null}

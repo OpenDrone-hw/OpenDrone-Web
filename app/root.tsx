@@ -23,7 +23,7 @@ import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {launchedStatusFlags} from '~/lib/launched-roadmap';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {toCards} from '~/lib/catalog';
-import {buyerCountry} from '~/lib/shipping-rates';
+import {buyerCountry, geoCountryForRequest} from '~/lib/shipping-rates';
 import {usSalesRate} from '~/lib/us-sales';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
 import {appCommerceEnabled, readCart} from '~/lib/commerce/app-api';
@@ -40,7 +40,6 @@ import {copyText} from '~/lib/copy';
 import {getCompanyIdentity} from '~/lib/company';
 import {getLocaleFromRequest, localeFromPathname, seoLocaleTag} from '~/lib/i18n';
 import {GEO_BANNER_DISMISSED_KEY, geoAvailabilityRegion} from '~/lib/geo-availability';
-import {visitorCountry as ipCountry} from '~/lib/visitor-country';
 import {buildOrgJsonLd, buildSeoMeta} from '~/lib/seo';
 import {themeOverrideCss} from '~/lib/theme-overrides';
 import {installViewTransitionGuard} from '~/lib/view-transition';
@@ -217,9 +216,15 @@ export async function loader(args: Route.LoaderArgs) {
     // (`shipCountryForRequest`: ?country, the picked
     // destination, the IP, the browser), so every surface agrees.
     visitorCountry: buyerCountry(args.request, usRate),
-    // The batch 1 ship line by CF-IPCountry (app/lib/geo-availability.ts):
-    // the region and the language its line is written in.
-    geo: {region: geoAvailabilityRegion(ipCountry(args.request)), locale: urlLocale ?? getLocaleFromRequest(args.request)},
+    // The batch 1 ship line by where the visitor orders to
+    // (app/lib/geo-availability.ts, `geoCountryForRequest`: ?country, the
+    // picked destination, else CF-IPCountry): the country, its region and
+    // the language its line is written in. The bar, buy box, cards and cart
+    // read it, and LocationNotice tells the visitor when it changes.
+    geo: (() => {
+      const country = geoCountryForRequest(args.request);
+      return {country, region: geoAvailabilityRegion(country), locale: urlLocale ?? getLocaleFromRequest(args.request)};
+    })(),
     // Present only while US sales are open: the flat US rate in USD.
     ...(usRate != null ? {usShippingRate: usRate} : {}),
     // Plausible counts the production site only: staging, previews and
@@ -375,7 +380,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
           nonce={nonce}
           suppressHydrationWarning
           dangerouslySetInnerHTML={{
-            __html: `try{if(localStorage.getItem(${JSON.stringify(GEO_BANNER_DISMISSED_KEY)})==='1'){var s=document.createElement('style');s.textContent='.avail-bar{display:none!important}body{--avail-bar-h:0px!important}';document.head.appendChild(s)}}catch(e){}`,
+            __html: `try{if(localStorage.getItem(${JSON.stringify(GEO_BANNER_DISMISSED_KEY)})==='1'){var s=document.createElement('style');s.textContent='.avail-bar{display:none!important}:root{--avail-bar-h:0px!important}';document.head.appendChild(s)}}catch(e){}`,
           }}
         />
         <link rel="stylesheet" href={resetStyles}></link>

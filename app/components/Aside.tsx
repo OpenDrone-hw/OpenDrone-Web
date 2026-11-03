@@ -17,6 +17,9 @@ import {copyText} from '~/lib/copy';
  * their types are gone rather than kept as dead states.
  */
 type AsideType = 'mobile' | 'closed';
+
+/** Stable DOM id of the mobile drawer dialog (the menu toggle's aria-controls). */
+export const MOBILE_DRAWER_ID = 'site-mobile-drawer';
 type AsideContextValue = {
   type: AsideType;
   /** True while the aside is open as a non-modal hover preview. */
@@ -213,6 +216,7 @@ export function Aside({
       aria-modal={modal || undefined}
       aria-hidden={expanded ? undefined : true}
       className={`overlay ${expanded ? 'expanded' : ''}`}
+      id={type === 'mobile' ? MOBILE_DRAWER_ID : undefined}
       role="dialog"
       aria-labelledby={id}
       ref={dialogRef}

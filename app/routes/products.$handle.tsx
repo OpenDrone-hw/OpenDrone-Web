@@ -99,12 +99,13 @@ import {
 } from '~/lib/product-content';
 import {useProductStatus} from '~/lib/coming-soon';
 import {StagingBenchText} from '~/lib/flasher/ui/status';
+import {tierFirmwarePublished} from '~/lib/flasher/published';
 import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
 import {reachableSteps, stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
-import {geoOfferAvailability, hasBatchOne, offerAvailability} from '~/lib/geo-availability';
+import {geoOfferAvailability, geoShipText, hasBatchOne, offerAvailability, offerRegionRestriction} from '~/lib/geo-availability';
 import {isInternationalQuote, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
 import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
@@ -115,13 +116,17 @@ import {ProductGhostTile} from '~/components/ProductGhostTile';
 import {StepBar} from '~/components/PreorderMeter';
 import {Availability, preorderWords} from '~/components/Availability';
 import {batchPhrase, currentBatch} from '~/lib/availability';
-import {ShipLine} from '~/components/ShipChip';
+import {ShipLine, useGeoDutiesNote, useGeoInStock} from '~/components/ShipChip';
 import {CART_COUNTRY_ACTION} from '~/lib/cart-client';
 import type {
   ChapterPin,
   DownloadAsset,
   DownloadKind,
 } from '~/lib/product-content';
+
+/** The new-tab notice for links whose ::after is taken (app.css excludes them
+ *  from the generic a[target=_blank]::after notice). */
+const NEW_TAB_NOTE = ' (opens in a new tab)';
 
 /** The campaign (content/preorders.json): each SKU's price steps. */
 const CAMPAIGN_CONFIG = parseCampaignConfig(preorders);
@@ -693,7 +698,7 @@ function Chapter({
         {children}
       </div>
       {backdrop || noMedia ? null : (
-        <aside className="chapter-media">
+        <div className="chapter-media">
           {media ? (
             <div className="chapter-media-frame chapter-media-frame--live">
               {media}
@@ -701,7 +706,7 @@ function Chapter({
           ) : (
             <ChapterMediaPlaceholder kind={number} />
           )}
-        </aside>
+        </div>
       )}
       {wide ? <div className="chapter-wide">{wide}</div> : null}
     </section>
@@ -1580,27 +1585,16 @@ function ProductPage() {
     // On touch, drop every hover/focus handler - a tap's synthetic mouse +
     // blur events would clear the spotlight the click just set. Click alone
     // toggles, and it persists (no container mouseleave on touch either).
-    const handlers = !hoverable
+    // The <li> stays non-interactive; the keyboard stop is a real <button>
+    // inside it (WCAG 4.1.2), so the row never carries a bare tabindex.
+    const liHandlers = hoverable && !noHover ? {onMouseEnter: enter} : {};
+    const btnHandlers = !hoverable
       ? {}
       : noHover
-        ? {onClick: tap, tabIndex: 0}
-        : {
-            onMouseEnter: enter,
-            onClick: tap,
-            onFocus: enter,
-            onBlur: clearHover,
-            tabIndex: 0,
-          };
-    return (
-      <li
-        key={pin.ref}
-        className={
-          hoverable
-            ? `teardown-pin teardown-pin-hoverable${isActive ? ' is-active' : ''}`
-            : undefined
-        }
-        {...handlers}
-      >
+        ? {onClick: tap}
+        : {onClick: tap, onFocus: enter, onBlur: clearHover};
+    const rowBody = (
+      <>
         <span className="teardown-pin-part" {...pinEdit('part')}>
           {pin.part}
         </span>
@@ -1609,6 +1603,30 @@ function ProductPage() {
             {pin.cost}
           </span>
         ) : null}
+      </>
+    );
+    return (
+      <li
+        key={pin.ref}
+        className={
+          hoverable
+            ? `teardown-pin teardown-pin-hoverable${isActive ? ' is-active' : ''}`
+            : undefined
+        }
+        {...liHandlers}
+      >
+        {hoverable ? (
+          <button
+            type="button"
+            className="teardown-pin-btn"
+            aria-pressed={isActive}
+            {...btnHandlers}
+          >
+            {rowBody}
+          </button>
+        ) : (
+          rowBody
+        )}
       </li>
     );
   };
@@ -1662,6 +1680,8 @@ function ProductPage() {
   // A batch 1 offer says what the visitor's ship line says (geo-availability.ts);
   // with no known country it keeps its PreOrder availability.
   const geoOffer = geoOfferAvailability(rootData?.geo?.region ?? 'fallback');
+  // US sales on hold: every offer says it is not sold to the US.
+  if (offerBase) Object.assign(offerBase, offerRegionRestriction(rootData?.usShippingRate != null));
   if (offerBase && !content.bundle && selectedVariant && hasBatchOne(selectedVariant.campaign)) {
     Object.assign(offerBase, {
       availabilityStarts: undefined,
@@ -1802,6 +1822,11 @@ function ProductPage() {
   // Preorder campaign of the selected variant: the price ladder, the ship
   // terms and the quantity cap all read it.
   const campaign = !isBundle && preorder ? (selectedVariant?.campaign ?? null) : null;
+  // Batch 1 stock in the EU is sold as stock (the bar's "in stock in
+  // Belgium"): "Add to cart" (ProductForm) and no pre-order terms link.
+  const geoInStock = useGeoInStock(campaign, isBundle || !preorder ? null : selectedVariant?.shipPromise);
+  // UK, CH, NO: the duties note under the ship line (root data, SSR: no CLS).
+  const dutiesNote = useGeoDutiesNote();
   // An early bird preorder price names the retail price it rises to.
   const earlyPrice = campaign ? (selectedVariant?.earlyPrice ?? null) : null;
   const retail = selectedVariant?.sku ? (retailBySku[selectedVariant.sku] ?? null) : null;
@@ -1877,7 +1902,10 @@ function ProductPage() {
     : usBuyer && buyPrice?.currencyCode === 'USD'
       ? say('product-chrome.buy_us_price_note', 'Duties included')
       : internationalBuyer
-        ? say('product-chrome.buy_international_price_note', 'Shipping and applicable sale taxes confirmed at checkout. Import charges may be payable on delivery.')
+        ? dutiesNote
+          // UK, CH, NO: the duties note under the button says who pays import charges; this line does not repeat it.
+          ? say('product-chrome.buy_near_price_note', 'Shipping confirmed at checkout.')
+          : say('product-chrome.buy_international_price_note', 'Shipping and applicable sale taxes confirmed at checkout. Import charges may be payable on delivery.')
         : null;
   // The destination gate decides whether the buy button is available.
   // Blocked destinations and an EU country not open
@@ -2034,6 +2062,10 @@ function ProductPage() {
         </p>
       ) : notDirect ? (
         <>
+          {/* US sales on hold: say so in the bar's words, with no ship promise. */}
+          {notDirect === 'shops' && rootData?.geo?.region === 'us' ? (
+            <p className="product-buy-ship" role="note">{geoShipText('us', rootData.geo.locale)}</p>
+          ) : null}
           {notDirect === 'shops' ? (
             <p className="product-buy-ship">
               <Link prefetch="intent" to="/wholesale" className="product-buy-terms-link">
@@ -2076,7 +2108,8 @@ function ProductPage() {
         </p>
       )}
       {notDirect ? null : usNotice}
-      {preorder && !isBundle && !notDirect ? (
+      {notDirect || !dutiesNote ? null : <p className="product-buy-ship">{dutiesNote}</p>}
+      {preorder && !isBundle && !notDirect && !geoInStock ? (
         <p className="product-buy-ship">
           {targetMissed ? <>{targetMissed}{' '}</> : null}
           <Link prefetch="intent" to="/preorder" className="product-buy-terms-link">
@@ -2383,6 +2416,7 @@ function ProductPage() {
                   rel="noopener noreferrer"
                   className="open-source-card open-source-card--github"
                 >
+                  <span className="sr-only">{NEW_TAB_NOTE}</span>
                   <p className="open-source-card-label">{c.title}</p>
                   <Txt
                     id="product-chrome.os_card_repo_title"
@@ -2416,6 +2450,7 @@ function ProductPage() {
                 rel="noopener noreferrer"
                 className="open-source-card open-source-card--github"
               >
+                <span className="sr-only">{NEW_TAB_NOTE}</span>
                 <Txt
                   id="product-chrome.os_card_study_label"
                   as="p"
@@ -2490,6 +2525,7 @@ function ProductPage() {
               rel="noopener noreferrer"
               className="open-source-card open-source-card--oshwa"
             >
+              <span className="sr-only">{NEW_TAB_NOTE}</span>
               <OshwaMark
                 uid={activeOshwaUid}
                 title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} ${activeOshwaUid}`}
@@ -2508,6 +2544,7 @@ function ProductPage() {
               rel="noopener noreferrer"
               className="open-source-card open-source-card--cern"
             >
+              <span className="sr-only">{NEW_TAB_NOTE}</span>
               <Txt
                 id="product-chrome.os_card_license_label"
                 as="p"
@@ -2535,6 +2572,7 @@ function ProductPage() {
             rel="noopener noreferrer"
             className="open-source-card open-source-card--help"
           >
+            <span className="sr-only">{NEW_TAB_NOTE}</span>
             <Txt
               id="product-chrome.os_card_help_label"
               as="p"
@@ -3027,17 +3065,18 @@ function ProductPage() {
                 {say('product-chrome.firmware_freedom_link', 'Warranty')}
               </Link>
             </p>
-            {/* Flasher links: FC and ESC only. The 20x20 tier (OpenFC-Lite
-                Mini, OpenESC 20x20) has firmware; the 30x30 tier (OpenFC-Lite,
-                OpenESC 30x30) has none yet outside the staging bench build. /guides/flash has its own
-                Permissions-Policy, so this is a full document load. */}
+            {/* Flasher links: FC and ESC only. "Flash firmware" only for a
+                tier whose firmware is published in the manifest
+                (tierFirmwarePublished); otherwise "not available yet", except
+                on the staging bench build, which offers every tier.
+                /guides/flash has its own Permissions-Policy, so this is a
+                full document load. */}
             {product.handle === 'openfc-lite' || product.handle === 'openesc' ? (
               <p>
                 <Link prefetch="none" reloadDocument to="/guides/flash">
-                  {/^20/.test(activeTier.trim()) ? (
+                  {tierFirmwarePublished(product.handle, activeTier) ? (
                     say('product-chrome.firmware_flash_link', 'Flash firmware')
                   ) : (
-                    // The staging bench build offers the 30x30 tier too (OpenFC-Lite, OpenESC 30x30).
                     <StagingBenchText
                       normal={say('product-chrome.firmware_flash_unavailable', 'Firmware download: not available yet')}
                       bench={say('product-chrome.firmware_flash_link', 'Flash firmware')}
@@ -3248,6 +3287,7 @@ function ProductPage() {
                   className="trust-chip trust-chip-oshwa trust-chip-link"
                   title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} ${activeOshwaUid}`}
                 >
+                  <span className="sr-only">{NEW_TAB_NOTE}</span>
                   <img
                     src="/logos/oshwa.svg"
                     alt=""

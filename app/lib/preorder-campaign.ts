@@ -22,19 +22,79 @@
  */
 
 import type {Catalog, CatalogVariant} from './catalog.ts';
-import {EU_COUNTRY_CODES} from './eu-countries.ts';
+import {EU_COUNTRY_CODES, IMPORT_COUNTRY_CODES} from './eu-countries.ts';
 
-/** Allocation regions: EU member states, the US, or other international
- *  destinations. Missing country information retains the historical EU default. */
-export type Region = 'EU' | 'US' | 'INT';
+/** Allocation regions: EU member states, the US, NEAR (UK, Switzerland,
+ *  Norway: `IMPORT_COUNTRY_CODES`, the March batch with import VAT and duties
+ *  paid on delivery; its own region so it can get a stock pool later), or
+ *  other international destinations. Missing country information retains the
+ *  historical EU default. */
+export type Region = 'EU' | 'US' | 'NEAR' | 'INT';
 
-export const REGIONS: readonly Region[] = ['EU', 'US', 'INT'];
+export const REGIONS: readonly Region[] = ['EU', 'US', 'NEAR', 'INT'];
 
 /** The region of a shipping country (ISO 3166-1 alpha-2). */
 export function regionOf(country: string | null | undefined): Region {
   const code = country?.trim().toUpperCase();
   if (code === 'US') return 'US';
+  if (code && IMPORT_COUNTRY_CODES.includes(code)) return 'NEAR';
   return code && /^[A-Z]{2}$/.test(code) && !EU_COUNTRY_CODES.includes(code) ? 'INT' : 'EU';
+}
+
+/** The region of a destination served through Shopify's international market: NEAR for GB, CH, NO, else INT. */
+export function internationalRegion(country: string | null | undefined): Region {
+  return regionOf(country) === 'NEAR' ? 'NEAR' : 'INT';
+}
+
+/** A paid line's recorded attributes, as the cart writes them (shopify-storefront.ts):
+ *  `_batch` "SKU:N", `_ship_region` (absent: EU), the promise in `Preorder` or `_ship_promise`. */
+export type RecordedLine = {
+  sku?: string | null;
+  attributes?: ReadonlyArray<{key: string; value?: string | null}> | null;
+};
+
+const attr = (line: RecordedLine, key: string) => line.attributes?.find((a) => a.key === key)?.value?.trim() || null;
+
+/**
+ * True for a line sold to a non-EU destination (recorded `_ship_region` INT
+ * or NEAR) with a paid batch: its `_batch` names a paid batch, or (a line
+ * from before `_batch`) its promise is a paid batch's `ships`. Before
+ * 2026-11-03 paid batch 1 served the EU and every other non-US destination
+ * together (GB, CH and NO were INT), so such a line was sold batch 1 stock and
+ * keeps it: it fills the batches as an EU unit (`lineAllocationRegion`).
+ * New non-EU carts never record a paid batch (`paidRegions` ["EU"]), and an
+ * EU line shipped abroad records no non-EU region, so neither is kept.
+ * Read from the order itself, so it does not depend on when a deploy happens.
+ */
+export function grandfatheredPaidLine(config: Pick<CampaignConfig, 'skus'>, line: RecordedLine): boolean {
+  const recorded = attr(line, '_ship_region');
+  if (recorded !== 'INT' && recorded !== 'NEAR') return false;
+  const batch = attr(line, '_batch');
+  const match = batch ? /^([A-Za-z0-9-]+):(\d+)$/.exec(batch) : null;
+  if (match) return config.skus[match[1]]?.batches[Number(match[2]) - 1]?.paid === true;
+  const promise = attr(line, 'Preorder') ?? attr(line, '_ship_promise');
+  const sku = line.sku?.trim();
+  return Boolean(promise && sku && config.skus[sku]?.batches.some((b) => b.paid && b.ships?.trim() === promise));
+}
+
+/** The region a line's units fill the batches in: its shipping region, or
+ *  EU for a grandfathered paid line ({@link grandfatheredPaidLine}). */
+export function lineAllocationRegion(region: Region, grandfathered: boolean): Region {
+  return grandfathered && isInternationalRegion(region) ? 'EU' : region;
+}
+
+/** The paid stack's ship promise as the /preorder page shows it to a buyer
+ *  in `region`: only where paid stock ships (`paidRegions`, the EU). NEAR,
+ *  INT and US buyers see no "ships late November" lane and no "order them
+ *  separately" line. */
+export function stackPaidShips(region: Region, paidShips: string | null, paidRegions: readonly Region[] | undefined): string | null {
+  return (paidRegions ?? ['EU']).includes(region) ? paidShips : null;
+}
+
+/** True for a region outside the EU and the US: NEAR and INT ship through
+ *  Shopify's international market (destination currency, rates at checkout). */
+export function isInternationalRegion(region: Region): boolean {
+  return region === 'NEAR' || region === 'INT';
 }
 
 /** Paid units of one SKU in order, oldest first, as runs of one region:
@@ -67,9 +127,10 @@ export type CampaignBatch = {
   deliveryByUS?: string | null;
   /** A separately agreed international arrival deadline; never inherits EU or US dates. */
   deliveryByINT?: string | null;
-  /** The regions this batch ships to; absent means every region. Paid
-   *  stock in Belgium is `["EU"]`: a non-EU unit skips it for the next batch
-   *  that serves the destination. A SKU's last funding batch serves every region. */
+  /** The regions this batch ships to; absent means every region, except a
+   *  paid batch, which takes the campaign's `paidRegions`. A unit of another
+   *  region skips it for the next batch that serves the destination. A SKU's
+   *  last funding batch serves every region. */
   regions?: Region[];
 };
 
@@ -89,6 +150,9 @@ function batchPromise(batch: CampaignBatch, fallback: string): string {
 /** The agreed arrival deadline for a region, YYYY-MM-DD, or null. Used for
  *  visible checkout metadata and ordering the lines of a combined cart. */
 function batchDeliveryDay(batch: CampaignBatch, region: Region): string | null {
+  // NEAR takes a funding batch like INT. Should a paid batch ever serve NEAR
+  // (`paidRegions`), it keeps that batch's `deliveryBy`, as the EU does.
+  if (region === 'NEAR') return (batch.paid ? batch.deliveryBy : batch.deliveryByINT) ?? null;
   return (region === 'US' ? batch.deliveryByUS : region === 'INT' ? batch.deliveryByINT : batch.deliveryBy) ?? null;
 }
 
@@ -108,6 +172,10 @@ export type CampaignConfig = {
   /** Price steps by paid units, in order: `upTo` is the last unit of the
    *  step and `off` its share off retail. Past the last step: retail. */
   priceTiers: PriceTier[];
+  /** Where paid stock (Belgium) ships: the regions of every paid batch that
+   *  lists none of its own. The one entry that decides who gets batch 1
+   *  (founder 2026-11-03: the EU only; NEAR, INT and the US take March). */
+  paidRegions?: Region[];
   /** Per SKU: its batches, and optionally its own price steps in place of
    *  the campaign's (`tiersFor`). */
   skus: Record<string, {batches: CampaignBatch[]; priceTiers?: PriceTier[]}>;
@@ -304,6 +372,17 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
   }
   if (!c.skus || typeof c.skus !== 'object' || Array.isArray(c.skus)) {
     throw new Error('preorders: skus must be an object');
+  }
+  if (c.paidRegions !== undefined) {
+    if (!Array.isArray(c.paidRegions) || !c.paidRegions.length || c.paidRegions.some((r) => !REGIONS.includes(r))) {
+      throw new Error(`preorders: paidRegions must list ${REGIONS.join(' or ')}`);
+    }
+    // Every reader after this point sees the regions on the paid batch itself.
+    for (const entry of Object.values(c.skus)) {
+      for (const batch of entry?.batches ?? []) {
+        if (batch?.paid && batch.regions === undefined) batch.regions = [...c.paidRegions];
+      }
+    }
   }
   for (const [sku, entry] of Object.entries(c.skus)) {
     if (!entry || !Array.isArray(entry.batches) || !entry.batches.length) {
