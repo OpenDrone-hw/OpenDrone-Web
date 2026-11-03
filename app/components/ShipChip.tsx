@@ -65,9 +65,15 @@ export function useGeoDutiesNote(): string | null {
  * the bar and `useGeoShipText` (root loader `geo`), so the SSR and the
  * hydrated page agree.
  */
-export function useGeoInStock(campaign: Pick<CampaignState, 'paidStock' | 'shipPromise'> | null | undefined): boolean {
+export function useGeoInStock(
+  campaign: Pick<CampaignState, 'paidStock' | 'shipPromise'> | null | undefined,
+  promise?: string | null,
+): boolean {
   const geo = useRouteLoaderData<RootLoader>('root')?.geo;
-  return geoInStock(geo?.region, campaign, BATCH_ONE);
+  // A variant without campaign state (a catalog that applies no campaign)
+  // that carries the batch 1 promise is batch 1 stock: the same promise the
+  // ship line reads as "In stock in Belgium", so the button agrees with it.
+  return geoInStock(geo?.region, campaign ?? (promise ? {paidStock: true, shipPromise: promise} : null), BATCH_ONE);
 }
 
 /**

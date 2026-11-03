@@ -1804,7 +1804,7 @@ function ProductPage() {
   const campaign = !isBundle && preorder ? (selectedVariant?.campaign ?? null) : null;
   // Batch 1 stock in the EU is sold as stock (the bar's "in stock in
   // Belgium"): "Add to cart" (ProductForm) and no pre-order terms link.
-  const geoInStock = useGeoInStock(campaign);
+  const geoInStock = useGeoInStock(campaign, isBundle || !preorder ? null : selectedVariant?.shipPromise);
   // UK, CH, NO: the duties note under the ship line (root data, SSR: no CLS).
   const dutiesNote = useGeoDutiesNote();
   // An early bird preorder price names the retail price it rises to.
