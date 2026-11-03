@@ -49,7 +49,7 @@ describe('focus after Remove', () => {
 describe('ShipToSelect', () => {
   it('never uses the native disabled attribute while busy', () => {
     const select = shipTo.slice(shipTo.indexOf('<select'), shipTo.indexOf('</select>'));
-    assert.doesNotMatch(select, /\bdisabled=/);
+    assert.doesNotMatch(select, /(?<![-\w])disabled=/);
     assert.match(select, /aria-disabled=\{busy \|\| undefined\}/);
   });
   it('restores focus after the switch', () => {
