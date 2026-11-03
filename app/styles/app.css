@@ -12076,6 +12076,16 @@ a.what-chain-chip:hover {
   outline-offset: 2px;
 }
 
+/* /testing: a full-bleed iframe on a light page. Dark inset ring, because the
+   gold focus token is ~1.5:1 on #FBFBFA. */
+.testing-main:focus {
+  outline: none;
+}
+.testing-frame:focus-visible {
+  outline: 3px solid #0d0d10;
+  outline-offset: -3px;
+}
+
 /* =========================================================
    od-* primitives. Token aliases below map the od-* names onto the
    project's existing variables; no new tokens are introduced.
