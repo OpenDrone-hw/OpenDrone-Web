@@ -230,7 +230,7 @@ export function FcFlasher({
       <h2 id="fc-update-title" className="flash-update-title">
         Before you start
       </h2>
-      <p className="flash-note">For OpenFC-Lite and Lite Mini.</p>
+      <p className="flash-note">For OpenFC-Lite. The Lite Mini file comes later.</p>
       <ol className="flash-checklist">
         <li>
           Back up your config: save <code>diff all</code> in the Betaflight CLI. Flashing resets settings.
@@ -238,7 +238,6 @@ export function FcFlasher({
         <li>Props off, battery out, USB only.</li>
         <li>Computer only (Chrome/Edge), data-capable USB cable.</li>
         <li>On a new board: test on USB before soldering.</li>
-        <li>Direct install: OpenFC-Lite. The Lite Mini file comes later.</li>
       </ol>
 
       <label htmlFor={backupId} className="mb-3 flex items-center gap-2">

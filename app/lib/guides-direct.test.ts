@@ -182,8 +182,8 @@ test('one live region for the flasher status; the file input reflows at 320px', 
   assert.match(fc, /type="file"[^>]*className="mt-2 block w-full max-w-full"/);
 });
 
-test('guide callouts with items render a real <ol>; the firmware page names the supported boards', () => {
+test('guide callouts with items render a real <ol>; the firmware page names the supported board (Lite; Mini later)', () => {
   const step = read('../routes/guides.$family.$step.tsx');
   assert.match(step, /\{callout\.items\?\.length \? \(\s*<ol className="mt-1 list-decimal pl-5[^"]*">/);
-  assert.match(read('./flasher/ui/FcFlasher.tsx'), /<p className="flash-note">For OpenFC-Lite and Lite Mini\.<\/p>\s*<ol className="flash-checklist">/);
+  assert.match(read('./flasher/ui/FcFlasher.tsx'), /<p className="flash-note">For OpenFC-Lite\. The Lite Mini file comes later\.<\/p>\s*<ol className="flash-checklist">/);
 });
