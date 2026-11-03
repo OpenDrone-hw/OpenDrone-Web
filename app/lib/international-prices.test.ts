@@ -160,3 +160,30 @@ test('EU batch 1 cart lines say in stock in Belgium with no preorder date; NEAR 
     {key: '_batch', value: 'OPENFC-LITE-2020:2'},
   ]);
 });
+
+test('the cart never writes a batch 1 _batch for INT or NEAR lines against the live preorders.json', () => {
+  const skus = Object.keys(config.skus);
+  const catalog: Catalog = {
+    ...base,
+    products: [{...base.products[0], variants: skus.map((sku) => ({...base.products[0].variants[0], sku, title: sku, availability: 'preorder' as const}))}],
+  };
+  let checked = 0;
+  for (const region of ['INT', 'NEAR'] as const) {
+    for (const units of [0, 1, 100, 199, 200, 250, 400]) {
+      const counts = Object.fromEntries(skus.map((sku) => [sku, units]));
+      const campaign = applyCampaign(catalog, config, counts, new Date('2026-11-04'), region);
+      for (const variant of campaign.products[0].variants) {
+        if (!variant.ship_promise) continue;
+        const attributes = lineAttributes(variant, region) ?? [];
+        const batch = attributes.find((a) => a.key === '_batch')?.value ?? '';
+        const [lead, n] = batch.split(':');
+        assert.ok(!(lead && config.skus[lead]?.batches[Number(n) - 1]?.paid), `${region} ${units} ${variant.sku} wrote ${batch}`);
+        assert.ok(!attributes.some((a) => a.key === 'Shipping' || a.key === '_ship_promise'), `${region} ${variant.sku}`);
+        if (batch) checked += 1;
+      }
+    }
+  }
+  // Not vacuous: at least every SKU with paid stock, in both regions, wrote a _batch at least once.
+  const paidSkus = Object.values(config.skus).filter((entry) => entry.batches.some((b) => b.paid)).length;
+  assert.ok(paidSkus > 0 && checked >= paidSkus * 2, `checked ${checked}`);
+});

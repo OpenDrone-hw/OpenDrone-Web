@@ -48,7 +48,22 @@ const STALE_MS = 15 * 60_000;
 /** After a failed read, this isolate does not ask the Admin API again for this long. */
 const FAILURE_COOLDOWN_MS = 30_000;
 const SHARED_CACHE_URL = 'https://paid-units.opendrone.internal/v1';
-const PAGE_SIZE = 250;
+export const ORDERS_PAGE_SIZE = 250;
+const PAGE_SIZE = ORDERS_PAGE_SIZE;
+/**
+ * Line items per order in PAID_ORDERS_QUERY. Orders have a handful of lines
+ * (a full build is under ten); an order with more fails the count loudly.
+ * Reading `customAttributes` (grandfatheredPaidLine) adds an object per line,
+ * so the page is 50, not 250: by Shopify's documented formula (a connection
+ * costs 2 + first × its node cost, an object 1, a scalar 0) the query costs
+ *   before: 2 + 250 × (1 order + 1 address + 2 + 250 × 1 line)       = 63,502
+ *   now:    2 + 250 × (1 order + 1 address + 2 + 50 × (1 line + 1 attrs)) = 26,002
+ * That formula overstates what Shopify enforces (the 63,502 query ran in
+ * production under the 1,000-point single-query cap), so the guarantee is
+ * relative: the new query never costs more than the one that ran. The test
+ * pins both page sizes and this inequality.
+ */
+export const LINE_ITEMS_PAGE = 50;
 const MAX_PAGES = 40;
 const THROTTLE_RETRIES = 2;
 const THROTTLE_WAIT_MS = 500;
@@ -63,7 +78,7 @@ export const PAID_ORDERS_QUERY = `#graphql
         cancelledAt
         displayFinancialStatus
         shippingAddress { countryCodeV2 }
-        lineItems(first: 250) {
+        lineItems(first: ${LINE_ITEMS_PAGE}) {
           pageInfo { hasNextPage }
           nodes { sku currentQuantity customAttributes { key value } }
         }
@@ -196,7 +211,7 @@ export async function fetchPaidUnitRuns(
         continue;
       }
       if (order.lineItems.pageInfo.hasNextPage) {
-        throw new Error('shopify orders: an order exceeds 250 lines');
+        throw new Error(`shopify orders: an order exceeds ${LINE_ITEMS_PAGE} lines`);
       }
       const region = regionOf(order.shippingAddress?.countryCodeV2);
       const lines = order.lineItems.nodes.map((l) => ({sku: l.sku, quantity: l.currentQuantity}));
