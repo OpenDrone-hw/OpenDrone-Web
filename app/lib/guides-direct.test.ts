@@ -83,3 +83,80 @@ test('guide pages reuse the firmware page\'s dark code chip (no light-on-light c
   assert.match(read('../routes/guides.$family.$step.tsx'), /<article className="page-shell guide-page">/);
   assert.match(read('../routes/guides._index.tsx'), /<article className="page-shell guide-page">/);
 });
+
+const CHECKLIST = [
+  /Back up your config: save `diff all`, because flashing resets settings\./,
+  /Props off, battery out, USB only\./,
+  /Computer only \(Chrome\/Edge\), with a data-capable USB cable\./,
+  /Test on USB before soldering\./,
+];
+
+test('firmware page: numbered 4-item pre-flash checklist directly above Update firmware', () => {
+  const fc = read('./flasher/ui/FcFlasher.tsx');
+  const ol = /<ol className="flash-checklist">([\s\S]*?)<\/ol>/.exec(fc);
+  assert.ok(ol, 'checklist is an <ol>');
+  const items = ol[1].replace(/<code>(.*?)<\/code>/g, '`$1`').replace(/\s+/g, ' ');
+  assert.equal(ol[1].match(/<li>/g)?.length, 4);
+  let at = -1;
+  for (const re of CHECKLIST) {
+    const m = re.exec(items);
+    assert.ok(m, String(re));
+    assert.ok(m.index > at, 'in order');
+    at = m.index;
+  }
+  const olEnd = fc.indexOf('</ol>');
+  const btn = fc.indexOf('Update firmware', olEnd);
+  assert.ok(btn > olEnd);
+  const between = fc.slice(olEnd, btn);
+  assert.match(between, /<button/);
+  assert.doesNotMatch(between, /<p|<h\d|<details|<div/, 'nothing but the backup checkbox between checklist and button');
+  const css = read('../styles/app.css');
+  const rule = /\.flash-checklist \{([^}]*)\}/.exec(css)![1];
+  assert.match(rule, /list-style: decimal/);
+  assert.match(rule, /border-left: 2px solid var\(--color-accent\)/);
+});
+
+test('backup checkbox gates only the disabled state; the click handler still starts with startUpdate', () => {
+  const fc = read('./flasher/ui/FcFlasher.tsx');
+  assert.match(fc, /<label htmlFor=\{backupId\}[\s\S]*?<input id=\{backupId\} type="checkbox"[\s\S]*?I&apos;ve backed up my config\s*<\/label>/);
+  assert.match(fc, /disabled=\{!canRun \|\| running \|\| run\.kind === 'need-usb'\}\s+aria-disabled=\{needsBackup \|\| undefined\}\s+aria-describedby=\{needsBackup \? backupReasonId : undefined\}/);
+  assert.match(fc, /<p id=\{backupReasonId\} className="flash-note">\s+\{BACKUP_REASON\}/);
+  assert.match(fc, /const BACKUP_REASON = 'Confirm your config backup first\.';/);
+  assert.match(fc, /onClick=\{onUpdate\}/);
+  const onUpdate = /const onUpdate = \(\) => \{([\s\S]*?)\n {2}\};/.exec(fc)![1];
+  assert.doesNotMatch(onUpdate, /await|async/, 'no await before start()');
+  assert.match(onUpdate, /if \(!backedUp\) \{\s+say\(BACKUP_REASON\);\s+return;\s+\}\s+void start\(\);/);
+  const start = /const start = async \(\) => \{([\s\S]*?)\n {2}\};/.exec(fc)![1];
+  assert.equal(start.match(/await /g)?.length, 1, 'one await');
+  assert.match(start, /await startUpdate\(deps\)/);
+  assert.doesNotMatch(start, /backedUp/, 'no state read or await before the serial picker');
+});
+
+test('firmware page: one line for the second device picker, at the Continue step', () => {
+  const fc = read('./flasher/ui/FcFlasher.tsx');
+  const needUsb = /\{run\.kind === 'need-usb' \? \(([\s\S]*?)\) : null\}/.exec(fc)![1];
+  assert.match(needUsb, /Your browser asks a second time: click Continue, then pick RP2350 Boot\./);
+  assert.ok(needUsb.indexOf('second time') < needUsb.indexOf('onClick={resume}'));
+});
+
+test('firmware page: version + short SHA next to the offered file, via firmwareIdText', () => {
+  const fc = read('./flasher/ui/FcFlasher.tsx');
+  assert.match(fc, /\{short\(t\)\}: \{firmwareIdText\(r\)\}/, 'under Update firmware (install)');
+  assert.match(fc, /\{boardRelease \? <span className="flash-filename">\{firmwareIdText\(boardRelease\)\}<\/span> : null\}/, 'under Save (download)');
+  assert.ok(fc.indexOf('firmwareIdText(boardRelease)') > fc.indexOf('Save firmware (.uf2)'));
+});
+
+test('guide flash step (base and one-button) carries the same 4 checklist items', () => {
+  for (const on of [false, true]) {
+    const p = resolveGuidePage(page('flash'), on);
+    const c = p.callouts.find((x) => x.title === 'Before you flash');
+    assert.ok(c, `callout present (direct=${on})`);
+    let at = -1;
+    for (const [i, re] of CHECKLIST.entries()) {
+      const m = new RegExp(`${i + 1}\. ${re.source}`).exec(c.text);
+      assert.ok(m, `${re} (direct=${on})`);
+      assert.ok(m.index > at);
+      at = m.index;
+    }
+  }
+});

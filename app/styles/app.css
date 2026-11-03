@@ -3965,7 +3965,8 @@ button.reset {
   transform: translateY(1px);
 }
 
-.btn-primary:disabled {
+.btn-primary:disabled,
+.btn-primary[aria-disabled='true'] {
   opacity: 0.45;
   cursor: not-allowed;
   box-shadow: none;
@@ -19176,12 +19177,21 @@ summary,
   margin: 0 0 var(--sp-2);
   font-size: 18px;
 }
+/* Pre-flash checklist: numbered, in the guide callout look (accent rail, soft gold surface, as InfoCallout). */
 .flash-checklist {
-  margin: 0 0 var(--sp-4);
-  padding-left: 1.25rem;
-  list-style: disc;
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) calc(var(--sp-3) + 1.25rem);
+  list-style: decimal;
+  border: 1px solid var(--color-border);
+  border-left: 2px solid var(--color-accent);
+  border-radius: var(--r-md);
+  background: var(--color-gold-soft);
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 1.4;
+}
+/* Tight items: item 3 (computer only) stays above the fold at 390x844. */
+.flash-checklist li {
+  margin: 0 0 4px;
 }
 .flash-note,
 .flash-stage {

@@ -121,6 +121,13 @@ const FC_SAFETY: Callout = {
   text: 'Take the propellers off the motors and unplug the flight battery before you start. The flight controller gets all the power it needs from the USB cable for this. Keep the battery unplugged for the whole update.',
 };
 
+/** The firmware page's pre-flash checklist (FcFlasher), same four items. */
+const PRE_FLASH: Callout = {
+  kind: 'safety',
+  title: 'Before you flash',
+  text: '1. Back up your config: save `diff all`, because flashing resets settings. 2. Props off, battery out, USB only. 3. Computer only (Chrome/Edge), with a data-capable USB cable. 4. Test on USB before soldering.',
+};
+
 const NEVER_UNPLUG: Callout = {
   kind: 'safety',
   title: 'Never unplug while it is writing',
@@ -237,6 +244,7 @@ const INSTALL_DIRECT: GuidePageDirect = {
     "Installing resets the board's settings, so save them first.",
   ],
   callouts: [
+    PRE_FLASH,
     FC_SAFETY,
     {
       kind: 'safety',
@@ -414,7 +422,7 @@ const OPENFC: GuideFamily = {
         'The firmware page checks the file before you get it: its size and checksum must match the release list built into the page, and it must be built for the board you picked.',
       ],
       tools: FC_TOOLS,
-      callouts: [FC_NOT_PUBLISHED, FC_SAFETY, NEVER_UNPLUG, BROWSER_NOTE],
+      callouts: [FC_NOT_PUBLISHED, PRE_FLASH, FC_SAFETY, NEVER_UNPLUG, BROWSER_NOTE],
       steps: [
         {
           title: 'Open the firmware page and pick your board',
