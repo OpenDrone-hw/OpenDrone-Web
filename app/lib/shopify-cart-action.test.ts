@@ -1290,7 +1290,7 @@ describe('international cart destination handoffs', () => {
           chosen = country!;
           const attr = (key: string) => lines[0].attributes?.find(a=>a.key===key)?.value;
           assert.equal(attr('_ship_region'),'NEAR');
-          assert.equal(attr('Import VAT and duties'),'Paid by you on delivery');
+          assert.equal(attr('Import VAT and duties'),'Paid by you on delivery, unless collected at checkout');
           // A funding-batch line takes the international arrival date.
           assert.equal(attr('Delivery by'),'30 April 2027');
           assert.match(attr('Preorder')??'',/31 March 2027/);

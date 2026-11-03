@@ -104,7 +104,7 @@ import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
 import {reachableSteps, stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
-import {geoOfferAvailability, geoShipText, hasBatchOne, offerAvailability} from '~/lib/geo-availability';
+import {geoOfferAvailability, geoShipText, hasBatchOne, offerAvailability, offerRegionRestriction} from '~/lib/geo-availability';
 import {isInternationalQuote, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
 import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
@@ -1662,6 +1662,8 @@ function ProductPage() {
   // A batch 1 offer says what the visitor's ship line says (geo-availability.ts);
   // with no known country it keeps its PreOrder availability.
   const geoOffer = geoOfferAvailability(rootData?.geo?.region ?? 'fallback');
+  // US sales on hold: every offer says it is not sold to the US.
+  if (offerBase) Object.assign(offerBase, offerRegionRestriction(rootData?.usShippingRate != null));
   if (offerBase && !content.bundle && selectedVariant && hasBatchOne(selectedVariant.campaign)) {
     Object.assign(offerBase, {
       availabilityStarts: undefined,

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {afterEach, describe, it} from 'node:test';
-import {parseCampaignConfig} from './preorder-campaign.ts';
+import {campaignState, parseCampaignConfig, type UnitRuns} from './preorder-campaign.ts';
 import {PAID_ORDERS_QUERY, fetchPaidUnitRuns, fetchPaidUnits, paidUnitRuns, paidUnits, resetPaidUnitsMemo} from './shopify-orders.ts';
 
 afterEach(resetPaidUnitsMemo);
@@ -19,7 +19,8 @@ type Order = {
   lines: Array<[string | null, number]>;
   more?: boolean;
   country?: string;
-  createdAt?: string;
+  /** Line attributes as the cart wrote them, for every line. */
+  attrs?: Array<{key: string; value: string}>;
 };
 
 function page(orders: Order[], next: string | null = null): Response {
@@ -31,11 +32,10 @@ function page(orders: Order[], next: string | null = null): Response {
           test: o.test ?? false,
           cancelledAt: o.cancelledAt ?? null,
           displayFinancialStatus: o.displayFinancialStatus,
-          ...(o.createdAt ? {createdAt: o.createdAt} : {}),
           shippingAddress: o.country ? {countryCodeV2: o.country} : null,
           lineItems: {
             pageInfo: {hasNextPage: o.more ?? false},
-            nodes: o.lines.map(([sku, currentQuantity]) => ({sku, currentQuantity})),
+            nodes: o.lines.map(([sku, currentQuantity]) => ({sku, currentQuantity, ...(o.attrs ? {customAttributes: o.attrs} : {})})),
           },
         })),
       },
@@ -197,18 +197,34 @@ describe('fetchPaidUnitRuns', () => {
   });
 });
 
-describe('fetchPaidUnitRuns across the region cutover (PAID_REGIONS_CUTOVER)', () => {
-  it('counts a non-EU order sold before the cutover as the EU unit it was allocated as; later ones in their own region', async () => {
-    assert.match(PAID_ORDERS_QUERY, /createdAt/);
+describe('fetchPaidUnitRuns: non-EU lines sold batch 1 keep it (grandfatheredPaidLine)', () => {
+  const config = parseCampaignConfig({
+    countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-31',
+    priceTiers: [{upTo: 100, off: 0.2}],
+    pendingShips: 'ships by 31 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait',
+    paidRegions: ['EU'],
+    skus: {'OPENESC-2020': {batches: [{units: 250, reserved: 50, paid: true, ships: 'ships late November 2026'}, {units: 250}]}},
+  });
+  const oldInt = [{key: '_ship_region', value: 'INT'}, {key: '_batch', value: 'OPENESC-2020:1'}, {key: 'Preorder', value: 'ships late November 2026'}];
+  const newNear = [{key: '_ship_region', value: 'NEAR'}, {key: '_batch', value: 'OPENESC-2020:2'}, {key: 'Preorder', value: config.pendingShips}];
+  it('reads line attributes and counts a recorded batch 1 non-EU line as EU; new NEAR/INT lines in their own region', async () => {
+    assert.match(PAID_ORDERS_QUERY, /customAttributes \{ key value \}/);
     const runs = await fetchPaidUnitRuns(ENV, '2026-09-21', SKUS, async () =>
       page([
-        {displayFinancialStatus: 'PAID', country: 'GB', createdAt: '2026-10-20T09:00:00Z', lines: [['OPENESC-2020', 2]]},
-        {displayFinancialStatus: 'PAID', country: 'CA', createdAt: '2026-10-21T09:00:00Z', lines: [['OPENESC-2020', 1]]},
-        {displayFinancialStatus: 'PAID', country: 'GB', createdAt: '2026-11-05T09:00:00Z', lines: [['OPENESC-2020', 1]]},
-        {displayFinancialStatus: 'PAID', country: 'CA', createdAt: '2026-11-05T10:00:00Z', lines: [['OPENESC-2020', 1]]},
+        {displayFinancialStatus: 'PAID', country: 'GB', attrs: oldInt, lines: [['OPENESC-2020', 2]]},
+        {displayFinancialStatus: 'PAID', country: 'CA', attrs: oldInt, lines: [['OPENESC-2020', 1]]},
+        {displayFinancialStatus: 'PAID', country: 'GB', attrs: newNear, lines: [['OPENESC-2020', 1]]},
+        {displayFinancialStatus: 'PAID', country: 'CA', attrs: [{key: '_ship_region', value: 'INT'}, {key: '_batch', value: 'OPENESC-2020:2'}], lines: [['OPENESC-2020', 1]]},
       ]),
-    );
+    config);
     assert.deepEqual(runs, {'OPENESC-2020': [{region: 'EU', units: 3}, {region: 'NEAR', units: 1}, {region: 'INT', units: 1}]});
+    // The storefront's batch 1 count is EU only: grandfathered units take it, new NEAR/INT units do not.
+    const eu = campaignState(config.skus['OPENESC-2020'].batches, runs['OPENESC-2020'] as UnitRuns, config.pendingShips, [], null, 'EU');
+    assert.equal(eu.batch, 1);
+    assert.equal(eu.paidLeft, 197);
+    const near = campaignState(config.skus['OPENESC-2020'].batches, runs['OPENESC-2020'] as UnitRuns, config.pendingShips, [], null, 'NEAR');
+    assert.equal(near.batch, 2);
+    assert.equal(near.paidStock, false);
   });
 });
 

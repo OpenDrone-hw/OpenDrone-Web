@@ -1170,14 +1170,14 @@ rate, and HS codes and country of origin on every variant.
 
 ### International preorders
 
-Other permitted destinations use allocation region `INT`. Batch-1 paid stock
-of FC and ESC serves the EU and `INT` but not the US (founder 2026-10-29), with
-the late November promise and no international delivery date; international
-products, accessories and a full batch 1 use the March batch, including the
-existing `usStock` rule for otherwise unlisted accessories. The Shopify
-shipping rates of the international zones are still named for the March ship
-date: add a batch-1 rate per zone, with the same price and the November ship
-date, before this reaches production (`docs/batch1-shipping-rates.md`).
+Other permitted destinations use allocation region `INT`; GB, CH and NO use
+`NEAR` (`IMPORT_COUNTRY_CODES`), the same March batch with the duties line.
+Batch-1 paid stock of FC and ESC serves the EU only (`paidRegions` in
+`content/preorders.json`, founder 2026-11-03); `NEAR`, `INT` and US buyers
+take the March batch, including the existing `usStock` rule for otherwise
+unlisted accessories. A non-EU line that recorded batch 1 before then keeps
+it (`grandfatheredPaidLine`, read from its `_batch`/promise and `_ship_region`
+line attributes).
 The selected country supplies Shopify's catalog prices, cart market and currency.
 A null shipping preview means the charge is confirmed at checkout, never free.
 Before checkout, the cart and the added-to-cart drawer show "from X, confirmed

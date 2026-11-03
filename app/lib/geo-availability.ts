@@ -31,7 +31,7 @@ import {EU_COUNTRY_CODES, IMPORT_COUNTRY_CODES} from './eu-countries.ts';
  * - `eu`: an EU member state: batch 1 stock, "In stock in Belgium, ships in a few days."
  * - `import`: UK, Switzerland, Norway (`IMPORT_COUNTRY_CODES`, allocation region NEAR):
  *   the March 2027 batch like `intl` (batch 1 is EU only, `paidRegions`), plus
- *   "Import VAT and duties are paid by you on delivery." (`GEO_DUTIES_NOTE`).
+ *   "Import VAT and duties: paid by you on delivery, unless collected at checkout." (`GEO_DUTIES_NOTE`).
  * - `intl`: any other known country except the US: the March 2027 preorder batch only.
  * - `us`: on hold, "Not shipping to the US yet.", no ship promise.
  * - `fallback`: no known country: the batch promise itself.
@@ -80,9 +80,9 @@ export const GEO_AVAILABILITY_COPY: Record<Locale, Record<KnownGeoRegion, string
 
 /** The duties note of the `import` region: PDP buy box, cart, bar, location notice. */
 export const GEO_DUTIES_NOTE: Record<Locale, string> = {
-  en: 'Import VAT and duties are paid by you on delivery.',
-  nl: 'Invoer-btw en invoerrechten betaal je zelf bij levering.',
-  fr: 'La TVA à l’importation et les droits de douane sont à votre charge à la livraison.',
+  en: 'Import VAT and duties: paid by you on delivery, unless collected at checkout.',
+  nl: 'Invoer-btw en invoerrechten: bij levering door jou betaald, tenzij geïnd bij de checkout.',
+  fr: 'TVA à l’importation et droits : à votre charge à la livraison, sauf s’ils sont perçus au paiement.',
 };
 
 /** The duties note for a region, or null outside the `import` region. */
@@ -110,6 +110,15 @@ export type GeoOfferAvailability = {
 
 /** First day of the March 2027 promise; a test checks it against `content/preorders.json`. */
 export const INTL_AVAILABILITY_STARTS = '2027-03-01';
+
+/**
+ * Where an Offer is not sold: the US while US sales are on hold (no US rate),
+ * so no visitor or crawler reads an InStock or PreOrder offer as orderable
+ * from the US. Spread into every Offer of the product's structured data.
+ */
+export function offerRegionRestriction(usSalesOpen: boolean): {ineligibleRegion?: Array<{'@type': 'Country'; name: string}>} {
+  return usSalesOpen ? {} : {ineligibleRegion: [{'@type': 'Country', name: 'US'}]};
+}
 
 /** The offer fields of a region, or null to keep the offer as it is (fallback). */
 export function geoOfferAvailability(region: GeoAvailabilityRegion): GeoOfferAvailability | null {

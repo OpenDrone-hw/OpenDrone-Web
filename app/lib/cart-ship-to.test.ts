@@ -434,7 +434,7 @@ describe('international cart country switches', () => {
       }
       assert.ok(written.length>0);
       for (const update of written) {
-        assert.equal(update.attributes?.find(a=>a.key==='Import VAT and duties')?.value,'Paid by you on delivery',update.id);
+        assert.equal(update.attributes?.find(a=>a.key==='Import VAT and duties')?.value,'Paid by you on delivery, unless collected at checkout',update.id);
       }
       written.length=0;
       await handleCartCountry(switchRequest('BE'),ENV,dependencies);

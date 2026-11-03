@@ -56,16 +56,16 @@
 
 import {
   allocateUnit,
-  allocationRegion,
   batchOfUnit,
   configSoldUnder,
+  grandfatheredPaidLine,
+  lineAllocationRegion,
   REGIONS,
   regionOf,
   sellableUnits,
   servesRegion,
   shipsOnlyWithPaid,
   shipsWithBatch,
-  soldBeforeRegionCutover,
   usStockRule,
   type CampaignConfig,
   type Region,
@@ -356,15 +356,20 @@ function lineRegion(line: PreorderOrder['lineItems']['nodes'][number]): Region {
 /** True when a preorder line's promise was computed for another region
  *  than the order ships to. */
 export function promiseMismatch(order: PreorderOrder): boolean {
-  const region = recordedRegion(order);
-  return order.lineItems.nodes.some((line) => hasPromise(line) && lineRegion(line) !== region);
+  const region = orderRegion(order);
+  return order.lineItems.nodes.some((line) => hasPromise(line) && !recordedFor(lineRegion(line), region));
 }
 
-/** The region an order's lines were recorded under: its shipping region,
- *  except GB/CH/NO sold before the cutover, which the cart recorded as INT. */
-function recordedRegion(order: Pick<PreorderOrder, 'shippingAddress' | 'createdAt'>): Region {
-  const region = orderRegion(order);
-  return region === 'NEAR' && soldBeforeRegionCutover(order.createdAt) ? 'INT' : region;
+/** True when a line recorded for `recorded` may ship to `region`: the same
+ *  region, or an INT line to GB/CH/NO (NEAR), which the cart recorded as INT
+ *  before NEAR existed and which ships through the same international market. */
+function recordedFor(recorded: Region, region: Region): boolean {
+  return recorded === region || (recorded === 'INT' && region === 'NEAR');
+}
+
+/** The region a line's units fill the batches in (`lineAllocationRegion`). */
+function lineFillRegion(config: CampaignConfig, line: PreorderOrder['lineItems']['nodes'][number], region: Region): Region {
+  return lineAllocationRegion(region, grandfatheredPaidLine(config, {sku: line.sku, attributes: line.customAttributes}));
 }
 
 /** Parse a `_batch` line attribute, `SKU:N`, or null. */
@@ -464,10 +469,7 @@ export function assignBatches(
   const sorted = [...orders].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   for (const order of sorted) {
     if (!isCountedOrder(order)) continue;
-    // Sold before the cutover: the rules of then. GB/CH/NO were INT, and a
-    // non-EU unit filled the batches as an EU unit (`allocationRegion`).
-    const region = recordedRegion(order);
-    const fillRegion = allocationRegion(orderRegion(order), order.createdAt);
+    const region = orderRegion(order);
     const found: LineBatch[] = [];
     // An order with a line that does not ship with paid stock ships whole in
     // March: none of its units takes a paid batch or stock on hand.
@@ -498,7 +500,8 @@ export function assignBatches(
           else found.push({sku: rule.sku, batch, units, shipPromise: ships, item: sku});
         };
         // The batch the lead's next unit for this region fell into.
-        const leadNext = () => nextBatchFromFill(lead, before[rule.sku], fillRegion, march);
+        // A non-EU line sold batch 1 before it became EU only keeps it (`grandfatheredPaidLine`).
+        const leadNext = () => nextBatchFromFill(lead, before[rule.sku], lineFillRegion(config, line, region), march);
         if (march) {
           // Pinned to paid stock or not, the parcel ships with the March batch.
           const pinned = rule.batch ? lead[rule.batch - 1] : undefined;
@@ -521,7 +524,7 @@ export function assignBatches(
       if (!sku || !entry || !(line.currentQuantity > 0)) continue;
       const fill = (fills[sku] ??= []);
       for (let unit = 0; unit < line.currentQuantity; unit += 1) {
-        const {batch, entry: batchEntry} = allocateUnit(entry.batches, fill, fillRegion, march);
+        const {batch, entry: batchEntry} = allocateUnit(entry.batches, fill, lineFillRegion(config, line, region), march);
         const existing = found.find((b) => b.sku === sku && b.batch === batch && !b.item);
         if (existing) existing.units += 1;
         else {
@@ -569,13 +572,11 @@ export function needsUsReview(order: PreorderOrder, orderBatches: LineBatch[], c
 export function needsDestinationReview(order: PreorderOrder, orderBatches: LineBatch[], config: CampaignConfig): boolean {
   const region = orderRegion(order);
   if (region === 'EU') return false;
-  // Sold before the cutover: a GB/CH/NO line was recorded as INT, and its
-  // batch is checked in the region it was allocated in.
-  const recorded = recordedRegion(order);
-  const served = allocationRegion(region, order.createdAt);
   return order.lineItems.nodes.some((line) => {
     if (!(line.currentQuantity > 0)) return false;
-    if (!hasPromise(line) || (lineRegion(line) !== region && lineRegion(line) !== recorded)) return true;
+    if (!hasPromise(line) || !recordedFor(lineRegion(line), region)) return true;
+    // A grandfathered paid line is checked in the region it was allocated in.
+    const served = lineFillRegion(config, line, region);
     const sku = line.sku?.trim();
     if (!sku) return true;
     const mine = orderBatches.filter((b) => (b.item ?? b.sku) === sku);

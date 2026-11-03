@@ -117,7 +117,7 @@ test('checkout states distinct paid-stock, EU funding and international arrival 
     assert.equal(attributes.find(a=>a.key==='Preorder')?.value,stock?undefined:variant.ship_promise);
     assert.equal(attributes.find(a=>a.key==='Shipping')?.value,stock?'In stock in Belgium, ships in a few days.':undefined);
     // Only NEAR lines tell the buyer they pay import VAT and duties on delivery.
-    assert.equal(attributes.find(a=>a.key==='Import VAT and duties')?.value,region==='NEAR' ? 'Paid by you on delivery' : undefined,region);
+    assert.equal(attributes.find(a=>a.key==='Import VAT and duties')?.value,region==='NEAR' ? 'Paid by you on delivery, unless collected at checkout' : undefined,region);
     assert.doesNotMatch(variant.ship_promise??'',/delivered|30 April|15 April/);
   }
 });
@@ -150,7 +150,7 @@ test('EU batch 1 cart lines say in stock in Belgium with no preorder date; NEAR 
     {key: 'Preorder', value: config.pendingShips},
     {key: 'Delivery by', value: '30 April 2027'},
     {key: '_ship_region', value: 'NEAR'},
-    {key: 'Import VAT and duties', value: 'Paid by you on delivery'},
+    {key: 'Import VAT and duties', value: 'Paid by you on delivery, unless collected at checkout'},
     {key: '_batch', value: 'OPENFC-LITE-2020:2'},
   ]);
   assert.deepEqual(attrs('US'), [

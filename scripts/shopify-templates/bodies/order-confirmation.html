@@ -3,11 +3,13 @@
 {% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
 {% assign delivery_region = 'INT' %}
 {% if shipping_address == blank or eu_countries contains shipping_address.country_code %}{% assign delivery_region = 'EU' %}{% elsif shipping_address.country_code == 'US' %}{% assign delivery_region = 'US' %}{% elsif shipping_address.country_code == 'GB' or shipping_address.country_code == 'CH' or shipping_address.country_code == 'NO' %}{% assign delivery_region = 'NEAR' %}{% endif %}
-{% assign destination_needs_review = false %}
+{% assign destination_needs_review = false %}{% assign review_batch_one = false %}
 {% for line in line_items %}
-{% assign recorded_region = 'EU' %}{% assign recorded_preorder = false %}
-{% for p in line.properties %}{% if p.first == '_ship_region' and p.last != blank %}{% assign recorded_region = p.last %}{% elsif p.first == 'Preorder' and p.last != blank %}{% assign recorded_preorder = true %}{% elsif p.first == '_ship_promise' and p.last != blank %}{% assign recorded_preorder = true %}{% endif %}{% endfor %}
-{% if recorded_preorder and recorded_region != delivery_region %}{% assign destination_needs_review = true %}{% endif %}
+{% assign recorded_region = 'EU' %}{% assign recorded_preorder = false %}{% assign recorded_batch = '' %}{% assign recorded_stock = false %}
+{% for p in line.properties %}{% if p.first == '_ship_region' and p.last != blank %}{% assign recorded_region = p.last %}{% elsif p.first == 'Preorder' and p.last != blank %}{% assign recorded_preorder = true %}{% elsif p.first == '_ship_promise' and p.last != blank %}{% assign recorded_preorder = true %}{% assign recorded_stock = true %}{% elsif p.first == '_batch' and p.last != blank %}{% assign recorded_batch = p.last | split: ':' | last %}{% endif %}{% endfor %}
+{% comment %} An INT line to GB/CH/NO (NEAR) ships through the same international market: no review. {% endcomment %}
+{% assign same_market = false %}{% if recorded_region == 'INT' and delivery_region == 'NEAR' %}{% assign same_market = true %}{% endif %}
+{% if recorded_preorder and recorded_region != delivery_region and same_market == false %}{% assign destination_needs_review = true %}{% if recorded_batch == '1' or recorded_stock %}{% assign review_batch_one = true %}{% endif %}{% endif %}
 {% endfor %}
 {% comment %}
   Preorder lines carry the ship promise as the line item property
@@ -45,7 +47,7 @@
 {% endif %}
 {% if destination_needs_review %}
 <od-card accent>
-  <od-t last><strong style="color: #ffb700;">Delivery address review.</strong> Your delivery country changed after these item dates were recorded. Stock from Belgium ships only to the EU. We will contact you to confirm a delivery arrangement or offer a full refund. Your recorded dates below remain part of your order; this email does not extend them.</od-t>
+  <od-t last><strong style="color: #ffb700;">Delivery address review.</strong> Your delivery country changed after these item dates were recorded.{% if review_batch_one %} Stock from Belgium ships only to the EU.{% endif %} We will contact you to confirm a delivery arrangement or offer a full refund. Your recorded dates below remain part of your order; this email does not extend them.</od-t>
 </od-card>
 {% endif %}
 <od-button href="{{ order_status_url }}" more>View order status &rarr;</od-button>

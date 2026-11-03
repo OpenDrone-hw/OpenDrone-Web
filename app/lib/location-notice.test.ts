@@ -43,7 +43,7 @@ describe('noticeText', () => {
     assert.equal(noticeText('BE', 'en'), 'Shipping to Belgium: In stock in Belgium, ships in a few days.');
     assert.equal(
       noticeText('GB', 'en'),
-      'Shipping to United Kingdom: Pre-order, ships March 2027. Import VAT and duties are paid by you on delivery.',
+      'Shipping to United Kingdom: Pre-order, ships March 2027. Import VAT and duties: paid by you on delivery, unless collected at checkout.',
     );
     assert.equal(noticeText('JP', 'en'), 'Shipping to Japan: Pre-order, ships March 2027.');
     assert.equal(noticeText('US', 'en'), 'Shipping to United States: Not shipping to the US yet.');

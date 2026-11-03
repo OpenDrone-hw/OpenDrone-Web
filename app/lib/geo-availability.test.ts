@@ -17,6 +17,7 @@ import {
   stockRegion,
   geoShipText,
   hasBatchOne,
+  offerRegionRestriction,
   offerAvailability,
 } from './geo-availability.ts';
 import {visitorCountry} from './visitor-country.ts';
@@ -114,7 +115,7 @@ describe('geoBannerLines', () => {
   it('shows only the visitor line when the country is known', () => {
     assert.deepEqual(geoBannerLines('eu', 'en'), [{region: 'eu', label: 'EU', text: 'In stock in Belgium, ships in a few days.'}]);
     assert.deepEqual(geoBannerLines('intl', 'en'), [{region: 'intl', label: 'Elsewhere', text: 'Pre-order, ships March 2027.'}]);
-    assert.deepEqual(geoBannerLines('import', 'en'), [{region: 'import', label: 'UK, CH, NO', text: 'Pre-order, ships March 2027. Import VAT and duties are paid by you on delivery.'}]);
+    assert.deepEqual(geoBannerLines('import', 'en'), [{region: 'import', label: 'UK, CH, NO', text: 'Pre-order, ships March 2027. Import VAT and duties: paid by you on delivery, unless collected at checkout.'}]);
     assert.deepEqual(geoBannerLines('us', 'en'), [{region: 'us', label: 'US', text: 'Not shipping to the US yet.'}]);
   });
 
@@ -212,7 +213,7 @@ describe('import and US regions', () => {
       assert.ok(geoDutiesNote('import', locale));
       for (const r of ['eu', 'intl', 'us', 'fallback'] as const) assert.equal(geoDutiesNote(r, locale), null);
     }
-    assert.equal(geoDutiesNote('import', 'en'), 'Import VAT and duties are paid by you on delivery.');
+    assert.equal(geoDutiesNote('import', 'en'), 'Import VAT and duties: paid by you on delivery, unless collected at checkout.');
   });
   it('the US line makes no ship promise', () => {
     for (const locale of ['en', 'nl', 'fr'] as const) assert.doesNotMatch(geoShipText('us', locale) ?? '', /20\d\d|ships? (in|by)/i);
@@ -224,5 +225,17 @@ describe('import and US regions', () => {
   });
   it('the phone bar has a short line for every region and locale', () => {
     for (const locale of ['en', 'nl', 'fr'] as const) for (const r of ['eu', 'import', 'intl', 'us'] as const) assert.ok(geoBarText(r, locale, true).length <= 42, `${locale}.${r}`);
+  });
+});
+
+describe('structured data while US sales are on hold', () => {
+  it('marks every offer ineligible for the US, and nothing when US sales are open', () => {
+    assert.deepEqual(offerRegionRestriction(false), {ineligibleRegion: [{'@type': 'Country', name: 'US'}]});
+    assert.deepEqual(offerRegionRestriction(true), {});
+  });
+  it('the PDP spreads it into the offer every variant offer copies', () => {
+    const src = fs.readFileSync(new URL('../routes/products.$handle.tsx', import.meta.url), 'utf8');
+    assert.match(src, /Object\.assign\(offerBase, offerRegionRestriction\(rootData\?\.usShippingRate != null\)\)/);
+    assert.ok(src.indexOf('offerRegionRestriction(rootData') < src.indexOf("'@type': 'AggregateOffer'"));
   });
 });

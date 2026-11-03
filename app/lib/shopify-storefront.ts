@@ -157,7 +157,7 @@ export const DELIVERY_BY_ATTRIBUTE = 'Delivery by';
 /** The visible line attribute of a UK, Swiss or Norwegian line (region
  *  NEAR): the buyer pays import VAT and duties on delivery. */
 export const DUTIES_ATTRIBUTE = 'Import VAT and duties';
-export const DUTIES_VALUE = 'Paid by you on delivery';
+export const DUTIES_VALUE = 'Paid by you on delivery, unless collected at checkout';
 /** The line's own deadline while its visible deadline follows a combined order. */
 export const DELIVERY_BY_OWN_ATTRIBUTE = '_delivery_by_own';
 

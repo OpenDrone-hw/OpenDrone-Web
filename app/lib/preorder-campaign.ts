@@ -25,9 +25,10 @@ import type {Catalog, CatalogVariant} from './catalog.ts';
 import {EU_COUNTRY_CODES, IMPORT_COUNTRY_CODES} from './eu-countries.ts';
 
 /** Allocation regions: EU member states, the US, NEAR (UK, Switzerland,
- *  Norway: `IMPORT_COUNTRY_CODES`, Belgian stock with import VAT and duties
- *  paid on delivery), or other international destinations. Missing country
- *  information retains the historical EU default. */
+ *  Norway: `IMPORT_COUNTRY_CODES`, the March batch with import VAT and duties
+ *  paid on delivery; its own region so it can get a stock pool later), or
+ *  other international destinations. Missing country information retains the
+ *  historical EU default. */
 export type Region = 'EU' | 'US' | 'NEAR' | 'INT';
 
 export const REGIONS: readonly Region[] = ['EU', 'US', 'NEAR', 'INT'];
@@ -45,29 +46,49 @@ export function internationalRegion(country: string | null | undefined): Region 
   return regionOf(country) === 'NEAR' ? 'NEAR' : 'INT';
 }
 
-/**
- * When paid stock became EU only (`paidRegions` ["EU"], founder 2026-11-03).
- * An order created before it keeps the batch it was sold: then paid batch 1
- * served the EU and every other non-US destination together (GB, CH and NO
- * were INT), so such a unit is allocated as an EU unit was (`allocationRegion`)
- * and its recorded promise stands. ISO 8601, compared as text with Shopify's
- * `createdAt` (UTC, "Z").
- * TODO(merge): set to the production deploy time of this change.
- */
-export const PAID_REGIONS_CUTOVER = '2026-11-04T00:00:00Z';
+/** A paid line's recorded attributes, as the cart writes them (shopify-storefront.ts):
+ *  `_batch` "SKU:N", `_ship_region` (absent: EU), the promise in `Preorder` or `_ship_promise`. */
+export type RecordedLine = {
+  sku?: string | null;
+  attributes?: ReadonlyArray<{key: string; value?: string | null}> | null;
+};
 
-/** True for an order created before {@link PAID_REGIONS_CUTOVER}. */
-export function soldBeforeRegionCutover(createdAt: string | null | undefined, cutover = PAID_REGIONS_CUTOVER): boolean {
-  return Boolean(createdAt) && createdAt! < cutover;
+const attr = (line: RecordedLine, key: string) => line.attributes?.find((a) => a.key === key)?.value?.trim() || null;
+
+/**
+ * True for a line sold to a non-EU destination (recorded `_ship_region` INT
+ * or NEAR) with a paid batch: its `_batch` names a paid batch, or (a line
+ * from before `_batch`) its promise is a paid batch's `ships`. Before
+ * 2026-11-03 paid batch 1 served the EU and every other non-US destination
+ * together (GB, CH and NO were INT), so such a line was sold batch 1 stock and
+ * keeps it: it fills the batches as an EU unit (`lineAllocationRegion`).
+ * New non-EU carts never record a paid batch (`paidRegions` ["EU"]), and an
+ * EU line shipped abroad records no non-EU region, so neither is kept.
+ * Read from the order itself, so it does not depend on when a deploy happens.
+ */
+export function grandfatheredPaidLine(config: Pick<CampaignConfig, 'skus'>, line: RecordedLine): boolean {
+  const recorded = attr(line, '_ship_region');
+  if (recorded !== 'INT' && recorded !== 'NEAR') return false;
+  const batch = attr(line, '_batch');
+  const match = batch ? /^([A-Za-z0-9-]+):(\d+)$/.exec(batch) : null;
+  if (match) return config.skus[match[1]]?.batches[Number(match[2]) - 1]?.paid === true;
+  const promise = attr(line, 'Preorder') ?? attr(line, '_ship_promise');
+  const sku = line.sku?.trim();
+  return Boolean(promise && sku && config.skus[sku]?.batches.some((b) => b.paid && b.ships?.trim() === promise));
 }
 
-/**
- * The region a paid unit is allocated in: its shipping region, except a
- * NEAR or INT unit sold before the cutover, which fills batches as the EU
- * does (batch 1 first), the rule it was sold under.
- */
-export function allocationRegion(region: Region, createdAt: string | null | undefined, cutover = PAID_REGIONS_CUTOVER): Region {
-  return isInternationalRegion(region) && soldBeforeRegionCutover(createdAt, cutover) ? 'EU' : region;
+/** The region a line's units fill the batches in: its shipping region, or
+ *  EU for a grandfathered paid line ({@link grandfatheredPaidLine}). */
+export function lineAllocationRegion(region: Region, grandfathered: boolean): Region {
+  return grandfathered && isInternationalRegion(region) ? 'EU' : region;
+}
+
+/** The paid stack's ship promise as the /preorder page shows it to a buyer
+ *  in `region`: only where paid stock ships (`paidRegions`, the EU). NEAR,
+ *  INT and US buyers see no "ships late November" lane and no "order them
+ *  separately" line. */
+export function stackPaidShips(region: Region, paidShips: string | null, paidRegions: readonly Region[] | undefined): string | null {
+  return (paidRegions ?? ['EU']).includes(region) ? paidShips : null;
 }
 
 /** True for a region outside the EU and the US: NEAR and INT ship through
@@ -129,8 +150,8 @@ function batchPromise(batch: CampaignBatch, fallback: string): string {
 /** The agreed arrival deadline for a region, YYYY-MM-DD, or null. Used for
  *  visible checkout metadata and ordering the lines of a combined cart. */
 function batchDeliveryDay(batch: CampaignBatch, region: Region): string | null {
-  // NEAR ships Belgian stock like the EU (its paid batch keeps `deliveryBy`)
-  // and a funding batch like INT.
+  // NEAR takes a funding batch like INT. Should a paid batch ever serve NEAR
+  // (`paidRegions`), it keeps that batch's `deliveryBy`, as the EU does.
   if (region === 'NEAR') return (batch.paid ? batch.deliveryBy : batch.deliveryByINT) ?? null;
   return (region === 'US' ? batch.deliveryByUS : region === 'INT' ? batch.deliveryByINT : batch.deliveryBy) ?? null;
 }
@@ -152,8 +173,8 @@ export type CampaignConfig = {
    *  step and `off` its share off retail. Past the last step: retail. */
   priceTiers: PriceTier[];
   /** Where paid stock (Belgium) ships: the regions of every paid batch that
-   *  lists none of its own. The one entry that decides whether INT buyers
-   *  get batch 1 (founder 2026-11-03: EU and NEAR, not INT or the US). */
+   *  lists none of its own. The one entry that decides who gets batch 1
+   *  (founder 2026-11-03: the EU only; NEAR, INT and the US take March). */
   paidRegions?: Region[];
   /** Per SKU: its batches, and optionally its own price steps in place of
    *  the campaign's (`tiersFor`). */

@@ -104,15 +104,25 @@ describe('Shopify notification templates', async () => {
     const nz = fixtures.find((f) => f.id === 'international-nz-gst')!;
     assert.match(renderLiquid(tpl.html, nz.context).output, /Tax recorded at checkout/);
     const uk = fixtures.find((f) => f.id === 'uk-gross-receipt')!;
-    // A UK line still recorded INT now differs from the NEAR address region: flagged for review.
-    assert.match(renderLiquid(tpl.html, asInt(uk.context)).output, /Stock from Belgium ships only to the EU\./);
+    // A UK line recorded INT (before NEAR existed) ships through the same international market: no review.
+    assert.doesNotMatch(renderLiquid(tpl.html, asInt(uk.context)).output, /Delivery address review/);
     for (const code of ['CH', 'NO']) {
       const ctx = {...uk.context, shipping_address: {country: code, country_code: code, province_code: null}};
       assert.doesNotMatch(renderLiquid(tpl.html, ctx).output, /Delivery address review/, code);
     }
-    // An INT line to a NEAR address is flagged.
-    const intToCh = {...asInt(uk.context), shipping_address: {country: 'Switzerland', country_code: 'CH', province_code: null}};
-    assert.match(renderLiquid(tpl.html, intToCh).output, /Delivery address review/);
+    // An EU line shipped to GB is reviewed; "Stock from Belgium ships only to the EU" only when it was batch 1.
+    const euLine = (properties: Record<string, string>) => ({
+      ...uk.context,
+      line_items: (uk.context.line_items as Array<Record<string, unknown>>).map((line) => ({...line, properties})),
+    });
+    const euBatchOne = renderLiquid(tpl.html, euLine({'Preorder': 'ships late November 2026', _batch: 'OPENFC-LITE-2020:1'})).output;
+    assert.match(euBatchOne, /Delivery address review/);
+    assert.match(euBatchOne, /Stock from Belgium ships only to the EU\./);
+    const euStock = renderLiquid(tpl.html, euLine({'Shipping': 'In stock in Belgium, ships in a few days.', _ship_promise: 'ships late November 2026', _batch: 'OPENFC-LITE-2020:1'})).output;
+    assert.match(euStock, /Stock from Belgium ships only to the EU\./);
+    const euMarch = renderLiquid(tpl.html, euLine({'Preorder': 'ships by 31 March 2027 if the target is reached', _batch: 'OPENFC-LITE-2020:2'})).output;
+    assert.match(euMarch, /Delivery address review/);
+    assert.doesNotMatch(euMarch, /Stock from Belgium/);
     const withPendingVat = {...uk.context, tax_price: 1937};
     const receipt = renderLiquid(tpl.html, withPendingVat).output;
     assert.doesNotMatch(receipt, /Includes VAT|Tax recorded at checkout/);

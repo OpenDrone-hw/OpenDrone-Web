@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import {describe, it, test} from 'node:test';
 import type {Catalog} from './catalog.ts';
 import {
+  stackPaidShips,
   allocateUnit,
   applyCampaign,
   batchFill,
@@ -1046,5 +1047,20 @@ describe('batch-1-only orders (founder 2026-11-01)', () => {
     assert.equal(only([['OPENFC-LITE-2020', 2], ['OPENRX-LITE', 0]]), true);
     assert.equal(only([['ACC-ANT-T', 4]]), true);
     assert.equal(only([['ACC-ANT-T', 2]], {'ACC-ANT-T': 3}), false);
+  });
+});
+
+describe('the /preorder page stack lane by region (stackPaidShips)', () => {
+  const live = parseCampaignConfig(JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')));
+  it('shows the paid stack ship date to EU buyers only: UK/CH/NO, INT and US see no November lane', () => {
+    assert.equal(stackPaidShips('EU', 'ships late November 2026', live.paidRegions), 'ships late November 2026');
+    for (const region of ['NEAR', 'INT', 'US'] as const) {
+      assert.equal(stackPaidShips(region, 'ships late November 2026', live.paidRegions), null, region);
+    }
+  });
+  it('the preorder route reads it with the catalog region', () => {
+    const src = fs.readFileSync(new URL('../routes/preorder.tsx', import.meta.url), 'utf8');
+    assert.match(src, /stackPaidShips\(context\.catalog\.region, paidShips, CAMPAIGN\.paidRegions\)/);
+    assert.match(src, /const international = isInternationalRegion\(context\.catalog\.region\)/);
   });
 });

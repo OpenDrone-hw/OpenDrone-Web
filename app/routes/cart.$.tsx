@@ -554,7 +554,7 @@ function PopulatedCart({
   const preorderSkus = new Set(useGeoParcel().preorderSkus(cart.lines));
   const anyEarly = useAnyEarlySku(cart.lines.map((line) => line.sku));
   const stockEarly = useAnyEarlySku(cart.lines.filter((line) => !preorderSkus.has(line.sku)).map((line) => line.sku));
-  // UK, CH, NO: "Import VAT and duties are paid by you on delivery."
+  // UK, CH, NO: "Import VAT and duties: paid by you on delivery, unless collected at checkout."
   const dutiesNote = useGeoDutiesNote();
   const wholesale = cartWholesaleCode(cart.discountCodes);
 

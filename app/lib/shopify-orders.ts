@@ -37,7 +37,7 @@
  * guessing.
  */
 
-import {allocationRegion, regionOf, shipsOnlyWithPaid, type CampaignConfig, type UnitRuns} from './preorder-campaign.ts';
+import {grandfatheredPaidLine, lineAllocationRegion, regionOf, shipsOnlyWithPaid, type CampaignConfig, type UnitRuns} from './preorder-campaign.ts';
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
 const FRESH_MS = 60_000;
@@ -62,11 +62,10 @@ export const PAID_ORDERS_QUERY = `#graphql
         test
         cancelledAt
         displayFinancialStatus
-        createdAt
         shippingAddress { countryCodeV2 }
         lineItems(first: 250) {
           pageInfo { hasNextPage }
-          nodes { sku currentQuantity }
+          nodes { sku currentQuantity customAttributes { key value } }
         }
       }
     }
@@ -85,11 +84,10 @@ type OrdersPage = {
       test: boolean;
       cancelledAt: string | null;
       displayFinancialStatus: string;
-      createdAt?: string | null;
       shippingAddress?: {countryCodeV2: string | null} | null;
       lineItems: {
         pageInfo: {hasNextPage: boolean};
-        nodes: Array<{sku: string | null; currentQuantity: number}>;
+        nodes: Array<{sku: string | null; currentQuantity: number; customAttributes?: Array<{key: string; value: string | null}> | null}>;
       };
     }>;
   };
@@ -200,8 +198,7 @@ export async function fetchPaidUnitRuns(
       if (order.lineItems.pageInfo.hasNextPage) {
         throw new Error('shopify orders: an order exceeds 250 lines');
       }
-      // A non-EU order sold before paid stock became EU only keeps its batch 1 units.
-      const region = allocationRegion(regionOf(order.shippingAddress?.countryCodeV2), order.createdAt);
+      const region = regionOf(order.shippingAddress?.countryCodeV2);
       const lines = order.lineItems.nodes.map((l) => ({sku: l.sku, quantity: l.currentQuantity}));
       const march = config ? !shipsOnlyWithPaid(config, lines, stockUsed) : false;
       if (config && !march) {
@@ -218,10 +215,14 @@ export async function fetchPaidUnitRuns(
         if (!Number.isSafeInteger(line.currentQuantity) || line.currentQuantity < 0) {
           throw new Error('shopify orders: invalid line quantity');
         }
+        // A non-EU line sold batch 1 before it became EU only keeps it (`grandfatheredPaidLine`).
+        const unitRegion = config
+          ? lineAllocationRegion(region, grandfatheredPaidLine(config, {sku, attributes: line.customAttributes}))
+          : region;
         const runs = (units[sku] ??= []);
         const last = runs[runs.length - 1];
-        if (last && last.region === region && Boolean(last.march) === march) last.units += line.currentQuantity;
-        else runs.push(march ? {region, units: line.currentQuantity, march} : {region, units: line.currentQuantity});
+        if (last && last.region === unitRegion && Boolean(last.march) === march) last.units += line.currentQuantity;
+        else runs.push(march ? {region: unitRegion, units: line.currentQuantity, march} : {region: unitRegion, units: line.currentQuantity});
       }
     }
     if (!result.data.orders.pageInfo.hasNextPage) return units;
