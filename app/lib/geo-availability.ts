@@ -29,8 +29,9 @@ import {EU_COUNTRY_CODES, IMPORT_COUNTRY_CODES} from './eu-countries.ts';
 
 /**
  * - `eu`: an EU member state: batch 1 stock, "In stock in Belgium, ships in a few days."
- * - `import`: UK, Switzerland, Norway (`IMPORT_COUNTRY_CODES`): the same stock and line,
- *   plus "Import VAT and duties are paid by you on delivery." (`GEO_DUTIES_NOTE`).
+ * - `import`: UK, Switzerland, Norway (`IMPORT_COUNTRY_CODES`, allocation region NEAR):
+ *   the March 2027 batch like `intl` (batch 1 is EU only, `paidRegions`), plus
+ *   "Import VAT and duties are paid by you on delivery." (`GEO_DUTIES_NOTE`).
  * - `intl`: any other known country except the US: the March 2027 preorder batch only.
  * - `us`: on hold, "Not shipping to the US yet.", no ship promise.
  * - `fallback`: no known country: the batch promise itself.
@@ -52,26 +53,26 @@ export function geoAvailabilityRegion(country: string | null | undefined): GeoAv
 
 /** True for a region batch 1 stock ships to now: sold as stock, not as a pre-order. */
 export function stockRegion(region: GeoAvailabilityRegion | null | undefined): boolean {
-  return region === 'eu' || region === 'import';
+  return region === 'eu';
 }
 
 /** The line a visitor reads instead of the batch 1 promise, per locale. */
 export const GEO_AVAILABILITY_COPY: Record<Locale, Record<KnownGeoRegion, string>> = {
   en: {
     eu: 'In stock in Belgium, ships in a few days.',
-    import: 'In stock in Belgium, ships in a few days.',
+    import: 'Pre-order, ships March 2027.',
     intl: 'Pre-order, ships March 2027.',
     us: 'Not shipping to the US yet.',
   },
   nl: {
     eu: 'Op voorraad in België, wordt binnen enkele dagen verzonden.',
-    import: 'Op voorraad in België, wordt binnen enkele dagen verzonden.',
+    import: 'Pre-order, verzending in maart 2027.',
     intl: 'Pre-order, verzending in maart 2027.',
     us: 'Nog geen verzending naar de VS.',
   },
   fr: {
     eu: 'En stock en Belgique, expédié sous quelques jours.',
-    import: 'En stock en Belgique, expédié sous quelques jours.',
+    import: 'Précommande, expédition en mars 2027.',
     intl: 'Précommande, expédition en mars 2027.',
     us: 'Pas encore de livraison aux États-Unis.',
   },
@@ -115,7 +116,7 @@ export function geoOfferAvailability(region: GeoAvailabilityRegion): GeoOfferAva
   // US (on hold) keeps the offer as it is: crawlers come from the US, and an
   // OutOfStock there would read as out of stock everywhere.
   if (stockRegion(region)) return {availability: 'https://schema.org/InStock'};
-  if (region === 'intl') return {availability: 'https://schema.org/PreOrder', availabilityStarts: INTL_AVAILABILITY_STARTS};
+  if (region === 'intl' || region === 'import') return {availability: 'https://schema.org/PreOrder', availabilityStarts: INTL_AVAILABILITY_STARTS};
   return null;
 }
 
@@ -168,9 +169,9 @@ export const GEO_BANNER_COPY: Record<Locale, Record<KnownGeoRegion, string> & {t
 
 /** The shorter line per region for the bar on phones (one line, no wrap). */
 export const GEO_BAR_SHORT: Record<Locale, Record<KnownGeoRegion, string>> = {
-  en: {eu: 'In stock, ships in days', import: 'Ships in days, duties on delivery', intl: 'Pre-order, ships Mar 2027', us: 'Not shipping to the US yet'},
-  nl: {eu: 'Op voorraad, binnen dagen verzonden', import: 'Binnen dagen, rechten bij levering', intl: 'Pre-order, verzending mrt 2027', us: 'Nog geen verzending naar de VS'},
-  fr: {eu: 'En stock, expédié sous quelques jours', import: 'Sous quelques jours, droits à la livraison', intl: 'Précommande, mars 2027', us: 'Pas encore de livraison aux É.-U.'},
+  en: {eu: 'In stock, ships in days', import: 'Pre-order Mar 2027, duties on delivery', intl: 'Pre-order, ships Mar 2027', us: 'Not shipping to the US yet'},
+  nl: {eu: 'Op voorraad, binnen dagen verzonden', import: 'Pre-order mrt 2027, rechten bij levering', intl: 'Pre-order, verzending mrt 2027', us: 'Nog geen verzending naar de VS'},
+  fr: {eu: 'En stock, expédié sous quelques jours', import: 'Précommande mars 2027, droits en sus', intl: 'Précommande, mars 2027', us: 'Pas encore de livraison aux É.-U.'},
 };
 
 /** The bar's one line: "EU: In stock in Belgium, ships in a few days" (the visitor's region), or both

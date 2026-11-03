@@ -104,7 +104,7 @@ import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
 import {reachableSteps, stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
-import {geoOfferAvailability, hasBatchOne, offerAvailability} from '~/lib/geo-availability';
+import {geoOfferAvailability, geoShipText, hasBatchOne, offerAvailability} from '~/lib/geo-availability';
 import {isInternationalQuote, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
 import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
@@ -2039,6 +2039,10 @@ function ProductPage() {
         </p>
       ) : notDirect ? (
         <>
+          {/* US sales on hold: say so in the bar's words, with no ship promise. */}
+          {notDirect === 'shops' && rootData?.geo?.region === 'us' ? (
+            <p className="product-buy-ship" role="note">{geoShipText('us', rootData.geo.locale)}</p>
+          ) : null}
           {notDirect === 'shops' ? (
             <p className="product-buy-ship">
               <Link prefetch="intent" to="/wholesale" className="product-buy-terms-link">

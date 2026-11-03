@@ -114,7 +114,7 @@ describe('geoBannerLines', () => {
   it('shows only the visitor line when the country is known', () => {
     assert.deepEqual(geoBannerLines('eu', 'en'), [{region: 'eu', label: 'EU', text: 'In stock in Belgium, ships in a few days.'}]);
     assert.deepEqual(geoBannerLines('intl', 'en'), [{region: 'intl', label: 'Elsewhere', text: 'Pre-order, ships March 2027.'}]);
-    assert.deepEqual(geoBannerLines('import', 'en'), [{region: 'import', label: 'UK, CH, NO', text: 'In stock in Belgium, ships in a few days. Import VAT and duties are paid by you on delivery.'}]);
+    assert.deepEqual(geoBannerLines('import', 'en'), [{region: 'import', label: 'UK, CH, NO', text: 'Pre-order, ships March 2027. Import VAT and duties are paid by you on delivery.'}]);
     assert.deepEqual(geoBannerLines('us', 'en'), [{region: 'us', label: 'US', text: 'Not shipping to the US yet.'}]);
   });
 
@@ -206,9 +206,9 @@ describe('every buy CTA asks the geo hook before saying "Pre-order"', () => {
 });
 
 describe('import and US regions', () => {
-  it('UK, CH and NO read the stock line plus the duties note; nowhere else has the note', () => {
+  it('UK, CH and NO read the March 2027 line plus the duties note (batch 1 is EU only); nowhere else has the note', () => {
     for (const locale of ['en', 'nl', 'fr'] as const) {
-      assert.equal(geoShipText('import', locale), geoShipText('eu', locale));
+      assert.equal(geoShipText('import', locale), geoShipText('intl', locale));
       assert.ok(geoDutiesNote('import', locale));
       for (const r of ['eu', 'intl', 'us', 'fallback'] as const) assert.equal(geoDutiesNote(r, locale), null);
     }
@@ -217,9 +217,9 @@ describe('import and US regions', () => {
   it('the US line makes no ship promise', () => {
     for (const locale of ['en', 'nl', 'fr'] as const) assert.doesNotMatch(geoShipText('us', locale) ?? '', /20\d\d|ships? (in|by)/i);
   });
-  it('stock regions are the EU and import regions only', () => {
-    assert.deepEqual((['eu', 'import', 'intl', 'us', 'fallback'] as const).filter(stockRegion), ['eu', 'import']);
-    assert.deepEqual(geoOfferAvailability('import'), {availability: 'https://schema.org/InStock'});
+  it('the EU is the only stock region', () => {
+    assert.deepEqual((['eu', 'import', 'intl', 'us', 'fallback'] as const).filter(stockRegion), ['eu']);
+    assert.deepEqual(geoOfferAvailability('import'), geoOfferAvailability('intl'));
     assert.equal(geoOfferAvailability('us'), null);
   });
   it('the phone bar has a short line for every region and locale', () => {

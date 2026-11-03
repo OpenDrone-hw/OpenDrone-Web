@@ -9,11 +9,12 @@ export const EU_COUNTRY_CODES: readonly string[] = [
 ];
 
 /**
- * The non-EU countries batch 1 stock ships to from Belgium now (founder
- * 2026-11-03): the buyer pays import VAT and duties on delivery. The one list
- * the allocation region (`regionOf` 'IMP', preorder-campaign.ts) and the ship
+ * UK, Switzerland and Norway (founder 2026-11-03): sold with the March 2027
+ * batch for now (batch 1 is EU only, `paidRegions` in content/preorders.json),
+ * the buyer pays import VAT and duties on delivery. The one list
+ * the allocation region (`regionOf` 'NEAR', preorder-campaign.ts) and the ship
  * line (`geoAvailabilityRegion` 'import', geo-availability.ts) read. Every
  * other non-EU country is 'INT'; whether INT gets batch 1 is one data entry,
- * the paid batches' `regions` in content/preorders.json.
+ * `paidRegions` in content/preorders.json.
  */
 export const IMPORT_COUNTRY_CODES: readonly string[] = ['GB', 'CH', 'NO'];
