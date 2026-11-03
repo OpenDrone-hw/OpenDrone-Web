@@ -119,17 +119,19 @@ test('firmware page: numbered 4-item pre-flash checklist directly above Update f
 test('backup checkbox gates only the disabled state; the click handler still starts with startUpdate', () => {
   const fc = read('./flasher/ui/FcFlasher.tsx');
   assert.match(fc, /<label htmlFor=\{backupId\}[\s\S]*?<input id=\{backupId\} type="checkbox"[\s\S]*?I&apos;ve backed up my config\s*<\/label>/);
-  assert.match(fc, /disabled=\{!canRun \|\| running \|\| run\.kind === 'need-usb'\}\s+aria-disabled=\{needsBackup \|\| undefined\}\s+aria-describedby=\{needsBackup \? backupReasonId : undefined\}/);
+  // Locked or not backed up: aria-disabled (still focusable), described by the visible reason; never the disabled attribute.
+  assert.match(fc, /aria-disabled=\{locked \|\| needsBackup \|\| undefined\}\s+aria-describedby=\{needsBackup \? backupReasonId : lockText \? lockReasonId : locked \? statusId : undefined\}/);
+  assert.doesNotMatch(fc, /disabled=\{!canRun/);
+  assert.match(fc, /<p id=\{lockReasonId\} className="flash-note">\s+\{lockText\}/);
+  assert.match(fc, /onClick=\{\(\) => \(board \? void save\(\) : say\(PICK_BOARD_TEXT\)\)\}\s+aria-disabled=\{!board \|\| undefined\}\s+aria-describedby=\{board \? undefined : pickBoardId\}/);
+  assert.match(fc, /flag: published\(t\) \? undefined : 'Not published yet'/);
   assert.match(fc, /<p id=\{backupReasonId\} className="flash-note">\s+\{BACKUP_REASON\}/);
   assert.match(fc, /const BACKUP_REASON = 'Confirm your config backup first\.';/);
   assert.match(fc, /onClick=\{onUpdate\}/);
+  // The decision itself is tested behaviourally in flasher/ui/update-click.test.ts.
   const onUpdate = /const onUpdate = \(\) => \{([\s\S]*?)\n {2}\};/.exec(fc)![1];
-  assert.doesNotMatch(onUpdate, /await|async/, 'no await before start()');
-  assert.match(onUpdate, /if \(!backedUp\) \{\s+say\(BACKUP_REASON\);\s+return;\s+\}\s+void start\(\);/);
-  const start = /const start = async \(\) => \{([\s\S]*?)\n {2}\};/.exec(fc)![1];
-  assert.equal(start.match(/await /g)?.length, 1, 'one await');
-  assert.match(start, /await startUpdate\(deps\)/);
-  assert.doesNotMatch(start, /backedUp/, 'no state read or await before the serial picker');
+  assert.doesNotMatch(onUpdate, /await|async/, 'no await before the serial picker');
+  assert.match(onUpdate, /^\s*const flow = updateClick\(\{locked, backedUp, lockText, backupReason: BACKUP_REASON\}, say, deps\);/);
 });
 
 test('firmware page: one line for the second device picker, at the Continue step', () => {
@@ -159,4 +161,12 @@ test('guide flash step (base and one-button) carries the same 4 checklist items'
       at = m.index;
     }
   }
+});
+
+test('one live region for the flasher status; the file input reflows at 320px', () => {
+  const fc = read('./flasher/ui/FcFlasher.tsx');
+  assert.doesNotMatch(fc, /aria-live/, 'FcFlasher announces through say() only');
+  assert.match(read('../routes/guides.flash.tsx'), /<div aria-live="polite" aria-atomic="true" className="sr-only">/);
+  assert.doesNotMatch(fc, /say\(`\$\{r\.text\} \$\{BOOT_HINT\}`\)/, 'failures are announced by role="alert" only');
+  assert.match(fc, /type="file"[^>]*className="mt-2 block w-full max-w-full"/);
 });

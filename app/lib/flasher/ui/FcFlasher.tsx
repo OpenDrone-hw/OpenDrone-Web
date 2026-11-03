@@ -22,7 +22,6 @@ import {
   NEED_USB_TEXT,
   pickBootsel,
   STAGE_TEXT,
-  startUpdate,
   type FlowDeps,
   type FlowResult,
   type Prepared,
@@ -41,9 +40,13 @@ import {
 } from '../targets.ts';
 import {imageContainsAscii, parseInfoUf2, parseUf2} from '../uf2.ts';
 import {firmwareIdText} from '../published.ts';
+import {finishAnnouncement, updateClick} from './update-click.ts';
 import {StatusLine, errText, saveBytes, useBeforeUnloadWhile, useStagingBench, type Status} from './status.tsx';
 
 const BACKUP_REASON = 'Confirm your config backup first.';
+const NO_USB_TEXT = "This browser can't reach USB. Use Other ways.";
+const WRITES_OFF_TEXT = 'Direct install is off for now. Use Other ways.';
+const PICK_BOARD_TEXT = 'Pick a board first.';
 
 const short = (t: FlasherTarget) => t.displayName.replace(/ \(.*\)$/, '');
 
@@ -107,6 +110,8 @@ export function FcFlasher({
   const [backedUp, setBackedUp] = useState(false);
   const backupId = useId();
   const backupReasonId = useId();
+  const lockReasonId = useId();
+  const statusId = useId();
 
   const [run, setRun] = useState<Run>({kind: 'idle'});
   /** What the last attempt learned, so Continue resumes at the WebUSB stage. */
@@ -150,15 +155,15 @@ export function FcFlasher({
   };
 
   const finish = (r: FlowResult) => {
+    const text = finishAnnouncement(r);
+    if (text) say(text);
     if (r.kind === 'done') {
       ctx.current = {board: null, prepared: null};
       setRun({kind: 'done'});
-      say(DONE_TEXT);
     } else if (r.kind === 'need-usb') {
       ctx.current = {board: r.board, prepared: r.prepared};
       lastBoard.current = r.board;
       setRun({kind: 'need-usb'});
-      say(NEED_USB_TEXT);
     } else if (r.kind === 'failed') {
       // Keep (or recall) the identified board so Continue stays usable after a failure.
       const board = boardAfterFailure(r.board, lastBoard.current);
@@ -166,20 +171,24 @@ export function FcFlasher({
       ctx.current = {board, prepared: r.prepared ?? (board && ctx.current.prepared?.target.target === board.target ? ctx.current.prepared : null)};
       setResumeBoard(board);
       setRun({kind: 'failed', stage: r.stage, text: r.text});
-      say(`${r.text} ${BOOT_HINT}`);
     } else {
       setRun({kind: 'refused', text: r.text});
-      say(r.text);
     }
   };
 
-  const start = async () => {
-    if (running || run.kind === 'need-usb') return;
+  // Locked (no USB/serial, direct install off, busy, waiting for Continue): aria-disabled, still
+  // focusable, described by the visible reason; a click only announces it (updateClick).
+  const locked = !canRun || running || run.kind === 'need-usb';
+  const lockText = !browserOk ? NO_USB_TEXT : !writesOn ? WRITES_OFF_TEXT : null;
+  const needsBackup = !locked && !backedUp;
+  // Synchronous up to updateClick → startUpdate, so the serial picker is still the click's first await.
+  const onUpdate = () => {
+    const flow = updateClick({locked, backedUp, lockText, backupReason: BACKUP_REASON}, say, deps);
+    if (!flow) return;
     ctx.current = {board: null, prepared: null};
-    const r = await startUpdate(deps).catch(
-      (e): FlowResult => ({kind: 'failed', stage: 'serial', text: errText(e), board: null, prepared: null}),
-    );
-    finish(r);
+    void flow
+      .catch((e): FlowResult => ({kind: 'failed', stage: 'serial', text: errText(e), board: null, prepared: null}))
+      .then(finish);
   };
   // Continue: the RP2350 Boot pick is the FIRST thing this click does (pickBootsel calls requestDevice
   // synchronously), so the browser still treats it as a user gesture. Everything else follows.
@@ -204,15 +213,6 @@ export function FcFlasher({
     );
   };
 
-  const needsBackup = canRun && !backedUp && !running && run.kind !== 'need-usb';
-  // Not ticked: announce the reason and stop. Ticked: start() runs at once, so its serial picker is still the click's first await.
-  const onUpdate = () => {
-    if (!backedUp) {
-      say(BACKUP_REASON);
-      return;
-    }
-    void start();
-  };
 
   // The board picker shows when no identify result is known; it starts with the last identified board selected.
   const needsBoardForResume = run.kind === 'failed' && !ctx.current.board;
@@ -247,9 +247,8 @@ export function FcFlasher({
         type="button"
         className="btn-primary"
         onClick={onUpdate}
-        disabled={!canRun || running || run.kind === 'need-usb'}
-        aria-disabled={needsBackup || undefined}
-        aria-describedby={needsBackup ? backupReasonId : undefined}
+        aria-disabled={locked || needsBackup || undefined}
+        aria-describedby={needsBackup ? backupReasonId : lockText ? lockReasonId : locked ? statusId : undefined}
       >
         Update firmware
       </button>
@@ -265,13 +264,14 @@ export function FcFlasher({
           </span>
         )),
       )}
-      {!browserOk ? (
-        <p className="flash-note">This browser can&apos;t reach USB. Use Other ways.</p>
-      ) : !writesOn ? (
-        <p className="flash-note">Direct install is off for now. Use Other ways.</p>
+      {lockText ? (
+        <p id={lockReasonId} className="flash-note">
+          {lockText}
+        </p>
       ) : null}
 
-      <div aria-live="polite">
+      {/* Not a live region: say() announces through the page's single one (guides.flash.tsx); errors use role="alert". */}
+      <div id={statusId}>
         {statusLine ? <p className="flash-stage">{statusLine}</p> : null}
         {run.kind === 'need-usb' ? (
           <>
@@ -319,6 +319,7 @@ function OtherWays({open, say}: {open: boolean; say: (t: string) => void}) {
   const [status, setStatus] = useState<Status>({kind: 'idle'});
   const [infoStatus, setInfoStatus] = useState<Status>({kind: 'idle'});
   const fileId = useId();
+  const pickBoardId = useId();
   const staging = useStagingBench();
   const published = (t: FlasherTarget) => publishedFor(t, staging).length > 0;
   const boardRelease = board ? publishedFor(board, staging)[0] : undefined;
@@ -361,11 +362,25 @@ function OtherWays({open, say}: {open: boolean; say: (t: string) => void}) {
           name: short(t),
           selected: board?.target === t.target,
           disabled: !published(t),
+          // The visible reason a card can't be picked (part of its accessible name).
+          flag: published(t) ? undefined : 'Not published yet',
+          tone: published(t) ? undefined : 'comingsoon',
         }))}
       />
-      <button type="button" className="btn-secondary mt-3" onClick={() => void save()} disabled={!board}>
+      <button
+        type="button"
+        className="btn-secondary mt-3"
+        onClick={() => (board ? void save() : say(PICK_BOARD_TEXT))}
+        aria-disabled={!board || undefined}
+        aria-describedby={board ? undefined : pickBoardId}
+      >
         Save firmware (.uf2)
       </button>
+      {board ? null : (
+        <p id={pickBoardId} className="flash-note">
+          {PICK_BOARD_TEXT}
+        </p>
+      )}
       {boardRelease ? <span className="flash-filename">{firmwareIdText(boardRelease)}</span> : null}
       <StatusLine status={status} />
       <p className="mt-3">
@@ -375,7 +390,7 @@ function OtherWays({open, say}: {open: boolean; say: (t: string) => void}) {
       <label htmlFor={fileId} className="mt-3 block">
         Not sure about the drive? Pick INFO_UF2.TXT from it.
       </label>
-      <input id={fileId} type="file" accept=".txt,text/plain" className="mt-2 block" onChange={(e) => void checkInfo(e.target.files?.[0])} />
+      <input id={fileId} type="file" accept=".txt,text/plain" className="mt-2 block w-full max-w-full" onChange={(e) => void checkInfo(e.target.files?.[0])} />
       <StatusLine status={infoStatus} />
     </details>
   );
