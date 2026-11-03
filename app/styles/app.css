@@ -10274,7 +10274,7 @@ a[target='_blank']::after {
   user-select: none;
 }
 :lang(nl) a[target='_blank']::after { content: ' (opent in een nieuw tabblad)'; }
-:lang(fr) a[target='_blank']::after { content: ' (s'ouvre dans un nouvel onglet)'; }
+:lang(fr) a[target='_blank']::after { content: " (s'ouvre dans un nouvel onglet)"; }
 
 /* Partner logos as margin art: a currentColor mask so brand marks take the
    same dim tint as the hand-drawn emblems in either theme. */
