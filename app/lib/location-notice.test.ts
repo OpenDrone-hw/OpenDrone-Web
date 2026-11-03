@@ -97,8 +97,23 @@ describe('wiring', () => {
     assert.match(src, /useState<string \| null>\(null\)/);
     assert.match(src, /aria-label=\{GEO_NOTICE_COPY\[locale\]\.dismiss\}/);
     assert.match(src, /'Escape'/);
-    assert.doesNotMatch(src, /autoFocus|\.focus\(/);
+    // It never takes focus when it opens: the only .focus( calls are in restoreFocus, run on dismiss.
+    assert.doesNotMatch(src, /autoFocus/);
+    assert.equal(src.match(/\.focus\(/g)?.length, 2);
+    assert.match(src, /function restoreFocus\(/);
     assert.match(src, /\[current, cartCountry, locale\]/);
+  });
+  it('dismissing hands focus back (the trigger, else main), never to body; no double announce with the cart alert', () => {
+    const src = read('../components/LocationNotice.tsx');
+    assert.match(src, /returnTo\.current = active instanceof HTMLElement && active !== document\.body \? active : null;/);
+    assert.match(src, /if \(document\.activeElement\?\.closest\('\.location-notice'\)\) restoreFocus\(returnTo\.current\);/);
+    assert.match(src, /document\.getElementById\('main-content'\)/);
+    assert.match(src, /onClick=\{dismiss\}/);
+    // The cart's role=alert notice already speaks the change: the line is shown, not spoken.
+    assert.match(src, /querySelector\('\.cart-alert\[role="alert"\]'\)/);
+    assert.match(src, /setLive\(!cartAnnounces\(\)\)/);
+    assert.match(src, /<p className="sr-only" role="status" aria-live="polite" aria-atomic="true">\s+\{live \? text : null\}/);
+    assert.match(src, /aria-hidden=\{live \? true : undefined\}/);
   });
   it('a Ship to change reads the root loader again, so geo.country moves', () => {
     assert.match(read('../components/ShipToSelect.tsx'), /await revalidator\.revalidate\(\)/);
