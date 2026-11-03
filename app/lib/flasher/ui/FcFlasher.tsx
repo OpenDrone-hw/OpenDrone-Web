@@ -1,8 +1,7 @@
 /**
  * /guides/flash, flight controller: one "Update firmware" button (Chrome/Edge)
  * that runs the stage machine in fc-update.ts, a collapsed "Other ways" copy
- * method (any browser) and a collapsed "Details". Copy: audience-checked
- * (incutec-drafts/web-flasher/audience-result.md).
+ * method (any browser) and a collapsed "Details". Copy: audience-checked.
  *
  * Safety lives in fc-update.ts + gates.ts, unchanged: the board is identified
  * over serial, the file is verified against its pinned SHA-256 and target,
