@@ -616,7 +616,8 @@ export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfi
     // `overfullBatches` and is never re-planned), never held.
     const euStock = pending && shipsFromEuStock(order, orderBatches, config);
     const preorder = pending && !euStock;
-    const reviewTag = orderRegion(order) === 'INT' ? INT_REVIEW_TAG : US_REVIEW_TAG;
+    // NEAR (GB, CH, NO) was INT before it had a region of its own: it keeps the international review tag.
+    const reviewTag = orderRegion(order) === 'US' ? US_REVIEW_TAG : INT_REVIEW_TAG;
     const review = !order.tags.includes(reviewTag) && needsDestinationReview(order, orderBatches, config);
     // The batch promise is checked when the batch tags are written: later
     // drift between tags and allocation is `overfullBatches`.

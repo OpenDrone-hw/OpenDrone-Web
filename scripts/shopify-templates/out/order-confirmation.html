@@ -67,7 +67,7 @@
 
 {% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
 {% assign delivery_region = 'INT' %}
-{% if shipping_address == blank or eu_countries contains shipping_address.country_code %}{% assign delivery_region = 'EU' %}{% elsif shipping_address.country_code == 'US' %}{% assign delivery_region = 'US' %}{% endif %}
+{% if shipping_address == blank or eu_countries contains shipping_address.country_code %}{% assign delivery_region = 'EU' %}{% elsif shipping_address.country_code == 'US' %}{% assign delivery_region = 'US' %}{% elsif shipping_address.country_code == 'GB' or shipping_address.country_code == 'CH' or shipping_address.country_code == 'NO' %}{% assign delivery_region = 'NEAR' %}{% endif %}
 {% assign destination_needs_review = false %}
 {% for line in line_items %}
 {% assign recorded_region = 'EU' %}{% assign recorded_preorder = false %}
@@ -132,7 +132,7 @@
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0a" style="background-color: #0a0a0a; border: 1px solid #ffb700;">
                   <tr>
                     <td style="padding: 14px 18px;">
-                      <p style="margin: 0 0 0px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;"><strong style="color: #ffb700;">Delivery address review.</strong> Your delivery country changed after these item dates were recorded. The November batch ships only to the EU. We will contact you to confirm a delivery arrangement or offer a full refund. Your recorded dates below remain part of your order; this email does not extend them.</p>
+                      <p style="margin: 0 0 0px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;"><strong style="color: #ffb700;">Delivery address review.</strong> Your delivery country changed after these item dates were recorded. Stock from Belgium ships only to the EU. We will contact you to confirm a delivery arrangement or offer a full refund. Your recorded dates below remain part of your order; this email does not extend them.</p>
                     </td>
                   </tr>
                 </table>

@@ -22,19 +22,33 @@
  */
 
 import type {Catalog, CatalogVariant} from './catalog.ts';
-import {EU_COUNTRY_CODES} from './eu-countries.ts';
+import {EU_COUNTRY_CODES, IMPORT_COUNTRY_CODES} from './eu-countries.ts';
 
-/** Allocation regions: EU member states, the US, or other international
- *  destinations. Missing country information retains the historical EU default. */
-export type Region = 'EU' | 'US' | 'INT';
+/** Allocation regions: EU member states, the US, NEAR (UK, Switzerland,
+ *  Norway: `IMPORT_COUNTRY_CODES`, Belgian stock with import VAT and duties
+ *  paid on delivery), or other international destinations. Missing country
+ *  information retains the historical EU default. */
+export type Region = 'EU' | 'US' | 'NEAR' | 'INT';
 
-export const REGIONS: readonly Region[] = ['EU', 'US', 'INT'];
+export const REGIONS: readonly Region[] = ['EU', 'US', 'NEAR', 'INT'];
 
 /** The region of a shipping country (ISO 3166-1 alpha-2). */
 export function regionOf(country: string | null | undefined): Region {
   const code = country?.trim().toUpperCase();
   if (code === 'US') return 'US';
+  if (code && IMPORT_COUNTRY_CODES.includes(code)) return 'NEAR';
   return code && /^[A-Z]{2}$/.test(code) && !EU_COUNTRY_CODES.includes(code) ? 'INT' : 'EU';
+}
+
+/** The region of a destination served through Shopify's international market: NEAR for GB, CH, NO, else INT. */
+export function internationalRegion(country: string | null | undefined): Region {
+  return regionOf(country) === 'NEAR' ? 'NEAR' : 'INT';
+}
+
+/** True for a region outside the EU and the US: NEAR and INT ship through
+ *  Shopify's international market (destination currency, rates at checkout). */
+export function isInternationalRegion(region: Region): boolean {
+  return region === 'NEAR' || region === 'INT';
 }
 
 /** Paid units of one SKU in order, oldest first, as runs of one region:
@@ -67,9 +81,10 @@ export type CampaignBatch = {
   deliveryByUS?: string | null;
   /** A separately agreed international arrival deadline; never inherits EU or US dates. */
   deliveryByINT?: string | null;
-  /** The regions this batch ships to; absent means every region. Paid
-   *  stock in Belgium is `["EU"]`: a non-EU unit skips it for the next batch
-   *  that serves the destination. A SKU's last funding batch serves every region. */
+  /** The regions this batch ships to; absent means every region, except a
+   *  paid batch, which takes the campaign's `paidRegions`. A unit of another
+   *  region skips it for the next batch that serves the destination. A SKU's
+   *  last funding batch serves every region. */
   regions?: Region[];
 };
 
@@ -89,6 +104,9 @@ function batchPromise(batch: CampaignBatch, fallback: string): string {
 /** The agreed arrival deadline for a region, YYYY-MM-DD, or null. Used for
  *  visible checkout metadata and ordering the lines of a combined cart. */
 function batchDeliveryDay(batch: CampaignBatch, region: Region): string | null {
+  // NEAR ships Belgian stock like the EU (its paid batch keeps `deliveryBy`)
+  // and a funding batch like INT.
+  if (region === 'NEAR') return (batch.paid ? batch.deliveryBy : batch.deliveryByINT) ?? null;
   return (region === 'US' ? batch.deliveryByUS : region === 'INT' ? batch.deliveryByINT : batch.deliveryBy) ?? null;
 }
 
@@ -108,6 +126,10 @@ export type CampaignConfig = {
   /** Price steps by paid units, in order: `upTo` is the last unit of the
    *  step and `off` its share off retail. Past the last step: retail. */
   priceTiers: PriceTier[];
+  /** Where paid stock (Belgium) ships: the regions of every paid batch that
+   *  lists none of its own. The one entry that decides whether INT buyers
+   *  get batch 1 (founder 2026-11-03: EU and NEAR, not INT or the US). */
+  paidRegions?: Region[];
   /** Per SKU: its batches, and optionally its own price steps in place of
    *  the campaign's (`tiersFor`). */
   skus: Record<string, {batches: CampaignBatch[]; priceTiers?: PriceTier[]}>;
@@ -304,6 +326,17 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
   }
   if (!c.skus || typeof c.skus !== 'object' || Array.isArray(c.skus)) {
     throw new Error('preorders: skus must be an object');
+  }
+  if (c.paidRegions !== undefined) {
+    if (!Array.isArray(c.paidRegions) || !c.paidRegions.length || c.paidRegions.some((r) => !REGIONS.includes(r))) {
+      throw new Error(`preorders: paidRegions must list ${REGIONS.join(' or ')}`);
+    }
+    // Every reader after this point sees the regions on the paid batch itself.
+    for (const entry of Object.values(c.skus)) {
+      for (const batch of entry?.batches ?? []) {
+        if (batch?.paid && batch.regions === undefined) batch.regions = [...c.paidRegions];
+      }
+    }
   }
   for (const [sku, entry] of Object.entries(c.skus)) {
     if (!entry || !Array.isArray(entry.batches) || !entry.batches.length) {

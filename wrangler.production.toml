@@ -42,8 +42,9 @@ SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
 PUBLIC_COMING_SOON = "0"
 # US consumer preorders (README "Open or close the shop"): "1" opens the US
 # to campaign preorders once content/us-sales.json sets the US rate; changing
-# it needs the founder's go.
-PUBLIC_US_SALES = "1"
+# it needs the founder's go. "0" since 2026-11-03 (founder): US sales on hold,
+# the US reads "Not shipping to the US yet." and buys through shops only.
+PUBLIC_US_SALES = "0"
 # Wholesale applications: mailed to the company inbox, reply-to the applicant.
 TRADE_MAIL_ENABLED = "1"
 # Newsletter welcome sender (src app/lib/growth/welcome-email.ts). opendrone.be is a

@@ -831,7 +831,9 @@ describe('committed dates derive from content/preorders.json', () => {
     assert.equal(funded.deliveryBy, '2027-04-15');
     assert.equal(funded.deliveryByUS, '2027-04-30');
     assert.equal(early.deliveryBy, '2026-11-30');
-    assert.deepEqual(early.regions, ['EU', 'INT']);
+    // Belgian paid stock ships to the EU only, set once in paidRegions (founder 2026-11-03); NEAR and INT take March.
+    assert.deepEqual(config.paidRegions, ['EU']);
+    assert.deepEqual(early.regions, ['EU']);
     assert.equal(early.ships, 'ships late November 2026');
   });
 
@@ -843,7 +845,10 @@ describe('committed dates derive from content/preorders.json', () => {
     for (const file of ['openfc-lite', 'openesc']) {
       assert.equal(json(`content/products/${file}.json`).statusNote, early.ships, file);
     }
-    assert.ok(read('content/copy/timeline.json').includes((early.ships ?? '').replace(/^ships /, 'Ships ')));
+    // The timeline names where batch 1 ships (paidRegions: EU only) and that the rest take the March batch.
+    const batch1 = (JSON.parse(read('content/copy/timeline.json')) as Record<string, string>).event_batch1_paid_detail;
+    assert.ok(batch1.includes('Ships from Belgium to EU addresses; outside the EU, orders take the March 2027 batch.'), batch1);
+    assert.ok(!/international|UK|Switzerland|Norway/i.test(batch1), batch1);
   });
 
   it('states the same dates in the shipping page and the US terms in en, nl and fr', () => {

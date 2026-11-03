@@ -126,14 +126,17 @@ export async function loader({context}: Route.LoaderArgs) {
   // A US buyer (US sales open): no paid batch ships to the US, so every
   // part waits for its funding target and the page drops the stack lane.
   const us = context.catalog.region === 'US';
-  const international = context.catalog.region === 'INT';
+  // NEAR (UK, CH, NO) reads the international terms but ships Belgian
+  // stock, so only INT drops the stack's paid ship date.
+  const international = context.catalog.region === 'INT' || context.catalog.region === 'NEAR';
+  const noPaidStock = context.catalog.region === 'INT';
   // The stack's paid batch carries the one fixed ship date on this page.
   const paidShips =
     Object.values(CAMPAIGN.skus)
       .flatMap((entry) => entry.batches)
       .find((batch) => batch.paid && batch.ships?.trim())
       ?.ships?.trim() ?? null;
-  const stackShips = us || international ? null : paidShips;
+  const stackShips = us || noPaidStock ? null : paidShips;
 
   const rows: Row[] = toCards(catalog).flatMap((card) =>
     card.variants.nodes.flatMap((v): Row[] => {

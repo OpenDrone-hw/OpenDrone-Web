@@ -68,6 +68,7 @@ function order(partial: {
   /** Lines added for a US destination carry `_ship_region: US`. */
   usPromise?: boolean;
   intPromise?: boolean;
+  nearPromise?: boolean;
   /** The `Preorder` text; the default names no configured batch. */
   promise?: string;
   /** The hidden `_batch` attribute, `SKU:N`. */
@@ -97,6 +98,7 @@ function order(partial: {
               ...(partial.batch ? [{key: '_batch', value: partial.batch}] : []),
               ...(partial.usPromise ? [{key: '_ship_region', value: 'US'}] : []),
               ...(partial.intPromise ? [{key: '_ship_region', value: 'INT'}] : []),
+              ...(partial.nearPromise ? [{key: '_ship_region', value: 'NEAR'}] : []),
             ]
           : [],
       })),
@@ -742,6 +744,25 @@ describe('international allocation and checkout address changes', () => {
     const release = planRelease([changed],'OPENFC-LITE-2020',2,new Set(),config.shipsWith,config.usStock)[0];
     assert.deepEqual(release.waitsFor,[INT_REVIEW_TAG,PROMISE_MISMATCH_TAG]);
     assert.equal(planPreorderHolds([changed],config).length,0);
+  });
+
+  it('allocates a NEAR order (GB, CH, NO) recorded NEAR from March with no review, like INT', () => {
+    for (const country of ['GB', 'CH', 'NO']) {
+      const near = order({country, nearPromise:true, lines:[['OPENFC-LITE-2020',1],['OPENRX-LITE',1]]});
+      const tags = planPreorderHolds([near],config)[0].tags;
+      assert.ok(tags.includes('batch:OPENFC-LITE-2020:2'), country);
+      assert.ok(!tags.includes('batch:OPENFC-LITE-2020:1'), country);
+      assert.ok(!tags.includes(INT_REVIEW_TAG) && !tags.includes(US_REVIEW_TAG), country);
+    }
+  });
+
+  it('puts a NEAR order whose lines were recorded for another region on the international review tag, never the US one', () => {
+    for (const recorded of [{intPromise:true}, {}] as const) {
+      const changed = order({country:'CH', ...recorded, lines:[['OPENFC-LITE-2020',1]]});
+      const tags = planPreorderHolds([changed],config)[0].tags;
+      assert.ok(tags.includes(INT_REVIEW_TAG), JSON.stringify(recorded));
+      assert.ok(!tags.includes(US_REVIEW_TAG), JSON.stringify(recorded));
+    }
   });
 
   it('retains an international accessory lead tag after its original lead line is removed', () => {
