@@ -39,3 +39,16 @@ test('site CSS: underlined inline links, new-tab notice, field borders >= 3:1', 
   assert.match(css, /main :is\(p, li, dd, td, blockquote, figcaption\) a:not\(\[class\]\),\s+\.legal-body a \{\s+text-decoration: underline;/);
   assert.match(css, /a\[target='_blank'\]::after \{\s+content: ' \(opens in a new tab\)';/);
 });
+
+test('route changes move focus to main and announce the title; no-op on first load', () => {
+  const src = read('../components/RouteAnnouncer.tsx');
+  assert.match(src, /previous\.current === pathname\) return/);
+  assert.match(src, /role="status" aria-live="polite"/);
+  assert.match(src, /setMessage\(document\.title\)/);
+  assert.match(read('../components/PageLayout.tsx'), /<RouteAnnouncer \/>/);
+});
+
+test('scroll-padding-top clears the strips and header; series rail number is full muted token at 12px', () => {
+  assert.match(read('../styles/site-ui.css'), /html \{ scroll-padding-top: calc\(var\(--test-banner-h, 0px\) \+ var\(--avail-bar-h, 0px\) \+ var\(--header-height, 0px\)/);
+  assert.match(read('../styles/app.css'), /\.series-rail-num \{\s+font-size: 12px;\s+letter-spacing: 0\.1em;\s+color: var\(--color-text-muted\);/);
+});

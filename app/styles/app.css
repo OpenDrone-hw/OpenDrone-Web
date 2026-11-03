@@ -10719,9 +10719,9 @@ a[target='_blank']::after {
 }
 
 .series-rail-num {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.1em;
-  color: color-mix(in srgb, var(--color-text-muted) 55%, transparent);
+  color: var(--color-text-muted);
 }
 
 .series-rail-title {
