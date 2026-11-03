@@ -44,7 +44,7 @@ import {trackEvent} from '~/lib/growth/plausible';
 import {BuildBundle, bundleFields} from '~/components/BuildBundle';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {cartQuoteCountry, countryName, isInternationalQuote, offersPickup, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
+import {cartQuoteCountry, countryName, geoCountryForRequest, isInternationalQuote, offersPickup, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
 import {internationalShippingFrom} from '~/lib/international-shipping';
 import '../styles/cart-checkout-bar.css';
 import {usSalesRate} from '~/lib/us-sales';
@@ -143,6 +143,8 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
         setCountry: (id, code) => setCartCountry(context.env, id, code),
         getCart: (id) => getCart(context.env, id),
         updateCartLines: (id, lines) => updateCartLines(context.env, id, lines),
+        // EU stock wording only for a country the page's `geo` knows too.
+        euStockKnown: geoCountryForRequest(request) != null,
       });
       cart = plan.cart;
       catalog = plan.catalog;
@@ -546,9 +548,10 @@ function PopulatedCart({
   const [inFlight, setInFlight] = useState(0);
   const onPending = useCallback((delta: number) => setInFlight((n) => Math.max(0, n + delta)), []);
   const pending = inFlight > 0 || revalidator.state !== 'idle';
-  // The early bird preorder note is for preorder lines, not EU stock lines.
+  // EU stock lines keep their early bird price, but the note drops "preorder".
   const euStock = useGeoEuStockLine();
-  const anyEarly = useAnyEarlySku(cart.lines.filter((line) => !euStock(line.shipPromise)).map((line) => line.sku));
+  const anyEarly = useAnyEarlySku(cart.lines.map((line) => line.sku));
+  const stockEarly = useAnyEarlySku(cart.lines.filter((line) => euStock(line.shipPromise)).map((line) => line.sku));
   const wholesale = cartWholesaleCode(cart.discountCodes);
 
   // One parcel per order: when lines ship at different times, the early
@@ -628,7 +631,7 @@ function PopulatedCart({
               </div>
             ) : null}
           </dl>
-          <EarlyBirdNote show={anyEarly} className="cart-summary-note" />
+          <EarlyBirdNote show={anyEarly} stock={stockEarly} className="cart-summary-note" />
           {usBuyer ? (
             <p className="cart-summary-note">
               {cart.subtotal.currencyCode === 'USD'

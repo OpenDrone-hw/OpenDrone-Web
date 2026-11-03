@@ -22,7 +22,7 @@ import {
   variantLink,
   type ShopifyCartDependencies,
 } from './shopify-cart-action.ts';
-import type {ShopifyCart, ShopifyCartLine} from './shopify-storefront.ts';
+import type {CartLineInput, ShopifyCart, ShopifyCartLine} from './shopify-storefront.ts';
 import {shippingQuote} from './shipping-rates.ts';
 
 const APPROVED = Object.fromEntries(['BE', 'BG', 'SE', 'NL', 'AT'].map((c) => [c, {saleApproved: true}]));
@@ -585,6 +585,23 @@ describe('Shopify cart action: paid batch limit', () => {
       {fetchCatalog: async () => paidCatalog(240), createCart: async (lines) => { created = lines; return cart(); }},
     );
     assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'}, {key: '_ship_promise', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
+  });
+
+  it('writes the batch promise, not the EU stock line, for a visitor with no known country (same source as the page geo)', async () => {
+    const add = async (headers: Record<string, string>) => {
+      let created: unknown;
+      const body = new URLSearchParams({sku: 'OPENFC-LITE-2020', qty: '1'});
+      await handleShopifyCartAction(
+        new Request('https://opendrone.be/api/shopify/cart', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded', Origin: 'https://opendrone.be', ...headers}, body}),
+        ENABLED_ENV,
+        {fetchCatalog: async () => paidCatalog(0), createCart: async (lines) => { created = lines; return cart(); }},
+      );
+      return (created as CartLineInput[])[0].attributes;
+    };
+    // Accept-Language alone: the cart quotes the EU, the page shows the batch promise.
+    assert.deepEqual(await add({'Accept-Language': 'nl-BE'}), [{key: 'Preorder', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]);
+    assert.equal((await add({'CF-IPCountry': 'BE'}))?.[0].key, 'Shipping');
+    assert.equal((await add({Cookie: 'od_ship_country=BE', 'Accept-Language': 'en-US'}))?.[0].key, 'Shipping');
   });
 
   it('refuses a quantity update past the units left, but never blocks lowering it', async () => {
