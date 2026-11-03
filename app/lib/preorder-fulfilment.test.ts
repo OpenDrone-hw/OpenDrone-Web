@@ -852,7 +852,11 @@ describe('EU batch 1 stock ships now (founder 2026-11-03)', () => {
     assert.deepEqual(plan.hold, [mixed.fulfillmentOrders.nodes[0].id]);
   });
 
-  it('holds and tags INT and US batch 1 orders exactly as before', () => {
+  // Batch 1 is EU only since 2026-11-03 (paidRegions). A non-EU order that
+  // recorded a batch 1 promise is now allocated to the March batch, so it is
+  // held with the international review and promise-mismatch tags for a
+  // manual decision (the order keeps its recorded promise until then).
+  it('holds non-EU orders that recorded batch 1 for review; US orders as before', () => {
     const make = () => [
       order({lines: [['OPENFC-LITE-2020', 1]], country: 'CH', intPromise: true, promise: 'ships late November 2026', batch: 'OPENFC-LITE-2020:1'}),
       order({lines: [['OPENFC-LITE-2020', 1]], country: 'US', usPromise: true, promise: 'ships by 31 March 2027 if funded', batch: 'OPENFC-LITE-2020:2'}),
@@ -861,9 +865,9 @@ describe('EU batch 1 stock ships now (founder 2026-11-03)', () => {
     ];
     const [intLine, usLine, euPromiseToInt, euStockToInt] = make();
     const plans = new Map(planPreorderHolds([intLine, usLine, euPromiseToInt, euStockToInt], LIVE).map((p) => [p.orderId, p]));
-    assert.deepEqual(plans.get(intLine.id)?.tags, ['preorder', 'batch:OPENFC-LITE-2020:1']);
+    assert.deepEqual(plans.get(intLine.id)?.tags, ['preorder', 'batch:OPENFC-LITE-2020:2', INT_REVIEW_TAG, PROMISE_MISMATCH_TAG]);
     assert.deepEqual(plans.get(usLine.id)?.tags, ['preorder', 'batch:OPENFC-LITE-2020:2']);
-    assert.deepEqual(plans.get(euPromiseToInt.id)?.tags, ['preorder', 'batch:OPENFC-LITE-2020:1', INT_REVIEW_TAG, PROMISE_MISMATCH_TAG]);
+    assert.deepEqual(plans.get(euPromiseToInt.id)?.tags, ['preorder', 'batch:OPENFC-LITE-2020:2', INT_REVIEW_TAG, PROMISE_MISMATCH_TAG]);
     // An EU stock line shipped outside the EU reads `_ship_promise` as the
     // old `Preorder`: the same review and mismatch tags, held.
     assert.deepEqual(plans.get(euStockToInt.id)?.tags, plans.get(euPromiseToInt.id)?.tags);

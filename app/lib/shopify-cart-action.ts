@@ -320,7 +320,7 @@ export function lineAttributes(variant: CatalogVariant, destination: Region | bo
     {key: PREORDER_ATTRIBUTE, value: promise},
     ...(deliveryDay ? [{key: DELIVERY_BY_ATTRIBUTE, value: campaignDate(deliveryDay)}] : []),
     ...(region !== 'EU' ? [{key: SHIP_REGION_ATTRIBUTE, value: region}] : []),
-    // UK, CH, NO: Belgian stock, the buyer pays import VAT and duties on delivery (shown at checkout and on the order).
+    // UK, CH, NO (March batch): the buyer pays import VAT and duties on delivery (shown at checkout and on the order).
     ...(region === 'NEAR' ? [{key: DUTIES_ATTRIBUTE, value: DUTIES_VALUE}] : []),
     ...(batch ? [{key: BATCH_ATTRIBUTE, value: batch}] : []),
   ];

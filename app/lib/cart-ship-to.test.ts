@@ -439,7 +439,8 @@ describe('international cart country switches', () => {
       written.length=0;
       await handleCartCountry(switchRequest('BE'),ENV,dependencies);
       assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
-      assert.equal(fake.state.lines[0].deliveryBy,'30 November 2026');
+      // Back in the EU the FC is batch 1 stock again: no delivery date (hotfix a9b758b).
+      assert.equal(fake.state.lines[0].deliveryBy,undefined);
       assert.equal(fake.state.lines[1].shipPromise,null);
       assert.ok(fake.state.lines.every(line=>line.shipRegion===undefined));
       assert.ok(written.every(update=>!update.attributes?.some(a=>a.key==='Import VAT and duties')));
