@@ -219,7 +219,7 @@ const VERIFY_STEPS: GuideStep[] = [
  */
 const BOOT_MODE_DIRECT: GuidePageDirect = {
   intro: [
-    'Clicking **Update firmware** on the [firmware page](/guides/flash) restarts the board into bootloader mode for you, so usually you can skip this page. Use it when that step fails, or for the copy method.',
+    'On an OpenFC-Lite (OpenFC-Lite only), clicking **Update firmware** on the [firmware page](/guides/flash) restarts the board into bootloader mode for you, so usually you can skip this page. Use it when that step fails, for the Lite Mini, or for the copy method.',
     'In bootloader mode the board shows up as a drive called **RP2350**. The bootloader is in ROM inside the chip and cannot be erased.',
   ],
   sections: [
@@ -411,7 +411,7 @@ const OPENFC: GuideFamily = {
       description:
         'Step 2 of updating an OpenFC: download the verified Betaflight file from the firmware page and drag it onto the RP2350 drive.',
       intro: [
-        'The way to put the firmware on is **drag and drop**. It works in every browser and on every computer: you download the file from the firmware page and copy it onto the RP2350 drive. Installing straight from the web page is switched off until it has been checked on real boards.',
+        'The way to put the firmware on is **drag and drop**. It works in every browser and on every computer: you download the file from the firmware page and copy it onto the RP2350 drive. Installing straight from the web page works for the OpenFC-Lite in Chrome or Edge; for the Lite Mini it is not available yet.',
         '**OpenFC-Lite: available. Lite Mini: not published yet.** Its download will appear on the firmware page once it is released.',
         'The firmware page checks the file before you get it: its size and checksum must match the release list built into the page, and it must be built for the board you picked.',
       ],
@@ -446,9 +446,9 @@ const OPENFC: GuideFamily = {
       ],
       sections: [
         {
-          heading: 'Direct install is switched off',
+          heading: 'Direct install: OpenFC-Lite only',
           paragraphs: [
-            'The firmware page has code to write the file straight to the board from Chrome or Edge, but it is switched off until it has been checked on real boards. The page says so. Use drag and drop: it is the supported way.',
+            'The firmware page can write the file straight to an OpenFC-Lite from Chrome or Edge (checked on real boards). For the Lite Mini it is not available yet. Drag and drop works for every board and in every browser.',
           ],
         },
         {
@@ -480,7 +480,7 @@ const OPENFC: GuideFamily = {
         },
         {
           problem: 'I cannot find an install button on the page.',
-          fix: 'Installing straight from the page is switched off for now. Save the file and drag it onto the RP2350 drive, which works in every browser.',
+          fix: 'The install button is for the OpenFC-Lite in Chrome or Edge only. In other browsers, or for the Lite Mini, save the file and drag it onto the RP2350 drive, which works everywhere.',
         },
       ],
     },
