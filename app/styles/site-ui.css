@@ -6,7 +6,7 @@
 /* Wholesale controls override the legacy unlayered form reset. */
 .wholesale-page :where(input, select, textarea) {
   margin: 8px 0 0;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-field-border);
   border-radius: var(--r-xs);
   padding: 10px 12px;
   font-size: 16px;
@@ -862,7 +862,7 @@
 .footer-sheet-heading {
   margin-bottom: 8px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--ink);
@@ -910,7 +910,7 @@
   padding: 0 6px;
   background: var(--color-bg);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ink);
@@ -945,7 +945,7 @@
   min-width: 2.6em;
   margin-right: 0.35em;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.04em;
   color: var(--ink);
   opacity: 0.6;
@@ -966,7 +966,7 @@
 }
 .footer-foot-left { display: flex; align-items: flex-end; gap: 28px; min-width: 0; }
 .footer-foot-meta { padding-bottom: 12px; font-size: 12px; color: var(--color-text-muted); }
-.footer-copyright { margin-top: 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; }
+.footer-copyright { margin-top: 4px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; }
 
 /* Drawing view: the board outline in gold ink, sized to the title block. */
 .footer-view {
@@ -1334,7 +1334,7 @@
 .hero-build-part.is-active { background: var(--color-gold-soft); }
 .hero-build-check { position: relative; display: grid; place-items: center; width: 20px; height: 36px; cursor: pointer; }
 .hero-build-check input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.hero-build-check > span { display: grid; place-items: center; width: 16px; height: 16px; border: 1px solid var(--color-border); border-radius: 4px; color: transparent; }
+.hero-build-check > span { display: grid; place-items: center; width: 16px; height: 16px; border: 1px solid var(--color-field-border); border-radius: 4px; color: transparent; }
 .hero-build-check input:checked + span { background: var(--color-gold-fill); border-color: var(--color-gold-fill); color: var(--color-on-accent); }
 .hero-build-check input:focus-visible + span { outline: 2px solid var(--color-focus); outline-offset: 3px; }
 .hero-build-inspect { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 0; color: inherit; background: none; border: 0; text-align: left; cursor: pointer; }
@@ -1982,7 +1982,7 @@ a.hero-build-add { text-decoration: none; }
   background: var(--color-gold-fill);
   color: var(--color-on-accent);
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-align: center;
@@ -2034,6 +2034,10 @@ body:has(.test-banner) .avail-bar {
 .avail-bar-close:focus-visible { outline: 2px solid var(--color-on-accent); outline-offset: -2px; }
 body:has(.test-banner) { --test-banner-h: 26px; }
 body:has(.avail-bar) { --avail-bar-h: 26px; }
+/* Focus Not Obscured (2.4.11): anchored and focused elements scroll to below the
+   top strips and the fixed header. */
+html { scroll-padding-top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px) + var(--header-height, 0px) + 8px); }
+#main-content:focus { outline: none; }
 body:has(.test-banner),
 body:has(.avail-bar) {
   padding-top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px));
@@ -2087,7 +2091,7 @@ body:has(.avail-bar) .site-header {
 .app-shop-form { display: grid; gap: 1.25rem; padding: 1.25rem; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: 12px; }
 .app-shop-field { display: grid; gap: 0.5rem; border: 0; padding: 0; margin: 0; }
 .app-shop-field > span, .app-shop-field > legend { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-muted); padding: 0; }
-.app-shop-field input[type="email"] { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: 8px; padding: 0.75rem 0.875rem; font: inherit; }
+.app-shop-field input[type="email"] { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-field-border); border-radius: 8px; padding: 0.75rem 0.875rem; font: inherit; }
 .app-shop-field input[type="email"]:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .app-shop-rail { display: flex; align-items: center; gap: 0.625rem; padding: 0.625rem 0.75rem; border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer; }
 .app-shop-rail:has(input:checked) { border-color: var(--color-gold); background: var(--color-gold-soft); }
@@ -2122,7 +2126,7 @@ body:has(.avail-bar) .site-header {
 .co-field > span em { font-style: normal; color: var(--color-text-dim); }
 .co-field input, .co-field select {
   width: 100%; box-sizing: border-box; min-height: 3rem; padding: 0 0.875rem; font: inherit; font-size: 1rem;
-  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--r-md);
+  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-field-border); border-radius: var(--r-md);
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 .co-field select { appearance: none; padding-right: 2.5rem; cursor: pointer;
@@ -2204,7 +2208,7 @@ body:has(.avail-bar) .site-header {
 .co-combo { position: relative; }
 .co-combo > label > span { font-size: 0.8125rem; color: var(--color-text-muted); }
 .co-combo input { width: 100%; box-sizing: border-box; min-height: 3rem; padding: 0 0.875rem; font: inherit; font-size: 1rem;
-  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--r-md); }
+  background: var(--color-bg-card); color: var(--color-text); border: 1px solid var(--color-field-border); border-radius: var(--r-md); }
 .co-combo input:focus-visible { outline: none; border-color: var(--color-gold); box-shadow: 0 0 0 3px var(--color-gold-soft); }
 .co-suggest { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin: 0.25rem 0 0; padding: 0.25rem; list-style: none; max-height: 18rem; overflow-y: auto;
   background: var(--color-bg-card); border: 1px solid var(--color-border-strong); border-radius: var(--r-md); box-shadow: 0 8px 24px rgb(0 0 0 / 0.25); }
