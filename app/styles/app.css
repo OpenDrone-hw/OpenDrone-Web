@@ -1703,7 +1703,7 @@ html:root .site-header-categories .site-header-cat-group a:not(:hover):not(.acti
   background: var(--color-bg);
   border-radius: var(--r-xs);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-muted);
   letter-spacing: 0.02em;
 }
@@ -2786,7 +2786,7 @@ button.reset {
 
 .product-facts dt {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
@@ -2962,7 +2962,7 @@ button.reset {
 
 .product-gallery-counter {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text);
@@ -4901,7 +4901,7 @@ button.reset {
 .chapter-subhead {
   margin: 1.75rem 0 0.75rem;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -5624,7 +5624,7 @@ section.chapter[data-centered] .chapter-body-col {
   border: 1px solid color-mix(in srgb, var(--color-gold) 40%, transparent);
   border-radius: var(--r-pill);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
@@ -6437,7 +6437,7 @@ section.chapter[data-centered] .chapter-body-col {
   justify-content: space-between;
   margin-top: 0.7rem;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
@@ -6466,7 +6466,7 @@ section.chapter[data-centered] .chapter-body-col {
 }
 .board-art-fallback {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-dim);
 }
 @media (max-width: 879px) {
@@ -6650,7 +6650,7 @@ section.chapter[data-centered] .chapter-body-col {
 .teardown-pin-cost {
   flex: none;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   padding: 0.1rem 0.45rem;
   border-radius: var(--r-pill);
@@ -6741,7 +6741,7 @@ section.chapter[data-centered] .chapter-body-col {
 }
 .teardown-io-chip {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   padding: 0.2rem 0.55rem;
   border-radius: var(--r-pill);
@@ -7153,7 +7153,7 @@ section.chapter[data-centered] .chapter-body-col {
   flex-wrap: wrap;
   gap: 0.6rem;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -7218,7 +7218,7 @@ section.chapter[data-centered] .chapter-body-col {
   padding-bottom: var(--sp-2);
   border-bottom: 2px solid var(--color-gold);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
@@ -7247,7 +7247,7 @@ section.chapter[data-centered] .chapter-body-col {
 
 .provenance-row-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text);
@@ -7768,7 +7768,7 @@ a.what-chain-chip:hover {
 
 .spec-table dt {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -7924,7 +7924,7 @@ a.what-chain-chip:hover {
 }
 .board-art-skeleton-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -8020,7 +8020,7 @@ a.what-chain-chip:hover {
   }
   .board-deck-hint {
     margin-left: auto;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.04em;
     /* muted (not dim) so the gesture cue stays legible on bright light-mode
        displays; it's the primary "how to explore" affordance now. */
@@ -17265,7 +17265,7 @@ html.hero-header-in .homepage-layout .site-header {
 }
 .spec-table dt {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -17273,7 +17273,7 @@ html.hero-header-in .homepage-layout .site-header {
 }
 .board-art-skeleton-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -17332,6 +17332,10 @@ html.hero-header-in .homepage-layout .site-header {
   color: var(--color-text);
 }
 .spec-table dd a {
+  /* 24px minimum target (WCAG 2.5.8) */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   color: var(--color-gold-text);
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -18595,7 +18599,7 @@ summary,
 .build-chapter-bring-label {
   margin: 0 0 0.75rem;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-gold-text);
