@@ -4,6 +4,12 @@
 /boards/*
   Cache-Control: public, max-age=31536000, immutable
 
+# Published firmware: the file name carries the version and the page pins its SHA-256.
+/firmware/*
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: application/octet-stream
+  X-Content-Type-Options: nosniff
+
 /models/*.glb
   Cache-Control: public, max-age=86400
 

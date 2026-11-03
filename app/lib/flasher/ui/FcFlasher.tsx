@@ -127,7 +127,7 @@ export function FcFlasher({
   useEffect(() => onBusyChange(running), [running, onBusyChange]);
 
   const deps: FlowDeps = {
-    gatesOn: () => canRun,
+    gatesOn: (board) => canRun && (!board || directInstallEnabled(staging, board.target)),
     openSerial: () => MspConnection.request(),
     prepare: prepareFor,
     findBootsel: findPermittedBootsel,
@@ -214,7 +214,7 @@ export function FcFlasher({
         <li>
           Save your settings: Betaflight CLI, <code>diff all</code>. Flashing resets them.
         </li>
-        <li>Chrome or Edge, OpenFC-Lite or Lite Mini.</li>
+        <li>Chrome or Edge, OpenFC-Lite. The Lite Mini file comes later.</li>
       </ul>
 
       <button type="button" className="btn-primary" onClick={() => void start()} disabled={!canRun || running || run.kind === 'need-usb'}>
@@ -259,6 +259,7 @@ export function FcFlasher({
         ) : null}
       </div>
 
+      <GplNotice />
       <OtherWays open={!canRun || run.kind === 'refused'} say={say} />
       <Details />
     </section>
@@ -333,6 +334,24 @@ function OtherWays({open, say}: {open: boolean; say: (t: string) => void}) {
   );
 }
 
+/** GPL-3.0 source links for every published build that carries them (production manifest: same on server and client). */
+function GplNotice() {
+  const rows = FLASHER_TARGETS.flatMap((t) =>
+    FIRMWARE_MANIFEST.filter((r) => r.target === t.target && isPublished(r) && r.source).map((r) => ({t, s: r.source!})),
+  );
+  if (!rows.length) return null;
+  return (
+    <div className="flash-note">
+      {rows.map(({t, s}) => (
+        <p key={t.target}>
+          Betaflight is GPL-3.0. Source for this build: <a href={s.firmwareUrl}>Betaflight</a>,{' '}
+          <a href={s.configUrl}>config</a>. {short(t)}: target <code>{s.buildTarget}</code>, config {s.configRef}.
+        </p>
+      ))}
+    </div>
+  );
+}
+
 /** Version, target and SHA-256 per board: collapsed, for the people who want them. */
 function Details() {
   const staging = useStagingBench();
@@ -346,7 +365,7 @@ function Details() {
         <ul className="mt-2">
           {rows.map(({t, r}) => (
             <li key={t.target} className="mt-2">
-              {short(t)}: Betaflight {r.version}, target <code>{t.target}</code>. SHA-256{' '}
+              {short(t)}: Betaflight {r.version.replace(/^Betaflight /, '')}, target <code>{t.target}</code>. SHA-256{' '}
               <span className="flash-filename">{r.sha256}</span>
             </li>
           ))}

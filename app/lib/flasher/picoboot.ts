@@ -18,8 +18,9 @@
  * firmware currently on the board does not name a different board, and
  * (7) collected the user's confirmations. See design.md, section "Write path".
  * `flashImage` itself also refuses while CHIP_PACKAGE_VERIFIED or
- * PICOBOOT_WRITE_VERIFIED is false and the staging bench switch is off
- * (effectiveFcGates in targets.ts, staging.ts).
+ * PICOBOOT_WRITE_VERIFIED is false, the staging bench switch is off and the
+ * release has no per-board DIRECT_INSTALL_VERIFIED entry (effectiveFcGates
+ * in targets.ts, staging.ts).
  */
 
 import {
@@ -37,6 +38,7 @@ import {
   RPI_VID,
   policyAllows,
   type ChipPackage,
+  type VerifiedRef,
 } from './targets.ts';
 
 const PICOBOOT_MAGIC = 0x431fd10b;
@@ -334,8 +336,9 @@ export class Picoboot {
   async flashImage(
     image: Uf2Image,
     onProgress: (phase: FlashPhase, done: number, total: number) => void,
+    release?: VerifiedRef,
   ): Promise<void> {
-    const flags = effectiveFcGates();
+    const flags = effectiveFcGates(release);
     if (!flags.CHIP_PACKAGE_VERIFIED || !flags.PICOBOOT_WRITE_VERIFIED) {
       throw new PicobootError('Direct install is disabled until it is verified on hardware. Use the copy method.');
     }

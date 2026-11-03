@@ -98,6 +98,7 @@ import {
   ACCESSORY_SPECS,
 } from '~/lib/product-content';
 import {useProductStatus} from '~/lib/coming-soon';
+import {targetPublished} from '~/lib/flasher/firmware-manifest';
 import {StagingBenchText} from '~/lib/flasher/ui/status';
 import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
@@ -3027,17 +3028,22 @@ function ProductPage() {
                 {say('product-chrome.firmware_freedom_link', 'Warranty')}
               </Link>
             </p>
-            {/* Flasher links: FC and ESC only. The 20x20 tier (OpenFC-Lite
-                Mini, OpenESC 20x20) has firmware; the 30x30 tier (OpenFC-Lite,
-                OpenESC 30x30) has none yet outside the staging bench build. /guides/flash has its own
-                Permissions-Policy, so this is a full document load. */}
+            {/* Flasher links: FC and ESC only. "Flash firmware" only for a
+                tier whose target has a published file (targetPublished):
+                20x20 = OpenFC-Lite Mini / OpenESC 20x20, 30x30 = OpenFC-Lite /
+                OpenESC 30x30. /guides/flash has its own Permissions-Policy, so
+                this is a full document load. */}
             {product.handle === 'openfc-lite' || product.handle === 'openesc' ? (
               <p>
                 <Link prefetch="none" reloadDocument to="/guides/flash">
-                  {/^20/.test(activeTier.trim()) ? (
+                  {targetPublished(
+                    product.handle === 'openfc-lite'
+                      ? /^20/.test(activeTier.trim()) ? 'OPENFC_LITE_MINI_RP2350A' : 'OPENFC_LITE_RP2350B'
+                      : /^20/.test(activeTier.trim()) ? 'OPENESC_20_F421' : 'OPENESC_30X30',
+                  ) ? (
                     say('product-chrome.firmware_flash_link', 'Flash firmware')
                   ) : (
-                    // The staging bench build offers the 30x30 tier too (OpenFC-Lite, OpenESC 30x30).
+                    // The staging bench build offers every tier.
                     <StagingBenchText
                       normal={say('product-chrome.firmware_flash_unavailable', 'Firmware download: not available yet')}
                       bench={say('product-chrome.firmware_flash_link', 'Flash firmware')}

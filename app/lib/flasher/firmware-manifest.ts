@@ -6,30 +6,42 @@
  *   {version, url, sha256, size, channel}
  * where
  *   - url    = the GitHub release asset, https://github.com/OpenDrone-hw/<repo>/releases/download/<tag>/<file>
- *              (or a host added explicitly to FIRMWARE_URL_ALLOWLIST in manifest.ts);
+ *              (or a host added explicitly to FIRMWARE_URL_ALLOWLIST in manifest.ts),
+ *              or a same-origin /firmware/<board>/<file> shipped in public/;
  *   - sha256 = `sha256sum` of that exact asset, 64 lowercase hex;
  *   - size   = its size in bytes;
  *   - channel = 'alpha' | 'beta' | 'stable'. Never mark an alpha 'stable' (F11).
- * An entry the page will offer must pass isPublished(): allowlisted https URL,
+ * An entry the page will offer must pass isPublished(): allowlisted URL,
  * 64-hex SHA-256, positive size, non-empty version. Anything else (including
  * null) stays "firmware not published yet". The browser re-hashes every
  * download with crypto.subtle and refuses any byte difference.
  * Before the first pin: the CSP connect-src (app/lib/csp.ts) must allow the
  * download host, and the host must serve the asset to a browser fetch (CORS).
  *
- * Status (2026-11-02): nothing pinned. No OpenDrone-hw release carries a
- * firmware asset yet (all releases hold schematics/fab files only).
- *   - OpenFC-Lite / Lite Mini: the rev3.3 Betaflight ALPHA UF2s live only in
- *     the board repos' `firmware/` folders, not as release assets. Candidates
- *     (not pinned): Lite 2026.6.0-alpha, 868352 B, sha256 4dbd52d8...cfcd581;
- *     Mini 2026.12.0-alpha 0b1c266/cfg 9eada21, 897536 B, sha256 555f9ff4...241660a.
- *     Pin them as channel 'alpha' once they are attached to a release.
+ * Same-origin pins: a path /firmware/<board>/<file> (isSameOriginFirmwareUrl)
+ * served from public/firmware/ by Workers assets. The file in public/ must
+ * hash to the pinned SHA-256 (firmware-publish.test.ts checks it).
+ *
+ * Status (2026-11-03):
+ *   - OpenFC-Lite: PINNED, same-origin. Betaflight 2026.12.0-alpha d593400 +
+ *     config a2b6666, the image bench-verified on a real OpenFC-Lite on
+ *     2026-11-02 (one-button flow, staging c932382, Chrome macOS). Direct
+ *     install is verified for this exact SHA-256 (DIRECT_INSTALL_VERIFIED,
+ *     targets.ts).
+ *   - Lite Mini: not pinned yet (staging bench only).
  *   - OpenESC-20x20 and OpenESC-30x30: no public AM32 build exists yet. Both
  *     run the same AM32 OPENESC_20_F421 image (QC record), so their pins
  *     will be the same files.
  */
 
-import {PLACEHOLDER_SHA256, type FirmwareKind, type FirmwareRelease, type PinnedAsset} from './manifest.ts';
+import {
+  isPublished,
+  PLACEHOLDER_SHA256,
+  type FirmwareKind,
+  type FirmwareRelease,
+  type FirmwareSource,
+  type PinnedAsset,
+} from './manifest.ts';
 import {stagingBenchEnabled} from './staging.ts';
 
 export type FirmwareChannel = FirmwareRelease['channel'];
@@ -45,6 +57,8 @@ export type FirmwarePin = {
   kind?: FirmwareKind;
   /** AM32: the pinned EEPROM v4 defaults written after the app. */
   eepromDefaults?: PinnedAsset;
+  /** GPL source for this build (shown next to the download/install). */
+  source?: FirmwareSource;
 };
 
 /** Fixed facts per board; the pin carries everything that changes per release. */
@@ -55,7 +69,7 @@ const BOARDS = {
     kind: 'betaflight-uf2',
     firmware: 'Betaflight (OPENFC_LITE_RP2350B)',
     channelWhileUnpinned: 'alpha',
-    notes: 'Betaflight alpha build; no release asset yet (board repo firmware/ only).',
+    notes: 'Betaflight alpha build.',
   },
   OPENFC_LITE_MINI_RP2350A: {
     kind: 'betaflight-uf2',
@@ -82,8 +96,23 @@ export type PinnedTarget = keyof typeof BOARDS;
 // ---------------------------------------------------------------------------
 // PINNED: one line per board. null = not published.
 // ---------------------------------------------------------------------------
+/** OpenFC-Lite: bench-verified 2026-11-02 on a real board (staging c932382). */
+export const LITE_PIN: FirmwarePin = {
+  version: 'Betaflight 2026.12.0-alpha (d593400)',
+  url: '/firmware/openfc-lite/OpenFC-Lite_betaflight-2026.12.0-alpha-d593400_cfg-a2b6666_OPENFC_LITE_RP2350B.uf2',
+  sha256: 'cf94838a4207f89c196ff3ba5c4e0136eb6e9920eb68033876b90c0b6f4b4196',
+  size: 899584,
+  channel: 'alpha',
+  source: {
+    firmwareUrl: 'https://github.com/OpenDrone-hw/betaflight/tree/d593400a05',
+    configUrl: 'https://github.com/OpenDrone-hw/betaflight-config/tree/a2b666618f',
+    configRef: 'a2b6666',
+    buildTarget: 'OPENFC_LITE_RP2350B',
+  },
+};
+
 export const PINNED: Readonly<Record<PinnedTarget, FirmwarePin | null>> = {
-  OPENFC_LITE_RP2350B: null,
+  OPENFC_LITE_RP2350B: LITE_PIN,
   OPENFC_LITE_MINI_RP2350A: null,
   OPENESC_20_F421: null,
   OPENESC_30X30: null,
@@ -123,6 +152,7 @@ export function pinToRelease(target: PinnedTarget, pin: FirmwarePin | null): Fir
     sha256: pin.sha256,
     published: true,
     ...(pin.eepromDefaults ? {eepromDefaults: pin.eepromDefaults} : {}),
+    ...(pin.source ? {source: pin.source} : {}),
   };
 }
 
@@ -191,4 +221,9 @@ export function currentManifest(): readonly FirmwareRelease[] {
 
 export function releasesFor(target: string): FirmwareRelease[] {
   return currentManifest().filter((r) => r.target === target);
+}
+
+/** Whether the production manifest offers a file for this target (staging never counts). */
+export function targetPublished(target: string): boolean {
+  return FIRMWARE_MANIFEST.some((r) => r.target === target && isPublished(r));
 }

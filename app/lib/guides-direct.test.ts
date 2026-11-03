@@ -24,9 +24,22 @@ const ON_ONLY = /one button|one click|RP2350 Boot|Click \*\*Continue\*\*/i;
 const openfc = findFamily('flash-openfc')!;
 const page = (slug: string) => openfc.pages.find((p) => p.slug === slug)!;
 
-test('one gate: staging bench, or both hardware-verify flags', () => {
+test('one gate: staging bench, both hardware-verify flags, or per-board evidence (the OpenFC-Lite only)', () => {
   assert.equal(directInstallEnabled(true), true);
-  assert.equal(directInstallEnabled(false), CHIP_PACKAGE_VERIFIED && PICOBOOT_WRITE_VERIFIED);
+  assert.equal(CHIP_PACKAGE_VERIFIED || PICOBOOT_WRITE_VERIFIED, false, 'the global flags stay false');
+  assert.equal(directInstallEnabled(false), true, 'the OpenFC-Lite pin is bench-verified');
+  assert.equal(directInstallEnabled(false, 'OPENFC_LITE_RP2350B'), true);
+  assert.equal(directInstallEnabled(false, 'OPENFC_LITE_MINI_RP2350A'), false);
+});
+
+test('production (Lite verified): the guides describe the one-button install for the Lite and say the Mini comes later', () => {
+  const on = directInstallEnabled(false);
+  const install = visible(resolveGuidePage(page('flash'), on));
+  assert.match(install, /one button/);
+  assert.match(install, /works for the OpenFC-Lite\. The Lite Mini file comes later\./);
+  const recovery = visible(resolveGuidePage(page('recovery'), on));
+  assert.match(recovery, /has the OpenFC-Lite file/);
+  assert.match(recovery, /For the Lite Mini it still shows "firmware not published yet"/);
 });
 
 test('gate on (staging bench): the guides describe the one-button install and never "switched off"', () => {
@@ -43,9 +56,8 @@ test('gate on (staging bench): the guides describe the one-button install and ne
   assert.match(visible(resolveGuidePage(page('boot-mode'), on)), /usually you can skip this page/);
 });
 
-test('gate off (production): no one-button claim anywhere in the OpenFC guide', () => {
+test('gate off (base pages): no one-button claim anywhere in the OpenFC guide', () => {
   const off = false;
-  assert.equal(directInstallEnabled(off), false, 'the verify flags are still false');
   for (const p of openfc.pages) {
     const v = visible(resolveGuidePage(p, off));
     assert.doesNotMatch(v, ON_ONLY, p.slug);

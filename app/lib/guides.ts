@@ -65,8 +65,8 @@ export type GuidePage = {
   /**
    * The page as it reads while the firmware page's one-button install is on
    * (directInstallEnabled, app/lib/flasher/direct-install.ts). Replaces the
-   * listed fields; the rest is shared. The server render always uses the base
-   * page, so production copy never claims the one-button install.
+   * listed fields; the rest is shared. On in production since the OpenFC-Lite
+   * pin was bench-verified (2026-11-02); the direct copy says the Mini comes later.
    */
   direct?: GuidePageDirect;
 };
@@ -151,10 +151,11 @@ const ESC_BROWSER_NOTE: Callout = {
   text: 'Reading an ESC talks to the flight controller over a serial connection from the browser. Use **Chrome or Edge** on a computer. Safari and phones cannot do this.',
 };
 
+/** OpenFC-Lite published (2026-11-03); the Lite Mini not yet. */
 const FC_NOT_PUBLISHED: Callout = {
   kind: 'note',
-  title: 'The firmware file is not published yet',
-  text: 'Today the [firmware page](/guides/flash) shows "firmware not published yet" for both boards, so there is no file to download. The download will appear there once the firmware is released. Until then, read this guide to know what to expect, and do not use firmware files from other places.',
+  title: 'The Lite Mini file is not published yet',
+  text: 'The [firmware page](/guides/flash) has the OpenFC-Lite file. For the Lite Mini it still shows "firmware not published yet": its download will appear there once it is released. Do not use firmware files from other places.',
 };
 
 /** The status every ESC page that mentions installing carries. Tested in guides.test.ts. */
@@ -234,6 +235,7 @@ const BOOT_MODE_DIRECT: GuidePageDirect = {
 const INSTALL_DIRECT: GuidePageDirect = {
   intro: [
     'In Chrome or Edge, the [firmware page](/guides/flash) installs Betaflight with one button. It checks the file and the board before it writes anything.',
+    'This works for the OpenFC-Lite. The Lite Mini file comes later.',
     "Installing resets the board's settings, so save them first.",
   ],
   callouts: [
@@ -407,10 +409,10 @@ const OPENFC: GuideFamily = {
       title: 'Install Betaflight on your OpenFC',
       direct: INSTALL_DIRECT,
       description:
-        'Step 2 of updating an OpenFC: once released, download the verified Betaflight file from the firmware page and drag it onto the RP2350 drive.',
+        'Step 2 of updating an OpenFC: download the verified Betaflight file from the firmware page and drag it onto the RP2350 drive.',
       intro: [
         'The way to put the firmware on is **drag and drop**. It works in every browser and on every computer: you download the file from the firmware page and copy it onto the RP2350 drive. Installing straight from the web page is switched off until it has been checked on real boards.',
-        '**Not available yet:** the firmware page has no published file for either board today. The download will appear there once the firmware is released. The steps below are what you will do then.',
+        '**OpenFC-Lite: available. Lite Mini: not published yet.** Its download will appear on the firmware page once it is released.',
         'The firmware page checks the file before you get it: its size and checksum must match the release list built into the page, and it must be built for the board you picked.',
       ],
       tools: FC_TOOLS,
@@ -419,7 +421,7 @@ const OPENFC: GuideFamily = {
         {
           title: 'Open the firmware page and pick your board',
           text: 'Go to [the firmware page](/guides/flash) and choose your board. The name is printed on the board: OpenFC-Lite or OpenFC-Lite Mini.',
-          see: `Once released, the page shows the firmware version, whether it is a stable release or a pre-release (alpha) build, and the target name: \`${LITE_TARGET}\` for the OpenFC-Lite, \`${MINI_TARGET}\` for the Mini. Write the version down; you will check it later. Until then it says "Firmware not published yet": come back later.`,
+          see: `The page shows the firmware version, whether it is a stable release or a pre-release (alpha) build, and the target name: \`${LITE_TARGET}\` for the OpenFC-Lite, \`${MINI_TARGET}\` for the Mini. Write the version down; you will check it later. For the Lite Mini it still says "Firmware not published yet": come back later.`,
         },
         {
           title: 'Download and verify the file',
@@ -474,7 +476,7 @@ const OPENFC: GuideFamily = {
         },
         {
           problem: 'The page says "Firmware not published yet" and offers no download.',
-          fix: 'That is expected today. The download will appear once the firmware is released. Do not use a firmware file from anywhere else.',
+          fix: 'That is expected for the Lite Mini today. Its download will appear once it is released. Do not use a firmware file from anywhere else.',
         },
         {
           problem: 'I cannot find an install button on the page.',
@@ -542,7 +544,7 @@ const OPENFC: GuideFamily = {
         },
         {
           title: 'Get a fresh, checked file',
-          text: 'Once the firmware is released, go to the [firmware page](/guides/flash), pick the board printed on yours and download the file again. Do not reuse a file from an interrupted download. If the page still says "Firmware not published yet", stop here: the board is safe in bootloader mode, and you can leave it unplugged until the file is out.',
+          text: 'Go to the [firmware page](/guides/flash), pick the board printed on yours and download the file again. Do not reuse a file from an interrupted download. If the page says "Firmware not published yet" (the Lite Mini today), stop here: the board is safe in bootloader mode, and you can leave it unplugged until the file is out.',
           see: 'The page reports the file as checked, and a `.uf2` file is saved.',
         },
         {

@@ -132,15 +132,44 @@ export const PICOBOOT_WRITE_VERIFIED = false;
  * The two flags as the code must read them: each constant OR the staging
  * bench switch (staging.ts). Every check of CHIP_PACKAGE_VERIFIED /
  * PICOBOOT_WRITE_VERIFIED goes through here (or through the same
- * `CONST || stagingBenchEnabled()`); the constants stay false. This replaces
- * only the "unverified on hardware" flags, never the target or package match.
+ * `CONST || stagingBenchEnabled()`); the constants stay false. With a
+ * release, a per-board DIRECT_INSTALL_VERIFIED entry for that exact target +
+ * SHA-256 also counts. This replaces only the "unverified on hardware" flags,
+ * never the target or package match.
  */
-export function effectiveFcGates(): {CHIP_PACKAGE_VERIFIED: boolean; PICOBOOT_WRITE_VERIFIED: boolean} {
-  const staging = stagingBenchEnabled();
+export function effectiveFcGates(release?: VerifiedRef | null): {CHIP_PACKAGE_VERIFIED: boolean; PICOBOOT_WRITE_VERIFIED: boolean} {
+  const on = stagingBenchEnabled() || boardDirectInstallVerified(release);
   return {
-    CHIP_PACKAGE_VERIFIED: CHIP_PACKAGE_VERIFIED || staging,
-    PICOBOOT_WRITE_VERIFIED: PICOBOOT_WRITE_VERIFIED || staging,
+    CHIP_PACKAGE_VERIFIED: CHIP_PACKAGE_VERIFIED || on,
+    PICOBOOT_WRITE_VERIFIED: PICOBOOT_WRITE_VERIFIED || on,
   };
+}
+
+/**
+ * PER-BOARD hardware evidence for the direct (PICOBOOT) write, keyed by
+ * target and tied to the exact pinned image SHA-256. It stands in for BOTH
+ * global flags above, but only for a release whose target AND sha256 equal an
+ * entry here: a new pin (different SHA) is unverified again until a reviewed
+ * PR adds its evidence. Boards without an entry (the Lite Mini, the ESCs)
+ * stay copy-only. It never replaces the target, chip-package, installed-
+ * firmware, size or hash checks (fcDirectWriteGate, gates.ts).
+ */
+export const DIRECT_INSTALL_VERIFIED: Readonly<Partial<Record<string, {sha256: string; evidence: string}>>> = {
+  OPENFC_LITE_RP2350B: {
+    sha256: 'cf94838a4207f89c196ff3ba5c4e0136eb6e9920eb68033876b90c0b6f4b4196',
+    evidence:
+      'Bench 2026-11-02: real OpenFC-Lite, one-button flow (staging c932382, Chrome macOS); afterwards Betaflight RP2350B 2026.12.0-alpha d593400a0, OPENFC_LITE_RP2350B.',
+  },
+};
+
+/** The fields of a release the per-board check reads. */
+export type VerifiedRef = {target: string; sha256: string};
+
+/** True only if this exact (target, sha256) has recorded hardware evidence. */
+export function boardDirectInstallVerified(release: VerifiedRef | null | undefined): boolean {
+  if (!release) return false;
+  const v = Object.hasOwn(DIRECT_INSTALL_VERIFIED, release.target) ? DIRECT_INSTALL_VERIFIED[release.target] : undefined;
+  return !!v && v.sha256 === release.sha256;
 }
 
 /** USB IDs. */

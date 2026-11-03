@@ -72,8 +72,8 @@ function CalloutBox({callout}: {callout: Callout}) {
 
 export default function GuideStepRoute() {
   const {family, page: basePage, index, prev, next, total, howTo} = useLoaderData<typeof loader>();
-  // The firmware page's one-button install (same gate as FcFlasher), read after mount: the server
-  // render and production show the base copy; the direct variant only while the gate is on.
+  // The firmware page's one-button install (same gate as FcFlasher): the direct variant while the gate
+  // is on. The per-board part is static (server and client agree); the staging switch is read after mount.
   const page = resolveGuidePage(basePage, useDirectInstallEnabled());
   const seeLabel = copyText('guides.see_label') ?? 'You should see:';
 
