@@ -296,7 +296,7 @@
     {
       "id": "esc",
       "title": "OpenESC",
-      "note": "4in1, AM32, 40A",
+      "note": "4in1, AM32, 60A per motor",
       "hint": "Battery in, four motors out.",
       "href": "/products/openesc",
       "select": {

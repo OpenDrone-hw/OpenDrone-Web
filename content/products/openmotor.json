@@ -88,7 +88,7 @@
       "1 motor"
     ]
   ],
-  "specsNote": "We are still choosing the final motor manufacturer, so these specifications may change. Every buyer gets an email before shipping.",
+  "specsNote": "OpenMotor is an OEM motor, not open hardware: it is not an OpenDrone design, so there are no design files to publish. We are still choosing the final motor manufacturer, so these specifications may change. Every buyer gets an email before shipping.",
   "optionAxis": "Model",
   "secondAxis": "Cells",
   "secondOrder": [

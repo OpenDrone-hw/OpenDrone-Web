@@ -86,6 +86,8 @@ export function HeroBuildGuide({
           <Txt id="home.build_help" />
         </InfoHint>
       </div>
+      {/* The one-line answer to "is this a drone?", visible without opening the info hint (words from build_help). */}
+      <Txt id="home.build_note" as="p" className="hero-build-ship" />
       <ul
         className="hero-build-parts"
         onWheel={(event) => event.stopPropagation()}
