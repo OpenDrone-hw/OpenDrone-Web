@@ -1580,27 +1580,16 @@ function ProductPage() {
     // On touch, drop every hover/focus handler - a tap's synthetic mouse +
     // blur events would clear the spotlight the click just set. Click alone
     // toggles, and it persists (no container mouseleave on touch either).
-    const handlers = !hoverable
+    // The <li> stays non-interactive; the keyboard stop is a real <button>
+    // inside it (WCAG 4.1.2), so the row never carries a bare tabindex.
+    const liHandlers = hoverable && !noHover ? {onMouseEnter: enter} : {};
+    const btnHandlers = !hoverable
       ? {}
       : noHover
-        ? {onClick: tap, tabIndex: 0}
-        : {
-            onMouseEnter: enter,
-            onClick: tap,
-            onFocus: enter,
-            onBlur: clearHover,
-            tabIndex: 0,
-          };
-    return (
-      <li
-        key={pin.ref}
-        className={
-          hoverable
-            ? `teardown-pin teardown-pin-hoverable${isActive ? ' is-active' : ''}`
-            : undefined
-        }
-        {...handlers}
-      >
+        ? {onClick: tap}
+        : {onClick: tap, onFocus: enter, onBlur: clearHover};
+    const rowBody = (
+      <>
         <span className="teardown-pin-part" {...pinEdit('part')}>
           {pin.part}
         </span>
@@ -1609,6 +1598,30 @@ function ProductPage() {
             {pin.cost}
           </span>
         ) : null}
+      </>
+    );
+    return (
+      <li
+        key={pin.ref}
+        className={
+          hoverable
+            ? `teardown-pin teardown-pin-hoverable${isActive ? ' is-active' : ''}`
+            : undefined
+        }
+        {...liHandlers}
+      >
+        {hoverable ? (
+          <button
+            type="button"
+            className="teardown-pin-btn"
+            aria-pressed={isActive}
+            {...btnHandlers}
+          >
+            {rowBody}
+          </button>
+        ) : (
+          rowBody
+        )}
       </li>
     );
   };
