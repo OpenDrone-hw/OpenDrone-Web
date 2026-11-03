@@ -223,6 +223,6 @@ describe('import and US regions', () => {
     assert.equal(geoOfferAvailability('us'), null);
   });
   it('the phone bar has a short line for every region and locale', () => {
-    for (const locale of ['en', 'nl', 'fr'] as const) for (const r of ['eu', 'import', 'intl', 'us'] as const) assert.ok(geoBarText(r, locale, true).length <= 58, `${locale}.${r}`);
+    for (const locale of ['en', 'nl', 'fr'] as const) for (const r of ['eu', 'import', 'intl', 'us'] as const) assert.ok(geoBarText(r, locale, true).length <= 42, `${locale}.${r}`);
   });
 });

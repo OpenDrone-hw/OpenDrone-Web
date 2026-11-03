@@ -169,9 +169,9 @@ export const GEO_BANNER_COPY: Record<Locale, Record<KnownGeoRegion, string> & {t
 
 /** The shorter line per region for the bar on phones (one line, no wrap). */
 export const GEO_BAR_SHORT: Record<Locale, Record<KnownGeoRegion, string>> = {
-  en: {eu: 'In stock, ships in days', import: 'Pre-order Mar 2027, duties on delivery', intl: 'Pre-order, ships Mar 2027', us: 'Not shipping to the US yet'},
-  nl: {eu: 'Op voorraad, binnen dagen verzonden', import: 'Pre-order mrt 2027, rechten bij levering', intl: 'Pre-order, verzending mrt 2027', us: 'Nog geen verzending naar de VS'},
-  fr: {eu: 'En stock, expédié sous quelques jours', import: 'Précommande mars 2027, droits en sus', intl: 'Précommande, mars 2027', us: 'Pas encore de livraison aux É.-U.'},
+  en: {eu: 'In stock, ships in days', import: 'Mar 2027 + duties', intl: 'Pre-order, Mar 2027', us: 'Not shipping to the US yet'},
+  nl: {eu: 'Op voorraad, binnen dagen verzonden', import: 'mrt 2027 + rechten', intl: 'Pre-order, verzending mrt 2027', us: 'Nog geen verzending naar de VS'},
+  fr: {eu: 'En stock, expédié sous quelques jours', import: 'mars 2027 + droits', intl: 'Précommande, mars 2027', us: 'Pas encore de livraison aux É.-U.'},
 };
 
 /** The bar's one line: "EU: In stock in Belgium, ships in a few days" (the visitor's region), or both
