@@ -44,7 +44,7 @@ export async function action({request, context}: Route.ActionArgs) {
   return data<TradeResult>({ok: true});
 }
 
-const field = 'mt-2 block w-full rounded-[var(--r-xs)] border border-[var(--color-border)] bg-transparent px-3 py-2.5 font-sans text-[16px] normal-case tracking-normal text-[var(--color-text)] focus:border-[var(--color-text)] aria-[invalid=true]:border-[var(--od-pcb-copper)]';
+const field = 'mt-2 block w-full rounded-[var(--r-xs)] border border-[var(--color-border)] bg-transparent px-3 py-2.5 font-sans text-[16px] normal-case tracking-normal text-[var(--color-text)] focus:border-[var(--color-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus)] aria-[invalid=true]:border-[var(--od-pcb-copper)]';
 const label = 'block min-w-0 font-sans text-[13px] text-[var(--color-text-muted)]';
 
 function FieldError({message, id}: {message?: string; id: string}) {
