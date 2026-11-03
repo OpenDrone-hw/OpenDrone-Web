@@ -693,7 +693,7 @@ function Chapter({
         {children}
       </div>
       {backdrop || noMedia ? null : (
-        <aside className="chapter-media">
+        <div className="chapter-media">
           {media ? (
             <div className="chapter-media-frame chapter-media-frame--live">
               {media}
@@ -701,7 +701,7 @@ function Chapter({
           ) : (
             <ChapterMediaPlaceholder kind={number} />
           )}
-        </aside>
+        </div>
       )}
       {wide ? <div className="chapter-wide">{wide}</div> : null}
     </section>
