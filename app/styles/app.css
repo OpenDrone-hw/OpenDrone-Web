@@ -487,10 +487,11 @@ body {
   background: var(--color-text-muted);
 }
 
-/* Links */
+/* Links. No `text-decoration: none` here: the layered reset (reset.css,
+   reset-input) removes the underline, so Tailwind's `underline` utility can
+   put it back. Unlayered, this rule beat the utility (axe link-in-text-block). */
 a {
   color: var(--color-text);
-  text-decoration: none;
 }
 a:hover {
   color: var(--color-gold-text);
