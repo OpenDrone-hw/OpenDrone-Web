@@ -40,9 +40,16 @@ import {
   type FlasherTarget,
 } from '../targets.ts';
 import {imageContainsAscii, parseInfoUf2, parseUf2} from '../uf2.ts';
+import {firmwareIdText} from '../published.ts';
 import {StatusLine, errText, saveBytes, useBeforeUnloadWhile, useStagingBench, type Status} from './status.tsx';
 
+const BACKUP_REASON = 'Confirm your config backup first.';
+
 const short = (t: FlasherTarget) => t.displayName.replace(/ \(.*\)$/, '');
+
+/** Published releases for a board. F7: the staging manifest only after mount, so server and first client render agree. */
+const publishedFor = (t: FlasherTarget, staging: boolean): FirmwareRelease[] =>
+  (staging ? releasesFor(t.target) : FIRMWARE_MANIFEST.filter((r) => r.target === t.target)).filter(isPublished);
 
 /** Download + verify the pinned file for a board: SHA-256 (fetchVerifiedFirmware), UF2 family/range, target name. */
 async function prepareFor(target: FlasherTarget): Promise<Prepared> {
@@ -96,6 +103,10 @@ export function FcFlasher({
   const writesOn = directInstallEnabled(staging);
   const browserOk = hasUsb && hasSerial;
   const canRun = browserOk && writesOn;
+  /** "I've backed up my config": until ticked the button is aria-disabled (still focusable) with a visible reason. */
+  const [backedUp, setBackedUp] = useState(false);
+  const backupId = useId();
+  const backupReasonId = useId();
 
   const [run, setRun] = useState<Run>({kind: 'idle'});
   /** What the last attempt learned, so Continue resumes at the WebUSB stage. */
@@ -193,6 +204,16 @@ export function FcFlasher({
     );
   };
 
+  const needsBackup = canRun && !backedUp && !running && run.kind !== 'need-usb';
+  // Not ticked: announce the reason and stop. Ticked: start() runs at once, so its serial picker is still the click's first await.
+  const onUpdate = () => {
+    if (!backedUp) {
+      say(BACKUP_REASON);
+      return;
+    }
+    void start();
+  };
+
   // The board picker shows when no identify result is known; it starts with the last identified board selected.
   const needsBoardForResume = run.kind === 'failed' && !ctx.current.board;
   const statusLine =
@@ -209,17 +230,41 @@ export function FcFlasher({
       <h2 id="fc-update-title" className="flash-update-title">
         Before you start
       </h2>
-      <ul className="flash-checklist">
-        <li>Battery unplugged, props off. USB only.</li>
+      <ol className="flash-checklist">
         <li>
-          Save your settings: Betaflight CLI, <code>diff all</code>. Flashing resets them.
+          Back up your config: save <code>diff all</code>, because flashing resets settings.
         </li>
-        <li>Chrome or Edge, OpenFC-Lite or Lite Mini.</li>
-      </ul>
+        <li>Props off, battery out, USB only.</li>
+        <li>Computer only (Chrome/Edge), with a data-capable USB cable.</li>
+        <li>Test on USB before soldering.</li>
+      </ol>
 
-      <button type="button" className="btn-primary" onClick={() => void start()} disabled={!canRun || running || run.kind === 'need-usb'}>
+      <label htmlFor={backupId} className="mb-3 flex items-center gap-2">
+        <input id={backupId} type="checkbox" className="h-5 w-5" checked={backedUp} onChange={(e) => setBackedUp(e.target.checked)} />
+        I&apos;ve backed up my config
+      </label>
+      <button
+        type="button"
+        className="btn-primary"
+        onClick={onUpdate}
+        disabled={!canRun || running || run.kind === 'need-usb'}
+        aria-disabled={needsBackup || undefined}
+        aria-describedby={needsBackup ? backupReasonId : undefined}
+      >
         Update firmware
       </button>
+      {needsBackup ? (
+        <p id={backupReasonId} className="flash-note">
+          {BACKUP_REASON}
+        </p>
+      ) : null}
+      {FLASHER_TARGETS.flatMap((t) =>
+        publishedFor(t, staging).map((r) => (
+          <span key={t.target} className="flash-filename">
+            {short(t)}: {firmwareIdText(r)}
+          </span>
+        )),
+      )}
       {!browserOk ? (
         <p className="flash-note">This browser can&apos;t reach USB. Use Other ways.</p>
       ) : !writesOn ? (
@@ -229,9 +274,12 @@ export function FcFlasher({
       <div aria-live="polite">
         {statusLine ? <p className="flash-stage">{statusLine}</p> : null}
         {run.kind === 'need-usb' ? (
-          <button type="button" className="btn-primary mt-2" onClick={resume}>
-            Continue
-          </button>
+          <>
+            <p className="flash-note">Your browser asks a second time: click Continue, then pick RP2350 Boot.</p>
+            <button type="button" className="btn-primary mt-2" onClick={resume}>
+              Continue
+            </button>
+          </>
         ) : null}
         {run.kind === 'failed' ? (
           <div role="alert" className="flash-fail">
@@ -272,9 +320,8 @@ function OtherWays({open, say}: {open: boolean; say: (t: string) => void}) {
   const [infoStatus, setInfoStatus] = useState<Status>({kind: 'idle'});
   const fileId = useId();
   const staging = useStagingBench();
-  // F7: the staging manifest only after mount, so server and first client render agree.
-  const published = (t: FlasherTarget) =>
-    (staging ? releasesFor(t.target) : FIRMWARE_MANIFEST.filter((r: FirmwareRelease) => r.target === t.target)).some(isPublished);
+  const published = (t: FlasherTarget) => publishedFor(t, staging).length > 0;
+  const boardRelease = board ? publishedFor(board, staging)[0] : undefined;
 
   const save = async () => {
     if (!board) return;
@@ -319,6 +366,7 @@ function OtherWays({open, say}: {open: boolean; say: (t: string) => void}) {
       <button type="button" className="btn-secondary mt-3" onClick={() => void save()} disabled={!board}>
         Save firmware (.uf2)
       </button>
+      {boardRelease ? <span className="flash-filename">{firmwareIdText(boardRelease)}</span> : null}
       <StatusLine status={status} />
       <p className="mt-3">
         Hold BOOT while plugging in USB, then copy the file onto the RP2350 drive. The board restarts by itself. Check the
@@ -336,9 +384,7 @@ function OtherWays({open, say}: {open: boolean; say: (t: string) => void}) {
 /** Version, target and SHA-256 per board: collapsed, for the people who want them. */
 function Details() {
   const staging = useStagingBench();
-  const rows = FLASHER_TARGETS.flatMap((t) =>
-    (staging ? releasesFor(t.target) : FIRMWARE_MANIFEST.filter((r) => r.target === t.target)).filter(isPublished).map((r) => ({t, r})),
-  );
+  const rows = FLASHER_TARGETS.flatMap((t) => publishedFor(t, staging).map((r) => ({t, r})));
   return (
     <details className="flash-more">
       <summary>Details</summary>
