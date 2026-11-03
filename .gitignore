@@ -78,3 +78,5 @@ brand.zip
 /public/firmware-staging/
 # Bench firmware source copies (seeded into the bench Worker's local R2, wrangler.bench.toml): never commit
 /.firmware-staging/
+# Local bench Worker config (FIRMWARE_STAGING local R2): kept out of the repo, never deployed
+/wrangler.bench.toml

@@ -112,12 +112,11 @@ describe('staging firmware route (F1)', () => {
     const h = await handleStagingFirmware(req(`/firmware-staging/${FILE}`, okAuth, 'HEAD'), {password: PASSWORD, store: store()});
     assert.equal(h?.status, 200);
   });
-  it('the FIRMWARE_STAGING binding is declared only in wrangler.bench.toml', () => {
+  it('no committed wrangler config declares the FIRMWARE_STAGING binding (the bench config is local-only)', () => {
     const root = join(import.meta.dirname, '..', '..', '..');
     for (const f of ['wrangler.toml', 'wrangler.production.toml', 'wrangler.shoptest.toml']) {
       assert.doesNotMatch(readFileSync(join(root, f), 'utf8'), /FIRMWARE_STAGING/, f);
     }
-    assert.match(readFileSync(join(root, 'wrangler.bench.toml'), 'utf8'), /binding = "FIRMWARE_STAGING"/);
   });
   it('server.ts calls the route only in a VITE_FLASH_STAGING_GATES=1 build, before the site gate', () => {
     const src = readFileSync(join(import.meta.dirname, '..', '..', '..', 'server.ts'), 'utf8');

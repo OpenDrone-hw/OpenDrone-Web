@@ -2,7 +2,7 @@
  * Staging bench firmware files (review 3, F1 + F2). The unreleased bench
  * binaries are NEVER static assets: they are not in public/ and never in a
  * build output. A bench Worker reads them from a local-only R2 binding
- * (FIRMWARE_STAGING, declared only in wrangler.bench.toml) and serves them at
+ * (FIRMWARE_STAGING, declared only in a local, uncommitted wrangler.bench.toml) and serves them at
  * /firmware-staging/<file> behind the same basic auth as the staging site.
  *
  * The route exists only when ALL hold (else the files cannot be fetched):
