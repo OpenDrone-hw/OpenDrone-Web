@@ -15,8 +15,7 @@
 
 import type {Catalog} from './catalog.ts';
 import {fetchShopifyCatalog} from './shopify-storefront.ts';
-import {memoCatalog, recentCatalog, rememberCatalog} from './catalog-memo.ts';
-import {REPLAN_REUSE_MS} from './cart-replan.ts';
+import {REPLAN_REUSE_MS, memoCatalog, readAndRemember, recentCatalog} from './catalog-memo.ts';
 import {appCommerceEnabled} from './commerce/app-api.ts';
 import {appCatalogClient} from './commerce/app-catalog.ts';
 import {
@@ -94,11 +93,7 @@ export function createCatalogClient({env, request}: {env: Env; request?: Request
     market === 'default' ? fetchShopifyCatalog(env) : fetchShopifyCatalog(env, fetch, market);
   // A fresh read is kept in the memo too, so the cart loader right after a
   // Ship to switch can reuse it (`recent`).
-  const fresh = catalogReader(env, request, async (market = 'default') => {
-    const catalog = await read(market);
-    rememberCatalog(market, catalog);
-    return catalog;
-  });
+  const fresh = catalogReader(env, request, (market = 'default') => readAndRemember(market, () => read(market)));
   const recent = catalogReader(env, request, (market = 'default') => recentCatalog(market, REPLAN_REUSE_MS, () => read(market)));
   return {...cached, fresh, recent};
 }

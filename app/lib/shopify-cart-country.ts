@@ -127,7 +127,7 @@ export async function handleCartCountry(
     const response = remember({country: quote.country, applied: true, ...(summary ? {summary} : {})});
     // The cart was just re-planned on a fresh catalog: the cart loader that
     // React Router runs next may re-plan on that read (cart-replan.ts).
-    if (summary) response.headers.append('Set-Cookie', cartReplannedCookie(quote.country, new URL(request.url).protocol === 'https:'));
+    if (summary) response.headers.append('Set-Cookie', cartReplannedCookie(quote.country, cartId, new URL(request.url).protocol === 'https:'));
     return response;
   } catch (error) {
     dependencies.logError?.(

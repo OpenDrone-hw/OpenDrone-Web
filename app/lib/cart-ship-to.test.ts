@@ -6,7 +6,7 @@ import {applyCampaign, datedShipParts, parseCampaignConfig, shipLabelFromPromise
 import {shipCountryFromCookie} from './shipping-rates.ts';
 import {forwardedCountry, handleShopifyCartAction, withCountry, type ShopifyCartDependencies} from './shopify-cart-action.ts';
 import {handleCartCountry} from './shopify-cart-country.ts';
-import {cartReplannedFor, planCartPage} from './cart-replan.ts';
+import {cartReplannedFor, cartTag, planCartPage} from './cart-replan.ts';
 import {shippingQuote} from './shipping-rates.ts';
 import type {CartLineInput, CartLineUpdate, ShopifyCart, ShopifyCartLine} from './shopify-storefront.ts';
 
@@ -530,7 +530,25 @@ describe('the cart loader right after a Ship to switch (cart-replan.ts)', () => 
     const res = await handleCartCountry(switchRequest('BE'), ENV, switcher(shopify('US', [euLine()])));
     const cookies = setCookies(res);
     assert.match(cookies, /od_ship_country=BE;/);
-    assert.match(cookies, /od_cart_replanned=BE; Path=\/; Max-Age=15; HttpOnly; SameSite=Lax; Secure/);
+    // Bound to the cart it re-planned: country + a tag of the cart id.
+    assert.ok(cookies.includes(`od_cart_replanned=BE.${cartTag('gid://shopify/Cart/a')}; Path=/; Max-Age=15; HttpOnly; SameSite=Lax; Secure`), cookies);
+  });
+  it('drops Secure on http', async () => {
+    const req = new Request('http://localhost:8799/api/shopify/cart-country', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded', Origin: 'http://localhost:8799'},
+      body: new URLSearchParams({country: 'BE'}),
+    });
+    const cookies = setCookies(await handleCartCountry(req, ENV, switcher(shopify('US', [euLine()]))));
+    assert.match(cookies, /od_cart_replanned=BE\.[0-9a-f]{8}; Path=\/; Max-Age=15; HttpOnly; SameSite=Lax(?!; Secure)/);
+  });
+  it('no marker when the cart is gone after the switch (summary null)', async () => {
+    const fake = shopify('US', [euLine()]);
+    let reads = 0;
+    // The first read (the previous country) finds the cart; the re-price read finds none.
+    const res = await handleCartCountry(switchRequest('BE'), ENV, {...switcher(fake), getCart: async () => (reads++ === 0 ? fake.getCart() : null)});
+    assert.equal(res.status, 200);
+    assert.doesNotMatch(setCookies(res), /od_cart_replanned/);
   });
   it('no marker for a country not sold direct, or without a cart', async () => {
     const shops = await handleCartCountry(switchRequest('FR'), ENV, switcher(shopify('BE', [euLine()])));
@@ -542,7 +560,7 @@ describe('the cart loader right after a Ship to switch (cart-replan.ts)', () => 
     const fake = shopify('US', [euLine()]);
     const res = await handleCartCountry(switchRequest('BE'), ENV, switcher(fake));
     const marker = cartReplannedFor(setCookies(res).split('\n').find((c) => c.startsWith('od_cart_replanned'))!.split(';')[0]);
-    assert.equal(marker, 'BE');
+    assert.deepEqual(marker, {country: 'BE', cart: cartTag('gid://shopify/Cart/a')});
     const cart = (await fake.getCart())!;
     let freshReads = 0;
     let recentReads = 0;
@@ -571,7 +589,7 @@ describe('the cart loader right after a Ship to switch (cart-replan.ts)', () => 
     await handleCartCountry(switchRequest('US'), ENV, switcher(fake));
     fake.state.country = 'BE';
     const cart = (await fake.getCart())!;
-    const plan = await planCartPage(cart, shippingQuote('BE', REGISTRATIONS, 12), ENV, 'BE', {
+    const plan = await planCartPage(cart, shippingQuote('BE', REGISTRATIONS, 12), ENV, {country: 'BE', cart: cartTag(cart.id)}, {
       fresh: async () => { throw new Error('no fresh read expected'); },
       recent: async (region: Region) => catalogFor(region),
       setCountry: fake.setCountry, getCart: fake.getCart, updateCartLines: fake.updateCartLines,
@@ -580,5 +598,45 @@ describe('the cart loader right after a Ship to switch (cart-replan.ts)', () => 
     assert.equal(plan.reused, true);
     assert.equal(plan.cart.lines[0].shipPromise, EU_PROMISE);
     assert.equal(fake.state.lines[0].shipRegion, undefined);
+  });
+});
+
+describe('switch marker binding (cart-replan.ts reuseSwitchCatalog)', () => {
+  const plan = async (cart: ShopifyCart, destination: string, marker: {country: string; cart: string} | null) => {
+    let fresh = 0;
+    let recent = 0;
+    const out = await planCartPage(cart, shippingQuote(destination, REGISTRATIONS, 12), ENV, marker, {
+      fresh: async (region: Region) => { fresh += 1; return catalogFor(region); },
+      recent: async (region: Region) => { recent += 1; return catalogFor(region); },
+      fetchPaymentMethods: async () => [],
+    });
+    return {fresh, recent, reused: out.reused};
+  };
+  it('marker A, cart B, page destination C: fresh', async () => {
+    const cart = (await shopify('DE', [euLine()]).getCart())!;
+    assert.deepEqual(await plan(cart, 'BE', {country: 'US', cart: cartTag(cart.id)}), {fresh: 1, recent: 0, reused: false});
+  });
+  it('a marker for another cart id: fresh', async () => {
+    const cart = (await shopify('BE', [euLine()]).getCart())!;
+    assert.deepEqual(await plan(cart, 'BE', {country: 'BE', cart: cartTag('gid://shopify/Cart/other')}), {fresh: 1, recent: 0, reused: false});
+    assert.deepEqual(await plan(cart, 'BE', {country: 'BE', cart: cartTag(cart.id)}), {fresh: 0, recent: 1, reused: true});
+  });
+  it('A -> B -> A within 15 s: each loader reuses only for the switch that set its marker', async () => {
+    const fake = shopify('BE', [euLine()]);
+    const marker = async (country: string) => {
+      const res = await handleCartCountry(switchRequest(country), ENV, switcher(fake));
+      const all = (res.headers.getSetCookie?.() ?? [res.headers.get('Set-Cookie') ?? '']).join('; ');
+      return cartReplannedFor(all.split('; ').find((c) => c.startsWith('od_cart_replanned=')) ?? null);
+    };
+    const toUs = await marker('US');
+    assert.equal(toUs?.country, 'US');
+    assert.equal((await plan((await fake.getCart())!, 'US', toUs)).reused, true);
+    const toBe = await marker('BE');
+    assert.equal(toBe?.country, 'BE');
+    // The newer marker is BE: a loader still planning US (a late request) reads fresh.
+    assert.equal((await plan((await fake.getCart())!, 'US', toBe)).reused, false);
+    assert.equal((await plan((await fake.getCart())!, 'BE', toBe)).reused, true);
+    // The stale US marker no longer matches the cart's country.
+    assert.equal((await plan((await fake.getCart())!, 'BE', toUs)).reused, false);
   });
 });
