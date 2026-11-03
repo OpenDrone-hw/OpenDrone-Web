@@ -69,6 +69,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // scroll-lock) for a frame before matchMedia corrects it client-side.
   const ua = request.headers.get('user-agent') || '';
   const isMobileHint =
+    request.headers.get('sec-ch-ua-mobile') === '?1' ||
     /Mobi|Android|iPhone|iPod|Windows Phone|BlackBerry/i.test(ua);
 
   // Flagship line for the mobile showcase. Deferred, not awaited: desktop
@@ -104,20 +105,15 @@ export async function loader({request, context}: Route.LoaderArgs) {
     })
     .catch(() => ({featured: [], heroBuilds: []}));
 
-  // The build card sits on a phone's first screen, so a phone gets it
-  // resolved in the shell (same awaited query as `featured` below).
-  const heroBuilds = isMobileHint
-    ? await home.then((h) => h.heroBuilds)
-    : home.then((h) => h.heroBuilds);
-  // On a phone the featured cards are the first thing under the hero and the
-  // section's arrival used to shift everything below it (CLS 0.22) and delay
-  // the LCP image until the deferred chunk streamed in. The query is
-  // CacheLong, so awaiting it costs a few ms of TTFB at the edge and puts the
-  // cards, and the first card's image, in the initial HTML. Desktop keeps the
-  // deferred promise: it never renders these cards.
-  const featured = isMobileHint
-    ? await home.then((h) => h.featured)
-    : home.then((h) => h.featured);
+  // Resolved in the shell for every visitor, not just a phone UA. On a phone
+  // the build card and the featured cards sit on the first screens, and a
+  // streamed chunk shifted the ledger below them (CLS 0.22). The UA is only a
+  // hint: a narrow window whose UA does not say "mobile" (iPadOS Safari sends a
+  // Mac UA, a narrowed desktop window, "request desktop site") gets the
+  // desktop SSR tree, matchMedia swaps to MobileHome on the client, and a
+  // still-pending promise then streamed in and shifted the ledger (CLS 0.28).
+  // The query is CacheLong, so awaiting it costs a few ms of TTFB at the edge.
+  const {heroBuilds, featured} = await home;
 
   // Live Discord size for the community section: streamed, never awaited,
   // cached an hour, null (numbers hidden) when Discord does not answer.
