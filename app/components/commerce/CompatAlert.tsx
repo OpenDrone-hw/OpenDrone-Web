@@ -1,3 +1,4 @@
+import {useId} from 'react';
 import {Link} from 'react-router';
 import {TriangleAlert} from 'lucide-react';
 import type {CompatAlert as Alert} from '~/lib/cart-compat';
@@ -8,11 +9,13 @@ import type {CompatAlert as Alert} from '~/lib/cart-compat';
  * that appears after a quantity change or removal is announced politely.
  */
 export function CompatAlert({alert}: {alert: Alert}) {
+  // Unique per instance: the cart page and the add drawer can both show it.
+  const titleId = useId();
   return (
     <div role="status" aria-live="polite" className="co-compat-live">
       {alert.issues.length ? (
-        <section className="co-compat" aria-labelledby="co-compat-title" lang={alert.locale}>
-          <h2 id="co-compat-title" className="co-compat-title">
+        <section className="co-compat" aria-labelledby={titleId} lang={alert.locale}>
+          <h2 id={titleId} className="co-compat-title">
             <TriangleAlert aria-hidden="true" size={18} strokeWidth={2} />
             {alert.heading}
           </h2>

@@ -12,7 +12,9 @@ import {
   lineDisplayName,
   variantDisplayName,
 } from '~/lib/product-content';
-import {ShipChip, parcelPromise, soonerMonth} from './ShipChip';
+import {ShipChip, parcelPromise, soonerMonth, useGeoEuStockLine} from './ShipChip';
+import {CompatAlert} from '~/components/commerce/CompatAlert';
+import {compatForLines, compatLocale} from '~/lib/cart-compat';
 import {LineShipChip, heldBy, parcelDelay} from './ParcelChip';
 import {paysEuVat} from '~/lib/visitor-country';
 import {countryName, notSoldDirect, offersPickup, shippingQuote} from '~/lib/shipping-rates';
@@ -125,7 +127,9 @@ export function CartAddedDialog() {
 
   // A navigation (View cart, a product link) closes the drawer.
   useEffect(() => setDetail(null), [pathname]);
-  const anyEarly = useAnyEarlySku(summary?.lines.map((l) => l.sku) ?? []);
+  // The early bird preorder note is for preorder lines, not EU stock lines.
+  const euStock = useGeoEuStockLine();
+  const anyEarly = useAnyEarlySku(summary?.lines.filter((l) => !euStock(l.shipPromise)).map((l) => l.sku) ?? []);
 
   if (!detail || !summary) return null;
 
@@ -406,6 +410,8 @@ export function CartAddedDialog() {
               </span>
             </p>
           ) : null}
+          {/* The cart's parts warning, as on /cart: advisory, never blocks checkout. */}
+          <CompatAlert alert={compatForLines(summary.lines, visitor, compatLocale((rootData?.locale ?? 'en_US').split('_')[0]))} />
           {subtotal ? <EarlyBirdNote show={anyEarly} className="cart-added-parcel" /> : null}
           {shippingRate ? (
             <p className="cart-added-subtotal">

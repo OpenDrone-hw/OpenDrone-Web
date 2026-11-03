@@ -38,7 +38,7 @@ import {
 import buildsJson from '../../content/builds.json';
 import {isPurchasableStatus, lineDisplayName, setSize, shortShipPromise, variantDisplayName} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
-import {ShipChip, parcelPromise, soonerMonth} from '~/components/ShipChip';
+import {ShipChip, parcelPromise, soonerMonth, useGeoEuStockLine} from '~/components/ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from '~/components/ParcelChip';
 import {trackEvent} from '~/lib/growth/plausible';
 import {BuildBundle, bundleFields} from '~/components/BuildBundle';
@@ -465,7 +465,9 @@ function CartSuggestions({cart, group}: {cart: ShopifyCart; group: 'build' | 'ex
 function ParcelPanel({lines}: {lines: ShopifyCartLine[]}) {
   const promises = lines.map((l) => l.shipPromise);
   const promise = parcelPromise(promises) ?? promises.find(Boolean) ?? null;
-  const deliveryBy = latestDeliveryBy(lines);
+  // EU lines from Belgian stock ship in a few days: no preorder delivery date.
+  const euStock = useGeoEuStockLine();
+  const deliveryBy = promises.every((p) => euStock(p)) ? null : latestDeliveryBy(lines);
   if (!promise && !deliveryBy) return null;
   const mixed = new Set(promises.map((p) => p ?? '')).size > 1;
   return (
@@ -544,7 +546,9 @@ function PopulatedCart({
   const [inFlight, setInFlight] = useState(0);
   const onPending = useCallback((delta: number) => setInFlight((n) => Math.max(0, n + delta)), []);
   const pending = inFlight > 0 || revalidator.state !== 'idle';
-  const anyEarly = useAnyEarlySku(cart.lines.map((line) => line.sku));
+  // The early bird preorder note is for preorder lines, not EU stock lines.
+  const euStock = useGeoEuStockLine();
+  const anyEarly = useAnyEarlySku(cart.lines.filter((line) => !euStock(line.shipPromise)).map((line) => line.sku));
   const wholesale = cartWholesaleCode(cart.discountCodes);
 
   // One parcel per order: when lines ship at different times, the early

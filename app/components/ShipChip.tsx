@@ -53,6 +53,16 @@ export function useGeoInStock(campaign: Pick<CampaignState, 'paidStock' | 'shipP
   return geoInStock(geo?.region, campaign, BATCH_ONE);
 }
 
+/**
+ * True for a batch 1 promise the visitor's region reads as in stock (the EU
+ * line): a cart line from Belgian stock, with no delivery date and no early
+ * bird preorder note. Root loader `geo`, so SSR and hydration agree.
+ */
+export function useGeoEuStockLine(): (promise: string | null | undefined) => boolean {
+  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  return (promise) => geo?.region === 'eu' && Boolean(promise && BATCH_ONE.has(promise));
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
