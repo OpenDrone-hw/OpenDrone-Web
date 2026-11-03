@@ -10688,7 +10688,7 @@ a.what-chain-chip:hover {
 .series-rail-num {
   font-size: 10px;
   letter-spacing: 0.1em;
-  color: color-mix(in srgb, var(--color-text-muted) 55%, transparent);
+  color: var(--color-text-dim);
 }
 
 .series-rail-title {
@@ -12084,7 +12084,9 @@ a.what-chain-chip:hover {
   --od-bg-2: var(--color-bg-card);
   --od-ink: var(--color-text);
   --od-ink-dim: var(--color-text-muted);
-  --od-ink-faint: #4a4d44;
+  /* 5.6:1 on --color-bg (was #4a4d44, 2.25:1, failing WCAG 1.4.3 for the
+     newsletter index/post meta text). */
+  --od-ink-faint: var(--color-text-dim);
   --od-line: #2a2e26;
   --od-line-strong: #3a3f33;
   --od-pcb-gold: var(--color-gold);
@@ -13841,7 +13843,7 @@ a.what-chain-chip:hover {
   font-size: clamp(2rem, 5vw, 3rem);
   letter-spacing: 0.06em;
   line-height: 1;
-  color: color-mix(in srgb, var(--color-text) 22%, transparent);
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
   margin: 0 0 var(--sp-4);
 }
 .tl-events {
@@ -13853,9 +13855,10 @@ a.what-chain-chip:hover {
 }
 .tl-event {
   position: relative;
-  opacity: 0.35;
+  /* No opacity fade: 0.35 dropped the date and detail text to 1.7:1. The pad
+     and trace already mark passed events. */
   transform: translateY(6px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition: transform 0.4s ease;
 }
 .tl-event.is-passed {
   opacity: 1;
