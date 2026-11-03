@@ -12,7 +12,7 @@ import {
   lineDisplayName,
   variantDisplayName,
 } from '~/lib/product-content';
-import {ShipChip, parcelPromise, soonerMonth, useGeoEuStockLine} from './ShipChip';
+import {ShipChip, parcelPromise, soonerMonth, useGeoDutiesNote, useGeoParcel} from './ShipChip';
 import {CompatAlert} from '~/components/commerce/CompatAlert';
 import {compatForLines, compatLocale} from '~/lib/cart-compat';
 import {LineShipChip, heldBy, parcelDelay} from './ParcelChip';
@@ -127,10 +127,14 @@ export function CartAddedDialog() {
 
   // A navigation (View cart, a product link) closes the drawer.
   useEffect(() => setDetail(null), [pathname]);
-  // EU stock lines keep their early bird price, but the note drops "preorder".
-  const euStock = useGeoEuStockLine();
+  // Same rules as the cart: early bird prices stay on stock lines, but the
+  // note drops "preorder" unless a line is a pre-order for this visitor; the
+  // parcel's date and the duties note follow the region.
+  const geoParcel = useGeoParcel();
+  const preorderSkus = new Set(geoParcel.preorderSkus(summary?.lines ?? []));
   const anyEarly = useAnyEarlySku(summary?.lines.map((l) => l.sku) ?? []);
-  const stockEarly = useAnyEarlySku(summary?.lines.filter((l) => euStock(l.shipPromise)).map((l) => l.sku) ?? []);
+  const stockEarly = useAnyEarlySku(summary?.lines.filter((l) => !preorderSkus.has(l.sku)).map((l) => l.sku) ?? []);
+  const dutiesNote = useGeoDutiesNote();
 
   if (!detail || !summary) return null;
 
@@ -166,7 +170,7 @@ export function CartAddedDialog() {
       : null;
   const cartPromises = summary.lines.map((l) => l.shipPromise);
   const orderPromise = parcelPromise(cartPromises) ?? cartPromises.find(Boolean) ?? null;
-  const orderDeliveryBy = latestDeliveryBy(summary.lines);
+  const orderDeliveryBy = latestDeliveryBy(geoParcel.deliveryLines(summary.lines));
 
   // The parts that complete the build, judged on the cart as it was when
   // the drawer opened, so a part added from here stays listed as "Added".
@@ -437,6 +441,7 @@ export function CartAddedDialog() {
               </span>
             </div>
           ) : null}
+          {dutiesNote ? <p className="cart-added-parcel">{dutiesNote}</p> : null}
           {shippingRate && offersPickup(visitor) ? (
             <p className="cart-added-parcel">{t('pickup_note', 'Or pick up free at our Leuven office: choose Pickup at checkout.')}</p>
           ) : null}

@@ -38,7 +38,7 @@ import {
 import buildsJson from '../../content/builds.json';
 import {isPurchasableStatus, lineDisplayName, setSize, shortShipPromise, variantDisplayName} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
-import {ShipChip, parcelPromise, soonerMonth, useGeoEuStockLine} from '~/components/ShipChip';
+import {ShipChip, parcelPromise, soonerMonth, useGeoDutiesNote, useGeoParcel} from '~/components/ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from '~/components/ParcelChip';
 import {trackEvent} from '~/lib/growth/plausible';
 import {BuildBundle, bundleFields} from '~/components/BuildBundle';
@@ -467,9 +467,9 @@ function CartSuggestions({cart, group}: {cart: ShopifyCart; group: 'build' | 'ex
 function ParcelPanel({lines}: {lines: ShopifyCartLine[]}) {
   const promises = lines.map((l) => l.shipPromise);
   const promise = parcelPromise(promises) ?? promises.find(Boolean) ?? null;
-  // EU lines from Belgian stock ship in a few days: no preorder delivery date.
-  const euStock = useGeoEuStockLine();
-  const deliveryBy = promises.every((p) => euStock(p)) ? null : latestDeliveryBy(lines);
+  // In a stock region batch 1 ships in a few days: no late-November date;
+  // the US (on hold) gets none (`geoDeliveryLines`).
+  const deliveryBy = latestDeliveryBy(useGeoParcel().deliveryLines(lines));
   if (!promise && !deliveryBy) return null;
   const mixed = new Set(promises.map((p) => p ?? '')).size > 1;
   return (
@@ -548,10 +548,14 @@ function PopulatedCart({
   const [inFlight, setInFlight] = useState(0);
   const onPending = useCallback((delta: number) => setInFlight((n) => Math.max(0, n + delta)), []);
   const pending = inFlight > 0 || revalidator.state !== 'idle';
-  // EU stock lines keep their early bird price, but the note drops "preorder".
-  const euStock = useGeoEuStockLine();
+  // Early bird prices stay on stock lines, but the note drops "preorder"
+  // unless a line is a pre-order for this visitor (not batch 1 stock in a
+  // stock region).
+  const preorderSkus = new Set(useGeoParcel().preorderSkus(cart.lines));
   const anyEarly = useAnyEarlySku(cart.lines.map((line) => line.sku));
-  const stockEarly = useAnyEarlySku(cart.lines.filter((line) => euStock(line.shipPromise)).map((line) => line.sku));
+  const stockEarly = useAnyEarlySku(cart.lines.filter((line) => !preorderSkus.has(line.sku)).map((line) => line.sku));
+  // UK, CH, NO: "Import VAT and duties are paid by you on delivery."
+  const dutiesNote = useGeoDutiesNote();
   const wholesale = cartWholesaleCode(cart.discountCodes);
 
   // One parcel per order: when lines ship at different times, the early
@@ -645,6 +649,7 @@ function PopulatedCart({
           {shippingRate || internationalFrom ? null : (
             <p className="cart-summary-note">{t('shipping_at_checkout', 'Shipping calculated at checkout')}</p>
           )}
+          {dutiesNote ? <p className="cart-summary-note">{dutiesNote}</p> : null}
           {international ? <p className="cart-summary-note">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p> : null}
           {/* One parcel, one date: said once here, not under every line. */}
           <ParcelPanel lines={cart.lines} />

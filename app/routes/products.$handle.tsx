@@ -115,7 +115,7 @@ import {ProductGhostTile} from '~/components/ProductGhostTile';
 import {StepBar} from '~/components/PreorderMeter';
 import {Availability, preorderWords} from '~/components/Availability';
 import {batchPhrase, currentBatch} from '~/lib/availability';
-import {ShipLine, useGeoInStock} from '~/components/ShipChip';
+import {ShipLine, useGeoDutiesNote, useGeoInStock} from '~/components/ShipChip';
 import {CART_COUNTRY_ACTION} from '~/lib/cart-client';
 import type {
   ChapterPin,
@@ -1805,6 +1805,8 @@ function ProductPage() {
   // Batch 1 stock in the EU is sold as stock (the bar's "in stock in
   // Belgium"): "Add to cart" (ProductForm) and no pre-order terms link.
   const geoInStock = useGeoInStock(campaign);
+  // UK, CH, NO: the duties note under the ship line (root data, SSR: no CLS).
+  const dutiesNote = useGeoDutiesNote();
   // An early bird preorder price names the retail price it rises to.
   const earlyPrice = campaign ? (selectedVariant?.earlyPrice ?? null) : null;
   const retail = selectedVariant?.sku ? (retailBySku[selectedVariant.sku] ?? null) : null;
@@ -2079,6 +2081,7 @@ function ProductPage() {
         </p>
       )}
       {notDirect ? null : usNotice}
+      {notDirect || !dutiesNote ? null : <p className="product-buy-ship">{dutiesNote}</p>}
       {preorder && !isBundle && !notDirect && !geoInStock ? (
         <p className="product-buy-ship">
           {targetMissed ? <>{targetMissed}{' '}</> : null}

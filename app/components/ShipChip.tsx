@@ -1,6 +1,14 @@
 import {useRouteLoaderData} from 'react-router';
 import {copyText} from '~/lib/copy';
-import {GEO_BAR_SHORT, batchOnePromises, geoDutiesNote, geoInStock, geoShipText} from '~/lib/geo-availability';
+import {
+  GEO_BAR_SHORT,
+  batchOnePromises,
+  geoDeliveryLines,
+  geoDutiesNote,
+  geoInStock,
+  geoPreorderLine,
+  geoShipText,
+} from '~/lib/geo-availability';
 import type {RootLoader} from '~/root';
 import {shipMonth, shortShipPromise} from '~/lib/product-content';
 import {
@@ -63,13 +71,22 @@ export function useGeoInStock(campaign: Pick<CampaignState, 'paidStock' | 'shipP
 }
 
 /**
- * True for a batch 1 promise the visitor's region reads as in stock (the EU
- * line): a cart line from Belgian stock, with no delivery date and no early
- * bird preorder note. Root loader `geo`, so SSR and hydration agree.
+ * The parcel of a cart, read for the visitor's region (root loader `geo`):
+ * - `deliveryLines(lines)`: the lines whose "Delivery by" date counts
+ *   (`latestDeliveryBy`): not batch 1 stock in a stock region (it ships in a
+ *   few days), none for the US (on hold); other lines keep their own date;
+ * - `preorderSkus(lines)`: the SKUs of the lines that are pre-orders for this
+ *   visitor, for "Early bird preorder prices." (not batch 1 stock read as stock).
  */
-export function useGeoEuStockLine(): (promise: string | null | undefined) => boolean {
-  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
-  return (promise) => geo?.region === 'eu' && Boolean(promise && BATCH_ONE.has(promise));
+export function useGeoParcel(): {
+  deliveryLines: <T extends {shipPromise?: string | null}>(lines: readonly T[]) => T[];
+  preorderSkus: (lines: ReadonlyArray<{shipPromise?: string | null; sku?: string | null}>) => Array<string | null | undefined>;
+} {
+  const region = useRouteLoaderData<RootLoader>('root')?.geo?.region ?? null;
+  return {
+    deliveryLines: (lines) => geoDeliveryLines(lines, region, BATCH_ONE),
+    preorderSkus: (lines) => lines.filter((l) => geoPreorderLine(l.shipPromise, region, BATCH_ONE)).map((l) => l.sku),
+  };
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

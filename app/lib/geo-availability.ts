@@ -209,3 +209,40 @@ export function geoBannerLines(
   const regions: KnownGeoRegion[] = region === 'fallback' ? ['eu', 'intl'] : [region];
   return regions.map((r) => ({region: r, label: GEO_BANNER_COPY[locale][r], text: geoFullLine(r, locale) ?? ''}));
 }
+
+/** The location notice (LocationNotice): "Shipping to Belgium: In stock in Belgium, ...", and its dismiss label. */
+export const GEO_NOTICE_COPY: Record<Locale, {line: string; dismiss: string}> = {
+  en: {line: 'Shipping to {country}: {line}', dismiss: 'Dismiss the shipping notice'},
+  nl: {line: 'Verzending naar {country}: {line}', dismiss: 'Melding over verzending sluiten'},
+  fr: {line: 'Livraison vers {country} : {line}', dismiss: 'Fermer l’avis de livraison'},
+};
+
+/**
+ * True when a cart line is a pre-order for this visitor: it carries a ship
+ * promise, and that promise is not batch 1 stock read as stock in their
+ * region (`stockRegion`). "Early bird preorder prices." shows only then.
+ */
+export function geoPreorderLine(
+  promise: string | null | undefined,
+  region: GeoAvailabilityRegion | null | undefined,
+  batchOne: ReadonlySet<string>,
+): boolean {
+  if (!promise) return false;
+  return !(stockRegion(region) && batchOne.has(promise));
+}
+
+/**
+ * The lines whose "Delivery by" date the parcel shows. A batch 1 line in a
+ * stock region ships in a few days, so its late-November date drops; the US
+ * (on hold) shows no date; elsewhere (`intl`, `fallback`) every line keeps its
+ * own date. A line of another batch or a funding target always keeps it.
+ */
+export function geoDeliveryLines<T extends {shipPromise?: string | null}>(
+  lines: readonly T[],
+  region: GeoAvailabilityRegion | null | undefined,
+  batchOne: ReadonlySet<string>,
+): T[] {
+  if (region === 'us') return [];
+  if (!stockRegion(region)) return [...lines];
+  return lines.filter((l) => !(l.shipPromise && batchOne.has(l.shipPromise)));
+}
