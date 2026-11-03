@@ -207,9 +207,12 @@ describe('a batch name never carries a date (G6, G8)', () => {
     const attrs = (v: CatalogVariant) => Object.fromEntries((lineAttributes(v, false) ?? []).map((a) => [a.key, a.value]));
     const nov = attrs(variant('OPENESC-3030', state('OPENESC-3030', 1, 'EU')));
     const march = attrs(variant('OPENRX-LITE', state('OPENRX-LITE', 1, 'EU')));
-    // The date lives in `Preorder` only.
+    // The date lives in `Preorder` only; EU batch 1 stock reads the EU line instead, its promise hidden.
     assert.equal(nov.Availability, undefined);
     assert.equal(march.Availability, undefined);
-    assert.match(nov.Preorder, /late November 2026/);
+    assert.equal(nov.Preorder, undefined);
+    assert.equal(nov.Shipping, 'In stock in Belgium, ships in a few days.');
+    assert.match(nov._ship_promise, /late November 2026/);
+    assert.match(march.Preorder, /31 March 2027/);
   });
 });

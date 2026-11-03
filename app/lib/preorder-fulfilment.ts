@@ -88,6 +88,10 @@ export const BATCH_LINE_ATTRIBUTE = '_batch';
 /** Same key as `PREORDER_OWN_ATTRIBUTE` in `shopify-storefront.ts` (a test
  *  pins it): a line's own promise while `Preorder` carries the mixed wording. */
 export const PREORDER_OWN_LINE_ATTRIBUTE = '_preorder_own';
+/** Same key as `SHIP_PROMISE_ATTRIBUTE` in `shopify-storefront.ts` (a test
+ *  pins it): the hidden promise of an EU line sold from batch 1 stock, which
+ *  carries no `Preorder` attribute. Read wherever `Preorder` is read. */
+export const SHIP_PROMISE_LINE_ATTRIBUTE = '_ship_promise';
 /** Order tag for an order shipping to another region than its promise, or
  *  allocated another batch than its line promised. */
 export const PROMISE_MISMATCH_TAG = 'promise-mismatch';
@@ -297,8 +301,14 @@ function lineAttribute(line: OrderLine, key: string): string | null {
   return line.customAttributes.find((a) => a.key === key)?.value?.trim() || null;
 }
 
+/** The promise the cart wrote: `Preorder`, or the hidden `_ship_promise`
+ *  of an EU stock line (the same text `Preorder` carried before). */
+function linePromise(line: OrderLine): string | null {
+  return lineAttribute(line, PREORDER_LINE_ATTRIBUTE) ?? lineAttribute(line, SHIP_PROMISE_LINE_ATTRIBUTE);
+}
+
 function hasPromise(line: OrderLine): boolean {
-  return lineAttribute(line, PREORDER_LINE_ATTRIBUTE) !== null;
+  return linePromise(line) !== null;
 }
 
 /** A live line of a SKU `content/preorders.json` lists (`skus` or `shipsWith`). */
@@ -374,7 +384,7 @@ export function batchPromiseMismatch(order: PreorderOrder, orderBatches: LineBat
     const promised = parseBatchAttribute(lineAttribute(line, BATCH_LINE_ATTRIBUTE));
     if (promised && march && sold.skus[promised.sku]?.batches[promised.batch - 1]?.paid) return false;
     if (promised) return mine.some((b) => b.sku !== promised.sku || b.batch !== promised.batch);
-    const own = lineAttribute(line, PREORDER_OWN_LINE_ATTRIBUTE) ?? lineAttribute(line, PREORDER_LINE_ATTRIBUTE);
+    const own = lineAttribute(line, PREORDER_OWN_LINE_ATTRIBUTE) ?? linePromise(line);
     if (mine.every((b) => textOf(b.sku, b.batch) === own)) return false;
     if (march && mine.some((b) => (sold.skus[b.sku]?.batches ?? []).some((e, i) => e.paid && textOf(b.sku, i + 1) === own))) return false;
     return mine.some((b) => (sold.skus[b.sku]?.batches ?? []).some((_, i) => textOf(b.sku, i + 1) === own));
@@ -545,7 +555,7 @@ export function needsDestinationReview(order: PreorderOrder, orderBatches: LineB
   if (region === 'EU') return false;
   return order.lineItems.nodes.some((line) => {
     if (!(line.currentQuantity > 0)) return false;
-    if (!line.customAttributes.some(a => a.key === PREORDER_LINE_ATTRIBUTE && Boolean(a.value?.trim())) || lineRegion(line) !== region) return true;
+    if (!hasPromise(line) || lineRegion(line) !== region) return true;
     const sku = line.sku?.trim();
     if (!sku) return true;
     const mine = orderBatches.filter((b) => (b.item ?? b.sku) === sku);
@@ -554,6 +564,25 @@ export function needsDestinationReview(order: PreorderOrder, orderBatches: LineB
       const entry = config.skus[b.sku]?.batches[b.batch - 1];
       return entry ? !servesRegion(entry, region) : false;
     });
+  });
+}
+
+/**
+ * True for an EU order that ships now from paid stock in Belgium: every
+ * batch its units were allocated (`assignBatches`) is a paid batch, and
+ * every live preorder or campaign line has one and was sold for the EU (no
+ * `_ship_region`). It gets no `preorder` tag
+ * and no hold (founder 2026-11-03). An EU order with any line outside paid
+ * stock (motors, frames, receivers) is allocated the March batch whole
+ * (`shipsOnlyWithPaid`) and stays a held preorder. Non-EU orders: false.
+ */
+export function shipsFromEuStock(order: PreorderOrder, orderBatches: LineBatch[], config: CampaignConfig): boolean {
+  if (orderRegion(order) !== 'EU' || !orderBatches.length) return false;
+  if (!orderBatches.every((b) => config.skus[b.sku]?.batches[b.batch - 1]?.paid === true)) return false;
+  return order.lineItems.nodes.every((line) => {
+    if (!(line.currentQuantity > 0) || !(hasPromise(line) || isCampaignLine(line, config))) return true;
+    const sku = line.sku?.trim();
+    return Boolean(sku) && lineRegion(line) === 'EU' && orderBatches.some((b) => (b.item ?? b.sku) === sku);
   });
 }
 
@@ -572,7 +601,8 @@ export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfi
   for (const order of orders) {
     if (!isCountedOrder(order)) continue;
     const orderBatches = batches.get(order.id) ?? [];
-    const preorder = isPreorderOrder(order, config) && !order.tags.includes(PREORDER_TAG);
+    const preorder = isPreorderOrder(order, config) && !order.tags.includes(PREORDER_TAG) &&
+      !shipsFromEuStock(order, orderBatches, config);
     const reviewTag = orderRegion(order) === 'INT' ? INT_REVIEW_TAG : US_REVIEW_TAG;
     const review = !order.tags.includes(reviewTag) && needsDestinationReview(order, orderBatches, config);
     // The batch promise is checked when the batch tags are written: later

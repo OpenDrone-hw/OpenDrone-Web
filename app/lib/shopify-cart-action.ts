@@ -9,13 +9,16 @@ import {usSalesRate} from './us-sales.ts';
 import {wholesaleCodes, wholesaleMainCode} from './wholesale-codes.ts';
 import {cartAttributesFromForm, ORDER_ATTRIBUTE} from './growth/attribution.ts';
 import {internationalShippingFrom} from './international-shipping.ts';
+import {GEO_AVAILABILITY_COPY, hasBatchOne} from './geo-availability.ts';
 import {
   BATCH_ATTRIBUTE,
   PREORDER_ATTRIBUTE,
   DELIVERY_BY_ATTRIBUTE,
   DELIVERY_BY_OWN_ATTRIBUTE,
   PREORDER_OWN_ATTRIBUTE,
+  SHIP_PROMISE_ATTRIBUTE,
   SHIP_REGION_ATTRIBUTE,
+  SHIPPING_ATTRIBUTE,
   storefrontRequest,
   type CartLineInput,
   type CartLineUpdate,
@@ -299,12 +302,35 @@ export function lineAttributes(variant: CatalogVariant, destination: Region | bo
   // The batch the promise belongs to (hidden at checkout), so the hold pass
   // can flag a line paid at a batch boundary and allocated the next batch.
   const batch = variant.campaign ? `${variant.campaign.shipsWith ?? variant.sku}:${variant.campaign.batch}` : null;
+  // An EU line from batch 1 stock in Belgium ships now: checkout and the
+  // confirmation read the site's EU line, no preorder promise or delivery
+  // date. The promise stays hidden for the cart and the hold pass.
+  if (region === 'EU' && euStock(variant)) {
+    return [
+      {key: SHIPPING_ATTRIBUTE, value: GEO_AVAILABILITY_COPY.en.eu},
+      {key: SHIP_PROMISE_ATTRIBUTE, value: promise},
+      ...(batch ? [{key: BATCH_ATTRIBUTE, value: batch}] : []),
+    ];
+  }
   return [
     {key: PREORDER_ATTRIBUTE, value: promise},
     ...(deliveryDay ? [{key: DELIVERY_BY_ATTRIBUTE, value: campaignDate(deliveryDay)}] : []),
     ...(region !== 'EU' ? [{key: SHIP_REGION_ATTRIBUTE, value: region}] : []),
     ...(batch ? [{key: BATCH_ATTRIBUTE, value: batch}] : []),
   ];
+}
+
+/** True for a variant whose next EU unit is paid batch 1 stock in Belgium. */
+export function euStock(variant: Pick<CatalogVariant, 'campaign'>): boolean {
+  return hasBatchOne(variant.campaign);
+}
+
+/** The ship promise a line's attributes carry: `Preorder`, or the hidden
+ *  promise of an EU stock line. */
+function promiseOf(attributes: NonNullable<CartLineInput['attributes']>): string | null {
+  return attributes.find((a) => a.key === PREORDER_ATTRIBUTE)?.value
+    ?? attributes.find((a) => a.key === SHIP_PROMISE_ATTRIBUTE)?.value
+    ?? null;
 }
 
 /** A US destination buys a preorder with a campaign state: the catalog for
@@ -488,10 +514,14 @@ function withOrderPromise(
   orderPromise: string,
   orderDeliveryBy: string | null,
 ): NonNullable<CartLineInput['attributes']> {
-  const own = attributes.find((a) => a.key === PREORDER_ATTRIBUTE)?.value ?? '';
+  const own = promiseOf(attributes) ?? '';
   const ownDeliveryBy = attributes.find((a) => a.key === DELIVERY_BY_ATTRIBUTE)?.value;
+  // An EU stock line in a parcel that waits for a later batch is a preorder
+  // again: it states the order's promise, not "in stock".
+  const stock = !attributes.some((a) => a.key === PREORDER_ATTRIBUTE);
   return [
-    ...attributes.filter(a => !orderDeliveryBy || a.key !== DELIVERY_BY_ATTRIBUTE).map((a) => (a.key === PREORDER_ATTRIBUTE ? {...a, value: orderPromise} : a)),
+    ...(stock ? [{key: PREORDER_ATTRIBUTE, value: orderPromise}] : []),
+    ...attributes.filter(a => (!orderDeliveryBy || a.key !== DELIVERY_BY_ATTRIBUTE) && a.key !== SHIPPING_ATTRIBUTE).map((a) => (a.key === PREORDER_ATTRIBUTE ? {...a, value: orderPromise} : a)),
     ...(orderDeliveryBy ? [{key: DELIVERY_BY_ATTRIBUTE, value: orderDeliveryBy}] : []),
     ...(ownDeliveryBy ? [{key: DELIVERY_BY_OWN_ATTRIBUTE, value: ownDeliveryBy}] : []),
     {key: PREORDER_OWN_ATTRIBUTE, value: own},
@@ -546,11 +576,14 @@ export function rederiveLines(
     const total = totals.get(line.merchandiseId);
     totals.set(line.merchandiseId, {variant, quantity: (total?.quantity ?? 0) + line.quantity});
     const attributes = lineAttributes(variant, region) ?? [];
-    const promise = attributes.find((a) => a.key === PREORDER_ATTRIBUTE)?.value ?? null;
+    const promise = promiseOf(attributes);
     const attributeRegion = attributes.find((a) => a.key === SHIP_REGION_ATTRIBUTE)?.value ?? null;
     const deliveryBy = attributes.find((a) => a.key === DELIVERY_BY_ATTRIBUTE)?.value ?? null;
     const batch = attributes.find((a) => a.key === BATCH_ATTRIBUTE)?.value ?? null;
-    if (promise !== line.shipPromise || attributeRegion !== (line.shipRegion ?? null) || deliveryBy !== (line.deliveryBy ?? null)) {
+    // An EU stock line drops its `Delivery by` but keeps its promise: moving
+    // a line to that form is silent (`sync`), not a changed ship date.
+    const euStockForm = attributes.some((a) => a.key === SHIPPING_ATTRIBUTE);
+    if (promise !== line.shipPromise || attributeRegion !== (line.shipRegion ?? null) || (!euStockForm && deliveryBy !== (line.deliveryBy ?? null))) {
       refresh.push({id: line.id, quantity: line.quantity, attributes});
       continue;
     }
@@ -560,7 +593,7 @@ export function rederiveLines(
     // that names another batch under the same promise (a line without one
     // keeps none: the hold pass then reads its promise text).
     const wantedDeliveryBy = wanted && orderDeliveryBy !== deliveryBy ? orderDeliveryBy : null;
-    if (wanted !== (line.orderPromise ?? null) || wantedDeliveryBy !== (line.orderDeliveryBy ?? null) || line.availability != null || (line.batch != null && batch !== line.batch)) {
+    if (euStockForm !== Boolean(line.euStock) || wanted !== (line.orderPromise ?? null) || wantedDeliveryBy !== (line.orderDeliveryBy ?? null) || line.availability != null || (line.batch != null && batch !== line.batch)) {
       sync.push({
         id: line.id,
         quantity: line.quantity,

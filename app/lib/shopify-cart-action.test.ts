@@ -544,7 +544,7 @@ function paidCatalog(ordered: number): Catalog {
 function fcLine(overrides: Partial<ShopifyCartLine> = {}): ShopifyCartLine {
   return line({
     id: 'gid://shopify/CartLine/fc?cart=a', merchandiseId: PAID_ID, handle: 'openfc-lite',
-    sku: 'OPENFC-LITE-2020', title: 'OpenFC Lite', variantTitle: '20×20', shipPromise: PAID_PROMISE,
+    sku: 'OPENFC-LITE-2020', title: 'OpenFC Lite', variantTitle: '20×20', shipPromise: PAID_PROMISE, euStock: true,
     ...overrides,
   });
 }
@@ -584,7 +584,7 @@ describe('Shopify cart action: paid batch limit', () => {
       request({sku: 'OPENFC-LITE-2020', qty: '10'}), ENABLED_ENV,
       {fetchCatalog: async () => paidCatalog(240), createCart: async (lines) => { created = lines; return cart(); }},
     );
-    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Preorder', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
+    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'}, {key: '_ship_promise', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
   });
 
   it('refuses a quantity update past the units left, but never blocks lowering it', async () => {
@@ -949,7 +949,7 @@ describe('Shopify cart action: a line across a price step', () => {
       {fetchCatalog: async () => catalog, createCart: async (lines) => { created = lines; return cart(); }},
     );
     assert.equal(response.status, 303);
-    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Preorder', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
+    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'}, {key: '_ship_promise', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
   });
 
   it('lets checkout through when the step moved on but the paid batch still covers the line', async () => {
@@ -1017,7 +1017,8 @@ describe('Shopify cart action: one promise for a mixed order', () => {
   const OWN_LATE =
     'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait';
   const REWRITE = 'ships with the rest of this order by 31 March 2027';
-  const own = (value: string) => [{key: 'Preorder', value}, {key:'Delivery by',value:'30 November 2026'}, {key: '_batch', value: 'OPENFC-LITE-3030:1'}];
+  // An EU line from batch 1 stock: the site's EU line, no Preorder and no Delivery by.
+  const own = (value: string) => [{key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'}, {key: '_ship_promise', value}, {key: '_batch', value: 'OPENFC-LITE-3030:1'}];
 
   function base(sku: string, handle: string, id: string, preorder: boolean) {
     return {
@@ -1042,7 +1043,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
   const US = applyCampaign(RAW, REAL, {}, NOW, 'US');
 
   const fcLine = (overrides: Partial<ShopifyCartLine> = {}) =>
-    line({id: FC_LINE, merchandiseId: FC, sku: 'OPENFC-LITE-3030', handle: 'openfc-lite', shipPromise: OWN_EARLY, deliveryBy:'30 November 2026', ...(overrides.orderPromise ? {orderDeliveryBy:'15 April 2027'} : {}), ...overrides});
+    line({id: FC_LINE, merchandiseId: FC, sku: 'OPENFC-LITE-3030', handle: 'openfc-lite', shipPromise: OWN_EARLY, euStock: true, ...(overrides.orderPromise ? {orderDeliveryBy:'15 April 2027'} : {}), ...overrides});
   const rxLine = (overrides: Partial<ShopifyCartLine> = {}) =>
     line({id: RX_LINE, merchandiseId: RX, sku: 'OPENRX-LITE', handle: 'openrx', shipPromise: OWN_LATE, deliveryBy:'15 April 2027', ...overrides});
   const strapLine = () =>
@@ -1084,7 +1085,8 @@ describe('Shopify cart action: one promise for a mixed order', () => {
     assert.deepEqual(updates, [[{
       id: FC_LINE,
       quantity: 1,
-      attributes: [{key: 'Preorder', value: REWRITE}, {key: '_batch', value: 'OPENFC-LITE-3030:1'}, {key:'Delivery by',value:'15 April 2027'}, {key:'_delivery_by_own',value:'30 November 2026'}, {key: '_preorder_own', value: OWN_EARLY}],
+      // In a parcel waiting for March the stock line is a preorder again.
+      attributes: [{key: 'Preorder', value: REWRITE}, {key: '_ship_promise', value: OWN_EARLY}, {key: '_batch', value: 'OPENFC-LITE-3030:1'}, {key:'Delivery by',value:'15 April 2027'}, {key: '_preorder_own', value: OWN_EARLY}],
     }]]);
   });
 
@@ -1145,7 +1147,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
   });
 
   describe('US destination', () => {
-    const usLine = (l: ShopifyCartLine): ShopifyCartLine => ({...l, shipRegion: 'US', deliveryBy:'30 April 2027'});
+    const usLine = (l: ShopifyCartLine): ShopifyCartLine => ({...l, shipRegion: 'US', deliveryBy:'30 April 2027', euStock: undefined});
 
     it('replans a cart built for the US once the header moves to Belgium: country, promise, date and batch', async () => {
       const usCart = {...cart([usLine(fcLine({shipPromise: OWN_LATE, deliveryBy: '30 April 2027', batch: 'OPENFC-LITE-3030:2'}))], 'cart-a'), country: 'US'};

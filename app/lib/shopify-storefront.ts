@@ -178,6 +178,16 @@ export const BATCH_ATTRIBUTE = '_batch';
  *  rest of this order by ..."). Absent on every other line. */
 export const PREORDER_OWN_ATTRIBUTE = '_preorder_own';
 
+/** The visible line attribute of an EU line sold from batch 1 stock in
+ *  Belgium: "In stock in Belgium, ships in a few days." in place of the
+ *  `Preorder` promise and its `Delivery by` date. */
+export const SHIPPING_ATTRIBUTE = 'Shipping';
+
+/** The hidden line attribute holding the batch promise of that EU stock
+ *  line, so the cart and the hold pass read the same promise a `Preorder`
+ *  attribute carried before (`hasPromise` in preorder-fulfilment.ts). */
+export const SHIP_PROMISE_ATTRIBUTE = '_ship_promise';
+
 export type ShopifyMoney = {amount: string; currencyCode: string};
 
 export type ShopifyCartLine = {
@@ -201,6 +211,9 @@ export type ShopifyCartLine = {
   /** The region the promise was computed for, from `_ship_region`; null
    *  for an EU line. */
   shipRegion?: string | null;
+  /** True for an EU line from batch 1 stock (`_ship_promise`, no own
+   *  delivery date): the cart writes `Shipping` on it, not `Preorder`. */
+  euStock?: boolean;
   /** The `Availability` attribute: the batch and where it ships. */
   availability?: string | null;
   /** The hidden `_batch` attribute, `SKU:N`. */
@@ -602,12 +615,18 @@ function validatedCart(
     lines: cart.lines.nodes.map((line) => {
       // Non-EU lines record their region; absence remains the EU default.
       const shipRegion = line.attributes.find(({key}) => key === SHIP_REGION_ATTRIBUTE)?.value;
-      const preorder = line.attributes.find(({key}) => key === PREORDER_ATTRIBUTE)?.value ?? null;
+      const preorder = line.attributes.find(({key}) => key === PREORDER_ATTRIBUTE)?.value
+        ?? line.attributes.find(({key}) => key === SHIP_PROMISE_ATTRIBUTE)?.value
+        ?? null;
       const own = line.attributes.find(({key}) => key === PREORDER_OWN_ATTRIBUTE)?.value;
       const availability = line.attributes.find(({key}) => key === AVAILABILITY_ATTRIBUTE)?.value;
       const deliveryBy = line.attributes.find(({key}) => key === DELIVERY_BY_ATTRIBUTE)?.value;
       const ownDeliveryBy = line.attributes.find(({key}) => key === DELIVERY_BY_OWN_ATTRIBUTE)?.value;
       const batch = line.attributes.find(({key}) => key === BATCH_ATTRIBUTE)?.value;
+      // An EU stock line has no delivery date of its own: a `Delivery by` on
+      // it is the mixed order's.
+      const euStock = line.attributes.some(({key, value}) => key === SHIP_PROMISE_ATTRIBUTE && Boolean(value));
+      const ownBy = ownDeliveryBy || (euStock ? null : deliveryBy);
       return {
         id: line.id,
         merchandiseId: line.merchandise.id,
@@ -619,10 +638,11 @@ function validatedCart(
         image: line.merchandise.image,
         selectedOptions: line.merchandise.selectedOptions,
         shipPromise: own && preorder ? own : preorder,
-        ...(deliveryBy ? {deliveryBy: ownDeliveryBy || deliveryBy} : {}),
-        ...(ownDeliveryBy && deliveryBy && ownDeliveryBy !== deliveryBy ? {orderDeliveryBy: deliveryBy} : {}),
+        ...(deliveryBy && ownBy ? {deliveryBy: ownBy} : {}),
+        ...(deliveryBy && ownBy !== deliveryBy ? {orderDeliveryBy: deliveryBy} : {}),
         ...(own && preorder && own !== preorder ? {orderPromise: preorder} : {}),
         ...(shipRegion ? {shipRegion} : {}),
+        ...(euStock ? {euStock} : {}),
         ...(availability ? {availability} : {}),
         ...(batch ? {batch} : {}),
         total: line.cost.totalAmount,
