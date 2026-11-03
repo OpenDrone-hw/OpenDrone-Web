@@ -7,7 +7,7 @@ const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf8'
 
 test('the availability bar is server-rendered on every page except /flash and /guides/*', () => {
   const layout = read('../components/PageLayout.tsx');
-  assert.match(layout, /\{shopOpen && !availabilityBannerHiddenOn\(pathname\) \? <AvailabilityBar geo=\{geo\} \/> : null\}/);
+  assert.match(layout, /\{shopOpen && !availabilityBannerHiddenOn\(pathname\) \? <AvailabilityBar geo=\{shipGeo \?\? geo\} \/> : null\}/);
   for (const p of ['/', '/products/openesc', '/support', '/cart', '/nl/products/openfc-lite']) assert.equal(availabilityBannerHiddenOn(p), false, p);
   for (const p of ['/guides', '/guides/flash', '/flash', '/fr/guides/flash-openfc/flash']) assert.equal(availabilityBannerHiddenOn(p), true, p);
   const banner = read('../components/AvailabilityBanner.tsx');

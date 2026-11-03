@@ -256,3 +256,20 @@ export function geoDeliveryLines<T extends {shipPromise?: string | null}>(
   if (!stockRegion(region)) return [...lines];
   return lines.filter((l) => !(l.shipPromise && batchOne.has(l.shipPromise)));
 }
+
+/**
+ * True for a US destination while US sales are on hold (no US rate,
+ * PUBLIC_US_SALES not "1"): the no-checkout note says "Not shipping to the
+ * US yet. Shops and retailers: contact us." instead of the shops/trade text
+ * every other no-checkout destination keeps.
+ */
+export function usOnHold(country: string | null | undefined, usRate: number | null | undefined): boolean {
+  return usRate == null && country?.trim().toUpperCase() === 'US';
+}
+
+/** The US-on-hold note, per locale: the sentence, the shops lead, the link text. */
+export const US_HOLD_COPY: Record<Locale, {line: string; trade: string; link: string}> = {
+  en: {line: 'Not shipping to the US yet.', trade: 'Shops and retailers:', link: 'contact us'},
+  nl: {line: 'Nog geen verzending naar de VS.', trade: 'Winkels en verkopers:', link: 'neem contact op'},
+  fr: {line: 'Pas encore de livraison aux États-Unis.', trade: 'Boutiques et revendeurs :', link: 'contactez-nous'},
+};

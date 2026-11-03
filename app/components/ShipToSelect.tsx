@@ -3,6 +3,7 @@ import {useRevalidator} from 'react-router';
 import {copyText} from '~/lib/copy';
 import {countryName, shipCountryPicker} from '~/lib/shipping-rates';
 import {groupShipCountries} from '~/lib/ship-to-order';
+import {setPendingShipTo} from '~/lib/pending-ship-to';
 import {CART_COUNTRY_ACTION, CART_UPDATED_EVENT, type CartCountryReply} from '~/lib/cart-client';
 
 /** Set while a switch that started on a focused select is in flight: the
@@ -66,6 +67,9 @@ export function ShipToSelect({
   const change = async (next: string) => {
     if (!next || next === country || busy) return;
     setValue(next);
+    // The bar, ship lines and the cart's destination gate follow at once;
+    // cleared once the loaders have returned the same country (or on failure).
+    setPendingShipTo(next);
     restoreFocus = document.activeElement === selectRef.current;
     setBusy(true);
     setFailed(false);
@@ -90,6 +94,7 @@ export function ShipToSelect({
       setFailed(true);
       setValue(country ?? '');
     } finally {
+      setPendingShipTo(null);
       setBusy(false);
       onBusy?.(false);
       // Still mounted: put focus back if the re-render lost it. Remounted:

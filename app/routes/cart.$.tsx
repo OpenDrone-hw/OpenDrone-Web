@@ -49,6 +49,9 @@ import {internationalShippingFrom} from '~/lib/international-shipping';
 import '../styles/cart-checkout-bar.css';
 import {usSalesRate} from '~/lib/us-sales';
 import {ShipToSelect} from '~/components/ShipToSelect';
+import {UsHoldNote} from '~/components/UsHoldNote';
+import {usOnHold} from '~/lib/geo-availability';
+import {usePendingShipTo} from '~/lib/pending-ship-to';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {cartWholesaleCode} from '~/lib/wholesale-codes';
@@ -214,6 +217,10 @@ export default function CartPage() {
   };
   const notice = checkNotice(check);
   const [announcement, setAnnouncement] = useState('');
+  // A Ship to switch in flight: the destination gate (Checkout, the shops and
+  // blocked notes) follows the picked country at once; Checkout stays
+  // disabled until the loaders return it (lib/pending-ship-to.ts).
+  const pendingShipTo = usePendingShipTo();
   return (
     <AnnounceContext.Provider value={setAnnouncement}>
     <div className="cart page-shell">
@@ -231,7 +238,7 @@ export default function CartPage() {
           cart={cart}
           info={info}
           payments={payments}
-          country={cartQuoteCountry(country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
+          country={pendingShipTo ?? cartQuoteCountry(country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
           usRate={rootData?.usShippingRate ?? null}
           shippingFrom={shippingFrom}
           onSplit={(items) => updateRemoved([...removed.filter((r) => !items.some((i) => i.id === r.id)), ...items])}
@@ -577,6 +584,7 @@ function PopulatedCart({
   const stockEarly = useAnyEarlySku(cart.lines.filter((line) => !preorderSkus.has(line.sku)).map((line) => line.sku));
   // UK, CH, NO: "Import VAT and duties: paid by you on delivery, unless collected at checkout."
   const dutiesNote = useGeoDutiesNote();
+  const geoLocale = useRouteLoaderData<RootLoader>('root')?.geo?.locale;
   const wholesale = cartWholesaleCode(cart.discountCodes);
 
   // One parcel per order: when lines ship at different times, the early
@@ -688,6 +696,13 @@ function PopulatedCart({
               {t('checkout_blocked', 'Not available in {country}.', {country: countryName(country ?? '')})}{' '}
               <Link to="/end-use">{t('checkout_blocked_link', 'End-Use Policy')}</Link>
             </p>
+          ) : throughShops && usOnHold(country, usRate) ? (
+            <>
+              <UsHoldNote locale={geoLocale} className="cart-summary-note" />
+              <p className="cart-summary-note">
+                <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
+              </p>
+            </>
           ) : throughShops ? (
             <p className="cart-summary-note" role="note">
               {usRate != null

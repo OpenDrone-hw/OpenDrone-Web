@@ -14,6 +14,7 @@ import {LocationNotice} from '~/components/LocationNotice';
 import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
 import type {CommerceHandoff} from '~/lib/shop-links';
 import {AvailabilityBar} from '~/components/AvailabilityBanner';
+import {useShipGeo} from '~/components/ShipChip';
 import {availabilityBannerHiddenOn, type GeoAvailabilityRegion} from '~/lib/geo-availability';
 import type {Locale} from '~/lib/i18n';
 
@@ -42,6 +43,8 @@ export function PageLayout({
 }: PageLayoutProps) {
   const {pathname} = useLocation();
   const isHomepage = pathname === '/';
+  // The bar follows a Ship to switch at once (lib/pending-ship-to.ts).
+  const shipGeo = useShipGeo();
 
   return (
     <MotionConfig reducedMotion="user">
@@ -64,7 +67,7 @@ export function PageLayout({
           <RouteAnnouncer />
           {/* Ordering is open: the batch line for the visitor's country, a bar at the very top (under the
               staging strip on staging). Never on /flash or /guides/*. */}
-          {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBar geo={geo} /> : null}
+          {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBar geo={shipGeo ?? geo} /> : null}
           <Header
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}
