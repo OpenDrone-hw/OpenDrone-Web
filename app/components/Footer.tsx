@@ -114,13 +114,24 @@ function FooterGroup({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    const summary = el.querySelector('summary');
     const mq = window.matchMedia('(max-width: 639px)');
     const apply = () => {
       el.open = mq.matches ? open : true;
+      // Wide screens: the summary is a plain heading (the mouse can't toggle
+      // it), so keep it out of the Tab order and don't let Enter collapse it.
+      if (summary) summary.tabIndex = mq.matches ? 0 : -1;
     };
+    const guard = (e: Event) => {
+      if (!mq.matches) e.preventDefault();
+    };
+    summary?.addEventListener('click', guard);
     apply();
     mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
+    return () => {
+      mq.removeEventListener('change', apply);
+      summary?.removeEventListener('click', guard);
+    };
   }, [open]);
   return (
     <details ref={ref} open className="group/fg">

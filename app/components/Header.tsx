@@ -485,7 +485,6 @@ function FamilyNav({
         <NavLink
           prefetch="intent"
           to={cat.to}
-          aria-expanded={open === cat.label}
         >
           {familyShort(cat.type, cat.label)}
         </NavLink>
