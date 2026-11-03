@@ -107,6 +107,10 @@ export const UK_VAT_REVIEW_TAG = 'uk-vat-review';
 export const PICKUP_TAG = 'pickup-leuven';
 /** Order tag that marks an order as held and tagged by this module. */
 export const PREORDER_TAG = 'preorder';
+/** Order tag for an EU order that ships now from paid batch 1 stock
+ *  (`shipsFromEuStock`): tagged once with its batch tags, never held. Like
+ *  `preorder`, it marks the order done. */
+export const EU_STOCK_TAG = 'eu-stock';
 /** Hold handle: one per app per fulfillment order, so it doubles as the marker. */
 export const PREORDER_HOLD_HANDLE = 'opendrone-preorder';
 
@@ -574,10 +578,16 @@ export function needsDestinationReview(order: PreorderOrder, orderBatches: LineB
  * `_ship_region`). It gets no `preorder` tag
  * and no hold (founder 2026-11-03). An EU order with any line outside paid
  * stock (motors, frames, receivers) is allocated the March batch whole
- * (`shipsOnlyWithPaid`) and stays a held preorder. Non-EU orders: false.
+ * (`shipsOnlyWithPaid`) and stays a held preorder. Non-EU orders, pickup
+ * orders and orders already carrying this module's hold: false.
  */
 export function shipsFromEuStock(order: PreorderOrder, orderBatches: LineBatch[], config: CampaignConfig): boolean {
   if (orderRegion(order) !== 'EU' || !orderBatches.length) return false;
+  // A pickup order stays held: released, it would reach the bpost plugin.
+  if (order.tags.includes(PICKUP_TAG)) return false;
+  // A legacy order this module already held (tag write failed): finish it
+  // as the preorder it was planned as.
+  if (order.fulfillmentOrders.nodes.some(hasPreorderHold)) return false;
   if (!orderBatches.every((b) => config.skus[b.sku]?.batches[b.batch - 1]?.paid === true)) return false;
   return order.lineItems.nodes.every((line) => {
     if (!(line.currentQuantity > 0) || !(hasPromise(line) || isCampaignLine(line, config))) return true;
@@ -601,8 +611,11 @@ export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfi
   for (const order of orders) {
     if (!isCountedOrder(order)) continue;
     const orderBatches = batches.get(order.id) ?? [];
-    const preorder = isPreorderOrder(order, config) && !order.tags.includes(PREORDER_TAG) &&
-      !shipsFromEuStock(order, orderBatches, config);
+    const pending = isPreorderOrder(order, config) && !order.tags.includes(PREORDER_TAG) && !order.tags.includes(EU_STOCK_TAG);
+    // EU batch 1 stock: tagged once (`eu-stock` + batch tags, so it counts in
+    // `overfullBatches` and is never re-planned), never held.
+    const euStock = pending && shipsFromEuStock(order, orderBatches, config);
+    const preorder = pending && !euStock;
     const reviewTag = orderRegion(order) === 'INT' ? INT_REVIEW_TAG : US_REVIEW_TAG;
     const review = !order.tags.includes(reviewTag) && needsDestinationReview(order, orderBatches, config);
     // The batch promise is checked when the batch tags are written: later
@@ -611,10 +624,12 @@ export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfi
       (promiseMismatch(order) || (preorder && batchPromiseMismatch(order, orderBatches, config))) &&
       !order.tags.includes(PROMISE_MISMATCH_TAG);
     const ukVatReview = order.shippingAddress?.countryCodeV2 === 'GB' && !order.tags.includes(UK_VAT_REVIEW_TAG);
-    if (!preorder && !review && !mismatch && !ukVatReview) continue;
-    const hold = order.fulfillmentOrders.nodes
-      .filter((fo) => HOLDABLE_STATES.has(fo.status) && !hasPreorderHold(fo))
-      .map((fo) => fo.id);
+    if (!preorder && !euStock && !review && !mismatch && !ukVatReview) continue;
+    const hold = preorder || review || mismatch || ukVatReview
+      ? order.fulfillmentOrders.nodes
+          .filter((fo) => HOLDABLE_STATES.has(fo.status) && !hasPreorderHold(fo))
+          .map((fo) => fo.id)
+      : [];
     const reviewNote = reviewTag === INT_REVIEW_TAG
       ? 'International review: an item does not ship to this destination from any batch. Hold for manual follow-up.'
       : US_REVIEW_NOTE;
@@ -630,9 +645,9 @@ export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfi
       orderId: order.id,
       orderName: order.name,
       tags: [
-        ...(preorder
+        ...(preorder || euStock
           ? [
-              PREORDER_TAG,
+              preorder ? PREORDER_TAG : EU_STOCK_TAG,
               ...new Set(orderBatches.map((b) => batchTag(b.sku, b.batch))),
             ]
           : []),

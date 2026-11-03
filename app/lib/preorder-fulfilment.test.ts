@@ -22,6 +22,7 @@ import {
   planRelease,
   shipsFromEuStock,
   syncPreorderHolds,
+  EU_STOCK_TAG,
   type PreorderOrder,
 } from './preorder-fulfilment.ts';
 import {reconcilePreorders} from './preorder-ops.ts';
@@ -223,10 +224,12 @@ describe('preorder fulfilment', () => {
     const done = order({lines: [['OPENRX-LITE', 1]], tags: ['preorder', 'batch:OPENRX-LITE:1']});
     const unpaid = order({lines: [['OPENRX-LITE', 1]], status: 'PENDING'});
     const test = order({lines: [['OPENRX-LITE', 1]], test: true});
-    // EU batch 1 stock ships now: no hold, no tag (shipsFromEuStock).
+    // EU batch 1 stock ships now: tagged eu-stock, no hold (shipsFromEuStock).
     const stock = order({lines: [['OPENFC-LITE-2020', 2]]});
     const fresh = order({lines: [['OPENRX-LITE', 2]]});
-    const plans = planPreorderHolds([plain, done, unpaid, test, stock, fresh], CONFIG);
+    const all = planPreorderHolds([plain, done, unpaid, test, stock, fresh], CONFIG);
+    assert.deepEqual(all.filter((p) => p.orderId === stock.id).map((p) => [p.tags, p.hold]), [[[EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1'], []]]);
+    const plans = all.filter((p) => p.orderId !== stock.id);
     assert.equal(plans.length, 1);
     assert.equal(plans[0].orderName, fresh.name);
     assert.deepEqual(plans[0].tags, ['preorder', 'batch:OPENRX-LITE:1']);
@@ -351,7 +354,10 @@ describe('orders without a Preorder attribute', () => {
     assert.deepEqual(plans.get(admin.id)?.hold, [admin.fulfillmentOrders.nodes[0].id]);
     assert.deepEqual(plans.get(accessory.id)?.tags, ['preorder', 'batch:OPENRX-LITE:1']);
     const pinnedToStock = parseCampaignConfig({...CONFIG, shipsWith: {'ACC-PROP-5-HQ-J37': {sku: 'OPENFC-LITE-2020', batch: 1}}});
-    assert.deepEqual(planPreorderHolds([adminStock, accessoryStock], pinnedToStock), []);
+    assert.deepEqual(planPreorderHolds([adminStock, accessoryStock], pinnedToStock).map((p) => [p.tags, p.hold]), [
+      [[EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1'], []],
+      [[EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1'], []],
+    ]);
     assert.equal(plans.has(other.id), false);
     assert.equal(plans.has(removed.id), false);
   });
@@ -373,7 +379,7 @@ describe('batch promise mismatch', () => {
     const late = order({lines: [['OPENFC-LITE-2020', 1]], promise: 'ships early November 2026', batch: 'OPENFC-LITE-2020:1'});
     const plans = new Map(planPreorderHolds([first, late], SMALL).map((p) => [p.orderId, p.tags]));
     // The first order is EU batch 1 stock: it ships now, unheld.
-    assert.equal(plans.get(first.id), undefined);
+    assert.deepEqual(plans.get(first.id), [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1']);
     assert.deepEqual(plans.get(late.id), ['preorder', 'batch:OPENFC-LITE-2020:2', PROMISE_MISMATCH_TAG]);
   });
 
@@ -540,7 +546,8 @@ describe('SKUs that ship with a campaign SKU', () => {
       ['OPENFC-LITE-2020', 1, 'ACC-PROP-5-HQ-J37'],
     ]);
     // Pinned to EU batch 1 stock: ships now, unheld; the note still names the lead.
-    assert.deepEqual(planPreorderHolds([props], WITH), []);
+    const [plan] = planPreorderHolds([props], WITH);
+    assert.deepEqual([plan.tags, plan.hold], [[EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1'], []]);
     assert.match(holdNote(assigned.get(props.id)!), /ACC-PROP-5-HQ-J37 with OPENFC-LITE-2020 batch 1/);
   });
 
@@ -786,12 +793,17 @@ describe('EU batch 1 stock ships now (founder 2026-11-03)', () => {
     assert.equal(SHIP_PROMISE_LINE_ATTRIBUTE, SHIP_PROMISE_ATTRIBUTE);
   });
 
-  it('neither holds nor tags an EU batch 1 order, old or new line attributes, admin-made too', () => {
+  it('tags an EU batch 1 order eu-stock with its batch once and never holds it, old or new line attributes, admin-made too', () => {
     const fresh = withAttrs(order({lines: [['OPENFC-LITE-2020', 2]], country: 'BE'}), euStockLine);
     const old = order({lines: [['OPENFC-LITE-2020', 1]], country: 'DE', promise: 'ships late November 2026', batch: 'OPENFC-LITE-2020:1'});
     const admin = order({lines: [['OPENFC-LITE-2020', 1, false]], country: 'FR'});
     const all = [fresh, old, admin];
+    const plans = planPreorderHolds(all, LIVE);
+    assert.deepEqual(plans.map((p) => [p.orderId, p.tags, p.hold]), all.map((o) => [o.id, [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1'], []]));
+    // Tagged, it is done: the next run plans nothing.
+    for (const o of all) o.tags = [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1'];
     assert.deepEqual(planPreorderHolds(all, LIVE), []);
+    assert.equal(holdHealth(all, LIVE).unheld, 0);
     const batches = assignBatches(all, LIVE);
     assert.ok(all.every((o) => shipsFromEuStock(o, batches.get(o.id)!, LIVE)));
     // Its units still take batch 1 slots: the cap and the count are unchanged.
@@ -802,7 +814,7 @@ describe('EU batch 1 stock ships now (founder 2026-11-03)', () => {
     const filler = order({lines: [['OPENFC-LITE-2020', 200]], country: 'BE'});
     const over = withAttrs(order({lines: [['OPENFC-LITE-2020', 1]], country: 'BE'}), euStockLine);
     const plans = new Map(planPreorderHolds([filler, over], LIVE).map((p) => [p.orderId, p.tags]));
-    assert.equal(plans.has(filler.id), false);
+    assert.deepEqual(plans.get(filler.id), [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1']);
     assert.deepEqual(plans.get(over.id), ['preorder', 'batch:OPENFC-LITE-2020:2', PROMISE_MISMATCH_TAG]);
   });
 
@@ -835,5 +847,65 @@ describe('EU batch 1 stock ships now (founder 2026-11-03)', () => {
     // old `Preorder`: the same review and mismatch tags, held.
     assert.deepEqual(plans.get(euStockToInt.id)?.tags, plans.get(euPromiseToInt.id)?.tags);
     for (const p of plans.values()) assert.equal(p.hold.length, 1);
+  });
+
+  it('holds an INT line shipped to an EU address as before: promise-mismatch, no eu-stock', () => {
+    const intToEu = order({lines: [['OPENFC-LITE-2020', 1]], country: 'BE', intPromise: true, promise: 'ships late November 2026', batch: 'OPENFC-LITE-2020:1'});
+    const [plan] = planPreorderHolds([intToEu], LIVE);
+    assert.deepEqual(plan.tags, ['preorder', 'batch:OPENFC-LITE-2020:1', PROMISE_MISMATCH_TAG]);
+    assert.equal(plan.hold.length, 1);
+  });
+
+  it('reads an order without a shipping address as EU (the hold pass default): eu-stock, unheld', () => {
+    const bare = withAttrs(order({lines: [['OPENFC-LITE-2020', 1]]}), euStockLine);
+    assert.equal(bare.shippingAddress, undefined);
+    const [plan] = planPreorderHolds([bare], LIVE);
+    assert.deepEqual([plan.tags, plan.hold], [[EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1'], []]);
+  });
+
+  it('keeps holding a pickup-leuven order, so the bpost plugin never imports it', () => {
+    const pickup = withAttrs(order({lines: [['OPENFC-LITE-2020', 1]], country: 'BE', tags: [PICKUP_TAG]}), euStockLine);
+    const [plan] = planPreorderHolds([pickup], LIVE);
+    assert.deepEqual(plan.tags, ['preorder', 'batch:OPENFC-LITE-2020:1']);
+    assert.deepEqual(plan.hold, [pickup.fulfillmentOrders.nodes[0].id]);
+  });
+
+  it('finishes a legacy order held but never tagged (failed tag write) as a preorder, not eu-stock', () => {
+    const legacy = withAttrs(order({
+      lines: [['OPENFC-LITE-2020', 1]],
+      country: 'BE',
+      foStatus: 'ON_HOLD',
+      holds: [{id: 'gid://shopify/FulfillmentHold/9', handle: PREORDER_HOLD_HANDLE}],
+    }), euStockLine);
+    const [plan] = planPreorderHolds([legacy], LIVE);
+    assert.deepEqual(plan.tags, ['preorder', 'batch:OPENFC-LITE-2020:1']);
+    assert.deepEqual(plan.hold, []);
+    // The batch release then lifts its hold as for any preorder.
+    legacy.tags = plan.tags;
+    assert.equal(planRelease([legacy], 'OPENFC-LITE-2020', 1, new Set()).length, 1);
+  });
+
+  it('never retags an eu-stock order when a later allocation shift moves it; overfull reports the drift', () => {
+    const stock = withAttrs(order({lines: [['OPENFC-LITE-2020', 1]], country: 'BE'}), euStockLine);
+    const [first] = planPreorderHolds([stock], LIVE);
+    stock.tags = first.tags;
+    // An older order indexed late fills the batch ahead of it.
+    const late = order({lines: [['OPENFC-LITE-2020', 200]], country: 'BE'});
+    late.createdAt = '2026-09-01T00:00:00Z';
+    const second = planPreorderHolds([late, stock], LIVE);
+    assert.equal(second.some((p) => p.orderId === stock.id), false);
+    assert.deepEqual(stock.tags, [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1']);
+    late.tags = second.find((p) => p.orderId === late.id)!.tags;
+    assert.deepEqual(overfullBatches([late, stock], LIVE), [{sku: 'OPENFC-LITE-2020', batch: 1, units: 200, tagged: 201}]);
+  });
+
+  it('counts a partial refund back under the cap: the next unit is eu-stock and the batch is not overfull', () => {
+    const filler = order({lines: [['OPENFC-LITE-2020', 200]], country: 'BE', tags: [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1']});
+    filler.lineItems.nodes[0].currentQuantity = 199;
+    const next = withAttrs(order({lines: [['OPENFC-LITE-2020', 1]], country: 'BE'}), euStockLine);
+    const [plan] = planPreorderHolds([filler, next], LIVE);
+    assert.deepEqual([plan.orderId, plan.tags, plan.hold], [next.id, [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1'], []]);
+    next.tags = plan.tags;
+    assert.deepEqual(overfullBatches([filler, next], LIVE), []);
   });
 });
