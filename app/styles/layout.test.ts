@@ -59,3 +59,16 @@ describe('mobile homepage build card', () => {
     assert.match(mobile[1], /overscroll-behavior:\s*auto/, 'contain blocks scroll chaining on Chrome Android');
   });
 });
+
+describe('PDP chapters never shift the page', () => {
+  it('chapters do not skip-render with a placeholder size (content-visibility: auto shifted the related strip and footer)', () => {
+    const blocks = blocksFor('.chapter');
+    assert.ok(blocks.length > 0, '.chapter has rules');
+    const noComments = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const block of blocks) {
+      assert.doesNotMatch(noComments(block), /content-visibility:\s*auto/);
+      assert.doesNotMatch(noComments(block), /contain-intrinsic-size/);
+    }
+    assert.doesNotMatch(noComments(CSS), /\.chapter[^{,]*\{[^}]*content-visibility:\s*auto/);
+  });
+});

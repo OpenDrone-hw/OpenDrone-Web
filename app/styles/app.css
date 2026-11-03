@@ -5500,12 +5500,12 @@ section.chapter[data-centered] .chapter-body-col {
   border-top: 1px solid var(--color-border);
   opacity: 1;
   transform: translateY(0);
-  /* Skip layout+paint for chapters that are far offscreen - the PDP is a very
-     long page and browsers otherwise render every chapter on load. The
-     intrinsic-size placeholder keeps the scrollbar stable; the scroll-reveal
-     IO fires as normal once a chapter approaches the viewport. */
-  content-visibility: auto;
-  contain-intrinsic-size: auto 640px;
+  /* No content-visibility: auto here. Its fixed intrinsic-size placeholder
+     (640px) never matched a chapter's real height (280-1500px), so the
+     first render of a chapter near the viewport moved everything under it:
+     the related strip, the safety block and the footer jumped up to ~290px
+     (CLS 0.19 on /products/openesc, 2026-11-02). Every chapter is laid out
+     on load instead. */
 }
 /* Reading measure: chapter paragraphs never run the full rail. The
    whitespace right of the text is deliberate - it is what directs the eye
@@ -5513,16 +5513,6 @@ section.chapter[data-centered] .chapter-body-col {
    blocks (schematic, teardown, tables, card grids) are untouched. */
 .chapter p {
   max-width: 68ch;
-}
-
-/* content-visibility's paint containment clips descendants at the chapter's
-   box - but the teardown board art bleeds past its media column into the page
-   margin, and the frame-viewer backdrop over-bleeds into the neighbouring
-   sections. Those chapters give up the skip-render optimisation so the bleed
-   stays visible. */
-.chapter:has(.board-art),
-.chapter[data-backdrop] {
-  content-visibility: visible;
 }
 
 @media (min-width: 880px) {
