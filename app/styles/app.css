@@ -6108,6 +6108,9 @@ section.chapter[data-centered] .chapter-body-col {
 .board-folder-rail:focus-visible,
 .schematic-rail:focus-visible {
   border-color: color-mix(in srgb, var(--color-gold) 45%, transparent);
+  /* The base rule sets outline: none; keyboard focus needs a real ring (2.4.7). */
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 .board-folder-rail-head,
 .schematic-rail-head {
