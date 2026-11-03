@@ -3,7 +3,7 @@ import type {KeyboardEvent} from 'react';
 import {Form, useLocation, useRouteLoaderData} from 'react-router';
 import {Link, NavLink} from '~/components/nav';
 import {AnimatePresence} from 'motion/react';
-import {useAside} from '~/components/Aside';
+import {MOBILE_DRAWER_ID, useAside} from '~/components/Aside';
 import {LangToggle} from '~/components/LangToggle';
 import {useHeaderPopover} from '~/components/header-popover';
 import {RegionSwitch} from '~/components/RegionSwitch';
@@ -485,7 +485,6 @@ function FamilyNav({
         <NavLink
           prefetch="intent"
           to={cat.to}
-          aria-expanded={open === cat.label}
         >
           {familyShort(cat.type, cat.label)}
         </NavLink>
@@ -560,7 +559,11 @@ export function HeaderMenu({
           ? 'site-mobile-nav flex flex-col gap-1 px-1'
           : 'hidden md:flex items-center gap-8 ml-10'
       }
-      role="navigation"
+      aria-label={
+        isMobile
+          ? (copyText('chrome.menu_toggle_aria') ?? 'Menu')
+          : (copyText('chrome.main_nav_aria') ?? 'Main')
+      }
     >
       {/* Mobile drawer only: surface Search + the product families + Home up
           top. The desktop header carries these in its own bar / FamilyNav,
@@ -917,14 +920,17 @@ function HeaderCtas({
 }
 
 function HeaderMenuMobileToggle() {
-  const {open} = useAside();
+  const {open, type} = useAside();
   return (
     <button
       className="site-header-icon site-header-menu-toggle text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
       onClick={() => open('mobile')}
+      aria-expanded={type === 'mobile'}
+      aria-controls={MOBILE_DRAWER_ID}
+      aria-haspopup="dialog"
       aria-label={copyText('chrome.menu_toggle_aria') ?? 'Menu'}
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" focusable="false">
         <line x1="4" y1="7" x2="20" y2="7" />
         <line x1="4" y1="12" x2="20" y2="12" />
         <line x1="4" y1="17" x2="20" y2="17" />

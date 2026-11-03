@@ -123,6 +123,10 @@ import type {
   DownloadKind,
 } from '~/lib/product-content';
 
+/** The new-tab notice for links whose ::after is taken (app.css excludes them
+ *  from the generic a[target=_blank]::after notice). */
+const NEW_TAB_NOTE = ' (opens in a new tab)';
+
 /** The campaign (content/preorders.json): each SKU's price steps. */
 const CAMPAIGN_CONFIG = parseCampaignConfig(preorders);
 /** The builds (content/builds.json): the "Build with this" card and the
@@ -693,7 +697,7 @@ function Chapter({
         {children}
       </div>
       {backdrop || noMedia ? null : (
-        <aside className="chapter-media">
+        <div className="chapter-media">
           {media ? (
             <div className="chapter-media-frame chapter-media-frame--live">
               {media}
@@ -701,7 +705,7 @@ function Chapter({
           ) : (
             <ChapterMediaPlaceholder kind={number} />
           )}
-        </aside>
+        </div>
       )}
       {wide ? <div className="chapter-wide">{wide}</div> : null}
     </section>
@@ -1580,27 +1584,16 @@ function ProductPage() {
     // On touch, drop every hover/focus handler - a tap's synthetic mouse +
     // blur events would clear the spotlight the click just set. Click alone
     // toggles, and it persists (no container mouseleave on touch either).
-    const handlers = !hoverable
+    // The <li> stays non-interactive; the keyboard stop is a real <button>
+    // inside it (WCAG 4.1.2), so the row never carries a bare tabindex.
+    const liHandlers = hoverable && !noHover ? {onMouseEnter: enter} : {};
+    const btnHandlers = !hoverable
       ? {}
       : noHover
-        ? {onClick: tap, tabIndex: 0}
-        : {
-            onMouseEnter: enter,
-            onClick: tap,
-            onFocus: enter,
-            onBlur: clearHover,
-            tabIndex: 0,
-          };
-    return (
-      <li
-        key={pin.ref}
-        className={
-          hoverable
-            ? `teardown-pin teardown-pin-hoverable${isActive ? ' is-active' : ''}`
-            : undefined
-        }
-        {...handlers}
-      >
+        ? {onClick: tap}
+        : {onClick: tap, onFocus: enter, onBlur: clearHover};
+    const rowBody = (
+      <>
         <span className="teardown-pin-part" {...pinEdit('part')}>
           {pin.part}
         </span>
@@ -1609,6 +1602,30 @@ function ProductPage() {
             {pin.cost}
           </span>
         ) : null}
+      </>
+    );
+    return (
+      <li
+        key={pin.ref}
+        className={
+          hoverable
+            ? `teardown-pin teardown-pin-hoverable${isActive ? ' is-active' : ''}`
+            : undefined
+        }
+        {...liHandlers}
+      >
+        {hoverable ? (
+          <button
+            type="button"
+            className="teardown-pin-btn"
+            aria-pressed={isActive}
+            {...btnHandlers}
+          >
+            {rowBody}
+          </button>
+        ) : (
+          rowBody
+        )}
       </li>
     );
   };
@@ -2398,6 +2415,7 @@ function ProductPage() {
                   rel="noopener noreferrer"
                   className="open-source-card open-source-card--github"
                 >
+                  <span className="sr-only">{NEW_TAB_NOTE}</span>
                   <p className="open-source-card-label">{c.title}</p>
                   <Txt
                     id="product-chrome.os_card_repo_title"
@@ -2431,6 +2449,7 @@ function ProductPage() {
                 rel="noopener noreferrer"
                 className="open-source-card open-source-card--github"
               >
+                <span className="sr-only">{NEW_TAB_NOTE}</span>
                 <Txt
                   id="product-chrome.os_card_study_label"
                   as="p"
@@ -2505,6 +2524,7 @@ function ProductPage() {
               rel="noopener noreferrer"
               className="open-source-card open-source-card--oshwa"
             >
+              <span className="sr-only">{NEW_TAB_NOTE}</span>
               <OshwaMark
                 uid={activeOshwaUid}
                 title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} ${activeOshwaUid}`}
@@ -2523,6 +2543,7 @@ function ProductPage() {
               rel="noopener noreferrer"
               className="open-source-card open-source-card--cern"
             >
+              <span className="sr-only">{NEW_TAB_NOTE}</span>
               <Txt
                 id="product-chrome.os_card_license_label"
                 as="p"
@@ -2550,6 +2571,7 @@ function ProductPage() {
             rel="noopener noreferrer"
             className="open-source-card open-source-card--help"
           >
+            <span className="sr-only">{NEW_TAB_NOTE}</span>
             <Txt
               id="product-chrome.os_card_help_label"
               as="p"
@@ -3263,6 +3285,7 @@ function ProductPage() {
                   className="trust-chip trust-chip-oshwa trust-chip-link"
                   title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} ${activeOshwaUid}`}
                 >
+                  <span className="sr-only">{NEW_TAB_NOTE}</span>
                   <img
                     src="/logos/oshwa.svg"
                     alt=""

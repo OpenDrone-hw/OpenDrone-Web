@@ -185,7 +185,7 @@ function WithdrawalForm({locale}: {locale: 'nl' | 'en' | 'fr'}) {
   }
 
   const field =
-    'w-full rounded border border-[var(--color-border)] bg-transparent px-3 py-2 text-[var(--color-text)]';
+    'w-full rounded border border-[var(--color-border)] bg-transparent px-3 py-2 text-[var(--color-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus)]';
   return (
     <Form method="post" id="withdraw" className="mt-10 max-w-xl space-y-4">
       <h2 className="font-mono text-[13px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]">

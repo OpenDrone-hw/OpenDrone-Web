@@ -173,9 +173,19 @@ export function NewsletterSignup({
         ? 'error'
         : null;
 
+  // The footer's title copy is intentionally empty (its label sits above the
+  // form): render no empty <h3> and name the region directly instead.
+  const titleKey =
+    titleId ??
+    (isNotify ? 'newsletter.signup_title_notify' : 'newsletter.signup_title');
+  const hasTitle = isRestock || Boolean(copyText(titleKey));
+  const regionLabel = copyText('chrome.footer_detail_newsletter') ?? 'Newsletter';
+
   return (
     <section
-      aria-labelledby={`${emailId}-heading`}
+      {...(hasTitle
+        ? {'aria-labelledby': `${emailId}-heading`}
+        : {'aria-label': regionLabel})}
       className={[
         'newsletter-signup',
         isWide
@@ -208,6 +218,7 @@ export function NewsletterSignup({
         {/* The heading keeps its DOM id in code: `aria-labelledby` on the
             section points at it, and <Txt> spends its own `id` prop on the
             copy key. */}
+        {hasTitle ? (
         <h3
           id={`${emailId}-heading`}
           className={
@@ -219,16 +230,10 @@ export function NewsletterSignup({
           {isRestock ? (
             say('signup_title_restock', 'Email me when it can be ordered.')
           ) : (
-            <Txt
-              id={
-                titleId ??
-                (isNotify
-                  ? 'newsletter.signup_title_notify'
-                  : 'newsletter.signup_title')
-              }
-            />
+            <Txt id={titleKey} />
           )}
         </h3>
+        ) : null}
         <p
           className={
             isWide
@@ -332,7 +337,7 @@ export function NewsletterSignup({
             aria-describedby={message ? statusId : undefined}
             aria-invalid={messageTone === 'error' || undefined}
             className={[
-              'flex-1 bg-[var(--color-bg)] border border-[var(--color-border)]',
+              'flex-1 bg-[var(--color-bg)] border border-[var(--color-field-border)]',
               'text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]',
               'font-mono text-sm px-3 py-2.5 min-h-[44px] rounded-sm',
               'focus:outline-none focus:border-[var(--color-gold)]',

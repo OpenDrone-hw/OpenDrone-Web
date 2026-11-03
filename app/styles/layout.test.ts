@@ -44,8 +44,8 @@ describe('buy module price notes', () => {
 describe('legal tables', () => {
   it('scroll inside their own box', () => {
     assert.ok(
-      blocksFor('.legal-body table').some((b) => /overflow-x:\s*auto/.test(b)),
-      '.legal-body table needs overflow-x: auto',
+      blocksFor('.legal-body .table-scroll').some((b) => /overflow-x:\s*auto/.test(b)),
+      '.legal-body .table-scroll (focusable wrapper around each table) needs overflow-x: auto',
     );
   });
 });

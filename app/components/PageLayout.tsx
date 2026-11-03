@@ -7,6 +7,7 @@ import {Header, HeaderMenu, type HeaderFamilyProduct} from '~/components/Header'
 import {LangToggle} from '~/components/LangToggle';
 import {RegionSwitch} from '~/components/RegionSwitch';
 import {RouteProgress} from '~/components/RouteProgress';
+import {RouteAnnouncer} from '~/components/RouteAnnouncer';
 import {Txt} from '~/components/Txt';
 import {CartAddedDialog} from '~/components/CartAddedDialog';
 import {LocationNotice} from '~/components/LocationNotice';
@@ -60,6 +61,7 @@ export function PageLayout({
             <Txt id="chrome.skip_link" />
           </a>
           <RouteProgress />
+          <RouteAnnouncer />
           {/* Ordering is open: the batch line for the visitor's country, a bar at the very top (under the
               staging strip on staging). Never on /flash or /guides/*. */}
           {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBar geo={geo} /> : null}

@@ -28,6 +28,13 @@ export function AvailabilityBar({geo}: {geo: {region: GeoAvailabilityRegion; loc
     } catch {
       /* storage blocked: dismissed for this page view only */
     }
+    // The button unmounts with the bar: hand focus to <main> so the next Tab
+    // continues from the page content instead of restarting at the top.
+    const main = document.getElementById('main-content');
+    if (main) {
+      if (!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1');
+      main.focus({preventScroll: true});
+    }
     setDismissed(true);
   };
   return (
