@@ -9917,19 +9917,21 @@ a.what-chain-chip:hover {
 
 /* Wide tables (rate tables, processor lists) scroll inside their own box
    on a phone instead of widening the page. */
-.legal-body table {
-  width: 100%;
+.legal-body .table-scroll {
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  border-collapse: collapse;
   margin: 1rem 0;
-  font-size: 0.9rem;
 }
-@media (max-width: 47.99em) {
-  .legal-body table {
-    display: block;
-  }
+.legal-body .table-scroll:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.legal-body table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
 }
 
 .legal-body th,
