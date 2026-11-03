@@ -15,3 +15,7 @@ test('the home loader resolves build and featured data for every visitor', () =>
 test('Sec-CH-UA-Mobile counts as a phone hint', () => {
   assert.match(src, /request\.headers\.get\('sec-ch-ua-mobile'\) === '\?1'/);
 });
+
+test('the Discord fetch starts before the catalog await (not serialized)', () => {
+  assert.ok(src.indexOf('const discord = fetchDiscordCounts();') < src.indexOf('await home;'));
+});

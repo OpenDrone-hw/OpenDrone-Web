@@ -37,3 +37,13 @@ test('the picker order does not depend on localeCompare', () => {
     String.prototype.localeCompare = orig;
   }
 });
+
+test('blocked countries named outside the picker are in the table too', () => {
+  for (const code of ['RU', 'BY', 'IR', 'KP', 'SY', 'CU']) assert.ok(COUNTRY_NAMES_EN[code], code);
+});
+
+test('a code outside the table falls back to Intl, then to the code itself', () => {
+  assert.equal(Object.hasOwn(COUNTRY_NAMES_EN, 'AQ'), false, 'pick a code that is not in the table');
+  assert.equal(countryName('AQ'), new Intl.DisplayNames(['en'], {type: 'region'}).of('AQ'));
+  assert.equal(countryName('not-a-code'), 'not-a-code');
+});

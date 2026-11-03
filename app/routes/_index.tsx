@@ -72,11 +72,9 @@ export async function loader({request, context}: Route.LoaderArgs) {
     request.headers.get('sec-ch-ua-mobile') === '?1' ||
     /Mobi|Android|iPhone|iPod|Windows Phone|BlackBerry/i.test(ua);
 
-  // Flagship line for the mobile showcase. Deferred, not awaited: desktop
-  // never renders these cards, and on mobile they sit below the hero - so
-  // streaming them keeps TTFB off the catalog fetch entirely (it is worker
-  // -cached anyway). Catch resolves to [] so a catalog hiccup just drops
-  // the cards instead of blanking the page.
+  // Flagship line for the mobile showcase and the hero build card, from one
+  // catalog read (awaited below). Catch resolves to [] so a catalog hiccup
+  // just drops the cards instead of blanking the page.
   const home: Promise<{
     featured: HomeProduct[];
     heroBuilds: HeroBuild[];
@@ -112,12 +110,13 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // Mac UA, a narrowed desktop window, "request desktop site") gets the
   // desktop SSR tree, matchMedia swaps to MobileHome on the client, and a
   // still-pending promise then streamed in and shifted the ledger (CLS 0.28).
-  // The query is CacheLong, so awaiting it costs a few ms of TTFB at the edge.
-  const {heroBuilds, featured} = await home;
-
-  // Live Discord size for the community section: streamed, never awaited,
-  // cached an hour, null (numbers hidden) when Discord does not answer.
+  // The catalog read is memoised per isolate for a minute (catalog-memo.ts), so
+  // awaiting it usually costs little TTFB; a cold isolate pays one read.
+  // Live Discord size for the community section: started first so it runs in
+  // parallel, streamed and never awaited, cached an hour, null (numbers
+  // hidden) when Discord does not answer.
   const discord = fetchDiscordCounts();
+  const {heroBuilds, featured} = await home;
 
   // The stack card is for buyers of the EU's paid batch only.
   const stackOffer = context.catalog.region === 'EU';

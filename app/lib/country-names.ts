@@ -5,7 +5,8 @@
  * and the browser's ICU name some regions differently ('Cape Verde' vs 'Cabo
  * Verde', 'Caribbean Netherlands' vs 'Bonaire, Sint Eustatius and Saba'), so
  * the cart's server HTML and its hydration disagreed (React #418 on /cart).
- * Generated from Node's ICU (CLDR) English names.
+ * Covers the destination list plus the blocked countries countryName is asked
+ * about outside the picker (AddToCartButton, AccountPages). Generated from Node's ICU (CLDR) English names.
  */
 export const COUNTRY_NAMES_EN: Readonly<Record<string, string>> = {
   AD: 'Andorra',
@@ -41,6 +42,7 @@ export const COUNTRY_NAMES_EN: Readonly<Record<string, string>> = {
   BS: 'Bahamas',
   BT: 'Bhutan',
   BW: 'Botswana',
+  BY: 'Belarus',
   BZ: 'Belize',
   CA: 'Canada',
   CC: 'Cocos (Keeling) Islands',
@@ -55,6 +57,7 @@ export const COUNTRY_NAMES_EN: Readonly<Record<string, string>> = {
   CN: 'China',
   CO: 'Colombia',
   CR: 'Costa Rica',
+  CU: 'Cuba',
   CV: 'Cape Verde',
   CW: 'Curaçao',
   CX: 'Christmas Island',
@@ -108,6 +111,7 @@ export const COUNTRY_NAMES_EN: Readonly<Record<string, string>> = {
   IM: 'Isle of Man',
   IN: 'India',
   IQ: 'Iraq',
+  IR: 'Iran',
   IS: 'Iceland',
   IT: 'Italy',
   JE: 'Jersey',
@@ -120,6 +124,7 @@ export const COUNTRY_NAMES_EN: Readonly<Record<string, string>> = {
   KI: 'Kiribati',
   KM: 'Comoros',
   KN: 'St. Kitts & Nevis',
+  KP: 'North Korea',
   KR: 'South Korea',
   KW: 'Kuwait',
   KY: 'Cayman Islands',
@@ -189,6 +194,7 @@ export const COUNTRY_NAMES_EN: Readonly<Record<string, string>> = {
   RE: 'Réunion',
   RO: 'Romania',
   RS: 'Serbia',
+  RU: 'Russia',
   RW: 'Rwanda',
   SA: 'Saudi Arabia',
   SB: 'Solomon Islands',
@@ -209,6 +215,7 @@ export const COUNTRY_NAMES_EN: Readonly<Record<string, string>> = {
   ST: 'São Tomé & Príncipe',
   SV: 'El Salvador',
   SX: 'Sint Maarten',
+  SY: 'Syria',
   SZ: 'Eswatini',
   TC: 'Turks & Caicos Islands',
   TD: 'Chad',
