@@ -10210,6 +10210,35 @@ a.what-chain-chip:hover {
   text-decoration-color: currentColor;
 }
 
+/* Inline links inside running text (WCAG 1.4.1 / axe link-in-text-block): the
+   link colour is only ~2.2:1 against the muted body text, so a non-colour cue
+   is required. Class-less links in text blocks inside <main>, plus the legal
+   and guide prose, are underlined. Button-styled and card links carry a class
+   and are untouched. */
+main :is(p, li, dd, td, blockquote, figcaption) a:not([class]),
+.legal-body a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+/* New-tab notice (WCAG 3.2.5 advisory / A-15): every target=_blank link gets a
+   visually hidden suffix, one rule for the shared copy renderer, the legal
+   content and all hand-written links. */
+a[target='_blank']::after {
+  content: ' (opens in a new tab)';
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  user-select: none;
+}
+:lang(nl) a[target='_blank']::after { content: ' (opent in een nieuw tabblad)'; }
+:lang(fr) a[target='_blank']::after { content: ' (s'ouvre dans un nouvel onglet)'; }
+
 /* Partner logos as margin art: a currentColor mask so brand marks take the
    same dim tint as the hand-drawn emblems in either theme. */
 .section-art-logo {
