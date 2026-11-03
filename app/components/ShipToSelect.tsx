@@ -1,8 +1,9 @@
 import {useEffect, useId, useMemo, useRef, useState} from 'react';
-import {useRevalidator} from 'react-router';
+import {useRevalidator, useRouteLoaderData} from 'react-router';
 import {copyText} from '~/lib/copy';
 import {countryName, shipCountryPicker} from '~/lib/shipping-rates';
 import {groupShipCountries} from '~/lib/ship-to-order';
+import {setPendingShipTo} from '~/lib/pending-ship-to';
 import {CART_COUNTRY_ACTION, CART_UPDATED_EVENT, type CartCountryReply} from '~/lib/cart-client';
 
 /** Set while a switch that started on a focused select is in flight: the
@@ -42,6 +43,9 @@ export function ShipToSelect({
   // error screen. A switch that lands reads every active loader again, so
   // the page behind quotes the new market.
   const revalidator = useRevalidator();
+  // The root loader data the switch starts from: the pending country clears
+  // once it is replaced (PageLayout reconcilePendingShipTo).
+  const rootData = useRouteLoaderData('root');
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [value, setValue] = useState(country ?? '');
@@ -66,6 +70,10 @@ export function ShipToSelect({
   const change = async (next: string) => {
     if (!next || next === country || busy) return;
     setValue(next);
+    // The bar, ship lines and the cart's destination gate follow at once;
+    // cleared when the root loader returns new data (PageLayout), on failure,
+    // or after a timeout (lib/pending-ship-to.ts).
+    setPendingShipTo(next, rootData);
     restoreFocus = document.activeElement === selectRef.current;
     setBusy(true);
     setFailed(false);
@@ -87,6 +95,7 @@ export function ShipToSelect({
       onChanged?.(reply);
       await revalidator.revalidate();
     } catch {
+      setPendingShipTo(null);
       setFailed(true);
       setValue(country ?? '');
     } finally {

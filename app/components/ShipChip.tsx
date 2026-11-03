@@ -7,8 +7,11 @@ import {
   geoDutiesNote,
   geoInStock,
   geoPreorderLine,
+  geoAvailabilityRegion,
   geoShipText,
 } from '~/lib/geo-availability';
+import {usePendingShipTo, withPendingShipTo} from '~/lib/pending-ship-to';
+import {shippingQuote} from '~/lib/shipping-rates';
 import type {RootLoader} from '~/root';
 import {shipMonth, shortShipPromise} from '~/lib/product-content';
 import {
@@ -26,13 +29,25 @@ const CAMPAIGN = parseCampaignConfig(preorders);
 const BATCH_ONE = batchOnePromises(preorders);
 
 /**
+ * The root loader's `geo` with an in-flight Ship to switch applied
+ * (lib/pending-ship-to.ts): every ship line, the bar and the cart follow the
+ * picked country at once instead of after the loaders return.
+ */
+export function useShipGeo() {
+  const root = useRouteLoaderData<RootLoader>('root');
+  // A blocked IP country stays there (cartQuoteCountry): no pending country is shown.
+  const ipBlocked = shippingQuote(root?.visitorCountry ?? null)?.kind === 'blocked';
+  return withPendingShipTo(root?.geo, usePendingShipTo(), geoAvailabilityRegion, ipBlocked);
+}
+
+/**
  * The visitor's line in place of a batch 1 promise ("In stock in Belgium,
  * ships in a few days." in the EU, "Pre-order, ships March 2027." elsewhere),
  * or null to show the promise itself: another batch, or no known country
  * (app/lib/geo-availability.ts).
  */
 export function useGeoShipText(promise: string | null | undefined): string | null {
-  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  const geo = useShipGeo();
   return geo && promise && BATCH_ONE.has(promise) ? geoShipText(geo.region, geo.locale) : null;
 }
 
@@ -42,7 +57,7 @@ export function useGeoShipText(promise: string | null | undefined): string | nul
  * the bar's phone line ("In stock, ships in days"), for chips.
  */
 export function useGeoShipLine(short = false): (promise: string | null | undefined) => string | null {
-  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  const geo = useShipGeo();
   return (promise) => {
     if (!geo || !promise || !BATCH_ONE.has(promise) || geo.region === 'fallback') return null;
     return short ? GEO_BAR_SHORT[geo.locale][geo.region] : geoShipText(geo.region, geo.locale);
@@ -54,7 +69,7 @@ export function useGeoShipLine(short = false): (promise: string | null | undefin
  * you on delivery." for UK, CH, NO), or null. Same source as the bar.
  */
 export function useGeoDutiesNote(): string | null {
-  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  const geo = useShipGeo();
   return geo ? geoDutiesNote(geo.region, geo.locale) : null;
 }
 
@@ -69,7 +84,7 @@ export function useGeoInStock(
   campaign: Pick<CampaignState, 'paidStock' | 'shipPromise'> | null | undefined,
   promise?: string | null,
 ): boolean {
-  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  const geo = useShipGeo();
   // A variant without campaign state (a catalog that applies no campaign)
   // that carries the batch 1 promise is batch 1 stock: the same promise the
   // ship line reads as "In stock in Belgium", so the button agrees with it.
@@ -88,7 +103,7 @@ export function useGeoParcel(): {
   deliveryLines: <T extends {shipPromise?: string | null}>(lines: readonly T[]) => T[];
   preorderSkus: (lines: ReadonlyArray<{shipPromise?: string | null; sku?: string | null}>) => Array<string | null | undefined>;
 } {
-  const region = useRouteLoaderData<RootLoader>('root')?.geo?.region ?? null;
+  const region = useShipGeo()?.region ?? null;
   return {
     deliveryLines: (lines) => geoDeliveryLines(lines, region, BATCH_ONE),
     preorderSkus: (lines) => lines.filter((l) => geoPreorderLine(l.shipPromise, region, BATCH_ONE)).map((l) => l.sku),

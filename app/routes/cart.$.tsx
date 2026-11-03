@@ -49,6 +49,7 @@ import {internationalShippingFrom} from '~/lib/international-shipping';
 import '../styles/cart-checkout-bar.css';
 import {usSalesRate} from '~/lib/us-sales';
 import {ShipToSelect} from '~/components/ShipToSelect';
+import {usePendingShipTo} from '~/lib/pending-ship-to';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {cartWholesaleCode} from '~/lib/wholesale-codes';
@@ -214,6 +215,10 @@ export default function CartPage() {
   };
   const notice = checkNotice(check);
   const [announcement, setAnnouncement] = useState('');
+  // A Ship to switch in flight: the destination gate (Checkout, the shops and
+  // blocked notes) follows the picked country at once; Checkout stays
+  // disabled until the loaders return it (lib/pending-ship-to.ts).
+  const pendingShipTo = usePendingShipTo();
   return (
     <AnnounceContext.Provider value={setAnnouncement}>
     <div className="cart page-shell">
@@ -231,7 +236,7 @@ export default function CartPage() {
           cart={cart}
           info={info}
           payments={payments}
-          country={cartQuoteCountry(country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
+          country={cartQuoteCountry(pendingShipTo ?? country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
           usRate={rootData?.usShippingRate ?? null}
           shippingFrom={shippingFrom}
           onSplit={(items) => updateRemoved([...removed.filter((r) => !items.some((i) => i.id === r.id)), ...items])}
@@ -568,7 +573,9 @@ function PopulatedCart({
   const revalidator = useRevalidator();
   const [inFlight, setInFlight] = useState(0);
   const onPending = useCallback((delta: number) => setInFlight((n) => Math.max(0, n + delta)), []);
-  const pending = inFlight > 0 || revalidator.state !== 'idle';
+  // A Ship to switch in flight anywhere (here or in the drawer) also holds Checkout.
+  const switching = usePendingShipTo() != null;
+  const pending = inFlight > 0 || revalidator.state !== 'idle' || switching;
   // Early bird prices stay on stock lines, but the note drops "preorder"
   // unless a line is a pre-order for this visitor (not batch 1 stock in a
   // stock region).

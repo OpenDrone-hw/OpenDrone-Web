@@ -1,4 +1,5 @@
-import {useLocation} from 'react-router';
+import {useEffect} from 'react';
+import {useLocation, useRouteLoaderData} from 'react-router';
 import {MotionConfig} from 'motion/react';
 import type {CompanyIdentity} from '~/lib/company';
 import {Aside} from '~/components/Aside';
@@ -14,6 +15,8 @@ import {LocationNotice} from '~/components/LocationNotice';
 import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
 import type {CommerceHandoff} from '~/lib/shop-links';
 import {AvailabilityBar} from '~/components/AvailabilityBanner';
+import {useShipGeo} from '~/components/ShipChip';
+import {reconcilePendingShipTo} from '~/lib/pending-ship-to';
 import {availabilityBannerHiddenOn, type GeoAvailabilityRegion} from '~/lib/geo-availability';
 import type {Locale} from '~/lib/i18n';
 
@@ -42,6 +45,11 @@ export function PageLayout({
 }: PageLayoutProps) {
   const {pathname} = useLocation();
   const isHomepage = pathname === '/';
+  // The bar follows a Ship to switch at once (lib/pending-ship-to.ts); the
+  // pending country clears when the root loader returns new data.
+  const shipGeo = useShipGeo();
+  const rootData = useRouteLoaderData('root');
+  useEffect(() => reconcilePendingShipTo(rootData), [rootData]);
 
   return (
     <MotionConfig reducedMotion="user">
@@ -64,7 +72,7 @@ export function PageLayout({
           <RouteAnnouncer />
           {/* Ordering is open: the batch line for the visitor's country, a bar at the very top (under the
               staging strip on staging). Never on /flash or /guides/*. */}
-          {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBar geo={geo} /> : null}
+          {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBar geo={shipGeo ?? geo} /> : null}
           <Header
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}
