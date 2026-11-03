@@ -10252,9 +10252,10 @@ a.what-chain-chip:hover {
    link colour is only ~2.2:1 against the muted body text, so a non-colour cue
    is required. Class-less links in text blocks inside <main>, plus the legal
    and guide prose, are underlined. Button-styled and card links carry a class
-   and are untouched. */
-main :is(p, li, dd, td, blockquote, figcaption) a:not([class]),
-.legal-body a {
+   and are untouched. Zero specificity (:where), so any contextual
+   text-decoration: none (learn cards, the series rail, breadcrumbs, cart
+   product names, guide and doc index lists) still wins; never in a nav. */
+:where(main :is(p, li, dd, td, blockquote, figcaption) a:not([class]):not(nav a), .legal-body a) {
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
@@ -10262,8 +10263,10 @@ main :is(p, li, dd, td, blockquote, figcaption) a:not([class]),
 
 /* New-tab notice (WCAG 3.2.5 advisory / A-15): every target=_blank link gets a
    visually hidden suffix, one rule for the shared copy renderer, the legal
-   content and all hand-written links. */
-a[target='_blank']::after {
+   content and all hand-written links. Links whose own ::after draws something
+   (the open-source card watermarks, the trust chip tap area) are excluded and
+   carry an sr-only span instead (products.$handle.tsx). */
+a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   content: ' (opens in a new tab)';
   position: absolute;
   width: 1px;
@@ -10274,8 +10277,8 @@ a[target='_blank']::after {
   white-space: nowrap;
   user-select: none;
 }
-:lang(nl) a[target='_blank']::after { content: ' (opent in een nieuw tabblad)'; }
-:lang(fr) a[target='_blank']::after { content: " (s'ouvre dans un nouvel onglet)"; }
+:lang(nl) a[target='_blank']:not(.open-source-card, .trust-chip-link)::after { content: ' (opent in een nieuw tabblad)'; }
+:lang(fr) a[target='_blank']:not(.open-source-card, .trust-chip-link)::after { content: " (s'ouvre dans un nouvel onglet)"; }
 
 /* Partner logos as margin art: a currentColor mask so brand marks take the
    same dim tint as the hand-drawn emblems in either theme. */
@@ -12025,10 +12028,6 @@ a[target='_blank']::after {
   margin: 0.3rem 0 0;
 }
 
-/* Anchor lands below the fixed header, not underneath it. */
-#reviews {
-  scroll-margin-top: 96px;
-}
 
 .review-list {
   list-style: none;
@@ -14203,7 +14202,6 @@ a[target='_blank']::after {
 
 .learn-section {
   margin-top: 2.5rem;
-  scroll-margin-top: 5rem;
 }
 .learn-section h2 {
   font-family: var(--font-display);
@@ -15413,13 +15411,6 @@ body:has(main.cart) footer .footer-note--newsletter {
   .product-hero-copy .variant-ladder .variant-ladder-track {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .product-hero-copy .variant-ladder .variant-tier {
-    scroll-margin-top: calc(var(--header-height) + 1rem);
-  }
-}
-.product-buy,
-.variant-tier {
-  scroll-margin-top: calc(var(--header-height) + 1rem);
 }
 
 /* OSHWA chip: the mark is an <img>, so its currentColor paths render
@@ -17358,9 +17349,6 @@ html.hero-header-in .homepage-layout .site-header {
     transition: none;
   }
 }
-.chapter[id] {
-  scroll-margin-top: calc(var(--header-height) + 1.5rem);
-}
 .spec-table > div {
   flex-wrap: wrap;
 }
@@ -17810,7 +17798,7 @@ html.hero-header-in .homepage-layout .site-header {
 .sp-topic-hint {font-size: 13px; color: var(--color-text-muted); line-height: 1.4;}
 
 /* Fields */
-.sp-details {display: grid; gap: 1.1rem; scroll-margin-top: 6.5rem;}
+.sp-details {display: grid; gap: 1.1rem;}
 .sp-details > .sp-step {margin-bottom: 0;}
 .sp-row {display: grid; gap: 1.1rem;}
 @media (min-width: 640px) {
@@ -18180,7 +18168,6 @@ html.hero-header-in .homepage-layout .site-header {
   padding: 1rem 1.1rem;
   list-style: none;
   cursor: pointer;
-  scroll-margin-top: calc(var(--header-height) + 1rem);
 }
 .sp-tile-ask > summary::-webkit-details-marker {display: none;}
 .sp-tile-ask[open] {grid-column: 1 / -1;}
@@ -18361,10 +18348,12 @@ html.hero-header-in .homepage-layout .site-header {
   background-position: right 0.75rem center;
   cursor: pointer;
 }
-.ship-to-select:hover:not(:disabled) {
+.ship-to-select:hover:not([aria-disabled='true']) {
   border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-field-border));
 }
-.ship-to-select:disabled {
+/* Busy while a switch is in flight: aria-disabled, not disabled, so the
+   select keeps focus (ShipToSelect). */
+.ship-to-select[aria-disabled='true'] {
   opacity: 0.6;
   cursor: progress;
 }
@@ -18590,7 +18579,6 @@ select,
 textarea,
 summary,
 [tabindex]:not([tabindex='-1']) {
-  scroll-margin-top: calc(var(--header-height) + 1.5rem);
   scroll-margin-bottom: 6rem;
 }
 

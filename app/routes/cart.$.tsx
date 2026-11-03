@@ -532,8 +532,11 @@ const AnnounceContext = createContext<(message: string) => void>(() => {});
 const CART_HEADING_ID = 'cart-heading';
 
 /** After a line is removed its row is gone and focus fell to <body>: move it
- *  to the next (else previous) row's Remove button, else the cart heading. */
+ *  to the next (else previous) row's Remove button, else the cart heading.
+ *  Only from <body>: focus the buyer has already moved elsewhere stays put. */
 function focusAfterRemove(sibling: Element | null) {
+  const active = document.activeElement;
+  if (active && active !== document.body) return;
   const target =
     sibling?.querySelector<HTMLElement>('.cart-line-remove') ??
     document.getElementById(CART_HEADING_ID);

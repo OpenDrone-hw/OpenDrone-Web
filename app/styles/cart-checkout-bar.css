@@ -130,7 +130,7 @@
   }
 }
 
-/* Short windows (a phone on its side, 200% zoom on a laptop: 400px of
+/* Short windows (a phone on its side, 200% zoom on a laptop: 500px of
    height or less): the avail strip, the floating header and the checkout bar
    together took most of the viewport (WCAG 1.4.4 / 1.4.10 usability). On the
    cart they scroll away with the page instead of staying pinned, and the

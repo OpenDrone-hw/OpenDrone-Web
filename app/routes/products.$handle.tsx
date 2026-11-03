@@ -123,6 +123,10 @@ import type {
   DownloadKind,
 } from '~/lib/product-content';
 
+/** The new-tab notice for links whose ::after is taken (app.css excludes them
+ *  from the generic a[target=_blank]::after notice). */
+const NEW_TAB_NOTE = ' (opens in a new tab)';
+
 /** The campaign (content/preorders.json): each SKU's price steps. */
 const CAMPAIGN_CONFIG = parseCampaignConfig(preorders);
 /** The builds (content/builds.json): the "Build with this" card and the
@@ -2399,6 +2403,7 @@ function ProductPage() {
                   rel="noopener noreferrer"
                   className="open-source-card open-source-card--github"
                 >
+                  <span className="sr-only">{NEW_TAB_NOTE}</span>
                   <p className="open-source-card-label">{c.title}</p>
                   <Txt
                     id="product-chrome.os_card_repo_title"
@@ -2432,6 +2437,7 @@ function ProductPage() {
                 rel="noopener noreferrer"
                 className="open-source-card open-source-card--github"
               >
+                <span className="sr-only">{NEW_TAB_NOTE}</span>
                 <Txt
                   id="product-chrome.os_card_study_label"
                   as="p"
@@ -2506,6 +2512,7 @@ function ProductPage() {
               rel="noopener noreferrer"
               className="open-source-card open-source-card--oshwa"
             >
+              <span className="sr-only">{NEW_TAB_NOTE}</span>
               <OshwaMark
                 uid={activeOshwaUid}
                 title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} ${activeOshwaUid}`}
@@ -2524,6 +2531,7 @@ function ProductPage() {
               rel="noopener noreferrer"
               className="open-source-card open-source-card--cern"
             >
+              <span className="sr-only">{NEW_TAB_NOTE}</span>
               <Txt
                 id="product-chrome.os_card_license_label"
                 as="p"
@@ -2551,6 +2559,7 @@ function ProductPage() {
             rel="noopener noreferrer"
             className="open-source-card open-source-card--help"
           >
+            <span className="sr-only">{NEW_TAB_NOTE}</span>
             <Txt
               id="product-chrome.os_card_help_label"
               as="p"
@@ -3264,6 +3273,7 @@ function ProductPage() {
                   className="trust-chip trust-chip-oshwa trust-chip-link"
                   title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} ${activeOshwaUid}`}
                 >
+                  <span className="sr-only">{NEW_TAB_NOTE}</span>
                   <img
                     src="/logos/oshwa.svg"
                     alt=""

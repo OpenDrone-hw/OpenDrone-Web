@@ -13,6 +13,8 @@
   "line_decrease_aria": "Decrease quantity",
   "line_increase_aria": "Increase quantity",
   "line_remove_named": "Remove {name}",
+  "line_removed": "Removed {name}",
+  "line_qty_announce": "Quantity {count}, {name}",
   "register_subtotal": "Subtotal",
   "checkout_cta": "Checkout",
   "checkout_updating": "Updating cart…",

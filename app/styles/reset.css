@@ -94,8 +94,10 @@ form {
    `base` (preflight, which it must still beat) and `components`/`utilities`
    (which must beat it). Unlayered, it overrode layered field-border utilities
    (WCAG 1.4.11). Layer order is fixed by first appearance, and this sheet loads
-   before app.css, so the full Tailwind order is declared here. */
-@layer theme, base, reset-input, components, utilities;
+   before app.css, so the full Tailwind order is declared here, Tailwind 4.3's
+   `properties` layer first (the @property fallbacks older Safari and Firefox
+   need for shadows, rings, rotate, translate and gradients). */
+@layer properties, theme, base, reset-input, components, utilities;
 
 @layer reset-input {
   input {
