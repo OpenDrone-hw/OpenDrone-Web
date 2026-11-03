@@ -271,5 +271,5 @@ export function usOnHold(country: string | null | undefined, usRate: number | nu
 export const US_HOLD_COPY: Record<Locale, {line: string; trade: string; link: string}> = {
   en: {line: 'Not shipping to the US yet.', trade: 'Shops and retailers:', link: 'contact us'},
   nl: {line: 'Nog geen verzending naar de VS.', trade: 'Winkels en verkopers:', link: 'neem contact op'},
-  fr: {line: 'Pas encore de livraison aux États-Unis.', trade: 'Boutiques et revendeurs :', link: 'contactez-nous'},
+  fr: {line: 'Pas encore de livraison aux États-Unis.', trade: 'Boutiques et revendeurs :', link: 'contactez-nous'},
 };

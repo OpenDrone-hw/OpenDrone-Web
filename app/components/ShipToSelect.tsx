@@ -1,5 +1,5 @@
 import {useEffect, useId, useMemo, useRef, useState} from 'react';
-import {useRevalidator} from 'react-router';
+import {useRevalidator, useRouteLoaderData} from 'react-router';
 import {copyText} from '~/lib/copy';
 import {countryName, shipCountryPicker} from '~/lib/shipping-rates';
 import {groupShipCountries} from '~/lib/ship-to-order';
@@ -43,6 +43,9 @@ export function ShipToSelect({
   // error screen. A switch that lands reads every active loader again, so
   // the page behind quotes the new market.
   const revalidator = useRevalidator();
+  // The root loader data the switch starts from: the pending country clears
+  // once it is replaced (PageLayout reconcilePendingShipTo).
+  const rootData = useRouteLoaderData('root');
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [value, setValue] = useState(country ?? '');
@@ -68,8 +71,9 @@ export function ShipToSelect({
     if (!next || next === country || busy) return;
     setValue(next);
     // The bar, ship lines and the cart's destination gate follow at once;
-    // cleared once the loaders have returned the same country (or on failure).
-    setPendingShipTo(next);
+    // cleared when the root loader returns new data (PageLayout), on failure,
+    // or after a timeout (lib/pending-ship-to.ts).
+    setPendingShipTo(next, rootData);
     restoreFocus = document.activeElement === selectRef.current;
     setBusy(true);
     setFailed(false);
@@ -91,10 +95,10 @@ export function ShipToSelect({
       onChanged?.(reply);
       await revalidator.revalidate();
     } catch {
+      setPendingShipTo(null);
       setFailed(true);
       setValue(country ?? '');
     } finally {
-      setPendingShipTo(null);
       setBusy(false);
       onBusy?.(false);
       // Still mounted: put focus back if the re-render lost it. Remounted:

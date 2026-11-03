@@ -11,6 +11,7 @@ import {
   geoShipText,
 } from '~/lib/geo-availability';
 import {usePendingShipTo, withPendingShipTo} from '~/lib/pending-ship-to';
+import {shippingQuote} from '~/lib/shipping-rates';
 import type {RootLoader} from '~/root';
 import {shipMonth, shortShipPromise} from '~/lib/product-content';
 import {
@@ -33,8 +34,10 @@ const BATCH_ONE = batchOnePromises(preorders);
  * picked country at once instead of after the loaders return.
  */
 export function useShipGeo() {
-  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
-  return withPendingShipTo(geo, usePendingShipTo(), geoAvailabilityRegion);
+  const root = useRouteLoaderData<RootLoader>('root');
+  // A blocked IP country stays there (cartQuoteCountry): no pending country is shown.
+  const ipBlocked = shippingQuote(root?.visitorCountry ?? null)?.kind === 'blocked';
+  return withPendingShipTo(root?.geo, usePendingShipTo(), geoAvailabilityRegion, ipBlocked);
 }
 
 /**

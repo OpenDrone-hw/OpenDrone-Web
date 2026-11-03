@@ -238,7 +238,7 @@ export default function CartPage() {
           cart={cart}
           info={info}
           payments={payments}
-          country={pendingShipTo ?? cartQuoteCountry(country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
+          country={cartQuoteCountry(pendingShipTo ?? country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
           usRate={rootData?.usShippingRate ?? null}
           shippingFrom={shippingFrom}
           onSplit={(items) => updateRemoved([...removed.filter((r) => !items.some((i) => i.id === r.id)), ...items])}
@@ -575,7 +575,9 @@ function PopulatedCart({
   const revalidator = useRevalidator();
   const [inFlight, setInFlight] = useState(0);
   const onPending = useCallback((delta: number) => setInFlight((n) => Math.max(0, n + delta)), []);
-  const pending = inFlight > 0 || revalidator.state !== 'idle';
+  // A Ship to switch in flight anywhere (here or in the drawer) also holds Checkout.
+  const switching = usePendingShipTo() != null;
+  const pending = inFlight > 0 || revalidator.state !== 'idle' || switching;
   // Early bird prices stay on stock lines, but the note drops "preorder"
   // unless a line is a pre-order for this visitor (not batch 1 stock in a
   // stock region).

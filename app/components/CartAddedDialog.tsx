@@ -20,7 +20,7 @@ import {CompatAlert} from '~/components/commerce/CompatAlert';
 import {compatForLines, compatLocale} from '~/lib/cart-compat';
 import {LineShipChip, heldBy, parcelDelay} from './ParcelChip';
 import {paysEuVat} from '~/lib/visitor-country';
-import {countryName, notSoldDirect, offersPickup, shippingQuote} from '~/lib/shipping-rates';
+import {cartQuoteCountry, countryName, notSoldDirect, offersPickup, shippingQuote} from '~/lib/shipping-rates';
 import {
   buildSuggestionSpecs,
   extraSuggestionSpecs,
@@ -156,7 +156,11 @@ export function CartAddedDialog() {
   const subtotal = summary.subtotal ?? null;
   // Same rule as the buy module and the cart: "incl. VAT" only where EU VAT
   // applies.
-  const visitor = pendingShipTo ?? rootData?.visitorCountry ?? null;
+  // `visitor` is what the drawer shows (a Ship to switch in flight applied);
+  // `confirmed` is what every request sends. A blocked IP country stays.
+  const confirmed = rootData?.visitorCountry ?? null;
+  const visitor = cartQuoteCountry(pendingShipTo ?? confirmed, confirmed, rootData?.usShippingRate ?? null);
+  const switching = pendingShipTo != null;
   const vatIncluded = paysEuVat(visitor);
   // The same destination availability gate as the product and cart.
   const usRate = rootData?.usShippingRate ?? null;
@@ -206,14 +210,14 @@ export function CartAddedDialog() {
     .slice(0, 3);
 
   const addPart = async (part: BuildSuggestion) => {
-    if (!beginCartAdd()) return;
+    if (switching || !beginCartAdd()) return;
     setBusy(part.sku);
     setFailed(null);
     try {
       setSummary(
         await postCartAdd(
           CART_ACTION,
-          withCountry([['sku', part.sku], ['qty', String(part.quantity)]], visitor),
+          withCountry([['sku', part.sku], ['qty', String(part.quantity)]], confirmed),
         ),
       );
       trackEvent('Recommendation Add', {
@@ -236,11 +240,11 @@ export function CartAddedDialog() {
   // Parts already in the cart (added from here, say) leave the bundle.
   const bundle = suggestions.filter((p) => !summary.lines.some((l) => l.sku === p.sku));
   const addBundle = async () => {
-    if (!bundle.length || !beginCartAdd()) return;
+    if (switching || !bundle.length || !beginCartAdd()) return;
     setBusy('bundle');
     setFailed(null);
     try {
-      setSummary(await postCartAdd(CART_ACTION, withCountry(bundleFields(bundle), visitor)));
+      setSummary(await postCartAdd(CART_ACTION, withCountry(bundleFields(bundle), confirmed)));
       trackEvent('Recommendation Add', {
         props: {
           product: bundle.map((p) => p.handle).join(','),
@@ -366,7 +370,7 @@ export function CartAddedDialog() {
                     <button
                       type="button"
                       className="cart-added-add"
-                      disabled={inCart || busy !== null}
+                      disabled={inCart || busy !== null || switching}
                       aria-busy={busy === part.sku || undefined}
                       onClick={() => void addPart(part)}
                     >
@@ -392,7 +396,7 @@ export function CartAddedDialog() {
           parts={bundle}
           label={buildLabel}
           cartPromises={cartPromises}
-          busy={busy === 'bundle'}
+          busy={busy === 'bundle' || switching}
           failed={failed === 'bundle'}
           onAdd={() => void addBundle()}
         />
@@ -514,7 +518,7 @@ export function CartAddedDialog() {
             onSubmit={() => trackCheckoutClick(subtotal, 'dialog')}
           >
             <input type="hidden" name="intent" value="checkout" />
-            {visitor ? <input type="hidden" name="country" value={visitor} /> : null}
+            {confirmed ? <input type="hidden" name="country" value={confirmed} /> : null}
             {/* The drawer shows the one-parcel line, so checkout may go on. */}
             {mixed ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
             <div className="cart-bar-sum">
@@ -526,7 +530,12 @@ export function CartAddedDialog() {
               ) : null}
               <ShipChip promise={orderPromise} ifFunded className="cart-bar-ship" />
             </div>
-            <button type="submit" className="cart-added-checkout cart-bar-checkout">
+            <button
+              type="submit"
+              className="cart-added-checkout cart-bar-checkout"
+              disabled={switching}
+              aria-busy={switching || undefined}
+            >
               {copyText('cart.checkout_cta') ?? 'Checkout'}
             </button>
           </form>
