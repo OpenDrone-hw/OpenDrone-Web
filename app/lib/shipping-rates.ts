@@ -317,6 +317,24 @@ export function queryCountryCookie(request: Request): string | null {
 }
 
 /**
+ * The country the batch 1 ship line follows (app/lib/geo-availability.ts):
+ * where the visitor orders to. A blocked IP country, else `?country`, else
+ * the picked destination (`od_ship_country`), else `CF-IPCountry`. Unlike
+ * `shipCountryForRequest` it never guesses from `Accept-Language`: a browser
+ * language is no reason to say "in stock in Belgium", so a visitor with no
+ * known country keeps the batch promise (the `fallback` region).
+ */
+export function geoCountryForRequest(request: Request): string | null {
+  const blocked = blockedIpCountry(request);
+  if (blocked) return blocked;
+  return (
+    isoCode(new URL(request.url).searchParams.get('country')) ??
+    shipCountryFromCookie(request.headers.get('Cookie')) ??
+    isoCode(request.headers.get('CF-IPCountry'))
+  );
+}
+
+/**
  * The one country the buy button (root loader) and the server-side add
  * refusal read: `shipCountryForRequest`, also used by the cart and checkout.
  */

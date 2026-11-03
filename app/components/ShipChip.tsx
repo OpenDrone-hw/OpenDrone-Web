@@ -1,6 +1,6 @@
 import {useRouteLoaderData} from 'react-router';
 import {copyText} from '~/lib/copy';
-import {batchOnePromises, geoShipText} from '~/lib/geo-availability';
+import {GEO_BAR_SHORT, batchOnePromises, geoInStock, geoShipText} from '~/lib/geo-availability';
 import type {RootLoader} from '~/root';
 import {shipMonth, shortShipPromise} from '~/lib/product-content';
 import {
@@ -27,6 +27,42 @@ export function useGeoShipText(promise: string | null | undefined): string | nul
   const geo = useRouteLoaderData<RootLoader>('root')?.geo;
   return geo && promise && BATCH_ONE.has(promise) ? geoShipText(geo.region, geo.locale) : null;
 }
+
+/**
+ * {@link useGeoShipText} as a function of the promise, for a caller that
+ * picks the promise after its hooks ran: `geoLine(promise)`. With `short`,
+ * the bar's phone line ("In stock, ships in days"), for chips.
+ */
+export function useGeoShipLine(short = false): (promise: string | null | undefined) => string | null {
+  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  return (promise) => {
+    if (!geo || !promise || !BATCH_ONE.has(promise) || geo.region === 'fallback') return null;
+    return short ? GEO_BAR_SHORT[geo.locale][geo.region] : geoShipText(geo.region, geo.locale);
+  };
+}
+
+/**
+ * True when the visitor's next unit of this SKU is batch 1 stock and their
+ * region reads it as in stock (the EU line): the buy button says "Add to
+ * cart", not "Pre-order", and the pre-order terms link drops. Same source as
+ * the bar and `useGeoShipText` (root loader `geo`), so the SSR and the
+ * hydrated page agree.
+ */
+export function useGeoInStock(campaign: Pick<CampaignState, 'paidStock' | 'shipPromise'> | null | undefined): boolean {
+  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  return geoInStock(geo?.region, campaign, BATCH_ONE);
+}
+
+/**
+ * True for a batch 1 promise the visitor's region reads as in stock (the EU
+ * line): a cart line from Belgian stock, with no delivery date and no early
+ * bird preorder note. Root loader `geo`, so SSR and hydration agree.
+ */
+export function useGeoEuStockLine(): (promise: string | null | undefined) => boolean {
+  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  return (promise) => geo?.region === 'eu' && Boolean(promise && BATCH_ONE.has(promise));
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**

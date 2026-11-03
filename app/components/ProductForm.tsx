@@ -1,6 +1,7 @@
 import {useLocation, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useState} from 'react';
 import {AddToCartButton} from './AddToCartButton';
+import {useGeoInStock} from './ShipChip';
 import {useComingSoon, useProductStatus} from '~/lib/coming-soon';
 import {copyFill, copyText} from '~/lib/copy';
 import {formatPrice} from '~/lib/catalog';
@@ -80,8 +81,11 @@ export function ProductForm({
   // Pre-order products take the order now and ship later, so the CTA says
   // so; the bundle CTA is the caller's label and is unchanged.
   const productStatus = useProductStatus(selectedVariant?.product?.handle);
+  // Batch 1 stock reads as stock where the bar says "in stock" (the EU): the
+  // buyer adds it to the cart, they do not pre-order it.
+  const geoInStock = useGeoInStock(selectedVariant?.campaign);
   const ctaLabelAvailable =
-    productStatus === 'preorder'
+    productStatus === 'preorder' && !geoInStock
       ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
       : (copyText('product-chrome.buy_cta_add') ?? 'Add to cart');
   const ctaLabelSoldOut = copyText('product-chrome.buy_stock_out') ?? 'Sold out';

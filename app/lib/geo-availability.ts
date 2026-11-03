@@ -14,9 +14,12 @@
  * The line replaces the batch 1 promise wherever a ship chip or ship line
  * shows it (product page, availability rows, cart, added-to-cart dialog);
  * the promise text itself, the checkout line property and the allocation are
- * unchanged. The country comes from `visitorCountry` (the header, with
- * `?country=XX` to check a page as seen from elsewhere), not from the ship-to
- * cookie the cart and allocation read.
+ * unchanged. The country is where the visitor orders to
+ * (`geoCountryForRequest` in shipping-rates.ts: `?country=XX`, the picked
+ * destination cookie the cart and allocation read, else `CF-IPCountry`), so a
+ * visitor who switches destination reads that destination's line, and
+ * LocationNotice says so once. In the `eu` region a batch 1 SKU is sold as
+ * stock: "Add to cart", not "Pre-order" (`useGeoInStock`).
  *
  * Bundler-free (type-only imports) so the node:test suites can load it.
  */
@@ -75,6 +78,19 @@ export function geoOfferAvailability(region: GeoAvailabilityRegion): GeoOfferAva
  *  it is sold out, nor for a buyer whose region it does not ship to). */
 export function hasBatchOne(campaign: {paidStock: boolean} | null | undefined): boolean {
   return Boolean(campaign?.paidStock);
+}
+
+/**
+ * True when the visitor's next unit is batch 1 stock (`paidStock`, its
+ * promise one of `batchOne`) and their region reads it as in stock: the EU.
+ * The buy button then says "Add to cart", not "Pre-order".
+ */
+export function geoInStock(
+  region: GeoAvailabilityRegion | null | undefined,
+  campaign: {paidStock: boolean; shipPromise?: string | null} | null | undefined,
+  batchOne: ReadonlySet<string>,
+): boolean {
+  return region === 'eu' && hasBatchOne(campaign) && Boolean(campaign?.shipPromise && batchOne.has(campaign.shipPromise));
 }
 
 /** The ship promises of paid batch 1 stock in `content/preorders.json`. */

@@ -43,12 +43,13 @@ function catalogFor(region: Region): Catalog {
 }
 
 function cartLine(id: string, merchandiseId: string, sku: string, attributes: Array<{key: string; value: string}>): ShopifyCartLine {
-  const promise = attributes.find((a) => a.key === 'Preorder')?.value ?? null;
+  const promise = attributes.find((a) => a.key === 'Preorder')?.value ?? attributes.find((a) => a.key === '_ship_promise')?.value ?? null;
+  const euStock = attributes.some((a) => a.key === '_ship_promise');
   const region = attributes.find((a) => a.key === '_ship_region')?.value;
   const deliveryBy = attributes.find((a) => a.key === 'Delivery by')?.value;
   return {
     id, merchandiseId, quantity: 1, title: sku, variantTitle: sku, handle: 'openfc-lite', sku, image: null,
-    selectedOptions: [], shipPromise: promise, ...(deliveryBy ? {deliveryBy} : {}), ...(region ? {shipRegion: region} : {}),
+    selectedOptions: [], shipPromise: promise, ...(deliveryBy ? {deliveryBy} : {}), ...(region ? {shipRegion: region} : {}), ...(euStock ? {euStock} : {}),
     total: {amount: '31.2', currencyCode: 'EUR'},
   };
 }
@@ -77,9 +78,10 @@ function shopify(country: string | null, lines: ShopifyCartLine[]) {
           if (l.id !== update.id) return l;
           const attrs = update.attributes ?? [];
           const region = attrs.find((a) => a.key === '_ship_region')?.value;
-          const {shipRegion: _drop, deliveryBy: _dropDate, ...rest} = l;
+          const {shipRegion: _drop, deliveryBy: _dropDate, euStock: _dropStock, ...rest} = l;
           const deliveryBy = attrs.find((a) => a.key === 'Delivery by')?.value;
-          return {...rest, shipPromise: attrs.find((a) => a.key === 'Preorder')?.value ?? null, ...(deliveryBy ? {deliveryBy} : {}), ...(region ? {shipRegion: region} : {})};
+          const euStock = attrs.some((a) => a.key === '_ship_promise');
+          return {...rest, shipPromise: attrs.find((a) => a.key === 'Preorder')?.value ?? attrs.find((a) => a.key === '_ship_promise')?.value ?? null, ...(deliveryBy ? {deliveryBy} : {}), ...(region ? {shipRegion: region} : {}), ...(euStock ? {euStock} : {})};
         });
       }
       return view();
@@ -87,7 +89,8 @@ function shopify(country: string | null, lines: ShopifyCartLine[]) {
   };
 }
 
-const euLine = () => cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [{key: 'Preorder', value: EU_PROMISE}, {key:'Delivery by',value:'30 November 2026'}]);
+// An EU batch 1 line: "In stock in Belgium" at checkout, the promise hidden.
+const euLine = () => cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [{key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'}, {key: '_ship_promise', value: EU_PROMISE}]);
 
 function switchRequest(country: string): Request {
   return new Request('https://opendrone.be/api/shopify/cart-country', {
@@ -400,7 +403,9 @@ describe('international cart country switches', () => {
       assert.match(fake.state.lines[1].shipPromise??'',/31 March 2027/);
       await handleCartCountry(switchRequest('BE'),ENV,dependencies);
       assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
-      assert.equal(fake.state.lines[0].deliveryBy,'30 November 2026');
+      // Back in the EU it is Belgian stock again: no delivery date.
+      assert.ok(!fake.state.lines[0].deliveryBy);
+      assert.equal(fake.state.lines[0].euStock,true);
       assert.equal(fake.state.lines[1].shipPromise,null);
       assert.ok(fake.state.lines.every(line=>line.shipRegion===undefined));
     }

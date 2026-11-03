@@ -2,6 +2,9 @@ import {createContext, useCallback, useContext, useEffect, useRef, useState} fro
 import {Form, Link, redirect, useLoaderData, useRevalidator, useRouteLoaderData} from 'react-router';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import type {Route} from './+types/cart.$';
+import {compatForLines, compatLocale} from '~/lib/cart-compat';
+import {readLocaleCookie} from '~/lib/i18n';
+import {CompatAlert} from '~/components/commerce/CompatAlert';
 import {fetchPaymentMethods, getCart, updateCartLines, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
 import {
   CART_CHECK,
@@ -35,13 +38,13 @@ import {
 import buildsJson from '../../content/builds.json';
 import {isPurchasableStatus, lineDisplayName, setSize, shortShipPromise, variantDisplayName} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
-import {ShipChip, parcelPromise, soonerMonth} from '~/components/ShipChip';
+import {ShipChip, parcelPromise, soonerMonth, useGeoEuStockLine} from '~/components/ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from '~/components/ParcelChip';
 import {trackEvent} from '~/lib/growth/plausible';
 import {BuildBundle, bundleFields} from '~/components/BuildBundle';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {cartQuoteCountry, countryName, isInternationalQuote, offersPickup, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
+import {cartQuoteCountry, countryName, geoCountryForRequest, isInternationalQuote, offersPickup, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
 import {internationalShippingFrom} from '~/lib/international-shipping';
 import '../styles/cart-checkout-bar.css';
 import {usSalesRate} from '~/lib/us-sales';
@@ -140,6 +143,8 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
         setCountry: (id, code) => setCartCountry(context.env, id, code),
         getCart: (id) => getCart(context.env, id),
         updateCartLines: (id, lines) => updateCartLines(context.env, id, lines),
+        // EU stock wording only for a country the page's `geo` knows too.
+        euStockKnown: geoCountryForRequest(request) != null,
       });
       cart = plan.cart;
       catalog = plan.catalog;
@@ -165,7 +170,9 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   const shippingFrom = cart?.lines.length && quote && isInternationalQuote(quote)
     ? {country: quote.country, price: await internationalShippingFrom(context.env, quote.country, cart)}
     : null;
-  return {cart, info, check, payments, country, shippingFrom};
+  // Parts that do not work together: a warning in the visitor's language, never a block.
+  const compat = compatForLines(cart?.lines ?? [], country, compatLocale(readLocaleCookie(request.headers.get('Cookie'))));
+  return {cart, info, check, payments, country, shippingFrom, compat};
 }
 
 type Removed = SplitItem[];
@@ -193,7 +200,7 @@ function checkNotice(check: string | null): string | null {
 }
 
 export default function CartPage() {
-  const {cart, info, check, payments, country, shippingFrom} = useLoaderData<typeof loader>();
+  const {cart, info, check, payments, country, shippingFrom, compat} = useLoaderData<typeof loader>();
   const rootData = useRouteLoaderData<RootLoader>('root');
   // Lines moved out for a second order: kept in this browser so the list
   // survives a reload and the trip through checkout.
@@ -215,6 +222,7 @@ export default function CartPage() {
       {removed.length ? (
         <SplitReminder items={removed} cartHasLines={Boolean(cart?.lines.length)} onChange={updateRemoved} />
       ) : null}
+      {cart?.lines.length ? <CompatAlert alert={compat} /> : null}
       {cart?.lines.length ? (
         <PopulatedCart
           cart={cart}
@@ -459,7 +467,9 @@ function CartSuggestions({cart, group}: {cart: ShopifyCart; group: 'build' | 'ex
 function ParcelPanel({lines}: {lines: ShopifyCartLine[]}) {
   const promises = lines.map((l) => l.shipPromise);
   const promise = parcelPromise(promises) ?? promises.find(Boolean) ?? null;
-  const deliveryBy = latestDeliveryBy(lines);
+  // EU lines from Belgian stock ship in a few days: no preorder delivery date.
+  const euStock = useGeoEuStockLine();
+  const deliveryBy = promises.every((p) => euStock(p)) ? null : latestDeliveryBy(lines);
   if (!promise && !deliveryBy) return null;
   const mixed = new Set(promises.map((p) => p ?? '')).size > 1;
   return (
@@ -538,7 +548,10 @@ function PopulatedCart({
   const [inFlight, setInFlight] = useState(0);
   const onPending = useCallback((delta: number) => setInFlight((n) => Math.max(0, n + delta)), []);
   const pending = inFlight > 0 || revalidator.state !== 'idle';
+  // EU stock lines keep their early bird price, but the note drops "preorder".
+  const euStock = useGeoEuStockLine();
   const anyEarly = useAnyEarlySku(cart.lines.map((line) => line.sku));
+  const stockEarly = useAnyEarlySku(cart.lines.filter((line) => euStock(line.shipPromise)).map((line) => line.sku));
   const wholesale = cartWholesaleCode(cart.discountCodes);
 
   // One parcel per order: when lines ship at different times, the early
@@ -618,7 +631,7 @@ function PopulatedCart({
               </div>
             ) : null}
           </dl>
-          <EarlyBirdNote show={anyEarly} className="cart-summary-note" />
+          <EarlyBirdNote show={anyEarly} stock={stockEarly} className="cart-summary-note" />
           {usBuyer ? (
             <p className="cart-summary-note">
               {cart.subtotal.currencyCode === 'USD'
