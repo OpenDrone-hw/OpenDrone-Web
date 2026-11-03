@@ -127,9 +127,10 @@ export function CartAddedDialog() {
 
   // A navigation (View cart, a product link) closes the drawer.
   useEffect(() => setDetail(null), [pathname]);
-  // The early bird preorder note is for preorder lines, not EU stock lines.
+  // EU stock lines keep their early bird price, but the note drops "preorder".
   const euStock = useGeoEuStockLine();
-  const anyEarly = useAnyEarlySku(summary?.lines.filter((l) => !euStock(l.shipPromise)).map((l) => l.sku) ?? []);
+  const anyEarly = useAnyEarlySku(summary?.lines.map((l) => l.sku) ?? []);
+  const stockEarly = useAnyEarlySku(summary?.lines.filter((l) => euStock(l.shipPromise)).map((l) => l.sku) ?? []);
 
   if (!detail || !summary) return null;
 
@@ -412,7 +413,7 @@ export function CartAddedDialog() {
           ) : null}
           {/* The cart's parts warning, as on /cart: advisory, never blocks checkout. */}
           <CompatAlert alert={compatForLines(summary.lines, visitor, compatLocale((rootData?.locale ?? 'en_US').split('_')[0]))} />
-          {subtotal ? <EarlyBirdNote show={anyEarly} className="cart-added-parcel" /> : null}
+          {subtotal ? <EarlyBirdNote show={anyEarly} stock={stockEarly} className="cart-added-parcel" /> : null}
           {shippingRate ? (
             <p className="cart-added-subtotal">
               <span>{t('shipping_row', 'Shipping to {country}', {country: countryName(visitor ?? '')})}</span>

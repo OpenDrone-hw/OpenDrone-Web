@@ -189,7 +189,7 @@ describe('explainConflicts', () => {
     const [i] = alert.issues;
     assert.equal(i.problem, 'The OpenFC Lite 30×30 has a 30.5 × 30.5 mm mount, but the OpenFrame 3" only takes 25.5 × 25.5 mm / 20 × 20 mm stacks.');
     assert.equal(i.fix, 'Choose the OpenFC Lite 20×20 instead.');
-    assert.deepEqual(i.link, {href: '/products/openfc-lite', label: 'See the OpenFC Lite 20×20'});
+    assert.deepEqual(i.link, {href: '/products/openfc-lite?Model=20%C3%9720', label: 'See the OpenFC Lite 20×20'});
     assert.match(alert.note, /still check out/);
   });
 

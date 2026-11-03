@@ -18,11 +18,16 @@ const text = (id: string, fallback: string) => copyText(`preorder.${id}`) ?? fal
  * while the shop shows prices and at least one listed price is an early bird
  * price.
  */
-export function EarlyBirdNote({show, className = ''}: {show: boolean; className?: string}) {
+export function EarlyBirdNote({show, stock = false, className = ''}: {show: boolean; stock?: boolean; className?: string}) {
   // Prices show while the shop is not coming soon; fail closed without root data.
   const root = useRouteLoaderData('root') as {comingSoon?: boolean} | undefined;
   if (!show || root?.comingSoon !== false) return null;
-  return <p className={`early-note ${className}`.trim()}>{text('early_note', 'Early bird preorder prices.')}</p>;
+  // `stock`: an early bird line ships from EU stock, so no "preorder".
+  return (
+    <p className={`early-note ${className}`.trim()}>
+      {stock ? text('early_note_stock', 'Early bird prices.') : text('early_note', 'Early bird preorder prices.')}
+    </p>
+  );
 }
 
 /** Whether any variant of these products sells at an early bird price. */

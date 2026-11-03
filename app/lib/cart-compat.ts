@@ -104,6 +104,18 @@ function fill(template: string, vars: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (m, k: string) => vars[k] ?? m);
 }
 
+/**
+ * The suggested part's product page with its size selected, in the format
+ * of `variantLink` (shopify-cart-action.ts, not imported: that module is
+ * server-side): `/products/openfc-lite?Model=30%C3%9730`. A part whose name
+ * names no size links to the bare product page.
+ */
+function partLink(part: CompatPart): string {
+  const size = /(\d+×\d+)$/.exec(part.name)?.[1];
+  const query = size ? `?${new URLSearchParams([['Model', size]]).toString()}` : '';
+  return `/products/${encodeURIComponent(part.handle)}${query}`;
+}
+
 export function compatLocale(x: string | null | undefined): CompatLocale {
   return (COMPAT_LOCALES as readonly string[]).includes(x ?? '') ? (x as CompatLocale) : 'en';
 }
@@ -121,7 +133,7 @@ export function explainConflicts(conflicts: readonly CompatConflict[], locale: C
       key: `${c.rule}:${c.a}:${c.b}`,
       problem: fill(msg.problem, vars),
       fix: c.alt ? fill(ui.swap, {alt: catalog[c.alt].name}) : fill(msg.fix, vars),
-      link: {href: `/products/${target.handle}`, label: fill(ui.see, {name: target.name})},
+      link: {href: partLink(target), label: fill(ui.see, {name: target.name})},
     }];
   });
   return {locale, heading: ui.heading, note: ui.note, issues};
