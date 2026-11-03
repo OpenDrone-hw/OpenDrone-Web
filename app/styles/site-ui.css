@@ -2020,8 +2020,10 @@ body:has(.test-banner) .avail-bar {
   right: 0.25rem;
   top: 50%;
   transform: translateY(-50%);
-  width: 1.75rem;
-  height: 1.75rem;
+  /* 24px: inside the 26px strip (overflow hidden), so the inset focus ring is never clipped; still the
+     WCAG 2.2 minimum target. */
+  width: 1.5rem;
+  height: 1.5rem;
   display: grid;
   place-items: center;
   padding: 0;
@@ -2283,3 +2285,68 @@ body:has(.avail-bar) .site-header {
 .co-changed ul, .co-parcels { margin: 0; padding: 0; list-style: none; }
 .co-parcels { display: grid; gap: 0.375rem; margin-top: 0.75rem; font-size: 0.8125rem; }
 .co-parcels li { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+
+/* Location notice (LocationNotice): the ship time for a new destination, once per change. Fixed, out of
+   the flow, empty until an effect fills it, so no layout shift. Bottom right on wide screens, bottom with
+   16px gutters on phones, lifted above the cart's fixed checkout bar while that bar shows. Calm: the card
+   colour with a gold edge, under the menu drawer and dialogs. No slide or fade (nothing to reduce for
+   prefers-reduced-motion); it wraps within calc(100vw - 32px), so nothing clips at 320px or 200% zoom. */
+.location-notice {
+  position: fixed;
+  right: 1.5rem;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  z-index: 70;
+  max-width: min(24rem, calc(100vw - 32px));
+  pointer-events: none;
+}
+.location-notice[data-open] {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 0.5rem 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+  border-left: 3px solid var(--color-gold);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+.location-notice-text {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.location-notice-close {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  margin: -0.25rem 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.location-notice-close:hover { color: var(--color-text); }
+.location-notice-close:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 0; }
+@media (max-width: 640px) {
+  .location-notice {
+    right: 16px;
+    left: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    max-width: none;
+  }
+}
+@media (max-width: 1023px) {
+  body:has(.cart-bar:not(.is-hidden)) .location-notice {
+    bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+}
