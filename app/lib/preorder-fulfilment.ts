@@ -141,7 +141,7 @@ export const PREORDER_ORDERS_QUERY = `#graphql
           nodes { sku name currentQuantity customAttributes { key value } }
         }
         fulfillmentOrders(first: 10) {
-          nodes { id status fulfillmentHolds { id handle reasonNotes } }
+          nodes { id status fulfillBy fulfillmentHolds { id handle reasonNotes } }
         }
       }
     }
@@ -160,6 +160,14 @@ export const RELEASE_MUTATION = `#graphql
   mutation OpenDronePreorderRelease($id: ID!, $holdIds: [ID!]) {
     fulfillmentOrderReleaseHold(id: $id, holdIds: $holdIds) {
       fulfillmentOrder { id status }
+      userErrors { field message }
+    }
+  }
+`;
+
+export const DEADLINE_MUTATION = `#graphql
+  mutation OpenDronePreorderDeadline($ids: [ID!]!, $deadline: DateTime!) {
+    fulfillmentOrdersSetFulfillmentDeadline(fulfillmentOrderIds: $ids, fulfillmentDeadline: $deadline) {
       userErrors { field message }
     }
   }
@@ -197,6 +205,8 @@ export type PreorderOrder = {
     nodes: Array<{
       id: string;
       status: string;
+      /** The fulfillment deadline Shopify shows as "Fulfill by". */
+      fulfillBy?: string | null;
       fulfillmentHolds: Array<{id: string; handle: string | null; reasonNotes: string | null}>;
     }>;
   };
@@ -218,8 +228,12 @@ export type HoldPlan = {
   batches: LineBatch[];
 };
 
+/** Held preorder fulfillment orders whose deadline moves to the ship-by date. */
+export type DeadlinePlan = {deadline: string; ids: string[]};
+
 export type HoldSync = {
   planned: HoldPlan[];
+  deadlines: DeadlinePlan[];
   applied: boolean;
   /** Order name to what failed; the next pass retries it. */
   errors: Record<string, string>;
@@ -690,6 +704,43 @@ export function holdHealth(orders: PreorderOrder[], config: CampaignConfig): {un
   };
 }
 
+/** Fulfillment orders per deadline write. */
+const DEADLINE_CHUNK = 50;
+
+/** The ship-by date the order was sold under, as an end-of-day deadline. */
+function shipByDeadline(config: CampaignConfig, createdAt: string): string {
+  return `${configSoldUnder(config, createdAt).shipsBy}T23:59:59Z`;
+}
+
+/**
+ * Shopify sets "Fulfill by" a business day after the order, so every held
+ * preorder shows as overdue. Each preorder fulfillment order this module
+ * holds, or `plans` is about to hold, gets the ship-by date the order was
+ * sold under instead; one already at or past that date is left alone, so a
+ * pass after the first writes nothing. Grouped by date, one write each.
+ */
+export function planDeadlines(orders: PreorderOrder[], config: CampaignConfig, plans: HoldPlan[] = []): DeadlinePlan[] {
+  const holding = new Map(
+    plans.filter((p) => p.tags.includes(PREORDER_TAG)).map((p) => [p.orderId, new Set(p.hold)]),
+  );
+  const byDate = new Map<string, string[]>();
+  for (const order of orders) {
+    if (!isCountedOrder(order)) continue;
+    const planned = holding.get(order.id);
+    if (!planned && !order.tags.includes(PREORDER_TAG)) continue;
+    const deadline = shipByDeadline(config, order.createdAt);
+    for (const fo of order.fulfillmentOrders.nodes) {
+      if (!HOLDABLE_STATES.has(fo.status)) continue;
+      if (!hasPreorderHold(fo) && !planned?.has(fo.id)) continue;
+      if (fo.fulfillBy && Date.parse(fo.fulfillBy) >= Date.parse(deadline)) continue;
+      const ids = byDate.get(deadline) ?? [];
+      ids.push(fo.id);
+      byDate.set(deadline, ids);
+    }
+  }
+  return [...byDate].map(([deadline, ids]) => ({deadline, ids}));
+}
+
 type UserErrors = Array<{field?: string[] | null; message: string}>;
 
 /**
@@ -704,8 +755,9 @@ export async function syncPreorderHolds(
 ): Promise<HoldSync> {
   const orders = await fetchPreorderOrders(env, config.countFrom, fetcher);
   const planned = planPreorderHolds(orders, config);
+  const deadlines = planDeadlines(orders, config, planned);
   const errors: Record<string, string> = {};
-  if (!apply) return {planned, applied: false, errors};
+  if (!apply) return {planned, deadlines, applied: false, errors};
 
   for (const plan of planned) {
     try {
@@ -739,7 +791,26 @@ export async function syncPreorderHolds(
       errors[plan.orderName] = (error instanceof Error ? error.message : String(error)).slice(0, 200);
     }
   }
-  return {planned, applied: true, errors};
+  // After the holds, so a fulfillment order held this pass is on hold. Keyed
+  // by date, not order name: a failed write never marks an order unheld.
+  for (const {deadline, ids} of deadlines) {
+    for (let i = 0; i < ids.length; i += DEADLINE_CHUNK) {
+      try {
+        const data = await adminGraphql<{fulfillmentOrdersSetFulfillmentDeadline: {userErrors: UserErrors}}>(
+          env,
+          DEADLINE_MUTATION,
+          {ids: ids.slice(i, i + DEADLINE_CHUNK), deadline},
+          fetcher,
+        );
+        const userErrors = data.fulfillmentOrdersSetFulfillmentDeadline.userErrors;
+        if (userErrors.length) throw new Error(userErrors[0].message);
+      } catch (error) {
+        errors[`deadline ${deadline.slice(0, 10)} part ${i / DEADLINE_CHUNK + 1}`] =
+          `deadline: ${(error instanceof Error ? error.message : String(error)).slice(0, 190)}`;
+      }
+    }
+  }
+  return {planned, deadlines, applied: true, errors};
 }
 
 /** The batches of an order read back from its tags, ignoring SKUs whose

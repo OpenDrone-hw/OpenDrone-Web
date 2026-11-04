@@ -18,6 +18,7 @@ import {
   holdHealth,
   holdNote,
   overfullBatches,
+  planDeadlines,
   planPreorderHolds,
   planRelease,
   shipsFromEuStock,
@@ -61,6 +62,8 @@ function order(partial: {
   status?: string;
   foStatus?: string;
   holds?: Array<{id: string; handle: string}>;
+  /** The fulfillment order's "Fulfill by"; omitted: none. */
+  fulfillBy?: string;
   test?: boolean;
   cancelled?: boolean;
   /** Shipping country; omitted: none (EU). */
@@ -108,6 +111,7 @@ function order(partial: {
         {
           id: `gid://shopify/FulfillmentOrder/${seq}`,
           status: partial.foStatus ?? 'OPEN',
+          ...(partial.fulfillBy ? {fulfillBy: partial.fulfillBy} : {}),
           fulfillmentHolds: (partial.holds ?? []).map((h) => ({...h, reasonNotes: null})),
         },
       ],
@@ -119,7 +123,11 @@ function order(partial: {
  *  `orders` and records every mutation. */
 function adminDouble(
   orders: PreorderOrder[],
-  opts: {tagError?: string; variants?: Array<{sku: string; price: string; compareAtPrice: string | null}>} = {},
+  opts: {
+    tagError?: string;
+    deadlineError?: string;
+    variants?: Array<{sku: string; price: string; compareAtPrice: string | null}>;
+  } = {},
 ) {
   const calls: Array<{op: string; variables: Record<string, unknown>}> = [];
   const fetcher = (async (_url: string, init?: RequestInit) => {
@@ -158,6 +166,14 @@ function adminDouble(
         return Response.json({data: {productVariantsBulkUpdate: {userErrors: []}}});
       case 'OpenDronePreorderHold':
         return Response.json({data: {fulfillmentOrderHold: {userErrors: []}}});
+      case 'OpenDronePreorderDeadline':
+        return Response.json({
+          data: {
+            fulfillmentOrdersSetFulfillmentDeadline: {
+              userErrors: opts.deadlineError ? [{field: null, message: opts.deadlineError}] : [],
+            },
+          },
+        });
       case 'OpenDronePreorderTags':
         return Response.json({
           data: {tagsAdd: {userErrors: opts.tagError ? [{field: null, message: opts.tagError}] : []}},
@@ -266,7 +282,7 @@ describe('preorder fulfilment', () => {
     const result = await syncPreorderHolds(ENV, CONFIG, {apply: true, fetcher});
     assert.deepEqual(result.errors, {});
     const ops = calls.map((c) => c.op);
-    assert.deepEqual(ops, ['OpenDronePreorderOrders', 'OpenDronePreorderHold', 'OpenDronePreorderTags']);
+    assert.deepEqual(ops, ['OpenDronePreorderOrders', 'OpenDronePreorderHold', 'OpenDronePreorderTags', 'OpenDronePreorderDeadline']);
     const hold = calls[1].variables as {fulfillmentHold: {reason: string; handle: string; reasonNotes: string}};
     assert.equal(hold.fulfillmentHold.reason, 'OTHER');
     assert.equal(hold.fulfillmentHold.handle, PREORDER_HOLD_HANDLE);
@@ -288,6 +304,75 @@ describe('preorder fulfilment', () => {
     const result = await syncPreorderHolds(ENV, CONFIG, {apply: true, fetcher});
     assert.deepEqual(Object.keys(result.errors), [a.name, b.name]);
     assert.match(result.errors[a.name], /tags: Access denied/);
+  });
+});
+
+describe('fulfillment deadline (Fulfill by)', () => {
+  const held = (fulfillBy?: string) =>
+    order({
+      lines: [['OPENRX-LITE', 1]],
+      tags: ['preorder', 'batch:OPENRX-LITE:1'],
+      foStatus: 'ON_HOLD',
+      holds: [{id: `gid://shopify/FulfillmentHold/${seq + 1}`, handle: PREORDER_HOLD_HANDLE}],
+      ...(fulfillBy ? {fulfillBy} : {}),
+    });
+
+  it('moves a held preorder from the next business day to the ship-by date', () => {
+    const due = held('2026-09-23T11:00:00Z');
+    assert.deepEqual(planDeadlines([due], CONFIG), [
+      {deadline: '2027-03-11T23:59:59Z', ids: [due.fulfillmentOrders.nodes[0].id]},
+    ]);
+  });
+
+  it('leaves a deadline already at the ship-by date, and orders it does not hold', () => {
+    const set = held('2027-03-11T23:59:59Z');
+    // Released: the hold is gone, the order ships now.
+    const released = order({lines: [['OPENRX-LITE', 1]], tags: ['preorder', 'batch:OPENRX-LITE:1']});
+    const euStock = order({lines: [['OPENFC-LITE-2020', 1]], tags: [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1']});
+    const unpaid = order({lines: [['OPENRX-LITE', 1]], status: 'PENDING'});
+    assert.deepEqual(planDeadlines([set, released, euStock, unpaid], CONFIG), []);
+  });
+
+  it('includes a fulfillment order held in the same pass', () => {
+    const fresh = order({lines: [['OPENRX-LITE', 1]], fulfillBy: '2026-09-23T11:00:00Z'});
+    const plans = planPreorderHolds([fresh], CONFIG);
+    assert.deepEqual(planDeadlines([fresh], CONFIG, plans), [
+      {deadline: '2027-03-11T23:59:59Z', ids: [fresh.fulfillmentOrders.nodes[0].id]},
+    ]);
+  });
+
+  it('uses the ship-by date an order was sold under', () => {
+    const config = parseCampaignConfig({
+      countFrom: '2026-09-21',
+      endsOn: '2026-12-31', shipsBy: '2027-03-11',
+      priceTiers: [],
+      pendingShips: 'ships about 10 weeks after its target is reached',
+      skus: {'OPENRX-LITE': {batches: [{units: 250}, {units: 1000}]}},
+      soldUnder: {before: '2026-09-22T12:00:00Z', shipsBy: '2027-03-01', paidShips: 'ships late October 2026', deliveryBy: '2027-03-15', deliveryByUS: '2027-03-31'},
+    });
+    const early = held('2026-09-23T11:00:00Z');
+    early.createdAt = '2026-09-22T09:00:00Z';
+    assert.equal(planDeadlines([early], config)[0].deadline, '2027-03-01T23:59:59Z');
+  });
+
+  it('writes deadlines after holds and tags, and plans them on a dry run', async () => {
+    const due = held('2026-09-23T11:00:00Z');
+    const {fetcher, calls} = adminDouble([due]);
+    const dry = await syncPreorderHolds(ENV, CONFIG, {fetcher});
+    assert.equal(dry.deadlines.length, 1);
+    assert.deepEqual(calls.map((c) => c.op), ['OpenDronePreorderOrders']);
+    const result = await syncPreorderHolds(ENV, CONFIG, {apply: true, fetcher});
+    assert.deepEqual(result.errors, {});
+    const write = calls.find((c) => c.op === 'OpenDronePreorderDeadline');
+    assert.deepEqual(write?.variables, {ids: [due.fulfillmentOrders.nodes[0].id], deadline: '2027-03-11T23:59:59Z'});
+  });
+
+  it('names a failed deadline write by date, never by order', async () => {
+    const due = held('2026-09-23T11:00:00Z');
+    const {fetcher} = adminDouble([due], {deadlineError: 'Access denied'});
+    const result = await syncPreorderHolds(ENV, CONFIG, {apply: true, fetcher});
+    assert.deepEqual(Object.keys(result.errors), ['deadline 2027-03-11 part 1']);
+    assert.match(result.errors['deadline 2027-03-11 part 1'], /deadline: Access denied/);
   });
 });
 
@@ -465,7 +550,7 @@ describe('reconcilePreorders', () => {
     const result = await reconcilePreorders({...ENV, SHOPIFY_PRICE_TIER_WRITE_ENABLED: '0'}, CONFIG, fetcher);
     assert.deepEqual(result.held, [fresh.name]);
     assert.equal(result.priceError, null);
-    assert.deepEqual(calls.map((c) => c.op), ['OpenDronePreorderOrders', 'OpenDronePreorderHold', 'OpenDronePreorderTags']);
+    assert.deepEqual(calls.map((c) => c.op), ['OpenDronePreorderOrders', 'OpenDronePreorderHold', 'OpenDronePreorderTags', 'OpenDronePreorderDeadline']);
   });
 
   it('still holds when the paid counts fail, and records the failure', async () => {
