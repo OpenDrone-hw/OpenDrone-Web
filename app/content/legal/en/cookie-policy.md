@@ -14,21 +14,18 @@ Cookies are small text files placed on your device by a website when you visit i
 
 #### Cookies of opendrone.be and checkout (no consent required)
 
-This site (opendrone.be) sets the cookies below of its own. Checkout runs on Shopify, which sets its own cookies on the checkout pages.
+This site (opendrone.be) sets the cookies below of its own. Checkout is part of this site: you place the order here and pay on the page of the payment provider you choose, which may set its own cookies there.
 
 | Cookie | Purpose | Retention |
 |--------|---------|-----------|
-| `session` (opendrone.be) | Keeps the reference to your Shopify cart once you add a product to your cart | Session |
+| `od_app_cart` (opendrone.be) | Keeps the products in your cart (the variant and quantity of each line, signed so it cannot be altered); set when you add a product to your cart (strictly necessary for the service you request) | 14 days |
+| `od_app_cart_options` (opendrone.be) | Keeps the discount code you entered, whether you chose pickup, and the campaign source of your visit (utm parameters, creator code, referring site and first page) with your cart; signed; set when you add a product from a campaign link, apply a code or choose pickup (strictly necessary for the service you request) | 14 days |
+| `od_app_order` (opendrone.be) | Keeps the number and status token of your last order, so the order status page opens on this device without signing in; set when you place an order (strictly necessary for the service you request) | 30 days |
 | `opendrone_lang` (opendrone.be) | Remembers the language you choose for the legal pages | 1 year |
 | `od_ship_country` (opendrone.be) | Remembers the delivery country you pick in the region switch, in the cart's "Ship to" field or through a link with a country, so that prices, shipping, ship dates and availability are shown for that country; set only when you pick a country (strictly necessary for the service you request) | 1 year |
 | `od_support` (opendrone.be) | Remembers which support tickets this browser may open; set only when you open or find a ticket | 180 days |
-| `__Host-od_sid` (opendrone.be) | Keeps you signed in to your OpenDrone account, also for signing in to chatfpv.com; set only when you sign in (strictly necessary) | 30 days after your last visit, or until you sign out |
-| `__Host-od_oauth` (opendrone.be) | Protects a sign-in in progress against forgery; set when you click Sign in (strictly necessary) | 10 minutes |
-| `__Host-od_logout` (opendrone.be) | Finishes a sign-out started on chatfpv.com; set only during that sign-out (strictly necessary) | 5 minutes |
-| Shopify checkout cookies | Keep your cart, checkout and customer-account sign-in working and prevent payment fraud; set by Shopify on the checkout pages, not on opendrone.be. Shopify's cookie list: https://www.shopify.com/legal/cookies | Session to 1 year, depending on the cookie |
-| Stripe cookies (`m`, `__stripe_mid`, `__stripe_sid`) | Payment fraud prevention: set by Stripe, which processes Shopify Payments, on the checkout pages during payment, not on opendrone.be (strictly necessary for the payment explicitly requested; Art. 10/2 of the Act of 30 July 2018 (as inserted by the Act of 21 December 2021); ePrivacy Directive 2002/58/EC) | Session to 1 year, depending on the cookie |
-
-When chatfpv.com checks whether you are already signed in with your OpenDrone account (silent sign-in), opendrone.be sets no cookie for a visitor who is not signed in.
+| `od_app_acct` (opendrone.be) | Keeps you signed in to your OpenDrone account (a random sign-in token, signed); set only when you sign in with the code or link we email you (strictly necessary) | 30 days after you sign in, or until you sign out |
+| Cookies of the payment provider (Mollie, Stripe or PayPal, depending on the payment method you choose) | Payment and fraud prevention: set by the provider on its own page when we send you there to pay, not on opendrone.be; see the provider's own cookie notice (strictly necessary for the payment explicitly requested; Art. 10/2 of the Act of 30 July 2018 (as inserted by the Act of 21 December 2021); ePrivacy Directive 2002/58/EC). A bank transfer sends you to no provider. | As set by the provider |
 
 #### Storage in your browser
 
@@ -39,12 +36,16 @@ Besides cookies, opendrone.be keeps a few items in your browser's storage (local
 | `od-theme` | localStorage | Remembers whether you chose the light or the dark view | Until you clear browser data |
 | `od-incutec-seen` | localStorage | Remembers that you already opened the Incutec page, so the pointer to it on the home page disappears | Until you clear browser data |
 | `opendrone:split-order` | localStorage | Remembers the items you took out of your cart for a second order, so you can add them back after checkout | 30 days |
-| `od-attribution`, `od-attribution-sent` | sessionStorage | Campaign source of the visit (e.g. a utm parameter) and the first page visited; used for aggregated statistics and, when you add a product to your cart, passed on as an attribute of the order in Shopify | Session |
+| `od-attribution`, `od-attribution-sent` | sessionStorage | Campaign source of the visit (e.g. a utm parameter) and the first page visited; used for aggregated statistics and, when you add a product to your cart, kept with your cart (`od_app_cart_options`) and passed on with your order as an attribute of the order | Session |
 | `od-support-draft:…` | sessionStorage | Keeps what you typed in a support form in this tab, so nothing is lost if sending fails; removed once the message is sent | Session |
 
 #### Website statistics
 
-We use **Plausible Analytics** (Plausible Insights OÜ, Estonia; hosted in the EU) on opendrone.be and on the order confirmation page on checkout.opendrone.be. On that page your browser sends Plausible one purchase event per order with the order value, the currency and the campaign source of your visit, including the creator code if you came through a creator link, under a fixed page address that contains no order details. Plausible sets no cookies, stores nothing in your browser and keeps no IP address: it uses your IP address and browser only to compute a visitor code that changes every day, and keeps only aggregated statistics. We process these statistics on the basis of our legitimate interest (Art. 6.1.f GDPR) to improve the website and to measure which channels and creators lead to orders.
+We use **Plausible Analytics** (Plausible Insights OÜ, Estonia; hosted in the EU) on opendrone.be. When your order is paid, our order system sends Plausible one purchase event per order from our server, with the order value, the currency and the campaign source of your visit, including the creator code if you came through a creator link, the campaign, the delivery country and the products ordered (SKUs), under a fixed page address that contains no order details. So that Plausible accepts the event, it carries the IP address and browser (User-Agent) your browser had when you placed the order; our system keeps them only until the event is sent and then erases them. Plausible sets no cookies, stores nothing in your browser and keeps no IP address: it uses your IP address and browser only to compute a visitor code that changes every day, and keeps only aggregated statistics. We process these statistics on the basis of our legitimate interest (Art. 6.1.f GDPR) to improve the website and to measure which channels and creators lead to orders.
+
+#### Address suggestions
+
+When you type at least three characters of your street in the delivery address at checkout, the text you typed and the country go through our own server to **Geoapify** (Germany), which returns up to five matching addresses. Your IP address and cookies are not passed on, and Geoapify sets no cookie on opendrone.be. The form works without the suggestions.
 
 #### Marketing cookies
 
