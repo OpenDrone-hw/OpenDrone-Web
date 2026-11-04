@@ -80,7 +80,7 @@ in `.dev.vars` and run `npm run dev`.
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
 | `npm run emails:preview` | local gallery of every customer and internal email, per scenario, at desktop and 375 px width; reloads on save (see "Preview emails") |
-| `npm run emails:build` | the same gallery as one self-contained file in the workspace `.review/emails/index.html` (`--out <path>` elsewhere), plus one file per mail in `cards/` |
+| `npm run emails:build` | the same gallery as one self-contained file in the workspace `.review/emails/index.html` (`--out <path>` elsewhere), plus one file per mail in `cards/` | <!-- pointer-check: skip -->
 | `npm run emails:chrome` / `emails:paste` | start the dedicated Shopify Chrome; dry-run or apply the templates into Shopify admin (see "Paste into Shopify admin") |
 | `npm run emails:hash` | sha256 of every pasteable `out/*.html` (`-- --json` for the paste list with notification name and subject) |
 | `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU>` | dry run: the held orders of a batch; `--apply` releases their holds (see "Fulfil a batch") |
@@ -765,7 +765,7 @@ A paid preorder placed before the run closes (`endsOn` in
 `content/preorders.json`, end of day in Brussels) unlocks the `Early Bird`
 role and the private `#early-birds` channel on the OpenDrone Discord, for one
 Discord account per order. `app/lib/early-bird.ts` decides and proves;
-the Discord bot Worker (OpenDrone-hw/discord, `bot/README.md` "Early Bird")
+the Discord bot Worker (OpenDrone-hw/discord, [Early Bird in bot/README.md](https://github.com/OpenDrone-hw/discord/blob/main/bot/README.md#early-bird))
 runs the Discord authorization, records the claim and gives the role.
 
 | Way in | Proof | Route |
@@ -982,7 +982,7 @@ step; `git diff` is the changelog.
 | Tab | Edits | Files |
 |---|---|---|
 | Words | page and product copy | `content/copy/*.json`, `content/products/*.json` |
-| Chapters | product page sections: order, titles, on or off | `content/chapters.json` (created on first save) |
+| Chapters | product page sections: order, titles, on or off | `content/chapters.json` (created on first save) | <!-- pointer-check: skip -->
 | Design | design tokens | `content/theme.json` |
 | Media | browse images and where each is used | read-only, `public/` |
 | Docs | legal pages in en, nl, fr; learn articles | `app/content/legal/**`, `app/content/learn/*.md` |
