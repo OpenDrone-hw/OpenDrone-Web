@@ -65,3 +65,20 @@ describe('background Turnstile', () => {
     assert.match(hook, /appearance: 'interaction-only'/);
   });
 });
+
+describe('ticket confirmation copy', () => {
+  const copy = JSON.parse(readFileSync(new URL('../../../content/copy/support.json', import.meta.url), 'utf8')) as Record<string, string>;
+
+  it('the opened banner names the ticket reference and the emailed copy', () => {
+    assert.match(copy.created_ref, /\{ref\}/);
+    assert.ok(copy.created_mail_on);
+    const page = route('support_.t.$ref.tsx');
+    assert.match(page, /t\('created_ref', \{ref: ticket\.ref\}\)/);
+    assert.match(page, /notify \? ` \$\{t\('created_mail_on'\)\}` : ''/);
+  });
+
+  it('the failure message says what to do', () => {
+    assert.match(copy.err_turnstile, /press send again/);
+    assert.match(copy.err_send, /try again/);
+  });
+});
