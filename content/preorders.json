@@ -4,6 +4,7 @@
   "endsOn": "2026-12-15",
   "confirmed": true,
   "afterEndsOn": "retail",
+  "choiceFrom": "2026-11-11T11:05:00Z",
   "priceTiers": [{"upTo": 100, "off": 0.2}, {"upTo": 250, "off": 0.1}],
   "paidRegions": ["EU"],
   "shipsBy": "2027-03-31",
