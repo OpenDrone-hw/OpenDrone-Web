@@ -1,4 +1,5 @@
 import {batchChoiceOn} from '~/lib/shopify-storefront';
+import {catalogHasPreorders} from '~/lib/catalog';
 import {useEffect} from 'react';
 import {useNonce} from '~/lib/csp';
 import {
@@ -264,6 +265,10 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
 
   return {
     commerceHandoff: commerceHandoff(catalog, hasCart),
+    // Buy now or pre-order on and nothing is pre-order any more (a batch has
+    // landed): an ordinary shop, so the bar and /preorder name no batch. An
+    // empty catalog (a failed read) is never read as "everything in stock".
+    ordinaryShop: batchChoiceOn(context.env) && catalog.products.length > 0 && !catalogHasPreorders(catalog),
     testBanner: context.env.TEST_BANNER?.trim() || null,
     // The app prices the cart and takes the destination at its own cart page: no Ship to select in the drawer.
     appCommerce: appMode,

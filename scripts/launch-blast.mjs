@@ -166,7 +166,7 @@ const PRODUCT_TITLES = {
   openrx: 'OpenRX',
   openesc: 'OpenESC',
   'openfc-lite': 'OpenFC Lite',
-  'openfc-lite-mini': 'OpenFC Lite Mini',
+  'openfc-lite-mini': 'OpenFC Lite 20×20',
   openframe: 'OpenFrame',
 };
 

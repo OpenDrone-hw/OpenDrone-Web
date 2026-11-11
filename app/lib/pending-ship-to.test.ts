@@ -64,7 +64,7 @@ describe('pending Ship to (optimistic destination while a switch is in flight)',
     // Only useShipGeo reads the root loader; every ship hook goes through it.
     assert.doesNotMatch(read('../components/ShipChip.tsx'), /useRouteLoaderData<RootLoader>\('root'\)\?\.geo/);
     assert.match(read('../components/ShipChip.tsx'), /export function useShipGeo\(\)/);
-    assert.match(read('../components/PageLayout.tsx'), /<AvailabilityBar geo=\{shipGeo \?\? geo\} \/>/);
+    assert.match(read('../components/PageLayout.tsx'), /<AvailabilityBar\s+geo=\{shipGeo \?\? geo\}/);
     const cart = read('../routes/cart.$.tsx');
     // Cart Checkout: pending includes a switch in flight anywhere (the drawer too).
     assert.match(cart, /const switching = usePendingShipTo\(\) != null;\s+const pending = inFlight > 0 \|\| revalidator\.state !== 'idle' \|\| switching;/);

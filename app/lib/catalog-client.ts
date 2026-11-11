@@ -13,7 +13,8 @@
  * the Storefront API adapter is `app/lib/shopify-storefront.ts`.
  */
 
-import type {Catalog} from './catalog.ts';
+import {withoutBuyNow, type Catalog} from './catalog.ts';
+import {resolveRegion} from './region.ts';
 import {fetchShopifyCatalog} from './shopify-storefront.ts';
 import {REPLAN_REUSE_MS, memoCatalog, readAndRemember, recentCatalog} from './catalog-memo.ts';
 import {appCommerceEnabled} from './commerce/app-api.ts';
@@ -122,5 +123,12 @@ function catalogReader(
     const campaign = await withCampaign(env, catalog, target);
     return target === 'US' ? withMarketPrices(campaign, market, CAMPAIGN) : withInternationalPrices(campaign, market);
   };
-  return {get, region, forRegion, forBuyer: () => forRegion(region)};
+  // The Buy now lane only where the visitor's region has it (region.ts
+  // `lanes.buyNow`): an EU country, never an unknown one. Without a request
+  // (sitemap, feeds) the catalog is the EU one, unchanged.
+  const buyNowLane = request ? resolveRegion(request, usSalesRate(env) != null).lanes.buyNow : true;
+  return {get, region, forRegion, forBuyer: async () => {
+    const catalog = await forRegion(region);
+    return buyNowLane ? catalog : withoutBuyNow(catalog);
+  }};
 }

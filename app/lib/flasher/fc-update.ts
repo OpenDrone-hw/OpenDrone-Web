@@ -151,7 +151,7 @@ export async function startUpdate(deps: FlowDeps): Promise<FlowResult> {
     const report = {boardName: info.boardName, targetName: info.targetName, manufacturerId: info.manufacturerId};
     board = FLASHER_TARGETS.find((t) => fcTargetProblems({chosen: t, reported: report}).length === 0) ?? null;
     if (!board) {
-      return {kind: 'refused', text: `Not installing: this board is ${info.boardName || info.targetName || 'unknown'}, not an OpenFC-Lite or Lite Mini.`};
+      return {kind: 'refused', text: `Not installing: this board is ${info.boardName || info.targetName || 'unknown'}, not an OpenFC Lite 30×30 or OpenFC Lite 20×20.`};
     }
     if (!deps.gatesOn(board)) return {kind: 'refused', text: boardGatedText(board)};
     deps.onStage('check');

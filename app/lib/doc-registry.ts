@@ -37,13 +37,13 @@ export const DOC_REGISTRY: DocEntry[] = [
   },
   {
     sku: 'openfc-lite',
-    name: 'OpenFC Lite flight controller',
+    name: 'OpenFC Lite 30×30 flight controller',
     status: 'in-preparation',
     legislation: ['EMC Directive 2014/30/EU', 'RoHS Directive 2011/65/EU'],
   },
   {
     sku: 'openfc-lite-mini',
-    name: 'OpenFC Lite Mini flight controller',
+    name: 'OpenFC Lite 20×20 flight controller',
     status: 'in-preparation',
     legislation: ['EMC Directive 2014/30/EU', 'RoHS Directive 2011/65/EU'],
   },

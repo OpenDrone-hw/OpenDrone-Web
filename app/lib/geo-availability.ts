@@ -201,18 +201,47 @@ export const GEO_BANNER_COPY: Record<Locale, Record<KnownGeoRegion, string> & {t
   fr: {title: 'Disponibilité', eu: 'UE', import: 'R.-U., CH, NO', intl: 'Ailleurs', us: 'É.-U.', dismiss: 'Fermer l’avis de disponibilité'},
 };
 
+const GEO_BAR_SHORT_EU: Record<Locale, string> = {en: 'In stock, ships in days', nl: 'Op voorraad, binnen dagen verzonden', fr: 'En stock, expédié sous quelques jours'};
+
 /** The shorter line per region for the bar on phones (one line, no wrap). */
 export const GEO_BAR_SHORT: Record<Locale, Record<KnownGeoRegion, string>> = {
-  en: {eu: 'In stock, ships in days', import: `${shipMonth('en', 'short')} + duties`, intl: `Pre-order, ${shipMonth('en', 'short')}`, us: 'Not shipping to the US yet'},
-  nl: {eu: 'Op voorraad, binnen dagen verzonden', import: `${shipMonth('nl', 'short')} + rechten`, intl: `Pre-order, verzending ${shipMonth('nl', 'short')}`, us: 'Nog geen verzending naar de VS'},
-  fr: {eu: 'En stock, expédié sous quelques jours', import: `${shipMonth('fr')} + droits`, intl: `Précommande, ${shipMonth('fr')}`, us: 'Pas encore de livraison aux É.-U.'},
+  en: {eu: GEO_BAR_SHORT_EU.en, import: `${shipMonth('en', 'short')} + duties`, intl: `Pre-order, ${shipMonth('en', 'short')}`, us: 'Not shipping to the US yet'},
+  nl: {eu: GEO_BAR_SHORT_EU.nl, import: `${shipMonth('nl', 'short')} + rechten`, intl: `Pre-order, verzending ${shipMonth('nl', 'short')}`, us: 'Nog geen verzending naar de VS'},
+  fr: {eu: GEO_BAR_SHORT_EU.fr, import: `${shipMonth('fr')} + droits`, intl: `Précommande, ${shipMonth('fr')}`, us: 'Pas encore de livraison aux É.-U.'},
+};
+
+/** The bar once nothing is pre-order any more (the "ordinary shop", `catalogHasPreorders` false):
+ *  stock everywhere the shop ships, no batch month. Long and short (phone) line per region. */
+export const GEO_STOCK_COPY: Record<Locale, Record<KnownGeoRegion, {long: string; short: string}>> = {
+  en: {
+    eu: {long: GEO_AVAILABILITY_COPY.en.eu, short: GEO_BAR_SHORT_EU.en},
+    import: {long: `In stock in Belgium, ships worldwide. ${GEO_DUTIES_NOTE.en}`, short: 'In stock + duties'},
+    intl: {long: 'In stock in Belgium, ships worldwide.', short: 'In stock, ships worldwide'},
+    us: {long: GEO_AVAILABILITY_COPY.en.us, short: 'Not shipping to the US yet'},
+  },
+  nl: {
+    eu: {long: GEO_AVAILABILITY_COPY.nl.eu, short: GEO_BAR_SHORT_EU.nl},
+    import: {long: `Op voorraad in België, wereldwijd verzonden. ${GEO_DUTIES_NOTE.nl}`, short: 'Op voorraad + rechten'},
+    intl: {long: 'Op voorraad in België, wereldwijd verzonden.', short: 'Op voorraad, wereldwijd verzonden'},
+    us: {long: GEO_AVAILABILITY_COPY.nl.us, short: 'Nog geen verzending naar de VS'},
+  },
+  fr: {
+    eu: {long: GEO_AVAILABILITY_COPY.fr.eu, short: GEO_BAR_SHORT_EU.fr},
+    import: {long: `En stock en Belgique, expédié dans le monde entier. ${GEO_DUTIES_NOTE.fr}`, short: 'En stock + droits'},
+    intl: {long: 'En stock en Belgique, expédié dans le monde entier.', short: 'En stock, expédié partout'},
+    us: {long: GEO_AVAILABILITY_COPY.fr.us, short: 'Pas encore de livraison aux É.-U.'},
+  },
 };
 
 /** The bar's one line: "EU: In stock in Belgium, ships in a few working days" (the visitor's region), or both
- *  regions joined with " · " when the country is unknown. `short` is the phone line. Upper-cased by CSS. */
-export function geoBarText(region: GeoAvailabilityRegion, locale: Locale, short: boolean): string {
+ *  regions joined with " · " when the country is unknown. `short` is the phone line. Upper-cased by CSS.
+ *  `ordinary`: nothing is pre-order any more, so no line names a batch or its month. */
+export function geoBarText(region: GeoAvailabilityRegion, locale: Locale, short: boolean, ordinary = false): string {
   return geoBannerLines(region, locale)
-    .map((l) => `${l.label}: ${(short ? GEO_BAR_SHORT[locale][l.region] : l.text).replace(/\.$/, '')}`)
+    .map((l) => {
+      const text = ordinary ? GEO_STOCK_COPY[locale][l.region][short ? 'short' : 'long'] : short ? GEO_BAR_SHORT[locale][l.region] : l.text;
+      return `${l.label}: ${text.replace(/\.$/, '')}`;
+    })
     .join(' · ');
 }
 

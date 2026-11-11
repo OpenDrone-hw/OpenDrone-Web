@@ -15,6 +15,7 @@ import {LocationNotice} from '~/components/LocationNotice';
 import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
 import type {CommerceHandoff} from '~/lib/shop-links';
 import {AvailabilityBar} from '~/components/AvailabilityBanner';
+import {notSoldNote} from '~/components/AddToCartButton';
 import {useShipGeo} from '~/components/ShipChip';
 import {reconcilePendingShipTo} from '~/lib/pending-ship-to';
 import {availabilityBannerHiddenOn, type GeoAvailabilityRegion} from '~/lib/geo-availability';
@@ -72,7 +73,12 @@ export function PageLayout({
           <RouteAnnouncer />
           {/* Ordering is open: the batch line for the visitor's country, a bar at the very top (under the
               staging strip on staging). Never on /flash or /guides/*. */}
-          {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBar geo={shipGeo ?? geo} /> : null}
+          {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBar
+              geo={shipGeo ?? geo}
+              ordinary={Boolean((rootData as {ordinaryShop?: boolean} | undefined)?.ordinaryShop)}
+              // A country the shop cannot sell to reads the buy box's own words, never a ship date.
+              note={(shipGeo ?? geo)?.region === 'us' ? null : notSoldNote(((shipGeo ?? geo) as {country?: string | null} | null | undefined)?.country ?? null, (rootData as {usShippingRate?: number} | undefined)?.usShippingRate ?? null)}
+            /> : null}
           <Header
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}

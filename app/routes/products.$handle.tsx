@@ -1944,9 +1944,11 @@ function ProductPage() {
   const usRate = rootData?.usShippingRate ?? null;
   const usBuyer = usRate != null && rootData?.visitorCountry === 'US';
   const internationalBuyer = isInternationalQuote(shippingQuote(rootData?.visitorCountry ?? null, undefined, usRate));
-  const vatNote = paysEuVat(rootData?.visitorCountry ?? null)
+  // The wording follows what the region's price includes (region.ts `taxes`).
+  const taxes = rootData?.region?.taxes ?? (paysEuVat(rootData?.visitorCountry ?? null) ? 'eu-vat-included' : null);
+  const vatNote = taxes === 'eu-vat-included'
     ? say('product-chrome.buy_vat_note', 'incl. VAT')
-    : usBuyer && buyPrice?.currencyCode === 'USD'
+    : taxes === 'us-duties-included' && buyPrice?.currencyCode === 'USD'
       ? say('product-chrome.buy_us_price_note', 'Duties included')
       : internationalBuyer
         ? dutiesNote

@@ -123,6 +123,27 @@ export function preorderView(variant: CatalogVariant): CatalogVariant | null {
 }
 
 /**
+ * The catalog without the Buy now lane: every board whose primary offer is
+ * Buy now becomes its pre-order offer (or sold out without one). For a
+ * buyer whose region has no Buy now lane (`Region.lanes.buyNow`, app/lib/
+ * region.ts: outside the EU, or no known country), so the home, the product
+ * page and the cart never show an offer the express checkout would refuse.
+ */
+export function withoutBuyNow<T extends Pick<Catalog, 'products'>>(catalog: T): T {
+  if (!catalog.products.some((product) => product.variants.some((variant) => variant.offer === 'buy_now'))) return catalog;
+  return {
+    ...catalog,
+    products: catalog.products.map((product) => ({
+      ...product,
+      variants: product.variants.map((variant) => {
+        if (variant.offer !== 'buy_now') return variant;
+        return preorderView(variant) ?? {...variant, offer: 'preorder', availability: 'sold_out', ship_promise: null, campaign: null, preorder_offer: undefined, buy_now: undefined};
+      }),
+    })),
+  };
+}
+
+/**
  * What a variant can be bought as, read only from the catalog (Shopify
  * variants and policy) and the campaign file (content/preorders.json): zero,
  * one or two offers. `in_stock` ships now (batch 1 today, every product once

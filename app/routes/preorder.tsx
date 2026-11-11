@@ -2,7 +2,7 @@ import type {Route} from './+types/preorder';
 import {ChatFpvWidget} from '~/components/ChatFpvWidget';
 import {chatFpvWidgetSrc} from '~/lib/support/chatfpv';
 import {InfoHint} from '~/components/InfoHint';
-import {Link, useLoaderData, useRouteLoaderData} from 'react-router';
+import {Link, redirect, useLoaderData, useRouteLoaderData} from 'react-router';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
@@ -15,7 +15,7 @@ import {AddToCartButton} from '~/components/AddToCartButton';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {Txt} from '~/components/Txt';
 import {copy, copyText} from '~/lib/copy';
-import {formatPrice, toCards} from '~/lib/catalog';
+import {catalogHasPreorders, formatPrice, toCards} from '~/lib/catalog';
 import {comingSoonFlag} from '~/lib/coming-soon';
 import {
   isPurchasableStatus,
@@ -183,6 +183,10 @@ export async function loader({context}: Route.LoaderArgs) {
   const latestDay = latestShipDay(CAMPAIGN);
   // Buy now or pre-order: the stacks this visitor can buy now, per size.
   const choice = batchChoiceOn(context.env);
+  // Nothing is pre-order any more (a batch has landed): the shop is an
+  // ordinary shop and this page has nothing to explain. A failed catalog
+  // read (no products) keeps the page.
+  if (choice && catalog.products.length > 0 && !catalogHasPreorders(catalog)) throw redirect('/products', 302);
   const stacks: HowOrderingStack[] = choice
     ? resolveHeroBuilds(parseBuilds(buildsJson), catalog, true).flatMap((build) => {
         const offer = stackOffer(build);
