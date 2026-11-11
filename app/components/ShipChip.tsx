@@ -37,7 +37,8 @@ export function useShipGeo() {
   const root = useRouteLoaderData<RootLoader>('root');
   // A blocked IP country stays there (cartQuoteCountry): no pending country is shown.
   const ipBlocked = shippingQuote(root?.visitorCountry ?? null)?.kind === 'blocked';
-  return withPendingShipTo(root?.geo, usePendingShipTo(), geoAvailabilityRegion, ipBlocked);
+  const usOpen = root?.usShippingRate != null;
+  return withPendingShipTo(root?.geo, usePendingShipTo(), (country) => geoAvailabilityRegion(country, usOpen), ipBlocked);
 }
 
 /**

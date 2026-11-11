@@ -223,7 +223,7 @@ export async function loader(args: Route.LoaderArgs) {
     // read it, and LocationNotice tells the visitor when it changes.
     geo: (() => {
       const country = geoCountryForRequest(args.request);
-      return {country, region: geoAvailabilityRegion(country), locale: urlLocale ?? getLocaleFromRequest(args.request)};
+      return {country, region: geoAvailabilityRegion(country, usRate != null), locale: urlLocale ?? getLocaleFromRequest(args.request)};
     })(),
     // Present only while US sales are open: the flat US rate in USD.
     ...(usRate != null ? {usShippingRate: usRate} : {}),

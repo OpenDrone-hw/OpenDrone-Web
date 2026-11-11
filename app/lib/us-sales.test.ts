@@ -29,11 +29,12 @@ const EU_FIRST: CampaignBatch[] = [
 ];
 
 describe('US sales gate', () => {
-  it('keeps the US on hold in production: PUBLIC_US_SALES is "0" (founder 2026-11-03)', () => {
+  it('sells the March 2027 batch to the US in production: PUBLIC_US_SALES is "1" (founder 2026-11-05, 2026-11-11)', () => {
     const toml = fs.readFileSync(new URL('../../wrangler.production.toml', import.meta.url), 'utf8');
     const gate = /^PUBLIC_US_SALES = "([^"]*)"/m.exec(toml)?.[1];
-    assert.equal(gate, '0');
-    assert.equal(usSalesRate({PUBLIC_US_SALES: gate}), null);
+    assert.equal(gate, '1');
+    assert.equal(usSalesRate({PUBLIC_US_SALES: gate}), US_SALES.rate);
+    assert.equal(usSalesRate({PUBLIC_US_SALES: '0'}), null);
   });
 
   it('opens only with the gate "1" and a committed rate', () => {

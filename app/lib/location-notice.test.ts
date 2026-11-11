@@ -47,6 +47,7 @@ describe('noticeText', () => {
     );
     assert.equal(noticeText('JP', 'en'), 'Shipping to Japan: Pre-order, ships March 2027.');
     assert.equal(noticeText('US', 'en'), 'Shipping to United States: Not shipping to the US yet.');
+    assert.equal(noticeText('US', 'en', true), 'Shipping to United States: Pre-order, ships March 2027.');
   });
   it('has copy in every locale', () => {
     for (const locale of ['en', 'nl', 'fr'] as const) {
@@ -101,7 +102,7 @@ describe('wiring', () => {
     assert.doesNotMatch(src, /autoFocus/);
     assert.equal(src.match(/\.focus\(/g)?.length, 2);
     assert.match(src, /function restoreFocus\(/);
-    assert.match(src, /\[current, cartCountry, locale\]/);
+    assert.match(src, /\[current, cartCountry, locale, usOpen\]/);
   });
   it('dismissing hands focus back (the trigger, else main), never to body; no double announce with the cart alert', () => {
     const src = read('../components/LocationNotice.tsx');

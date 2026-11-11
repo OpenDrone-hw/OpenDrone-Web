@@ -1078,7 +1078,7 @@ Both gates must be open for checkout; closing either one closes it.
 |---|---|---|---|
 | `PUBLIC_COMING_SOON` | `wrangler.production.toml` `[vars]` | `"0"` | anything else: coming-soon pages, no prices |
 | `SHOPIFY_CHECKOUT_WRITE_ENABLED` | `wrangler.production.toml` `[vars]` | `"1"` | anything else: cart POSTs refused, `/cart` redirects |
-| `PUBLIC_US_SALES` | `wrangler.production.toml` `[vars]` | `"1"` and a number in `content/us-sales.json` `rate` (production is `"0"` since 2026-11-03: US sales on hold) | anything else: the US buys through shops and reads "Not shipping to the US yet." |
+| `PUBLIC_US_SALES` | `wrangler.production.toml` `[vars]` | `"1"` and a number in `content/us-sales.json` `rate` (production: `"0"` from 2026-11-03, `"1"` again once the 2026-11-11 gate PR is merged) | anything else: the US buys through shops and reads "Not shipping to the US yet." |
 | `SHOPIFY_PREVIEW_POLICY_JSON` | Worker secret | `preorder` (campaign SKUs, `shipPromise: null`) or `in_stock` per SKU for sale | `sold_out` with `shipPromise: null` |
 | `SHOPIFY_CHECKOUT_DOMAIN` | Worker secret | the host of Shopify's checkout links | not needed |
 | `SHOPIFY_PRICE_TIER_WRITE_ENABLED` | Worker secret | `"1"` while a campaign steps prices | anything else |

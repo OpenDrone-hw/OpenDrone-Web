@@ -58,7 +58,7 @@ describe('pending Ship to (optimistic destination while a switch is in flight)',
     const ru = {country: 'RU', region: geoAvailabilityRegion('RU'), locale: 'en' as const};
     assert.equal(withPendingShipTo(ru, 'BE', geoAvailabilityRegion, true), ru);
     assert.match(read('../routes/cart.$.tsx'), /country=\{cartQuoteCountry\(pendingShipTo \?\? country \?\? cart\.country, rootData\?\.visitorCountry/);
-    assert.match(read('../components/ShipChip.tsx'), /withPendingShipTo\(root\?\.geo, usePendingShipTo\(\), geoAvailabilityRegion, ipBlocked\)/);
+    assert.match(read('../components/ShipChip.tsx'), /withPendingShipTo\(root\?\.geo, usePendingShipTo\(\), \(country\) => geoAvailabilityRegion\(country, usOpen\), ipBlocked\)/);
   });
   it('the bar, ship lines, cart gate and drawer read it; Checkout stays disabled while pending', () => {
     // Only useShipGeo reads the root loader; every ship hook goes through it.

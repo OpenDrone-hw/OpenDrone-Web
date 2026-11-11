@@ -33,7 +33,8 @@ import {EU_COUNTRY_CODES, IMPORT_COUNTRY_CODES} from './eu-countries.ts';
  *   the March 2027 batch like `intl` (batch 1 is EU only, `paidRegions`), plus
  *   "Import VAT and duties: paid by you on delivery, unless collected at checkout." (`GEO_DUTIES_NOTE`).
  * - `intl`: any other known country except the US: the March 2027 preorder batch only.
- * - `us`: on hold, "Not shipping to the US yet.", no ship promise.
+ * - `us`: only while US sales are closed (`PUBLIC_US_SALES`): "Not shipping to the US yet.", no ship promise.
+ *   Open, the US is `intl`.
  * - `fallback`: no known country: the batch promise itself.
  */
 export type GeoAvailabilityRegion = 'eu' | 'import' | 'intl' | 'us' | 'fallback';
@@ -42,13 +43,19 @@ export type KnownGeoRegion = Exclude<GeoAvailabilityRegion, 'fallback'>;
 const EU: ReadonlySet<string> = new Set(EU_COUNTRY_CODES);
 const IMPORT: ReadonlySet<string> = new Set(IMPORT_COUNTRY_CODES);
 
-/** The region of a visitor country (already validated, or null). */
-export function geoAvailabilityRegion(country: string | null | undefined): GeoAvailabilityRegion {
+/**
+ * The region of a visitor country (already validated, or null). `usOpen` is
+ * the US sales gate with its rate (`usSalesRate`, the root loader's
+ * `usShippingRate`): open, the US reads the March 2027 batch like every other
+ * destination outside the EU (duties are in its price, so no duties note);
+ * closed, it reads "Not shipping to the US yet."
+ */
+export function geoAvailabilityRegion(country: string | null | undefined, usOpen = false): GeoAvailabilityRegion {
   if (!country) return 'fallback';
   const code = country.toUpperCase();
   if (EU.has(code)) return 'eu';
   if (IMPORT.has(code)) return 'import';
-  return code === 'US' ? 'us' : 'intl';
+  return code === 'US' && !usOpen ? 'us' : 'intl';
 }
 
 /** True for a region batch 1 stock ships to now: sold as stock, not as a pre-order. */

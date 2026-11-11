@@ -213,7 +213,7 @@
       "rows": [
         [
           "Consumer orders",
-          "Stock ships to the EU only; outside the EU, March 2027 preorders (import VAT and duties paid on delivery); not the US yet"
+          "Stock ships to the EU only; outside the EU, March 2027 preorders (import VAT and duties paid on delivery; US: duties included in the price)"
         ],
         [
           "Pickup",
@@ -242,7 +242,7 @@
       "rows": [
         [
           "Consumenten",
-          "Voorraad alleen naar de EU; buiten de EU pre-orders voor maart 2027 (invoer-btw en rechten bij levering); nog niet naar de VS"
+          "Voorraad alleen naar de EU; buiten de EU pre-orders voor maart 2027 (invoer-btw en rechten bij levering; VS: rechten inbegrepen in de prijs)"
         ],
         [
           "Afhalen",
@@ -271,7 +271,7 @@
       "rows": [
         [
           "Consommateurs",
-          "Stock expédié uniquement dans l’UE ; hors UE, précommandes pour mars 2027 (TVA à l’importation et droits à la livraison) ; pas encore les États-Unis"
+          "Stock expédié uniquement dans l’UE ; hors UE, précommandes pour mars 2027 (TVA à l’importation et droits à la livraison ; États-Unis : droits inclus dans le prix)"
         ],
         [
           "Retrait",

@@ -55,8 +55,8 @@ export function nextLastSeen(lastSeen: string | null | undefined, current: strin
 }
 
 /** "Shipping to {Country}: {line}" in the locale, or null when the country has no line. */
-export function noticeText(country: string, locale: Locale): string | null {
-  const line = geoFullLine(geoAvailabilityRegion(country), locale);
+export function noticeText(country: string, locale: Locale, usOpen = false): string | null {
+  const line = geoFullLine(geoAvailabilityRegion(country, usOpen), locale);
   if (!line) return null;
   return GEO_NOTICE_COPY[locale].line.replace('{country}', countryName(country.toUpperCase(), locale)).replace('{line}', line);
 }
