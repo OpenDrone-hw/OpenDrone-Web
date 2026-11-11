@@ -3,21 +3,23 @@
  *
  * Input: how many distinct paying customers ship to each country and, for the
  * United States, each state. Output: the only thing the site ever stores and
- * shows, a snapshot of buckets. Raw orders and addresses never reach this
- * module's output and are never stored.
+ * shows, a snapshot that says where owners are and never how many. Raw orders
+ * and addresses never reach this module's output and are never stored.
  *
  * | Rule | Value |
  * |---|---|
  * | A region (country, or US state) is published at | 1 or more owners |
- * | Published values | buckets (1-4, 5-9, ...), never exact counts |
+ * | Per region | a shading level only: 0 some, 1 more, 2 most, relative to the largest region of its kind (countries; US states), so it shows rank, not volume |
+ * | Per region, in text | the name only, never a figure or range |
+ * | Headline | a milestone: the largest of 100, 250, 500, 1000, 2500, 5000 the total has reached; none under 100 |
+ * | Country count | floored to 10 with a plus ("30+"); none under 10 |
  * | US states | only where the United States itself is published |
- * | Headline | total rounded down to 10, hidden under 10, plus the country count |
  *
- * A region is one coarse attribute (country or state), so a bucket of 1-4
- * singles nobody out; buckets and the 30-day refresh keep month-to-month
- * differences from showing a single new order. Region ids in a snapshot: `DE`
- * (country), `US-CA` (US state). Kept free of worker APIs and path aliases so
- * node:test can load it directly.
+ * A region is one coarse attribute (country or state), so naming it singles
+ * nobody out; the milestone moves only when a step is crossed and the 30-day
+ * refresh keeps month-to-month differences from showing a single new order.
+ * Region ids in a snapshot: `DE` (country), `US-CA` (US state). Kept free of
+ * worker APIs and path aliases so node:test can load it directly.
  */
 import {STATE_NAME} from './owner-map-geo.ts';
 
@@ -27,16 +29,19 @@ export const SNAPSHOT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 /** After a failed or empty refresh the job waits this long before asking Shopify again. */
 export const REFRESH_RETRY_MS = 6 * 60 * 60 * 1000;
 
-const BUCKET_LOWER = [1, 5, 10, 25, 50, 100, 250, 500] as const;
-const BUCKET_LABELS = ['1-4', '5-9', '10-24', '25-49', '50-99', '100-249', '250-499', '500+'] as const;
+/** Headline steps: the page shows the largest one the true total has reached. */
+export const MILESTONES = [100, 250, 500, 1000, 2500, 5000] as const;
 
-/** Number of buckets; a bucket index runs 0 to BUCKET_COUNT - 1. */
-export const BUCKET_COUNT = BUCKET_LABELS.length;
+/** Shading levels: 0 some, 1 more, 2 most. */
+export const LEVEL_COUNT = 3;
+export type Level = 0 | 1 | 2;
 
 /** Reserved rows in the snapshot table, next to the region rows. */
 export const META_TOTAL = '_total';
 export const META_COUNTRIES = '_countries';
 export const META_ATTEMPT = '_attempt';
+/** Marks rows written under these rules; older rows (ranges, rounded totals) are recomputed. */
+export const META_VERSION = '_v2';
 
 export type RawCounts = {
   /** Owners per ISO 3166-1 alpha-2 country code, the United States included. */
@@ -48,90 +53,103 @@ export type RawCounts = {
 export type Snapshot = {
   /** Epoch ms the counts were taken. */
   generatedAt: number;
-  /** Total owners rounded down to 10, or null when under 10. */
-  total: number | null;
-  /** Countries with at least one owner. */
-  countries: number;
-  /** Region id to bucket index. Only suppressed, published regions. */
-  regions: Record<string, number>;
+  /** Largest milestone reached, or null under the first one. Never the total. */
+  milestone: number | null;
+  /** Countries with an owner, floored to 10, or null under 10. */
+  countriesFloor: number | null;
+  /** Region id to shading level. Only suppressed, published regions. */
+  regions: Record<string, Level>;
 };
 
-/** Bucket index for a count, or -1 for no owners. */
-export function bucketIndex(count: number): number {
-  let index = -1;
-  for (let i = 0; i < BUCKET_LOWER.length; i += 1) {
-    if (count >= BUCKET_LOWER[i]!) index = i;
+/** Largest milestone the total has reached, or null. */
+export function milestoneFor(total: number): number | null {
+  let out: number | null = null;
+  for (const step of MILESTONES) if (total >= step) out = step;
+  return out;
+}
+
+/** Country count floored to 10, or null under 10. */
+export function countryFloor(count: number): number | null {
+  const floor = Math.floor(count / 10) * 10;
+  return floor >= 10 ? floor : null;
+}
+
+/** Shading level of each count relative to the largest in its group: thirds of the maximum. */
+function levels(counts: Record<string, number>): Record<string, Level> {
+  const max = Math.max(0, ...Object.values(counts));
+  const out: Record<string, Level> = {};
+  for (const [id, count] of Object.entries(counts)) {
+    out[id] = count * 3 >= max * 2 ? 2 : count * 3 >= max ? 1 : 0;
   }
-  return index;
-}
-
-/** "10-24", "500+". */
-export function bucketLabel(index: number): string {
-  return BUCKET_LABELS[index] ?? '';
-}
-
-export function roundDownTo10(count: number): number {
-  return Math.floor(count / 10) * 10;
+  return out;
 }
 
 const isCode = (value: string) => /^[A-Z]{2}$/.test(value);
 
 /** The only entry point for raw counts: applies every suppression rule. */
 export function suppress(raw: RawCounts, generatedAt: number): Snapshot {
-  const regions: Record<string, number> = {};
   const countries: Record<string, number> = {};
   for (const [code, count] of Object.entries(raw.countries)) {
-    if (isCode(code) && Number.isFinite(count) && count > 0) countries[code] = Math.floor(count);
+    if (isCode(code) && Number.isFinite(count) && count >= 1) countries[code] = Math.floor(count);
   }
-
-  for (const [code, count] of Object.entries(countries)) regions[code] = bucketIndex(count);
+  const regions: Record<string, Level> = levels(countries);
 
   // State detail exists only where the United States itself is published.
   if (regions.US !== undefined) {
+    const states: Record<string, number> = {};
     for (const [code, count] of Object.entries(raw.usStates)) {
-      if (!STATE_NAME[code] || !Number.isFinite(count) || count < 1) continue;
-      regions[`US-${code}`] = bucketIndex(Math.floor(count));
+      if (STATE_NAME[code] && Number.isFinite(count) && count >= 1) states[code] = Math.floor(count);
     }
+    for (const [code, level] of Object.entries(levels(states))) regions[`US-${code}`] = level;
   }
 
   const sum = Object.values(countries).reduce((a, b) => a + b, 0);
-  const rounded = roundDownTo10(sum);
   return {
     generatedAt,
-    total: rounded >= 10 ? rounded : null,
-    countries: Object.keys(countries).length,
+    milestone: milestoneFor(sum),
+    countriesFloor: countryFloor(Object.keys(countries).length),
     regions,
   };
 }
 
+/** What the browser gets: the snapshot without its timestamp, so the only numbers are the milestone, the floor and levels 0-2. */
+export type PublicSnapshot = Omit<Snapshot, 'generatedAt'>;
+
+export function publicSnapshot(snapshot: Snapshot | null): PublicSnapshot | null {
+  if (!snapshot) return null;
+  const {generatedAt: _at, ...rest} = snapshot;
+  return rest;
+}
+
 export type SnapshotRow = {region: string; generated_at: number; bucket: number};
 
-/** The rows `owner_map_snapshot` holds for a snapshot (migration 0009). */
+/** The rows `owner_map_snapshot` holds for a snapshot (migration 0009; `bucket` stores the value). */
 export function snapshotRows(snapshot: Snapshot): SnapshotRow[] {
   const at = snapshot.generatedAt;
   return [
-    {region: META_TOTAL, generated_at: at, bucket: snapshot.total ?? 0},
-    {region: META_COUNTRIES, generated_at: at, bucket: snapshot.countries},
-    ...Object.entries(snapshot.regions).map(([region, bucket]) => ({region, generated_at: at, bucket})),
+    {region: META_VERSION, generated_at: at, bucket: 0},
+    {region: META_TOTAL, generated_at: at, bucket: snapshot.milestone ?? 0},
+    {region: META_COUNTRIES, generated_at: at, bucket: snapshot.countriesFloor ?? 0},
+    ...Object.entries(snapshot.regions).map(([region, level]) => ({region, generated_at: at, bucket: level})),
   ];
 }
 
-/** Rebuild a snapshot from stored rows; null when there is none. Bad rows are dropped. */
+/** Rebuild a snapshot from stored rows; null when there is none or it predates these rules. Bad rows are dropped. */
 export function snapshotFromRows(rows: SnapshotRow[]): Snapshot | null {
   const data = rows.filter((r) => r.region !== META_ATTEMPT);
   const total = data.find((r) => r.region === META_TOTAL);
   const countries = data.find((r) => r.region === META_COUNTRIES);
-  if (!total || !countries) return null;
-  const regions: Record<string, number> = {};
+  if (!total || !countries || !data.some((r) => r.region === META_VERSION)) return null;
+  const regions: Record<string, Level> = {};
   for (const row of data) {
     if (row.region.startsWith('_')) continue;
-    if (!Number.isInteger(row.bucket) || row.bucket < 0 || row.bucket >= BUCKET_COUNT) continue;
-    regions[row.region] = row.bucket;
+    if (!Number.isInteger(row.bucket) || row.bucket < 0 || row.bucket >= LEVEL_COUNT) continue;
+    regions[row.region] = row.bucket as Level;
   }
   return {
     generatedAt: total.generated_at,
-    total: total.bucket >= 10 ? total.bucket : null,
-    countries: countries.bucket,
+    milestone: (MILESTONES as readonly number[]).includes(total.bucket) ? total.bucket : null,
+    countriesFloor: countries.bucket >= 10 ? Math.floor(countries.bucket / 10) * 10 : null,
     regions,
   };
 }

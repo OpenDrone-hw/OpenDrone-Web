@@ -117,12 +117,11 @@ export type PilotCell = {
   id: string;
   lat: number;
   lon: number;
-  count: number;
   pilots: {discordId: string; name: string}[];
 };
 
 /** The view of the pilot map one viewer gets. `cells` exists only for a signed-in owner. */
-export type PilotView = {total: number; cells?: PilotCell[]};
+export type PilotView = {cells?: PilotCell[]};
 
 /** Group pins into cells, busiest first then by id, pilots by name. Rows with a bad cell id are dropped. */
 export function groupPins(rows: readonly PinRow[]): PilotCell[] {
@@ -132,14 +131,13 @@ export function groupPins(rows: readonly PinRow[]): PilotCell[] {
     const discordId = cleanDiscordId(row.discord_id);
     const name = cleanDiscordName(row.discord_name);
     if (!cell || !discordId || !name) continue;
-    const entry = cells.get(cell.id) ?? {id: cell.id, lat: cell.lat, lon: cell.lon, count: 0, pilots: []};
-    entry.count += 1;
+    const entry = cells.get(cell.id) ?? {id: cell.id, lat: cell.lat, lon: cell.lon, pilots: []};
     entry.pilots.push({discordId, name});
     cells.set(cell.id, entry);
   }
   const list = [...cells.values()];
   for (const c of list) c.pilots.sort((a, b) => a.name.localeCompare(b.name, 'en') || a.discordId.localeCompare(b.discordId));
-  return list.sort((a, b) => b.count - a.count || a.id.localeCompare(b.id));
+  return list.sort((a, b) => b.pilots.length - a.pilots.length || a.id.localeCompare(b.id));
 }
 
 /**
@@ -149,8 +147,7 @@ export function groupPins(rows: readonly PinRow[]): PilotCell[] {
  */
 export function viewFor(qualifiedOwner: boolean, rows: readonly PinRow[]): PilotView {
   const cells = groupPins(rows);
-  const total = cells.reduce((n, c) => n + c.count, 0);
-  return qualifiedOwner ? {total, cells} : {total};
+  return qualifiedOwner ? {cells} : {};
 }
 
 /** Paid or partly refunded and not cancelled: the order that makes someone an owner. */

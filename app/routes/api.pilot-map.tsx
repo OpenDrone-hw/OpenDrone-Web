@@ -8,7 +8,7 @@ import {pilotPanel, readViewer} from '~/lib/pilot-map-server';
  *
  * | Request | Answer |
  * |---|---|
- * | GET | `{total}` for everyone; `{total, cells}` only for a signed-in owner with a qualifying order. 404 while PILOT_MAP_ENABLED is off |
+ * | GET | `{}` for everyone; `{cells}` only for a signed-in owner with a qualifying order. 404 while PILOT_MAP_ENABLED is off |
  * | POST `intent=place` (same Origin, signed in, owner) | snaps `lat`/`lon` to the grid cell, stores the cell, the Discord account and the consent; the point itself is not kept |
  * | POST `intent=withdraw` (same Origin, signed in) | deletes the row now |
  *

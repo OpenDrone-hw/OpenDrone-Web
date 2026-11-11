@@ -792,19 +792,19 @@ Discord user id (privacy policy, section 2).
 
 ## Owners map
 
-`/owners` shows where owners are, as published ranges only. Rules live in `app/lib/owner-map.ts` (tested), the Worker side in `app/lib/owner-map-data.ts`, the page in `app/routes/owners.tsx`, the map in `app/components/OwnersMap.tsx` (geometry helpers in `app/lib/owner-map-draw.ts`), words in `content/copy/owners.json`.
+`/owners` shows where owners are, never how many: no per-region figure, only a milestone and a country floor. Rules live in `app/lib/owner-map.ts` (tested), the Worker side in `app/lib/owner-map-data.ts`, the page in `app/routes/owners.tsx`, the map in `app/components/OwnersMap.tsx` (geometry helpers in `app/lib/owner-map-draw.ts`), words in `content/copy/owners.json`.
 
-The page is one full-width map under the site header with one `.visit-card` over it (a bottom sheet on phones), styled like `/visit` (shared `--map-*` colour tokens in `app/styles/app.css`). Drag pans, the wheel, pinch and the buttons zoom; the default framing is the whole world. Countries and US states with a published range are filled in gold, stronger per range; hovering or tapping a region shows its range in the card's figures table. A screen-reader list carries the same figures as text.
+The page is one full-width map under the site header with one `.visit-card` over it (a bottom sheet on phones), styled like `/visit` (shared `--map-*` colour tokens in `app/styles/app.css`). Drag pans, the wheel, pinch and the buttons zoom; the default framing is the whole world. Countries and US states with an owner are filled in gold in three shades (fewer to more, relative to the largest region, so a shade shows rank and not volume); hovering or tapping a region shows its name only. The card shows "500+" owners (the largest of 100, 250, 500, 1000, 2500, 5000 the total has reached, nothing under 100) and "30+" countries (floored to 10, nothing under 10). A screen-reader list names the countries and states, alphabetical, without figures.
 
 | Step | What happens |
 |---|---|
 | Count | A distinct Shopify customer with a paid or partly refunded, not cancelled, non-test order with a physical line, counted once by the shipping country of their latest order; US customers also by state |
 | Schedule | The Worker's five-minute cron reads one D1 row set and recomputes only when the snapshot is missing or 30 days old (needs `SUPPORT_DB` and the Admin token). A failed run waits 6 hours |
-| Suppress | Every country and US state with an owner is published, only as a range; US states only where the United States is published |
-| Store | Table `owner_map_snapshot` (migration 0009) keeps buckets (1-4, 5-9, 10-24, 25-49, 50-99, 100-249, 250-499, 500+), the total rounded down to 10 and the country count. Orders and addresses are never stored |
+| Suppress | Every country and US state with an owner is published by name with a shading level (some, more, most: thirds of the largest region of its kind); US states only where the United States is published. The browser gets the milestone, the country floor and those levels, no timestamp and no other number (tested) |
+| Store | Table `owner_map_snapshot` (migration 0009) keeps the level per region (0 to 2), the milestone and the country floor (column `bucket` holds the value; row `_v2` marks these rules, so rows from the earlier range rules are recomputed at the next cron run). Orders and addresses are never stored |
 | Draw | d3-geo and topojson-client draw SVG from `public/geo/countries-50m.json` (world-atlas, Natural Earth, public domain) and `states-10m.json` (us-atlas, US Census). All are ISC-packaged copies from `node_modules`; no tiles, no third-party request, CSP unchanged |
 
-Local development: `OWNER_MAP_FIXTURE=1` in `.env` shows fixture counts through the same suppression and never reads orders. On the dev server the fixture is also used when the Admin token is missing. A deployed build without a snapshot shows the empty state, never invented numbers; a unit test keeps `OWNER_MAP_FIXTURE` out of both wrangler files. The migration is applied like the others (`npx wrangler d1 migrations apply SUPPORT_DB --remote --config wrangler.production.toml`) before the deploy.
+Local development: `OWNER_MAP_FIXTURE=1` in `.env` shows fixture data through the same suppression and never reads orders. On the dev server the fixture is also used when the Admin token is missing. A deployed build without a snapshot shows the empty state, never invented figures; a unit test keeps `OWNER_MAP_FIXTURE` out of both wrangler files. The migration is applied like the others (`npx wrangler d1 migrations apply SUPPORT_DB --remote --config wrangler.production.toml`) before the deploy.
 
 ### Pilot map ("Find pilots near you")
 
@@ -812,15 +812,15 @@ Optional part of the `/owners` card and map, off unless `PILOT_MAP_ENABLED` is `
 
 | Who | Sees |
 |---|---|
-| Signed out | The number of pilots and a sign-in link in the card, no dots |
-| Signed in, no paid not cancelled order | The number and a note |
-| Owner (paid or partly refunded, not cancelled order, read live from Shopify, cached 1 h in a signed cookie) | Gold dots on the map for cells of about 10 km (a count when more than one); a tap on a dot opens a popover with Discord usernames and a `discord.com/users/<id>` link. Linking, placing (tap the map, two consent boxes), moving and withdrawing are in the card |
+| Signed out | A sign-in link in the card, no dots, no figures |
+| Signed in, no paid not cancelled order | A note, no figures |
+| Owner (paid or partly refunded, not cancelled order, read live from Shopify, cached 1 h in a signed cookie) | Gold dots on the map for cells of about 10 km (a larger dot when more than one pilot, no number); a tap on a dot opens a popover with Discord usernames and a `discord.com/users/<id>` link. Linking, placing (tap the map, two consent boxes), moving and withdrawing are in the card |
 
 | Route | Purpose |
 |---|---|
 | `GET /owners/discord` | Owner starts the Discord link: authorize URL with scope `identify`, state and PKCE S256, cookie `__Host-od_pm_oauth` (10 min) |
 | `GET /owners/discord/callback` | Checks state and customer, reads Discord id and name, revokes the token, sets cookie `__Host-od_pm_link` (1 h). Nothing is written to D1 yet |
-| `GET /api/pilot-map` | `{total}`, plus `cells` only for a qualifying owner (decided from the session on the server) |
+| `GET /api/pilot-map` | `{}`, or `{cells}` for a qualifying owner (decided from the session on the server); never a count |
 | `POST /api/pilot-map` | Same Origin. `intent=place` needs owner, link (or an existing pin), both consent boxes and `version=PILOT_CONSENT_VERSION`; `intent=withdraw` deletes the row |
 
 | Data | Rule |
