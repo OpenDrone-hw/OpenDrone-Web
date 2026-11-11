@@ -6,6 +6,7 @@ import {
   tagForRepo,
   type LedgerEvent,
 } from '~/lib/timeline-ledger';
+import {liveLedgerEvents} from '~/lib/timeline-live';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {Txt} from '~/components/Txt';
@@ -33,7 +34,7 @@ export const meta: Route.MetaFunction = () =>
  */
 export async function loader(_args: Route.LoaderArgs) {
   const ledger = await fetchTimelineLedger();
-  return {ledgerEvents: ledger?.events ?? []};
+  return {ledgerEvents: liveLedgerEvents(ledger)};
 }
 
 type EventKind =

@@ -10,6 +10,9 @@
  *            change was first observed; GitHub keeps no topic history, so
  *            the first run only records the baseline and emits nothing)
  *
+ * A repo that stops being public is marked `gone` in `repos`; the site then
+ * hides its events, whose links no longer resolve.
+ *
  * The ledger is a JSON file on the unprotected `data` branch of this repo,
  * written by .github/workflows/timeline-ledger.yml once a day and read by
  * /timeline at request time (app/lib/timeline-ledger.ts). It never goes
@@ -137,10 +140,25 @@ for (const r of repos) {
   };
 }
 
+// A repo that is no longer public (made private, renamed or deleted) keeps
+// its events, which are history, but every link to it is dead: mark it
+// `gone` so /timeline drops them (app/lib/timeline-live.ts). An empty list is
+// an API hiccup, not an empty organisation: nothing is marked then.
+const listed = new Set(repos.map((r) => r.name));
+const gone = [];
+if (repos.length) {
+  for (const [name, entry] of Object.entries(ledger.repos)) {
+    if (listed.has(name) || entry.gone) continue;
+    entry.gone = TODAY;
+    gone.push(name);
+  }
+}
+
 ledger.events.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
 ledger.updatedAt = new Date().toISOString();
 
 console.log(`${repos.length} repos, ${ledger.events.length} events, ${added.length} new`);
+for (const name of gone) console.log(`  - ${name} is no longer public`);
 for (const e of added) console.log(`  + ${e.date} ${e.kind} ${e.repo}${e.tag ? ' ' + e.tag : ''}${e.status ? ' -> ' + e.status : ''}`);
 
 if (WRITE) {
