@@ -21,7 +21,8 @@
     "Black-Oxide flat head screws belong to the DJI O4 air unit reference model: excluded.",
     "Cam-Mount-L/R (TPU) are not in the box list; the camera mount is the CNC aluminium pair (Standoff-L/R).",
     "VTX-Mount is in the box list but not in the GLB.",
-    "Soft-mount grommets (softmount m2) are not in the box: excluded."
+    "Soft-mount grommets (softmount m2) are not in the box: excluded.",
+    "No sticker in the box: no sticker group."
   ],
   "groups": [
     {
@@ -103,16 +104,6 @@
       "item": "TPU parts set"
     },
     {
-      "label": "Sticker",
-      "procedural": {
-        "kind": "sticker",
-        "w": 80,
-        "h": 22
-      },
-      "row": 3,
-      "item": "Sticker"
-    },
-    {
       "label": "Battery straps",
       "procedural": {
         "kind": "strap",
@@ -139,7 +130,7 @@
       "note": "GLB colours are placeholder grey and white; the pad is dark silicone with the Incutec wordmark",
       "item": "Anti-slip",
       "lay": "x",
-      "below": "Sticker"
+      "row": 3
     },
     {
       "label": "M2.5x6 pan head",
