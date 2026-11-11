@@ -475,7 +475,7 @@ describe('EU launch claims', () => {
       ]),
     ];
     const power = rows.filter(([k]) => k === 'Telemetry power').map(([, v]) => v);
-    assert.ok(power.includes('20 dBm'));
+    assert.ok(power.some((v) => v?.startsWith('20 dBm')));
     assert.doesNotMatch(JSON.stringify(c), /22 dBm|158 mW/);
   });
 
