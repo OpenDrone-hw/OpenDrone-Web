@@ -28,17 +28,24 @@ const trigger = (page) => page.locator('.header-region-switch .header-popover-tr
 
 async function pick(page, index) {
   await trigger(page).click();
-  await page.locator('.header-region-switch [role=menuitemradio]').nth(index).click();
-  await page.waitForLoadState('networkidle');
+  const item = page.locator('.header-region-switch [role=menuitemradio]').nth(index);
+  await item.waitFor();
+  // The switch posts the country, then React Router reads the loaders again.
+  const posted = page.waitForResponse((r) => r.url().includes('/api/shopify/cart-country'), {timeout: 60000});
+  const reread = posted.then(() =>
+    page.waitForResponse((r) => r.url().includes('.data') && r.request().method() === 'GET', {timeout: 60000}),
+  );
+  await item.click();
+  await reread;
   await page.waitForFunction(
     () => !document.querySelector('.header-region-switch[aria-busy="true"]'),
     null,
-    {timeout: 15000},
+    {timeout: 30000},
   );
 }
 
 async function cookie(context) {
-  return (await context.cookies()).find((c) => c.name === 'od_ship_country')?.value ?? null;
+  return (await context.cookies(BASE)).find((c) => c.name === 'od_ship_country')?.value ?? null;
 }
 
 function check(failures, name, what, got, want) {
