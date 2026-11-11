@@ -2544,7 +2544,6 @@ body:has(.avail-bar) .site-header {
   border: 2px solid var(--color-gold);
   border-radius: var(--r-xs);
   background: var(--color-gold-soft);
-  scroll-margin-top: calc(var(--header-height) + var(--avail-bar-h, 0px) + 1.5rem);
 }
 .cart-choice-title {
   margin: 0;
