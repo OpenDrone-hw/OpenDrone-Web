@@ -238,6 +238,51 @@ export function boardExpressLines(
   return withStack && stack ? stack.lines.map((line) => ({...line})) : [{sku, quantity: 1}];
 }
 
+/**
+ * The build a product page's part belongs to: the build listing this SKU,
+ * else the first build listing the product (a motor winding or receiver
+ * that no build names by SKU).
+ */
+export function buildForPart(builds: ReadonlyArray<HeroBuild>, sku: string | null | undefined, handle: string): HeroBuild | null {
+  return builds.find((build) => build.parts.some((part) => part.sku === sku)) ?? builds.find((build) => build.parts.some((part) => part.handle === handle)) ?? null;
+}
+
+/**
+ * The partner board a board page offers in one tick row: the other of FC
+ * and ESC in the same build, at the chosen lane's price (`buildModes`, the
+ * home block's own rows), or null when that lane does not offer it to this
+ * buyer (out of stock, not sold in the region).
+ */
+export function partnerBoard(build: HeroBuild, sku: string | null | undefined, mode: BuildMode): HeroBuildPart | null {
+  if (!build.parts.some((part) => part.sku === sku && isBoard(part))) return null;
+  const modes = buildModes(build);
+  const lane = mode === 'buy_now' ? modes.buy_now : modes.preorder;
+  const partner = lane?.parts.find((part) => isBoard(part) && part.sku !== sku) ?? null;
+  return partner && partner.available && partner.price !== null && Number.isFinite(partner.price) ? partner : null;
+}
+
+/** The home page's build block for this size: `/?build=3#build`. */
+export function fullBuildHref(size: string): string {
+  return `/?build=${encodeURIComponent(size)}#build`;
+}
+
+/** One add of this part and the ticked parts, every line a pre-order, each times the quantity. */
+export function buildAddonUrl(
+  build: Pick<HeroBuild, 'addUrl'>,
+  sku: string,
+  ticked: ReadonlyArray<Pick<HeroBuildPart, 'sku' | 'quantity'>>,
+  quantity: number,
+): string {
+  const lines: CartLine[] = [{sku, quantity}, ...ticked.map((part) => ({sku: part.sku, quantity: part.quantity * quantity}))];
+  return modeAddUrl(cartAddUrl(build.addUrl, lines), 'preorder');
+}
+
+/** The total beside the button: this part and the ticked parts, times the quantity, in cents then back. */
+export function buildAddonTotal(ownPrice: number, ticked: ReadonlyArray<Pick<HeroBuildPart, 'price' | 'quantity'>>, quantity: number): number {
+  const cents = Math.round(ownPrice * 100) + ticked.reduce((sum, part) => sum + Math.round((part.price ?? 0) * 100) * part.quantity, 0);
+  return (cents * quantity) / 100;
+}
+
 /** The `lines` field of an express purchase: each line times the quantity. */
 export function expressLinesField(lines: ReadonlyArray<{sku: string; quantity: number}>, quantity: number): string {
   return lines.map((line) => `${line.sku}:${line.quantity * quantity}`).join(',');

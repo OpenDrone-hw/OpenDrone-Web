@@ -17,8 +17,8 @@
 //      and the pinned bar stays one row with "Buy the stack now";
 //   6. /preorder ("How ordering works") has nothing under the header, no
 //      overflow, the two lanes in the EU and the pre-order lane alone in the
-//      US, and the US product page shows the pre-order card alone (no
-//      batch boxes).
+//      US, and the US product page shows the one-offer status row (no
+//      selectable card, no batch boxes).
 //
 // Usage: BASE=http://localhost:3101 node scripts/choice-layout-check.mjs
 // Chrome is used when Playwright has no bundled browser (CHANNEL=chrome).
@@ -199,8 +199,12 @@ for (const [width, height] of SIZES) {
   // A US product page: the same components, the Buy now lane absent.
   await page.goto(BASE + PDP.replace('country=BE', 'country=US'), {waitUntil: 'networkidle'}).catch(() => {});
   await page.waitForSelector('[data-offer-choice]', {timeout: 15000}).catch(() => fail(at('product page US'), 'no pre-order card'));
-  const usCards = await page.locator('main [data-offer-choice] .offer-card').count();
-  if (usCards !== 1) fail(at('product page US'), `${usCards} offer cards, expected the pre-order card alone`);
+  // One offer: the status row, no selectable card.
+  const usCards = await page.locator('main .offer-card:visible').count();
+  if (usCards) fail(at('product page US'), `${usCards} selectable offer cards, expected the one-offer status row`);
+  if (!(await page.locator('main [data-offer-single="preorder"]').count())) fail(at('product page US'), 'no one-offer status row');
+  const cut = await page.evaluate(() => [...document.querySelectorAll('main .offer-status-row-text')].filter((el) => el.scrollWidth > el.clientWidth + 1).length);
+  if (cut) fail(at('product page US'), 'the status row is cut');
   if (await page.locator('main ul.avail, main [data-batches]').count()) fail(at('product page US'), 'the batch boxes still show');
   await clearOfHeader(page, at('product page US'), ['h1', '[data-offer-choice]', '.product-buy']);
   await context.close();

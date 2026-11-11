@@ -2452,11 +2452,20 @@ body:has(.avail-bar) .site-header {
 .offer-card.is-selected .offer-card-title { font-weight: 700; }
 .offer-card-pin { display: none; }
 .offer-card-pinprice { display: none; }
-/* The stack, an optional add-on under the cards: one compact row, the slot
-   always reserved so choosing an offer or ticking the box moves nothing. */
+/* The add-on slot under the cards, the same in both lanes: the partner
+   board's tick row at the left edge of the cards, the full build link at the
+   right. One row (two on a narrow phone), the same height in both lanes. */
 .offer-addon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: var(--sp-3);
+  min-width: 0;
   min-height: 1.75rem;
-  margin: calc(-1 * var(--sp-1)) 0 var(--sp-3);
+  margin: calc(-1 * var(--sp-1)) 0 0;
+  font-size: var(--fs-base);
+  line-height: 1.4;
 }
 .offer-addon-row {
   display: flex;
@@ -2464,13 +2473,10 @@ body:has(.avail-bar) .site-header {
   gap: var(--sp-2);
   min-width: 0;
   min-height: 1.75rem;
-  font-size: var(--fs-xs);
-  line-height: 1.4;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   cursor: pointer;
   font-variant-numeric: tabular-nums;
 }
-.offer-addon-row:hover { color: var(--color-text); }
 .offer-addon-input {
   flex: none;
   width: 1rem;
@@ -2494,7 +2500,43 @@ body:has(.avail-bar) .site-header {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.offer-addon-input:checked ~ .offer-addon-text { color: var(--color-text); }
+.offer-addon-build-link {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.offer-addon-build-link:hover { color: var(--color-text); }
+/* One offer: a status row in the cards' slot, no selectable card. */
+.offer-slot { display: grid; min-width: 0; margin: 0 0 1rem; }
+.offer-slot > * { grid-area: 1 / 1; min-width: 0; }
+.offer-slot-ghost { visibility: hidden; }
+.offer-slot-ghost .offer-choice { margin: 0; }
+.offer-status-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  align-self: start;
+  min-width: 0;
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--color-text);
+}
+.offer-status-row-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.offer-status-row-title { font-family: var(--font-display); font-size: var(--fs-sm); font-weight: 600; }
+.offer-status-row .is-muted { color: var(--color-text-muted); }
+.offer-status-row-extra { flex: none; white-space: nowrap; color: var(--color-gold-text); }
+@media (max-width: 480px) {
+  .offer-status-row-text { white-space: normal; }
+}
 /* "Stack total 78.00" beside the button: a fixed slot, empty unless the stack is ticked. */
 .product-buy .product-form > .buy-total,
 .product-buy .product-form:has(> .product-qty) > .product-qty ~ .buy-total {
@@ -2585,8 +2627,9 @@ body:has(.avail-bar) .site-header {
 .buy-rail.is-pinned .offer-card-title,
 .buy-rail.is-pinned .offer-card-price,
 .buy-rail.is-pinned .offer-addon,
+.buy-rail.is-pinned .offer-slot,
 .buy-rail.is-pinned .buy-total,
-.buy-rail.is-pinned .product-buy:has(.offer-choice) .product-buy-price { display: none; }
+.buy-rail.is-pinned .product-buy:has(> .offer-choice) .product-buy-price { display: none; }
 .buy-rail.is-pinned .offer-card-pin,
 .buy-rail.is-pinned .offer-card-pinprice { display: inline; font-size: 13px; line-height: 1; white-space: nowrap; color: var(--color-text); font-weight: 600; }
 .buy-rail.is-pinned .offer-card-pinprice { font-weight: 500; }
@@ -2595,11 +2638,11 @@ body:has(.avail-bar) .site-header {
 .buy-rail.is-pinned .offer-card.is-selected .offer-card-pin,
 .buy-rail.is-pinned .offer-card.is-selected .offer-card-pinprice { color: var(--color-on-accent); }
 /* One button width for "Buy now" and "Pre-order". */
-.buy-rail.is-pinned .product-buy:has(.offer-choice) .product-form .btn-primary { min-width: 7.25rem; }
+.buy-rail.is-pinned .product-buy:has(> .offer-choice) .product-form .btn-primary { min-width: 7.25rem; }
 @media (max-width: 959px) {
   /* Phone: the switch and the button, one row; the size tiles stay in the page. */
-  .buy-rail.is-pinned:has(.offer-choice) > .variant-ladder,
-  .buy-rail.is-pinned:has(.offer-choice) > .buy-rail-chips { display: none; }
+  .buy-rail.is-pinned:has(.product-buy > .offer-choice) > .variant-ladder,
+  .buy-rail.is-pinned:has(.product-buy > .offer-choice) > .buy-rail-chips { display: none; }
   .buy-rail.is-pinned .offer-choice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1 1 auto; min-width: 0; }
   .buy-rail.is-pinned .offer-card { padding: 0 8px; }
 }
@@ -2609,8 +2652,8 @@ body:has(.avail-bar) .site-header {
   .buy-rail.is-pinned .offer-card-head { flex-direction: column; align-items: center; gap: 2px; }
   .buy-rail.is-pinned .offer-card-pin,
   .buy-rail.is-pinned .offer-card-pinprice { font-size: 12px; line-height: 1.1; }
-  .buy-rail.is-pinned .product-buy:has(.offer-choice) .product-form { flex: 0 0 auto; }
-  .buy-rail.is-pinned .product-buy:has(.offer-choice) .product-form .btn-primary { width: auto; min-width: 6.5rem; padding: 0 12px; }
+  .buy-rail.is-pinned .product-buy:has(> .offer-choice) .product-form { flex: 0 0 auto; }
+  .buy-rail.is-pinned .product-buy:has(> .offer-choice) .product-form .btn-primary { width: auto; min-width: 6.5rem; padding: 0 12px; }
 }
 
 /* Cart: the pre-order lane, said once at the top. */

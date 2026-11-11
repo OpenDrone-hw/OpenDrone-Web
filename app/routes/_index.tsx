@@ -16,7 +16,7 @@ import {HeroDroneStage} from '~/components/HeroDroneStage';
 import type {HeroLoadState} from '~/components/HeroDroneScene';
 import {HeroWordmark} from '~/components/HeroWordmark';
 import {HeroSizeSlider} from '~/components/HeroSizeSlider';
-import {DEFAULT_HERO_SIZE} from '~/lib/hero-airframes';
+import {DEFAULT_HERO_SIZE, buildSizeFromSearch} from '~/lib/hero-airframes';
 import {HeroBuildGuide} from '~/components/HeroBuildGuide';
 import {HeroBuildChoice} from '~/components/HeroBuildChoice';
 import {HeroStackOffer} from '~/components/HeroStackOffer';
@@ -196,6 +196,11 @@ function DesktopHome({
   const changeHeroSize = useCallback((next: string) => {
     setHeroSize(next);
     setActivePart(null);
+  }, []);
+  // "See the full 3-inch build" from a product page: open on that size.
+  useEffect(() => {
+    const asked = buildSizeFromSearch(window.location.search);
+    if (asked) setHeroSize(asked);
   }, []);
   const inspectPart = useRef<((id: string) => void) | null>(null);
   const [canInspect, setCanInspect] = useState(false);
@@ -717,6 +722,7 @@ function DesktopHome({
           </a>
 
           <div
+            id="build"
             className={`hero-buy hero-buy--guide${splashSettled ? ' is-visible' : ''}`}
             inert={!splashSettled}
             style={{opacity: splashSettled ? 1 : 0}}

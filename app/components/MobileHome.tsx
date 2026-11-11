@@ -1,4 +1,4 @@
-import {Suspense, useState, type CSSProperties} from 'react';
+import {Suspense, useEffect, useState, type CSSProperties} from 'react';
 import {Await, Link} from 'react-router';
 import type {ProductCardFragment as CollectionItemFragment} from '~/lib/product-shapes';
 import {HeroWordmark} from '~/components/HeroWordmark';
@@ -15,7 +15,7 @@ import {HeroBuildGuide} from '~/components/HeroBuildGuide';
 import {HeroBuildChoice} from '~/components/HeroBuildChoice';
 import {HeroStackOffer} from '~/components/HeroStackOffer';
 import type {HeroBuild} from '~/lib/hero-build';
-import {HERO_AIRFRAMES, DEFAULT_HERO_SIZE, airframeLabel} from '~/lib/hero-airframes';
+import {HERO_AIRFRAMES, DEFAULT_HERO_SIZE, airframeLabel, buildSizeFromSearch} from '~/lib/hero-airframes';
 import {CommunitySection} from '~/components/Discord';
 import type {DiscordCounts} from '~/lib/discord-community';
 
@@ -85,6 +85,11 @@ export function MobileHome({
   discord: Promise<DiscordCounts | null>;
 }) {
   const [buildSize, setBuildSize] = useState(DEFAULT_HERO_SIZE);
+  // "See the full 3-inch build" from a product page: open on that size.
+  useEffect(() => {
+    const asked = buildSizeFromSearch(window.location.search);
+    if (asked) setBuildSize(asked);
+  }, []);
   // Staggered CSS entrance (transform only, so the hero is visible before JS).
   const rise = (i: number) => ({style: {'--rise-i': i} as CSSProperties});
   const buildCard = (builds: HeroBuild[]) => {

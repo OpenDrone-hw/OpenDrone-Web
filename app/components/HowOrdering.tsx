@@ -60,9 +60,10 @@ export function HowOrdering({data}: {data: HowOrderingData}) {
   ];
 
   // Reasons, each from a source the company owns (PR #818 lists them).
+  const shipMonthOf = (day: string) => new Intl.DateTimeFormat('en-GB', {month: 'long', year: 'numeric', timeZone: 'UTC'}).format(new Date(`${day}T12:00:00Z`));
   const reasons = [
     // Terms 2.9, art. 7bis.3bis; content/preorders.json `confirmed`.
-    {key: 'confirmed', title: say('why_confirmed_title', 'Batch confirmed'), line: say('why_confirmed_line', 'The March 2027 batch is made whatever the number of orders.')},
+    {key: 'confirmed', title: say('why_confirmed_title', 'Batch confirmed'), line: say('why_confirmed_line', 'The {month} batch is made whatever the number of orders.', {month: shipMonthOf(data.shipDay)})},
     // content/preorders.json `endsOn` and `afterEndsOn`.
     ...(earlyOpen && data.afterEndsOn === 'retail'
       ? [{key: 'early', title: say('why_early_title', 'Early bird price'), line: say('why_early_line', 'Under retail until {date}.', {date: ends})}]

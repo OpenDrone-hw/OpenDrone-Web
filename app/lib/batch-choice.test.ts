@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {describe, it} from 'node:test';
 import {bySku, offerSaving, preorderView, variantByMerchandise, type Catalog} from './catalog.ts';
-import {boardExpressLines, buildModes, expressLinesField, heroBuildSelection, modeAddUrl, resolveHeroBuilds, stackOffer} from './hero-build.ts';
+import {boardExpressLines, buildAddonTotal, buildAddonUrl, buildForPart, buildModes, expressLinesField, fullBuildHref, partnerBoard, heroBuildSelection, modeAddUrl, resolveHeroBuilds, stackOffer} from './hero-build.ts';
 import {parseBuilds} from './build-recommendations.ts';
 import {applyCampaign, parseCampaignConfig, preorderChoiceLine, shipsOnlyWithPaid, type CampaignConfig} from './preorder-campaign.ts';
 import {assignBatches, batchPromiseMismatch, batchTag, type PreorderOrder} from './preorder-fulfilment.ts';
@@ -489,6 +489,35 @@ describe('buy now lane: an express checkout of in-stock boards, never the cart',
       const {response, made} = express({lines: expressLinesField(lines, 1)}, {fetchCatalog: async () => live({[ESC]: 200})});
       assert.match((await response).headers.get('Location') ?? '', /buy=sold-out$/);
       assert.deepEqual(made, []);
+    });
+
+    it('one tick row, the partner board at the chosen lane price; pre-order adds both boards as pre-orders in one add', () => {
+      const build = buildForPart(resolveHeroBuilds(builds, live(), true), FC, 'openfc-lite')!;
+      assert.equal(partnerBoard(build, FC, 'buy_now')?.sku, ESC);
+      const pre = partnerBoard(build, FC, 'preorder')!;
+      assert.equal(pre.sku, ESC);
+      assert.equal(pre.offer, 'preorder');
+      assert.ok(pre.price! < partnerBoard(build, FC, 'buy_now')!.price!, 'the pre-order row shows the pre-order price');
+      const url = new URL(buildAddonUrl(build, FC, [pre], 2), 'https://opendrone.be');
+      assert.equal(url.searchParams.get('lines'), `${FC}:2,${ESC}:2`);
+      assert.equal(url.searchParams.get('offer'), 'preorder');
+      // The total is the sum of the two pre-order prices, times the quantity.
+      assert.equal(buildAddonTotal(26.1, [pre], 2), Math.round((26.1 + pre.price!) * 2 * 100) / 100);
+      assert.equal(fullBuildHref(build.size), `/?build=${build.size}#build`);
+    });
+
+    it('no tick row on a frame page, and no partner the region cannot buy', () => {
+      const all = resolveHeroBuilds(builds, live(), true);
+      const frame = buildForPart(all, 'OPENFRAME-3', 'openframe')!;
+      assert.equal(partnerBoard(frame, 'OPENFRAME-3', 'preorder'), null);
+      // US: no Buy now lane, so no stack; the pre-order partner stays.
+      const us = buildForPart(resolveHeroBuilds(builds, live({}, 'US'), true), FC, 'openfc-lite')!;
+      assert.equal(partnerBoard(us, FC, 'buy_now'), null);
+      assert.equal(partnerBoard(us, FC, 'preorder')?.sku, ESC);
+      // EU, ESC batch 1 gone: Buy now has no partner, pre-order still does.
+      const gone = buildForPart(resolveHeroBuilds(builds, live({[ESC]: 200}), true), FC, 'openfc-lite')!;
+      assert.equal(partnerBoard(gone, FC, 'buy_now'), null);
+      assert.equal(partnerBoard(gone, FC, 'preorder')?.sku, ESC);
     });
 
     it('partner sold out: no stack add-on, and a ticked box still buys this board alone', () => {

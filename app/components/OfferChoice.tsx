@@ -1,4 +1,5 @@
 import {useId} from 'react';
+import {Link} from 'react-router';
 import {copyFill, copyText} from '~/lib/copy';
 import {formatPrice, offerSaving} from '~/lib/catalog';
 import type {BatchOffer} from '~/lib/catalog';
@@ -72,34 +73,73 @@ export type StackAddon = {
 };
 
 /**
- * The stack as an optional add-on under the cards: one row, unticked by
- * default, shown only while Buy now is chosen. The slot is always there
- * (`slot`), so choosing an offer or ticking the box moves nothing; without
- * a partner in stock the row is empty.
+ * The add-on slot under the cards, the same in both lanes: one unticked
+ * tick row for the partner board at the chosen lane's price ("Add the
+ * OpenESC 20x20, +49.00"), and at its right a plain link to the full build
+ * on the home page. A part without a partner board shows the link alone;
+ * a lane that does not offer the partner leaves the slot's height empty.
  */
-export function StackAddonRow({
-  addon,
-  shown,
+export function AddonRow({
+  partner,
   checked,
   onChange,
+  fullBuild,
 }: {
-  addon: StackAddon | null;
-  shown: boolean;
+  partner: StackAddon | null;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  fullBuild: {size: string; href: string} | null;
 }) {
   return (
     <div className="offer-addon" data-stack-addon>
-      {addon && shown ? (
+      {partner ? (
         <label className="offer-addon-row">
           <input type="checkbox" className="offer-addon-input" checked={checked} onChange={(event) => onChange(event.target.checked)} />
-          {addon.thumb ? <img src={shopifyImageUrl(addon.thumb, 64)} alt="" width={22} height={22} loading="lazy" decoding="async" aria-hidden="true" /> : null}
+          {partner.thumb ? <img src={shopifyImageUrl(partner.thumb, 64)} alt="" width={22} height={22} loading="lazy" decoding="async" aria-hidden="true" /> : null}
           <span className="offer-addon-text">
-            {copyFill('product-chrome.offer_addon', 'Add the {name} to make a stack, +{price}', {name: addon.name, price: addon.price})}
+            {copyFill('product-chrome.offer_addon', 'Add the {name}, +{price}', {name: partner.name, price: partner.price})}
           </span>
         </label>
+      ) : <span />}
+      {fullBuild ? (
+        <Link prefetch="intent" to={fullBuild.href} className="offer-addon-build-link" data-full-build-link>
+          {copyFill('product-chrome.full_build_link', 'See the full {size}-inch build', {size: fullBuild.size})}
+        </Link>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A product with one offer gets no selectable card: one full-width status
+ * row on the cards' type scale, "Pre-order · Ships by 31 March 2027 ·
+ * Worldwide", the saving at the right when there is one, no second price
+ * (the headline above has it). `offer` picks which of the two cards the
+ * row says; a product simply in stock reads "Buy now · In stock, ships in
+ * days · From Belgium, EU only".
+ */
+export function OfferStatus({
+  buyNow,
+  preorder,
+  offer = 'preorder',
+}: {
+  buyNow: Pick<ProductVariantFragment, 'price' | 'campaign'>;
+  preorder: Pick<ProductVariantFragment, 'price' | 'campaign'>;
+  offer?: BatchOffer;
+}) {
+  const card = offerCards(buyNow, preorder).find((c) => c.offer === offer)!;
+  const extra = offer === 'preorder' ? card.extra : null;
+  return (
+    <p className="offer-status-row" data-offer-choice data-offer-single={offer}>
+      <span className="offer-status-row-text">
+        <span className="offer-status-row-title">{card.title}</span>
+        <span aria-hidden="true"> · </span>
+        {card.ships}
+        <span aria-hidden="true"> · </span>
+        <span className="is-muted">{card.where}</span>
+      </span>
+      {extra ? <span className="offer-status-row-extra">{extra}</span> : null}
+    </p>
   );
 }
 
@@ -114,12 +154,7 @@ export function OfferChoice({
   preorder,
   mode,
   onChange,
-  solo = false,
 }: {
-  /** No Buy now lane for this visitor (outside the EU, batch 1 gone): the
-   *  pre-order card alone, in the same place and type as beside Buy now.
-   *  `buyNow` then only carries the retail price the saving is read from. */
-  solo?: boolean;
   buyNow: Pick<ProductVariantFragment, 'price' | 'campaign'>;
   preorder: ProductVariantFragment;
   mode: BatchOffer;
@@ -127,16 +162,16 @@ export function OfferChoice({
 }) {
   const name = useId();
   return (
-    <fieldset className={`offer-choice${solo ? ' is-solo' : ''}`} data-offer-choice>
+    <fieldset className="offer-choice" data-offer-choice>
       <legend className="sr-only">{copyText('product-chrome.offer_legend') ?? 'Buy now or pre-order'}</legend>
-      {offerCards(buyNow, preorder).filter((card) => !solo || card.offer === 'preorder').map((card) => (
-        <label key={card.offer} className={`offer-card${mode === card.offer || solo ? ' is-selected' : ''}`} data-offer={card.offer}>
+      {offerCards(buyNow, preorder).map((card) => (
+        <label key={card.offer} className={`offer-card${mode === card.offer ? ' is-selected' : ''}`} data-offer={card.offer}>
           <input
             type="radio"
             className="offer-card-input"
             name={name}
             value={card.offer}
-            checked={mode === card.offer || solo}
+            checked={mode === card.offer}
             onChange={() => onChange(card.offer)}
           />
           <span className="offer-card-head">

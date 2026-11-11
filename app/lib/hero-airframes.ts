@@ -112,3 +112,10 @@ export const HERO_BOARDS: readonly HeroBoard[] = HERO_SLOTS.map((slot) => {
 
 /** The Shopify "Model" axis name the FC/ESC variants use. */
 export const HERO_VARIANT_AXIS = REGISTRY_VARIANT_AXIS;
+
+/** The size a link asks the home build block for (`/?build=3#build`, from a
+ *  product page's "See the full 3-inch build"), or null. */
+export function buildSizeFromSearch(search: string): string | null {
+  const size = new URLSearchParams(search).get('build');
+  return size && HERO_AIRFRAME_KEYS.includes(size) ? size : null;
+}

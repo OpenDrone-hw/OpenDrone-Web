@@ -30,7 +30,14 @@ export function ProductForm({
   showLineTotal = false,
   express,
   buyAside,
+  addUrl,
+  addLabel,
 }: {
+  /** The button's label with `addUrl` ("Pre-order the stack"). */
+  addLabel?: string;
+  /** Overrides the add link only (not a bundle): this part and the build
+   *  parts ticked beside it, in one add. */
+  addUrl?: string;
   /** A small slot beside the buy button (the stack total). */
   buyAside?: React.ReactNode;
   /** The Buy now lane: the button goes straight to a checkout of these
@@ -109,7 +116,7 @@ export function ProductForm({
   const qty = Math.max(1, Math.min(maxQuantity, Math.round(quantity ?? 1)));
   // The single-line hand-off carries `qty`; the bundle link keeps its own
   // per-line counts.
-  const href = buyUrl ?? withQuantity(selectedVariant?.cartAddUrl ?? '', qty);
+  const href = buyUrl ?? addUrl ?? withQuantity(selectedVariant?.cartAddUrl ?? '', qty);
   const disabled =
     soon ||
     !href ||
@@ -270,7 +277,7 @@ export function ProductForm({
         {isBundle
           ? (buyCtaLabel ?? copyText('product-chrome.buy_cta_add') ?? 'Add to cart')
           : selectedVariant?.availableForSale
-            ? (lineTotalLabel ?? ctaLabelAvailable)
+            ? (addLabel ?? lineTotalLabel ?? ctaLabelAvailable)
             : ctaLabelSoldOut}
       </AddToCartButton>
       )}

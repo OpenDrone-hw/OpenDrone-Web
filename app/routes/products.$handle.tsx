@@ -33,7 +33,7 @@ import {
   toProduct,
   type BatchOffer,
 } from '~/lib/catalog';
-import {OfferChoice, StackAddonRow} from '~/components/OfferChoice';
+import {AddonRow, OfferChoice, OfferStatus} from '~/components/OfferChoice';
 import {buyUrl, commerceHandoff} from '~/lib/shop-links';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
@@ -48,7 +48,7 @@ import {BuildWithThis} from '~/components/BuildWithThis';
 import {CartPlacementProvider} from '~/components/AddToCartButton';
 import {parseBuilds} from '~/lib/build-recommendations';
 import {batchChoiceOn} from '~/lib/shopify-storefront';
-import {boardExpressLines, resolveHeroBuilds, stackOffer} from '~/lib/hero-build';
+import {boardExpressLines, buildAddonTotal, buildAddonUrl, buildForPart, fullBuildHref, partnerBoard, resolveHeroBuilds, stackOffer} from '~/lib/hero-build';
 import {ExpressBuy, useExpressRefusal} from '~/components/ExpressBuy';
 import {buildForProduct} from '~/lib/related-parts';
 import buildsJson from '../../content/builds.json';
@@ -947,12 +947,18 @@ function ProductPage() {
     const build = builds.find((b) => b.parts.some((part) => part.sku === pickedVariant.sku && (part.role === 'flight-controller' || part.role === 'esc')));
     return build ? stackOffer(build) : null;
   }, [offerChoice?.buyNow, pickedVariant?.sku, builds]);
-  const partner = stack && pickedVariant?.sku ? (stack.parts.find((part) => part.sku !== pickedVariant.sku) ?? null) : null;
   const [withStack, setWithStack] = useState(false);
-  // A new size starts on this board alone.
-  useEffect(() => setWithStack(false), [pickedVariant?.id]);
+  // The build this part belongs to (the home block's), for the partner
+  // board's tick row and the "See the full build" link.
+  const build = useMemo(() => buildForPart(builds, pickedVariant?.sku, product.handle), [builds, pickedVariant?.sku, product.handle]);
+  // A size of this page with two offers: a one-offer size keeps that height.
+  const pageHasChoice = product.variants.nodes.some((variant) => Boolean(variant.preorderOffer));
+  // A new size starts on this part alone.
+  useEffect(() => {
+    setWithStack(false);
+  }, [pickedVariant?.id]);
   // The stack is bought only from Buy now, with the box ticked.
-  const stackOn = Boolean(withStack && stack && partner && offerMode === 'buy_now');
+  const stackOn = Boolean(withStack && stack && offerMode === 'buy_now' && offerChoice);
   const expressRefusal = useExpressRefusal();
   // Buy now or pre-order on (BATCH_CHOICE): one page for every region.
   const choiceOn = Boolean(useRouteLoaderData<RootLoader>('root')?.batchChoice);
@@ -1954,6 +1960,22 @@ function ProductPage() {
   // signup instead of the ship date. A blocked country gets "Not available
   // in <country>" and the End-Use Policy link, with no signup.
   const notDirect = notSoldDirect(rootData?.visitorCountry ?? null, usRate);
+  // The add-on slot, one for both lanes: the partner board at the chosen
+  // lane's price (Buy now: the stack, express; Pre-order: both boards into
+  // the cart in one add) and the link to the full build on the home page.
+  const preorderLane = Boolean(soloPreorder) || Boolean(offerChoice && offerMode === 'preorder');
+  const lane = preorderLane ? 'preorder' : 'buy_now';
+  const partner = build && (offerChoice || soloPreorder) ? partnerBoard(build, pickedVariant?.sku, lane) : null;
+  const addonShown = Boolean(!notDirect && build && (offerChoice || soloPreorder || !isBundle));
+  const preorderStack = Boolean(preorderLane && withStack && partner);
+  // A partner board in either lane: the total slot beside the button is kept for both.
+  const partnerEver = Boolean(build && (offerChoice || soloPreorder) && (partnerBoard(build, pickedVariant?.sku, 'buy_now') || partnerBoard(build, pickedVariant?.sku, 'preorder')));
+  const buildAdd = build && preorderStack && partner && pickedVariant?.sku
+    ? {
+        url: buildAddonUrl(build, pickedVariant.sku, [partner], buyQuantity),
+        total: formatPrice(buildAddonTotal(Number(selectedVariant?.price.amount ?? 0), [partner], buyQuantity).toFixed(2), selectedVariant?.price.currencyCode ?? 'EUR'),
+      }
+    : null;
   // The US notice under the ship date: the EU-only stock line.
   // The batches of a campaign SKU, one row each, the buyer's highlighted.
   // An accessory that ships with the paid November stock, or that a US buyer
@@ -2089,20 +2111,25 @@ function ProductPage() {
           onChange={setOfferMode}
         />
       ) : null}
-      {offerChoice && !notDirect ? (
-        <StackAddonRow
-          addon={
-            partner
-              ? {name: partner.title, price: formatPrice(partner.price ?? 0, partner.currency), thumb: partner.image}
-              : null
-          }
-          shown={offerMode === 'buy_now'}
+      {soloPreorder && !notDirect ? (
+        // One offer: a status row, no selectable card. On a page whose other
+        // size has two offers, an invisible copy of the cards keeps the height.
+        <div className={`offer-slot${pageHasChoice ? ' has-ghost' : ''}`}>
+          {pageHasChoice ? (
+            <div className="offer-slot-ghost" aria-hidden="true" inert>
+              <OfferChoice buyNow={soloPreorder.preorder} preorder={soloPreorder.preorder} mode="preorder" onChange={() => undefined} />
+            </div>
+          ) : null}
+          <OfferStatus buyNow={soloPreorder.retail} preorder={soloPreorder.preorder} />
+        </div>
+      ) : null}
+      {addonShown ? (
+        <AddonRow
+          partner={partner ? {name: partner.title, price: formatPrice(((partner.price ?? 0) * partner.quantity).toFixed(2), partner.currency), thumb: partner.image} : null}
           checked={withStack}
           onChange={setWithStack}
+          fullBuild={build ? {size: build.size, href: fullBuildHref(build.size)} : null}
         />
-      ) : null}
-      {soloPreorder && !notDirect ? (
-        <OfferChoice solo buyNow={soloPreorder.retail} preorder={soloPreorder.preorder} mode="preorder" onChange={() => undefined} />
       ) : null}
       {offerChoice && expressRefusal ? <p className="cart-alert" role="alert">{expressRefusal}</p> : null}
       {stepBar}
@@ -2123,6 +2150,8 @@ function ProductPage() {
         maxQuantityNote={maxQuantityNote}
         onQuantityChange={isBundle || notDirect ? undefined : setQuantity}
         showLineTotal={Boolean(setOf)}
+        addUrl={buildAdd?.url}
+        addLabel={buildAdd ? say('product-chrome.offer_cta_preorder_stack', 'Pre-order the stack') : undefined}
         express={
           offerChoice && offerMode === 'buy_now' && pickedVariant?.sku
             ? {
@@ -2134,14 +2163,19 @@ function ProductPage() {
             : null
         }
         buyAside={
-          // One slot beside the button for both offers (only filled with
-          // the stack ticked), so neither the choice nor the box moves it.
-          offerChoice && !notDirect && builds.some((b) => b.parts.some((part) => part.handle === product.handle) && stackOffer(b)) ? (
+          // One slot beside the button for both lanes, filled only with the
+          // stack or build parts ticked, so neither the choice nor a box moves it.
+          addonShown && partnerEver ? (
             <span className="buy-total" aria-live="polite">
               {stackOn && stack ? (
                 <>
                   <span className="buy-total-label">{say('product-chrome.offer_stack_total', 'Stack total')}</span>
                   <span className="buy-total-amount">{formatPrice((stack.price * buyQuantity).toFixed(2), stack.currency)}</span>
+                </>
+              ) : buildAdd ? (
+                <>
+                  <span className="buy-total-label">{say('product-chrome.build_total', 'Total')}</span>
+                  <span className="buy-total-amount">{buildAdd.total}</span>
                 </>
               ) : null}
             </span>
