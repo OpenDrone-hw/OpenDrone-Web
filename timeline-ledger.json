@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-10T13:29:20.770Z",
+  "updatedAt": "2026-11-11T05:01:59.584Z",
   "repos": {
     "OpenESC-20x20": {
       "createdAt": "2026-03-09",
@@ -112,7 +112,8 @@
       "status": null,
       "statusSince": "2026-08-15",
       "archived": false,
-      "releases": 0
+      "releases": 0,
+      "gone": "2026-11-11"
     },
     "OpenRX-Gemini": {
       "createdAt": "2026-09-01",
@@ -154,7 +155,8 @@
       "status": null,
       "statusSince": "2026-09-29",
       "archived": false,
-      "releases": 0
+      "releases": 0,
+      "gone": "2026-11-11"
     },
     "OpenFrame-3F": {
       "createdAt": "2026-09-19",
