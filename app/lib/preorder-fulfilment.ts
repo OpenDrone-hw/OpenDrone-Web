@@ -54,6 +54,7 @@
  * (`node --experimental-strip-types`) can load it.
  */
 
+import {batchOfferOf} from './catalog.ts';
 import {
   allocateUnit,
   batchOfUnit,
@@ -65,6 +66,7 @@ import {
   sellableUnits,
   servesRegion,
   shipsOnlyWithPaid,
+  preorderChoiceLine,
   shipsWithBatch,
   usStockRule,
   type CampaignConfig,
@@ -138,7 +140,7 @@ export const PREORDER_ORDERS_QUERY = `#graphql
         shippingAddress { countryCodeV2 }
         lineItems(first: 100) {
           pageInfo { hasNextPage }
-          nodes { sku name currentQuantity customAttributes { key value } }
+          nodes { sku name variantTitle currentQuantity customAttributes { key value } }
         }
         fulfillmentOrders(first: 10) {
           nodes { id status fulfillmentHolds { id handle reasonNotes } }
@@ -189,6 +191,8 @@ export type PreorderOrder = {
     nodes: Array<{
       sku: string | null;
       name: string;
+      /** The variant title as the order recorded it ("20×20 / Buy now"). */
+      variantTitle?: string | null;
       currentQuantity: number;
       customAttributes: Array<{key: string; value: string | null}>;
     }>;
@@ -389,16 +393,30 @@ export function parseBatchAttribute(value: string | null | undefined): {sku: str
  * promised a paid batch is not a mismatch when the rule moved it, since the
  * cart showed the whole parcel's March date.
  */
+/** An order's lines as `shipsOnlyWithPaid` reads them: a board bought as a
+ *  pre-order (`preorderChoiceLine`) makes the whole order a March order. */
+function paidCheckLines(order: Pick<PreorderOrder, 'createdAt' | 'lineItems'>, config: Pick<CampaignConfig, 'choiceFrom'>) {
+  return order.lineItems.nodes.map((l) => ({sku: l.sku, quantity: l.currentQuantity, preorder: preorderChoiceLine(config, l, order.createdAt)}));
+}
+
+/** True for a line of a board's `Buy now` variant: sold as batch 1 stock at retail. */
+function buyNowLine(line: {variantTitle?: string | null}): boolean {
+  return batchOfferOf(line.variantTitle ?? '') === 'buy_now';
+}
+
 export function batchPromiseMismatch(order: PreorderOrder, orderBatches: LineBatch[], config: CampaignConfig): boolean {
   const sold = configSoldUnder(config, order.createdAt);
   const textOf = (sku: string, batch: number) => sold.skus[sku]?.batches[batch - 1]?.ships?.trim() || sold.pendingShips;
-  const march = !shipsOnlyWithPaid(config, order.lineItems.nodes.map((l) => ({sku: l.sku, quantity: l.currentQuantity})));
+  const march = !shipsOnlyWithPaid(config, paidCheckLines(order, config));
   return order.lineItems.nodes.some((line) => {
     if (!(line.currentQuantity > 0) || !hasPromise(line)) return false;
     const sku = line.sku?.trim();
     if (!sku) return false;
     const mine = orderBatches.filter((b) => (b.item ?? b.sku) === sku);
     if (!mine.length) return false;
+    // A `Buy now` unit outside batch 1 stock: the site never sells that (the
+    // cart refuses it with a March line), so the order came another way.
+    if (buyNowLine(line) && mine.some((b) => !sold.skus[b.sku]?.batches[b.batch - 1]?.paid)) return true;
     const promised = parseBatchAttribute(lineAttribute(line, BATCH_LINE_ATTRIBUTE));
     if (promised && march && sold.skus[promised.sku]?.batches[promised.batch - 1]?.paid) return false;
     if (promised) return mine.some((b) => b.sku !== promised.sku || b.batch !== promised.batch);
@@ -475,7 +493,7 @@ export function assignBatches(
     // March: none of its units takes a paid batch or stock on hand.
     const march = !shipsOnlyWithPaid(
       config,
-      order.lineItems.nodes.map((l) => ({sku: l.sku, quantity: l.currentQuantity})),
+      paidCheckLines(order, config),
       euStock,
     );
     // The lead counts as the storefront showed them when the order was placed.

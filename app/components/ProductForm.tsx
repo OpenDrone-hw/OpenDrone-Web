@@ -84,10 +84,13 @@ export function ProductForm({
   // Batch 1 stock reads as stock where the bar says "in stock" (the EU): the
   // buyer adds it to the cart, they do not pre-order it.
   const geoInStock = useGeoInStock(selectedVariant?.campaign, selectedVariant?.shipPromise);
+  // A board with the buy now or pre-order choice: the button names the choice.
   const ctaLabelAvailable =
-    productStatus === 'preorder' && !geoInStock
-      ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
-      : (copyText('product-chrome.buy_cta_add') ?? 'Add to cart');
+    selectedVariant?.offer === 'buy_now' && selectedVariant.preorderOffer
+      ? (copyText('product-chrome.buy_cta_buy_now') ?? 'Buy now')
+      : selectedVariant?.offer === 'preorder' || (productStatus === 'preorder' && !geoInStock)
+        ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
+        : (copyText('product-chrome.buy_cta_add') ?? 'Add to cart');
   const ctaLabelSoldOut = copyText('product-chrome.buy_stock_out') ?? 'Sold out';
   const hidden = new Set(
     (hideOptionNames ?? []).map((n) => n.trim().toLowerCase()),

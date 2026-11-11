@@ -100,3 +100,56 @@ describe('order cards and the pinned buy bar keep clear of other content', () =>
     assert.ok(Number(rule[1]) >= 1037, 'the copy must be hidden on every height where the cards reach it');
   });
 });
+
+describe('buy now or pre-order blocks', () => {
+  const UI = readFileSync(new URL('./site-ui.css', import.meta.url), 'utf8');
+  const plain = UI.replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = (selector: string): string => {
+    const at = plain.indexOf(`\n${selector} {`);
+    assert.ok(at >= 0, `${selector} has no rule`);
+    return plain.slice(at, plain.indexOf('}', at));
+  };
+
+  it('puts the two offer cards side by side and stacks them on a phone', () => {
+    assert.match(rule('.offer-choice'), /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+    assert.match(plain, /@media \(max-width: 480px\) \{\s*\.offer-choice \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+  });
+
+  it('lets a card shrink inside a 390 px phone and keeps its radio focusable', () => {
+    for (const selector of ['.offer-choice', '.offer-card', '.hero-choice', '.hero-choice-option']) {
+      assert.match(rule(selector), /min-width:\s*0/, `${selector} must be allowed to shrink`);
+    }
+    // Hidden by opacity, never display: none, so keyboard and screen readers reach it.
+    assert.match(rule('.offer-card-input'), /opacity:\s*0/);
+    assert.doesNotMatch(rule('.offer-card-input'), /display:\s*none|visibility:\s*hidden/);
+    assert.match(plain, /\.offer-card:has\(\.offer-card-input:focus-visible\) \{[^}]*outline:/);
+    assert.match(plain, /\.hero-choice-option:has\(input:focus-visible\) \{[^}]*outline:/);
+  });
+
+  it('never cuts a part name in the home build block', () => {
+    const name = rule('.hero-build-choice .hero-build-name strong');
+    assert.match(name, /white-space:\s*normal/);
+    assert.match(name, /text-overflow:\s*clip/);
+  });
+
+  it('drops the 3D hero highlight where there is no 3D hero beside the list', () => {
+    assert.match(plain, /@media \(max-width: 1023px\) \{\s*\.hero-build-choice \.hero-build-part\.is-active \{ background: none; \}/);
+    assert.match(plain, /\.home-mobile-build \.hero-build-choice \.hero-build-part\.is-active,\s*\.pdp-build \.hero-build-choice \.hero-build-part\.is-active \{ background: none; \}/);
+  });
+
+  it('keeps the cart badge on one line and the mode labels readable', () => {
+    assert.match(rule('.cart-line-badge'), /white-space:\s*nowrap/);
+    assert.match(rule('.cart-choice-action,\n.cart-summary-page .cart-choice-action'), /text-transform:\s*none/);
+  });
+
+  it('hides the hero beat copy on every height where the pre-order block reaches it', () => {
+    const hide = plain.match(/@media \(max-height: (\d+)px\) and \(min-width: 769px\) \{\s*\.homepage:has\(\.hero-build-choice\) \.hp-copy \{ display: none; \}/);
+    assert.ok(hide, 'the rule for .hp-copy beside the build block is missing');
+    // Block up to 590 px + 36 px bottom offset + the copy down to 264 px + 12 px clear.
+    assert.ok(Number(hide[1]) >= 902);
+    const list = plain.match(/\.hero-buy--guide \.hero-build-choice \.hero-build-parts \{ max-height: min\((\d+)px, calc\(100svh - (\d+)px\)\); \}/);
+    assert.ok(list, 'the block needs its own list height');
+    // On the shortest guarded laptop (768 px) the block must end above the header's 180 px zone.
+    assert.ok(768 - 36 - (768 - Number(list[2]) + 200) >= 180);
+  });
+});

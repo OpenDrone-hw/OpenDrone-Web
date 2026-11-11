@@ -31,7 +31,9 @@ import {
   thirdPartyBrand,
   toCard,
   toProduct,
+  type BatchOffer,
 } from '~/lib/catalog';
+import {OfferChoice} from '~/components/OfferChoice';
 import {buyUrl, commerceHandoff} from '~/lib/shop-links';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
@@ -45,6 +47,7 @@ import {RelatedProducts} from '~/components/RelatedProducts';
 import {BuildWithThis} from '~/components/BuildWithThis';
 import {CartPlacementProvider} from '~/components/AddToCartButton';
 import {parseBuilds} from '~/lib/build-recommendations';
+import {batchChoiceOn} from '~/lib/shopify-storefront';
 import {resolveHeroBuilds} from '~/lib/hero-build';
 import {buildForProduct} from '~/lib/related-parts';
 import buildsJson from '../../content/builds.json';
@@ -324,12 +327,12 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const retailBySku: Record<string, number | null> = Object.fromEntries(
     // A USD variant (US buyer) has no EUR retail here: its ladder comes
     // ready-made in `campaign.usLadder`.
-    entry.variants.map((v) => [v.sku, v.currency === 'USD' || v.campaign?.internationalPrice ? null : (v.compare_price ?? null)]),
+    entry.variants.map((v) => [v.sku, v.currency === 'USD' || v.campaign?.internationalPrice ? null : (v.preorder_offer?.compare_price ?? v.compare_price ?? null)]),
   );
 
   // The builds this product is part of, priced from the same catalog read
   // as the homepage build card.
-  const builds = resolveHeroBuilds(BUILDS, catalog).filter((build) =>
+  const builds = resolveHeroBuilds(BUILDS, catalog, batchChoiceOn(context.env)).filter((build) =>
     build.parts.some((part) => part.handle === handle),
   );
 
@@ -909,7 +912,7 @@ function ProductPage() {
   // and fall back to the server's default variant when no options are set.
   const [searchParams] = useSearchParams();
   const searchKey = searchParams.toString();
-  const selectedVariant = useMemo(() => {
+  const pickedVariant = useMemo(() => {
     const params = new URLSearchParams(searchKey);
     const wanted = [...params].map(([name, value]) => ({name, value}));
     // A flattened picker (two option axes as one row of cards) opens on its
@@ -927,6 +930,13 @@ function ProductPage() {
       product.selectedOrFirstAvailableVariant
     );
   }, [searchKey, product]);
+  // Buy now or pre-order: a board with both offers opens on "Buy now"; the
+  // choice swaps the whole selected variant (price, ship line, hand-off), so
+  // everything below reads the chosen offer. Without the choice this is the
+  // picked variant, unchanged.
+  const [offerMode, setOfferMode] = useState<BatchOffer>('buy_now');
+  const offerChoice = pickedVariant?.preorderOffer ? {buyNow: pickedVariant, preorder: pickedVariant.preorderOffer} : null;
+  const selectedVariant = offerChoice && offerMode === 'preorder' ? offerChoice.preorder : pickedVariant;
 
   // Coming-soon state: no prices, no add-to-cart - the buy module becomes a
   // notify-at-launch signup. Root data feeds the Turnstile key.
@@ -1853,7 +1863,7 @@ function ProductPage() {
     current: nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
   }));
   const stepBarState =
-    campaign && tiers.length ? stepBarView(campaign, tiers.map((tier) => tier.upTo)) : null;
+    campaign && tiers.length && selectedVariant?.offer !== 'buy_now' ? stepBarView(campaign, tiers.map((tier) => tier.upTo)) : null;
   const stepBar =
     campaign && stepBarState ? (
       <StepBar
@@ -1920,7 +1930,8 @@ function ProductPage() {
   const accessoryBatches = Boolean(
     campaign?.shipsWith && campaign.batches.some((b) => b.paid || b.status === 'other_region'),
   );
-  const showAvailability = Boolean(campaign && ((tiers.length && stepBarState) || accessoryBatches));
+  // A board with the two offer cards says where and when on the cards.
+  const showAvailability = Boolean(!offerChoice && campaign && ((tiers.length && stepBarState) || accessoryBatches));
   const usEuOnly = usBuyer && !isBundle && !selectedVariant?.campaign && Boolean(selectedVariant?.availableForSale);
   // A unit that waits for a funding target: what happens if it is missed.
   const waitsForTarget = Boolean(campaign && !campaign.targetReached && currentBatch(campaign) && !currentBatch(campaign)!.paid);
@@ -2014,9 +2025,10 @@ function ProductPage() {
             </span>
           ) : null}
           {vatNote ? <span className="product-buy-vat">{vatNote}</span> : null}
-          <RetailPrice retail={earlyPrice?.retail} />
+          {/* With the two offer cards, the pre-order card states the saving. */}
+          {offerChoice ? null : <RetailPrice retail={earlyPrice?.retail} />}
         </span>
-        <EarlyBirdLine early={earlyPrice} />
+        {offerChoice ? null : <EarlyBirdLine early={earlyPrice} />}
         {isBundle ? (
           (() => {
             // Name the actual pair for the tier (20×20 ships the Mini).
@@ -2035,6 +2047,14 @@ function ProductPage() {
           })()
         ) : null}
       </div>
+      {offerChoice && !notDirect ? (
+        <OfferChoice
+          buyNow={offerChoice.buyNow}
+          preorder={offerChoice.preorder}
+          mode={offerMode}
+          onChange={setOfferMode}
+        />
+      ) : null}
       {stepBar}
       {/* Star aggregate + link to the reviews chapter. Renders nothing
           without reviews. */}
@@ -2084,7 +2104,7 @@ function ProductPage() {
       preorder && !isBundle ? (
         showAvailability && campaign ? (
           <Availability campaign={campaign} region={usBuyer ? 'US' : internationalBuyer ? 'INT' : 'EU'} countShown={Boolean(stepBar)} />
-        ) : (
+        ) : offerChoice ? null : (
           <ShipLine campaign={campaign} promise={shipPromise} className="product-buy-stock" />
         )
       ) : (

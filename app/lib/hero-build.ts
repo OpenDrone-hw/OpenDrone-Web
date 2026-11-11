@@ -1,4 +1,4 @@
-import {bySku, cartAddUrl, isEarlyPrice, type Catalog, type CartLine} from './catalog.ts';
+import {bySku, cartAddUrl, isEarlyPrice, type BatchOffer, type Catalog, type CartLine} from './catalog.ts';
 import {
   partHandle,
   type BuildsConfig,
@@ -31,6 +31,11 @@ export type HeroBuildPart = {
   shipPromise: string | null;
   /** The price is an early bird preorder price. */
   early?: boolean;
+  /** A board with the buy now or pre-order choice: which offer `price` and
+   *  `shipPromise` are. */
+  offer?: BatchOffer;
+  /** The pre-order beside a buy-now board: its price and ship promise. */
+  preorder?: {price: number; shipPromise: string | null};
 };
 
 export type HeroBuild = {
@@ -38,15 +43,20 @@ export type HeroBuild = {
   size: string;
   parts: HeroBuildPart[];
   addUrl: string;
+  /** Buy now or pre-order is on (`BATCH_CHOICE`): the home shows this build
+   *  as one block with the two modes ({@link buildModes}). */
+  choice?: boolean;
 };
 
 /** Use the same exact SKU recipes as the cart's build suggestions. */
 export function resolveHeroBuilds(
   config: BuildsConfig,
   catalog: Catalog,
+  choice = false,
 ): HeroBuild[] {
   return config.builds.map((build) => ({
     id: build.id,
+    ...(choice ? {choice} : {}),
     size: build.id.replace(/-inch$/, ''),
     addUrl: catalog.add_url,
     parts: build.parts.map((part) => {
@@ -70,6 +80,10 @@ export function resolveHeroBuilds(
         available: Boolean(variant && variant.availability !== 'sold_out'),
         shipPromise: variant?.ship_promise ?? null,
         early: isEarlyPrice(variant),
+        ...(variant?.offer ? {offer: variant.offer} : {}),
+        ...(variant?.preorder_offer
+          ? {preorder: {price: variant.preorder_offer.price, shipPromise: variant.preorder_offer.ship_promise}}
+          : {}),
       };
     }),
   }));
@@ -141,4 +155,41 @@ export function heroBuildSelection(
       | 'date'
       | 'none',
   };
+}
+
+export type BuildMode = 'buy_now' | 'preorder';
+
+const isBoard = (part: Pick<HeroBuildPart, 'role'>) => part.role === 'flight-controller' || part.role === 'esc';
+
+/**
+ * A build as its two modes, each a build of its own whose rows carry that
+ * mode's price, so the total of a mode is always the sum of its rows:
+ * - `buy_now`: the FC and ESC stack from stock at the retail price, or null
+ *   unless both boards are in stock for this buyer;
+ * - `preorder`: the full build, the boards at their pre-order price, every
+ *   line added as a pre-order (`offer=preorder`), so nothing in it is a
+ *   board paid at retail that then waits for March.
+ */
+export function buildModes(build: HeroBuild): {buy_now: HeroBuild | null; preorder: HeroBuild} {
+  const boards = build.parts.filter(isBoard);
+  const stocked = boards.length === 2 && boards.every((part) => part.offer === 'buy_now' && part.available);
+  return {
+    buy_now: stocked ? {...build, id: `${build.id}-stack`, parts: boards} : null,
+    preorder: {
+      ...build,
+      parts: build.parts.map((part) =>
+        part.offer !== 'buy_now'
+          ? part
+          : part.preorder
+            ? {...part, offer: 'preorder' as const, price: part.preorder.price, shipPromise: part.preorder.shipPromise}
+            // In stock but its pre-order is closed: not part of a pre-order build.
+            : {...part, available: false},
+      ),
+    },
+  };
+}
+
+/** The add link of a mode: a pre-order build asks for the pre-order offer. */
+export function modeAddUrl(href: string, mode: BuildMode): string {
+  return mode === 'preorder' ? `${href}${href.includes('?') ? '&' : '?'}offer=preorder` : href;
 }

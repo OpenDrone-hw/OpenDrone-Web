@@ -211,6 +211,11 @@ export type CampaignConfig = {
    *  of the current ones (terms 7bis.3 and 15.1: a later version never
    *  changes what an existing order was promised). One entry, or a list. */
   soldUnder?: SoldUnder | SoldUnder[];
+  /** The instant the buy now or pre-order choice went live (ISO timestamp,
+   *  set with `BATCH_CHOICE = "1"`). From then on an order line of a board's
+   *  `Pre-order` variant is a March unit ({@link preorderChoiceLine}); before
+   *  it that variant sold batch 1 stock. Absent: the choice never ran. */
+  choiceFrom?: string;
 };
 
 /** What the funding batches do after `endsOn` in a confirmed campaign:
@@ -501,6 +506,9 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
     }
     if (entry.priceTiers !== undefined) checkTiers(entry.priceTiers, `${sku} priceTiers`);
   }
+  if (c.choiceFrom !== undefined && (typeof c.choiceFrom !== 'string' || !/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(c.choiceFrom) || !Number.isFinite(Date.parse(c.choiceFrom)))) {
+    throw new Error('preorders: choiceFrom must be an ISO timestamp in UTC');
+  }
   if (c.confirmed !== undefined && typeof c.confirmed !== 'boolean') throw new Error('preorders: confirmed must be true or false');
   if (c.afterEndsOn !== undefined && !AFTER_ENDS_ON.includes(c.afterEndsOn)) {
     throw new Error(`preorders: afterEndsOn must be ${AFTER_ENDS_ON.join(', ')}`);
@@ -768,11 +776,13 @@ function toRuns(ordered: PaidUnitsOf): UnitRuns {
  */
 export function shipsOnlyWithPaid(
   config: Pick<CampaignConfig, 'skus' | 'shipsWith'>,
-  lines: Array<{sku: string | null | undefined; quantity: number}>,
+  lines: Array<{sku: string | null | undefined; quantity: number; preorder?: boolean}>,
   stockUsed: Record<string, number> = {},
 ): boolean {
   for (const line of lines) {
     if (!(line.quantity > 0)) continue;
+    // The buyer chose the pre-order variant of a board ({@link preorderChoiceLine}).
+    if (line.preorder) return false;
     const sku = line.sku?.trim();
     if (!sku) return false;
     const rule = config.shipsWith?.[sku];
@@ -784,6 +794,26 @@ export function shipsOnlyWithPaid(
     } else if (!config.skus[sku]?.batches.some((b) => b.paid)) return false;
   }
   return true;
+}
+
+/**
+ * Whether an order line is a board bought as a pre-order: its variant title
+ * as the order recorded it names the `Pre-order` value of the `Batch` option
+ * ("20×20 / Pre-order") and the order was created at or after `choiceFrom`.
+ * Such a line ships in March and makes its whole order a March order, so it
+ * takes no batch 1 stock. Before `choiceFrom` (and without one) the same
+ * variant sold batch 1 stock, so the title decides nothing. The price is
+ * bound to the variant by Shopify, so this cannot be edited from a cart.
+ */
+export function preorderChoiceLine(
+  config: Pick<CampaignConfig, 'choiceFrom'>,
+  line: {variantTitle?: string | null},
+  createdAt: string | null | undefined,
+): boolean {
+  if (!config.choiceFrom || !createdAt) return false;
+  const created = Date.parse(createdAt);
+  if (!Number.isFinite(created) || created < Date.parse(config.choiceFrom)) return false;
+  return (line.variantTitle ?? '').split(' / ').some((part) => part.trim() === 'Pre-order');
 }
 
 /** Every paid unit of a SKU, whatever its region: the count the price
@@ -901,11 +931,14 @@ export function campaignState(
   priceTiers: PriceTier[],
   retail: number | null = null,
   region: Region = 'EU',
+  /** The next unit is a pre-order: it skips paid batches, like the units of
+   *  an order that ships in March. */
+  march = false,
 ): CampaignState {
   const units = totalUnits(ordered);
   const list = openBatches(batches);
   const fill = batchFill(batches, ordered);
-  const index = nextIndex(list, fill, region);
+  const index = nextIndex(list, fill, region, march);
   const current = list[index];
 
   const stepUnits = tierUnits(batches, ordered);
@@ -1162,29 +1195,56 @@ export function applyCampaign(
           return {...variant, availability: 'preorder', ship_promise: state.shipPromise, campaign: dated};
         }
         if (!entry) return variant;
-        const state = campaignState(
-          entry.batches,
-          units[variant.sku] ?? 0,
-          config.pendingShips,
-          tiersFor(config, variant.sku, now),
-          variant.compare_price,
-          region,
-        );
-        if (closed && state.shipsOnTarget && !state.paidStock && (confirmed || !state.targetReached)) {
-          return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
-        }
-        // Shopify still charges under this SKU's step, so the step has not
-        // been written yet: close rather than sell under it.
-        if (state.price != null && variant.price < state.price - 0.005) {
-          return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
-        }
-        const dated: CampaignState = {
+        const tiers = tiersFor(config, variant.sku, now);
+        const stateFor = (march: boolean) =>
+          campaignState(entry.batches, units[variant.sku] ?? 0, config.pendingShips, tiers, variant.compare_price, region, march);
+        const date = (state: CampaignState): CampaignState => ({
           ...settle(state),
           deadline: campaignDate(config.endsOn),
           latestShip: state.shipsOnTarget && !state.paidStock ? latestShipDate(config) : null,
           shipByDay: state.shipsOnTarget && !state.paidStock ? latestShipDay(config) : null,
+        });
+        /** Whether the unit `state` describes is sold at the price Shopify
+         *  charges for this variant today. */
+        const open = (state: CampaignState): boolean => {
+          if (closed && state.shipsOnTarget && !state.paidStock && (confirmed || !state.targetReached)) return false;
+          // Shopify still charges under this SKU's step, so the step has not
+          // been written yet: close rather than sell under it.
+          return !(state.price != null && variant.price < state.price - 0.005);
         };
-        return {...variant, availability: 'preorder', ship_promise: state.shipPromise, campaign: dated};
+        const soldOut: CatalogVariant = {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
+        // A board with a `Buy now` variant (`BATCH_CHOICE`): batch 1 stock is
+        // that variant, at its own retail price, for an EU buyer while units
+        // are left; the entry's own Shopify variant is the pre-order and
+        // never takes batch 1 stock.
+        if (variant.buy_now) {
+          const {buy_now: buyNow, ...entryVariant} = variant;
+          const march = stateFor(true);
+          const preorder = open(march)
+            ? {merchandise_id: variant.merchandise_id, price: variant.price, compare_price: variant.compare_price, ship_promise: march.shipPromise, campaign: date(march)}
+            : null;
+          const stock = stateFor(false);
+          const stocked = region === 'EU' && buyNow.available && stock.paidStock && (stock.paidLeft ?? 0) > 0;
+          if (stocked) {
+            return {
+              ...entryVariant,
+              offer: 'buy_now',
+              merchandise_id: buyNow.merchandise_id,
+              price: buyNow.price,
+              compare_price: null,
+              availability: 'preorder',
+              ship_promise: stock.shipPromise,
+              // Retail, whatever the step: stock has no price step.
+              campaign: {...date(stock), earlyPrice: false, tierUpTo: null, tierLeft: 0, tierOff: 0, price: null, nextPrice: null},
+              ...(preorder ? {preorder_offer: preorder} : {}),
+            };
+          }
+          if (!preorder) return {...soldOut, buy_now: undefined, offer: 'preorder'};
+          return {...entryVariant, offer: 'preorder', availability: 'preorder', ship_promise: preorder.ship_promise, campaign: preorder.campaign};
+        }
+        const state = stateFor(false);
+        if (!open(state)) return soldOut;
+        return {...variant, availability: 'preorder', ship_promise: state.shipPromise, campaign: date(state)};
       }),
     })),
   };

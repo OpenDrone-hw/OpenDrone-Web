@@ -5,10 +5,12 @@ import type {Route} from './+types/cart.$';
 import {compatForLines, compatLocale} from '~/lib/cart-compat';
 import {readLocaleCookie} from '~/lib/i18n';
 import {CompatAlert} from '~/components/commerce/CompatAlert';
-import {fetchPaymentMethods, getCart, updateCartLines, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
+import {batchChoiceOn, fetchPaymentMethods, getCart, updateCartLines, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
 import {
   CART_CHECK,
   DATES_SEEN_FIELD,
+  KEEP_TOGETHER_INTENT,
+  batchChoiceConflict,
   cartLineInfo,
   checkoutOpen,
   hasMixedShipDates,
@@ -176,7 +178,9 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
     : null;
   // Parts that do not work together: a warning in the visitor's language, never a block.
   const compat = compatForLines(cart?.lines ?? [], country, compatLocale(readLocaleCookie(request.headers.get('Cookie'))));
-  return {cart, info, check, payments, country, shippingFrom, compat};
+  // Buy now or pre-order is on: every line says which it is.
+  const choice = batchChoiceOn(context.env);
+  return {cart, info, check, payments, country, shippingFrom, compat, choice};
 }
 
 type Removed = SplitItem[];
@@ -194,6 +198,7 @@ const CHECK_NOTICES: Record<CartCheck, () => string> = {
   [CART_CHECK.price]: () => t('check_price', 'A price changed. Check the total below.'),
   [CART_CHECK.priceAndDate]: () => t('check_price_and_date', 'A price and a ship date changed. Check the dates and the total below.'),
   [CART_CHECK.mixedDates]: () => t('parcel_note', 'Your order ships in one parcel, when its last item is ready.'),
+  [CART_CHECK.batchChoice]: () => t('check_batch_choice', 'Choose one order in March, or the in-stock items first.'),
   [CART_CHECK.usEuOnly]: () => t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.'),
   [CART_CHECK.market]: () => t('check_market', "Your cart moved to your delivery country's prices. Check the total below."),
 };
@@ -204,7 +209,7 @@ function checkNotice(check: string | null): string | null {
 }
 
 export default function CartPage() {
-  const {cart, info, check, payments, country, shippingFrom, compat} = useLoaderData<typeof loader>();
+  const {cart, info, check, payments, country, shippingFrom, compat, choice} = useLoaderData<typeof loader>();
   const rootData = useRouteLoaderData<RootLoader>('root');
   // Lines moved out for a second order: kept in this browser so the list
   // survives a reload and the trip through checkout.
@@ -237,6 +242,7 @@ export default function CartPage() {
       {cart?.lines.length ? (
         <PopulatedCart
           cart={cart}
+          choice={choice}
           info={info}
           payments={payments}
           country={cartQuoteCountry(pendingShipTo ?? country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
@@ -559,7 +565,10 @@ function PopulatedCart({
   usRate,
   shippingFrom,
   onSplit,
+  choice = false,
 }: {
+  /** Buy now or pre-order is on: lines carry their badge. */
+  choice?: boolean;
   cart: ShopifyCart;
   info: Record<string, CartLineInfo>;
   payments: string[];
@@ -617,6 +626,8 @@ function PopulatedCart({
   // A non-EU destination cannot take a line that ships to the EU only: the
   // buyer removes it or picks an EU country.
   const euOnlyForUs = (usBuyer || international) && cart.lines.some((line) => info[line.id]?.euOnly);
+  // A Buy now board with a March item: one of the two actions comes first.
+  const choiceOpen = batchChoiceConflict(cart, info);
   const blocked = pending || overLimit || euOnlyForUs;
   const checkoutRef = useRef<HTMLButtonElement>(null);
   const pendingStyle = pending ? {opacity: 0.5} : undefined;
@@ -632,7 +643,7 @@ function PopulatedCart({
           </div>
           <ul className="cart-lines-scroll" aria-label={copyText('cart.sr_line_items') ?? 'Line items'}>
             {sortCartLines(cart.lines).map((line) => (
-              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} />
+              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} badge={choice} />
             ))}
           </ul>
         </div>
@@ -690,7 +701,7 @@ function PopulatedCart({
           ) : null}
           {/* One parcel, one date: said once here, not under every line. */}
           <ParcelPanel lines={cart.lines} />
-          {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}
+          {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} choice={batchChoiceConflict(cart, info)} /> : null}
           {/* The cheap add-ons sit next to Checkout, where the buyer decides. */}
           {shipBlocked || throughShops || closed ? null : <CartSuggestions cart={cart} group="extras" />}
           {shipBlocked ? (
@@ -740,7 +751,7 @@ function PopulatedCart({
               method="post"
               action="/api/shopify/cart"
               onSubmit={(event) => {
-                if (blocked) {
+                if (blocked || choiceOpen) {
                   event.preventDefault();
                   return;
                 }
@@ -756,7 +767,7 @@ function PopulatedCart({
               ) : null}
               {/* This page shows the one-parcel line, so checkout may go on. */}
               {mixed ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
-              <button ref={checkoutRef} className="cart-checkout-cta" type="submit" disabled={blocked} aria-disabled={blocked || undefined}>
+              <button ref={checkoutRef} className="cart-checkout-cta" type="submit" disabled={blocked || choiceOpen} aria-disabled={blocked || choiceOpen || undefined}>
                 {pending ? t('checkout_updating', 'Updating cart…') : <Txt id="cart.checkout_cta" />}
               </button>
             </Form>
@@ -773,7 +784,7 @@ function PopulatedCart({
           subtotal={formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}
           vatIncluded={vatIncluded}
           promise={parcelPromise(cart.lines.map((l) => l.shipPromise))}
-          blocked={blocked}
+          blocked={blocked || choiceOpen}
           pending={pending}
         />
       )}
@@ -877,10 +888,15 @@ function MixedNote({
   cart,
   info,
   onSplit,
+  choice = false,
 }: {
   cart: ShopifyCart;
   info: Record<string, CartLineInfo>;
   onSplit: (items: Removed) => void;
+  /** A board bought as "Buy now" shares the cart with a March item
+   *  (`batchChoiceConflict`): the buyer picks one of two actions, and
+   *  checkout waits for it. */
+  choice?: boolean;
 }) {
   const revalidator = useRevalidator();
   const onPending = useContext(PendingContext);
@@ -917,6 +933,60 @@ function MixedNote({
     }
   };
 
+  const keepTogether = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setFailed(false);
+    onPending(1);
+    try {
+      await postCart('/api/shopify/cart', [['intent', KEEP_TOGETHER_INTENT]]);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+      onPending(-1);
+      void revalidator.revalidate();
+    }
+  };
+
+  if (choice) {
+    const month = cart.lines.map((l) => info[l.id]?.month).find(Boolean) ?? null;
+    return (
+      <div className="cart-choice-note" role="group" aria-labelledby="cart-choice-title" data-cart-choice>
+        <p className="cart-choice-title" id="cart-choice-title">
+          {t('choice_title', 'In-stock boards and pre-order items in one cart')}
+        </p>
+        <Form method="post" action="/api/shopify/cart" onSubmit={(event) => void keepTogether(event)}>
+          <input type="hidden" name="intent" value={KEEP_TOGETHER_INTENT} />
+          <button type="submit" className="cart-choice-action" disabled={busy}>
+            <span>{t('choice_keep', 'Keep everything in one order')}</span>
+            <small>
+              {month
+                ? t('choice_keep_note', 'Ships {month}, boards at the pre-order price', {month})
+                : t('choice_keep_note_plain', 'Ships with the pre-order, boards at the pre-order price')}
+            </small>
+          </button>
+        </Form>
+        {plan ? (
+          <Form method="post" action="/api/shopify/cart" onSubmit={(event) => void split(event)}>
+            <input type="hidden" name="intent" value="remove" />
+            {plan.later.map((id) => <input key={id} type="hidden" name="lineId" value={id} />)}
+            <button type="submit" className="cart-choice-action" disabled={busy}>
+              <span>{t('choice_split', 'Check out the in-stock items first')}</span>
+              <small>{t('choice_split_note', 'Ships in a few working days, the rest stays listed below')}</small>
+            </button>
+          </Form>
+        ) : null}
+        {failed ? (
+          <small className="cart-line-error" role="alert">
+            {copyText('cart.line_update_failed') ?? 'Could not update. Try again.'}
+          </small>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="cart-mixed-note" role="note">
       <p className="cart-summary-note">{t('parcel_note', 'Your order ships in one parcel, when its last item is ready.')}</p>
@@ -947,16 +1017,30 @@ function MixedNote({
   );
 }
 
+/** "Ships now" or "Pre-order, March 2027": what a cart line is, in two words. */
+function shipsBadge(info: CartLineInfo | undefined): {kind: 'now' | 'preorder'; text: string} | null {
+  if (!info?.ships) return null;
+  if (info.ships === 'now') return {kind: 'now', text: t('badge_now', 'Ships now')};
+  return {
+    kind: 'preorder',
+    text: info.month ? t('badge_preorder', 'Pre-order, {month}', {month: info.month}) : t('badge_preorder_plain', 'Pre-order'),
+  };
+}
+
 function CartLine({
   line,
   info,
   pending,
+  badge = false,
 }: {
   line: ShopifyCartLine;
   info: CartLineInfo | undefined;
   pending: boolean;
+  /** Show the line's "Ships now" or "Pre-order" badge (buy now or pre-order is on). */
+  badge?: boolean;
 }) {
   const max = info?.maxQuantity ?? null;
+  const ships = badge ? shipsBadge(info) : null;
   return (
     <li className="cart-line cart-line--sheet">
       <div className="cart-sheet-row">
@@ -967,6 +1051,7 @@ function CartLine({
         )}
         <div className="cart-sheet-item">
           <Link to={variantLink(line.handle, line.selectedOptions)}><strong>{lineName(line)}</strong></Link>
+          {ships ? <span className={`cart-line-badge is-${ships.kind}`}>{ships.text}</span> : null}
           {max !== null && line.quantity > max ? (
             <small className="cart-line-error" role="alert">{t('line_over_batch', 'Only {left} left. Lower the quantity.', {left: max})}</small>
           ) : max !== null && max < MAX_LINE_QUANTITY && line.quantity >= max ? (

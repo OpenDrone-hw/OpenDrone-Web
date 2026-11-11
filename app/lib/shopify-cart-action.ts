@@ -1,6 +1,6 @@
-import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
+import {bySku, preorderView, variantByMerchandise, type Catalog, type CatalogVariant} from './catalog.ts';
 import {appCommerceEnabled} from './commerce/app-api.ts';
-import {campaignDate, internationalRegion, isInternationalRegion, mixedShipPromise, regionOf, shipGroupKey, shipLabelFromPromise, shipOrderDay, type Region} from './preorder-campaign.ts';
+import {campaignDate, promiseBatchMonth, stockPromise, internationalRegion, isInternationalRegion, mixedShipPromise, regionOf, shipGroupKey, shipLabelFromPromise, shipOrderDay, type Region} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
 import {destinationForRequest, geoCountryForRequest, isInternationalQuote, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
@@ -401,26 +401,18 @@ export function sellableVariant(
   merchandiseId: string,
   globalComingSoon: boolean,
 ): CatalogVariant | null {
-  for (const product of catalog.products) {
-    const variant = product.variants.find((v) => v.merchandise_id === merchandiseId);
-    if (!variant) continue;
-    if (variant.availability === 'sold_out') return null;
-    // The request-time catalog proves the SKU and stock state. The storefront
-    // lifecycle remains an independent server-side release gate: a roadmap
-    // concept never becomes orderable merely because a Shopify variant exists.
-    const status = resolveStatus(product.handle, globalComingSoon);
-    return isPurchasableStatus(status) ? variant : null;
-  }
-  return null;
+  const found = variantByMerchandise(catalog, merchandiseId);
+  if (!found || found.variant.availability === 'sold_out') return null;
+  // The request-time catalog proves the SKU and stock state. The storefront
+  // lifecycle remains an independent server-side release gate: a roadmap
+  // concept never becomes orderable merely because a Shopify variant exists.
+  const status = resolveStatus(found.product.handle, globalComingSoon);
+  return isPurchasableStatus(status) ? found.variant : null;
 }
 
 /** The catalog variant behind a merchandise id, whatever it sells as. */
 function catalogVariant(catalog: Catalog, merchandiseId: string): CatalogVariant | null {
-  for (const product of catalog.products) {
-    const variant = product.variants.find((v) => v.merchandise_id === merchandiseId);
-    if (variant) return variant;
-  }
-  return null;
+  return variantByMerchandise(catalog, merchandiseId)?.variant ?? null;
 }
 
 /**
@@ -637,12 +629,66 @@ export const CART_CHECK = {
   /** Lines ship on different dates and the buyer has not seen the cart's
    *  notice (one parcel, the whole order waits for the last item). */
   mixedDates: 'mixed-dates',
+  /** A board bought as "Buy now" shares the cart with a March item: the
+   *  buyer chooses one order in March (the board moves to its pre-order
+   *  variant and price) or the in-stock items first. */
+  batchChoice: 'batch-choice',
   /** A US destination with a line that ships to the EU only. */
   usEuOnly: 'us-eu-only',
   /** The cart was priced for another market than the destination; it was
    *  moved to the destination's market and its prices changed. */
   market: 'market',
 } as const;
+
+/** The add field naming the offer of a board: `preorder` or `buy_now` (the default). */
+export const OFFER_FIELD = 'offer';
+/** The intent that moves every Buy now board of the cart to its pre-order variant. */
+export const KEEP_TOGETHER_INTENT = 'keep-together';
+
+/**
+ * True when a board bought as "Buy now" (retail, batch 1 stock) shares the
+ * cart with a line of the March batch or of a funding target. The one rule
+ * behind the cart's notice and the checkout refusal: such an order would ship
+ * whole in March, and nobody pays retail for a board that ships in March.
+ */
+export function batchChoiceConflict(
+  cart: Pick<ShopifyCart, 'lines'>,
+  info: Record<string, Pick<CartLineInfo, 'group'>>,
+): boolean {
+  if (!cart.lines.some((line) => line.offer === 'buy_now')) return false;
+  return cart.lines.some((line) => !(info[line.id]?.group ?? `date:${line.shipPromise ?? ''}`).startsWith('date:'));
+}
+
+/**
+ * "Keep everything in one order": the update that moves each Buy now board
+ * line to the board's pre-order variant, same quantity, with the pre-order
+ * line attributes (so Shopify charges the pre-order price and the order
+ * carries the March promise). Empty when the cart has no such line; null
+ * when a board has no open pre-order to move to.
+ */
+export function keepTogetherUpdates(
+  cart: Pick<ShopifyCart, 'lines'>,
+  catalog: Catalog,
+  destination: Region = 'EU',
+  euStockKnown = true,
+): CartLineUpdate[] | null {
+  const moves: CartLineUpdate[] = [];
+  for (const line of cart.lines) {
+    if (line.offer !== 'buy_now') continue;
+    const board = bySku(catalog, line.sku)?.variant;
+    // The board's pre-order: beside its buy-now offer, or its only offer
+    // once batch 1 is gone.
+    const preorder = board ? preorderView(board) ?? (board.offer === 'preorder' && board.availability === 'preorder' ? board : null) : null;
+    if (!preorder?.merchandise_id || preorder.merchandise_id === line.merchandiseId) return null;
+    moves.push({
+      id: line.id,
+      quantity: line.quantity,
+      merchandiseId: preorder.merchandise_id,
+      attributes: lineAttributes(preorder, destination, euStockKnown) ?? [],
+    });
+  }
+  return moves;
+}
 
 /** The form field the cart page sends with checkout once it has shown the
  *  mixed-dates notice. Checkout from anywhere else goes to /cart first. */
@@ -806,6 +852,26 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         : redirect('/cart');
     }
 
+    if (intent === KEEP_TOGETHER_INTENT) {
+      if (!existingId || !dependencies.getCart || !dependencies.updateCartLines) throw fail('Cart is empty.', 409);
+      const [cart, catalog] = await Promise.all([
+        dependencies.getCart(existingId),
+        dependencies.fetchCatalog(region, destination?.country),
+      ]);
+      if (!cart) {
+        dependencies.unsetCartId?.();
+        return redirect('/cart');
+      }
+      const moves = keepTogetherUpdates(cart, catalog, region, euStockKnown);
+      if (moves === null) throw fail('One or more boards cannot be pre-ordered right now.', 409);
+      const updated = moves.length ? await dependencies.updateCartLines(existingId, moves) : cart;
+      // Proof, not trust: no board may still be on its Buy now variant.
+      if (updated.lines.some((l) => l.offer === 'buy_now')) throw new Error('shopify: a Buy now line did not move to pre-order');
+      return wantsSummary
+        ? Response.json(cartSummary(updated, catalog), {headers: NO_STORE})
+        : redirect('/cart');
+    }
+
     if (intent === 'checkout') {
       if (!destination || destination.kind !== 'direct') {
         throw fail(
@@ -868,6 +934,13 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         // The ship date moved since the line was added: show it before payment.
         return redirect(`/cart?check=${CART_CHECK.shipDate}`);
       }
+      // A board bought at the retail price ships now. With a March item in
+      // the cart the order would ship whole in March, so nobody checks out
+      // that way: the cart asks for one of its two actions first, whatever
+      // page the checkout came from.
+      if (batchChoiceConflict(cart, cartLineInfo(cart, catalog))) {
+        return redirect(`/cart?check=${CART_CHECK.batchChoice}`);
+      }
       // Lines ship on different dates: the whole order waits for the last
       // one. Show the cart's notice and the option to order separately
       // before payment, unless the checkout came from that cart page.
@@ -893,13 +966,20 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       throw fail(destinationMessage(destination.kind, true), 403);
     }
     const requested = requestedLines(form);
+    const offer = form.get(OFFER_FIELD);
+    if (offer !== null && offer !== 'preorder' && offer !== 'buy_now') throw fail('Invalid cart offer.', 400);
+    const wantsPreorder = offer === 'preorder';
     const catalog = await dependencies.fetchCatalog(region, destination?.country);
     const lines: CartLineInput[] = requested.map(({sku, quantity}) => {
       const match = bySku(catalog, sku);
-      const variant = match?.variant.merchandise_id
+      const primary = match?.variant.merchandise_id
         ? sellableVariant(catalog, match.variant.merchandise_id, globalComingSoon)
         : null;
-      if (!variant?.merchandise_id) throw fail('Product is unavailable.', 409);
+      if (!primary?.merchandise_id) throw fail('Product is unavailable.', 409);
+      // `offer=preorder` buys a board's pre-order variant where it has both;
+      // every other product has one offer and takes it either way.
+      const variant = wantsPreorder ? preorderView(primary) ?? primary : primary;
+      if (!variant.merchandise_id) throw fail('Product is unavailable.', 409);
       if (region !== 'EU' && !usSellable(variant)) throw fail(region === 'US' ? US_EU_ONLY_MESSAGE : 'This item ships from stock in Belgium to EU addresses only. International orders use the preorder batch.', 409);
       const attributes = lineAttributes(variant, region, euStockKnown);
       return attributes
@@ -1087,6 +1167,11 @@ export type CartLineInfo = {
   shipLabel: string | null;
   /** The line ships to the EU only: it cannot go to a US destination. */
   euOnly: boolean;
+  /** `now`: the line ships from stock in a few working days. `preorder`: it
+   *  ships with a batch still to be produced; `month` then names it ("March
+   *  2027"). Null when the line's ship state is unknown. */
+  ships: 'now' | 'preorder' | null;
+  month: string | null;
 };
 
 /**
@@ -1122,6 +1207,12 @@ export function cartLineInfo(
           : null,
       shipLabel: shipLabelFromPromise(line.shipPromise, 'short'),
       euOnly: variant ? !usSellable(variant) : false,
+      ships: !group.startsWith('date:')
+        ? 'preorder'
+        : stockPromise(line.shipPromise) || (variant?.availability === 'in_stock' && !line.shipPromise)
+          ? 'now'
+          : line.shipPromise ? 'preorder' : null,
+      month: stockPromise(line.shipPromise) ? null : promiseBatchMonth(line.shipPromise),
     };
   }
   return out;

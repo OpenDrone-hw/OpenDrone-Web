@@ -1,4 +1,4 @@
-import type {Catalog, CatalogProduct, CatalogVariant} from './catalog.ts';
+import {BATCH_OPTION, batchOfferOf, titleWithoutBatch, type BatchOffer, type Catalog, type CatalogProduct, type CatalogVariant} from './catalog.ts';
 import {devOverride} from './support/dev-overrides.ts';
 
 const DEFAULT_API_VERSION = '2026-07';
@@ -204,6 +204,11 @@ export type ShopifyCartLine = {
   sku: string | null;
   image: {url: string; altText: string | null} | null;
   selectedOptions: Array<{name: string; value: string}>;
+  /** The Shopify `Batch` option of the line's variant: a `buy_now` line is
+   *  batch 1 stock at retail, a `preorder` line the March batch. Absent on a
+   *  variant without the option. `variantTitle` and `selectedOptions` never
+   *  carry the option itself. */
+  offer?: BatchOffer;
   /** The line's own ship promise: the hidden `_preorder_own` attribute when
    *  the line carries the mixed-order wording, else its `Preorder` attribute. */
   shipPromise: string | null;
@@ -253,6 +258,9 @@ export type CartLineInput = {
 export type CartLineUpdate = {
   id: string;
   quantity: number;
+  /** Move the line to another variant of the same product (`CartLineUpdateInput.merchandiseId`):
+   *  a board from its `Buy now` variant to its `Pre-order` one. */
+  merchandiseId?: string;
   attributes?: Array<{key: string; value: string}>;
 };
 
@@ -264,7 +272,13 @@ type StorefrontEnv = Pick<
   | 'SHOPIFY_CHECKOUT_DOMAIN'
   | 'SHOPIFY_PRICES_INCLUDE_VAT'
   | 'SHOPIFY_PREVIEW_POLICY_JSON'
+  | 'BATCH_CHOICE'
 >;
+
+/** The buy now or pre-order choice is on: only for exactly "1". */
+export function batchChoiceOn(env: {BATCH_CHOICE?: string} | null | undefined): boolean {
+  return env?.BATCH_CHOICE === '1';
+}
 
 type GraphqlResult<T> = {data?: T; errors?: Array<{message?: string}>};
 
@@ -403,6 +417,10 @@ export function mapShopifyCatalog(
   /** The default catalog must be EUR and the US catalog USD. Other country
    *  contexts use one consistent currency returned by Shopify. */
   market: string = 'default',
+  /** `BATCH_CHOICE` is on: a board's `Buy now` variant becomes `buy_now` on
+   *  its entry. Off: that variant is left out, so the catalog reads exactly
+   *  as it did before the board had one. */
+  batchChoice: boolean = false,
 ): Catalog {
   const expectedCurrency = market === 'US' ? 'USD' : market === 'default' ? 'EUR' : null;
   if (pricesIncludeVat !== '1') {
@@ -426,12 +444,39 @@ export function mapShopifyCatalog(
     if (product.variants.pageInfo.hasNextPage) {
       throw new Error(`shopify: ${product.handle} has more than 100 variants`);
     }
-    const variants: CatalogVariant[] = product.variants.nodes.map((variant) => {
+    // A board sells as two Shopify variants under the `Batch` option, both
+    // with the board's one SKU: `Pre-order` (the entry below) and `Buy now`
+    // (folded into it). That pair is the only duplicate SKU accepted: it
+    // must be one of each, on one product. Anything else still fails closed.
+    const offerOf = (variant: {selectedOptions: Array<{name: string; value: string}>}): BatchOffer | null => {
+      const value = variant.selectedOptions.find((o) => o.name === BATCH_OPTION)?.value;
+      if (value === undefined) return null;
+      const offer = batchOfferOf([{name: BATCH_OPTION, value}]);
+      if (!offer) throw new Error(`shopify: unknown ${BATCH_OPTION} value on ${product.handle}`);
+      return offer;
+    };
+    const buyNow = new Map<string, (typeof product.variants.nodes)[number]>();
+    for (const variant of product.variants.nodes) {
+      if (offerOf(variant) !== 'buy_now') continue;
+      const sku = variant.sku?.trim();
+      if (!sku || buyNow.has(sku)) {
+        throw new Error(`shopify: missing or duplicate SKU on ${product.handle}`);
+      }
+      buyNow.set(sku, variant);
+    }
+    const entries = product.variants.nodes.filter((variant) => offerOf(variant) !== 'buy_now');
+    for (const sku of buyNow.keys()) {
+      if (!entries.some((variant) => variant.sku?.trim() === sku && offerOf(variant) === 'preorder')) {
+        throw new Error(`shopify: ${sku} has a Buy now variant without its Pre-order variant`);
+      }
+    }
+    const variants: CatalogVariant[] = entries.map((variant) => {
       const sku = variant.sku?.trim();
       if (!sku || seen.has(sku)) {
         throw new Error(`shopify: missing or duplicate SKU on ${product.handle}`);
       }
       seen.add(sku);
+      const paired = offerOf(variant) === 'preorder' ? buyNow.get(sku) : undefined;
       const configured = policy[sku];
       if (
         !configured ||
@@ -444,8 +489,11 @@ export function mapShopifyCatalog(
         throw new Error(`shopify: closed SKU ${sku} must not carry a ship promise`);
       }
       const options = Object.fromEntries(
-        variant.selectedOptions.map(({name, value}) => [name, value]),
+        variant.selectedOptions.filter(({name}) => name !== BATCH_OPTION).map(({name, value}) => [name, value]),
       );
+      if (paired && paired.price.currencyCode !== variant.price.currencyCode) {
+        throw new Error(`shopify: ${sku} Buy now price currency differs`);
+      }
       const price = finiteMoney(variant.price.amount, `${sku} price`);
       if ((expectedCurrency && variant.price.currencyCode !== expectedCurrency) || !/^[A-Z]{3}$/.test(variant.price.currencyCode)) {
         throw new Error(`shopify: ${sku} is not priced in ${expectedCurrency}`);
@@ -465,7 +513,7 @@ export function mapShopifyCatalog(
         : null;
       return {
         sku,
-        title: variant.title,
+        title: offerOf(variant) ? titleWithoutBatch(variant.title) : variant.title,
         model: options.Model ?? null,
         options,
         price,
@@ -485,6 +533,13 @@ export function mapShopifyCatalog(
         cart_add_url: `${CART_PATH}?sku=${encodeURIComponent(sku)}&qty=1`,
         cart_add_method: 'POST',
         merchandise_id: variant.id,
+        ...(batchChoice && paired
+          ? {buy_now: {
+              merchandise_id: paired.id,
+              price: finiteMoney(paired.price.amount, `${sku} Buy now price`),
+              available: paired.availableForSale,
+            }}
+          : {}),
       } as CatalogVariant;
     });
     return {
@@ -535,6 +590,7 @@ export async function fetchShopifyCatalog(
     required(env, 'SHOPIFY_PREVIEW_POLICY_JSON'),
     required(env, 'SHOPIFY_PRICES_INCLUDE_VAT'),
     market,
+    batchChoiceOn(env),
   );
 }
 
@@ -636,11 +692,12 @@ function validatedCart(
         merchandiseId: line.merchandise.id,
         quantity: line.quantity,
         title: line.merchandise.product.title,
-        variantTitle: line.merchandise.title,
+        variantTitle: titleWithoutBatch(line.merchandise.title),
         handle: line.merchandise.product.handle,
         sku: line.merchandise.sku,
         image: line.merchandise.image,
-        selectedOptions: line.merchandise.selectedOptions,
+        selectedOptions: line.merchandise.selectedOptions.filter(({name}) => name !== BATCH_OPTION),
+        ...(batchOfferOf(line.merchandise.selectedOptions) ? {offer: batchOfferOf(line.merchandise.selectedOptions)!} : {}),
         shipPromise: own && preorder ? own : preorder,
         ...(deliveryBy && ownBy ? {deliveryBy: ownBy} : {}),
         ...(deliveryBy && ownBy !== deliveryBy ? {orderDeliveryBy: deliveryBy} : {}),

@@ -12,6 +12,7 @@ import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {assetUrl} from '~/lib/asset-url';
 import {HeroBuildGuide} from '~/components/HeroBuildGuide';
+import {HeroBuildChoice} from '~/components/HeroBuildChoice';
 import {HeroStackOffer} from '~/components/HeroStackOffer';
 import type {HeroBuild} from '~/lib/hero-build';
 import {HERO_AIRFRAMES, DEFAULT_HERO_SIZE, airframeLabel} from '~/lib/hero-airframes';
@@ -88,7 +89,9 @@ export function MobileHome({
   const rise = (i: number) => ({style: {'--rise-i': i} as CSSProperties});
   const buildCard = (builds: HeroBuild[]) => {
     const build = builds.find((item) => item.size === buildSize);
-    return build ? (
+    return build?.choice ? (
+      <HeroBuildChoice key={build.id} build={build} />
+    ) : build ? (
       <>
         <HeroStackOffer key={`${build.id}-stack`} build={build} show={stackOffer} />
         <HeroBuildGuide key={build.id} build={build} />
