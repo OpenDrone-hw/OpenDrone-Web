@@ -1,6 +1,6 @@
 /**
  * When the location notice (components/LocationNotice.tsx) shows, and what
- * it says: "Shipping to Belgium: In stock in Belgium, ships in a few days."
+ * it says: "Shipping to Belgium: In stock in Belgium, ships in a few working days."
  *
  * It shows once per change of the country the visitor orders to (root
  * loader `geo.country`: `?country`, the picked destination, else
@@ -55,8 +55,8 @@ export function nextLastSeen(lastSeen: string | null | undefined, current: strin
 }
 
 /** "Shipping to {Country}: {line}" in the locale, or null when the country has no line. */
-export function noticeText(country: string, locale: Locale): string | null {
-  const line = geoFullLine(geoAvailabilityRegion(country), locale);
+export function noticeText(country: string, locale: Locale, usOpen = false): string | null {
+  const line = geoFullLine(geoAvailabilityRegion(country, usOpen), locale);
   if (!line) return null;
   return GEO_NOTICE_COPY[locale].line.replace('{country}', countryName(country.toUpperCase(), locale)).replace('{line}', line);
 }

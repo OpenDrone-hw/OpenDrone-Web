@@ -166,7 +166,7 @@ const PRODUCT_TITLES = {
   openrx: 'OpenRX',
   openesc: 'OpenESC',
   'openfc-lite': 'OpenFC Lite',
-  'openfc-lite-mini': 'OpenFC Lite Mini',
+  'openfc-lite-mini': 'OpenFC Lite 20×20',
   openframe: 'OpenFrame',
 };
 
@@ -182,15 +182,16 @@ export const REGIONS = ['all', 'eu', 'us'];
 /** The launch copy for a region: `eu`, `us`, or `all` (both, for a list of unknown region). */
 export function launchCopy(region = 'all') {
   if (!REGIONS.includes(region)) throw new Error(`region must be one of ${REGIONS.join(', ')}`);
-  const promise = `Ships by ${FACTS.shipBy} if the target is reached by ${FACTS.close}.`;
+  // The March 2027 batch is confirmed (terms 2.9): the date, no target.
+  const promise = `Ships by ${FACTS.shipBy}. The batch is confirmed.`;
   const eu = [
     {
-      kicker: 'First batch, EU only',
-      title: `OpenFC Lite and OpenESC ship ${FACTS.batch1}`,
-      body: `${FACTS.batch1[0].toUpperCase()}${FACTS.batch1.slice(1)} 2026, from Belgium to EU addresses.`,
+      kicker: 'In stock, EU only',
+      title: 'OpenFC Lite and OpenESC are in stock',
+      body: 'Ships from Belgium to EU addresses in a few working days.',
     },
     {
-      kicker: `Preorder run, closes ${FACTS.close}`,
+      kicker: 'March 2027 batch, confirmed',
       title: 'Receiver, frame, motors, and more FCs and ESCs',
       body: promise,
     },
@@ -204,12 +205,12 @@ export function launchCopy(region = 'all') {
   return {
     subject: 'Preorders are open',
     preheader: region === 'us'
-      ? `OpenDrone preorders are open in the US. Duties included. The run closes ${FACTS.close}.`
-      : `FC and ESC batch 1 ships ${FACTS.batch1} in the EU. The preorder run closes ${FACTS.close}.`,
+      ? `OpenDrone preorders are open in the US. Duties included. Ships by ${FACTS.shipBy}.`
+      : `FC and ESC are in stock in Belgium for the EU. Everything else ships by ${FACTS.shipBy}.`,
     headline: 'Preorders are open.',
     intro: 'You asked to hear when OpenDrone launches. It is live at opendrone.be.',
     sections,
-    refund: 'Paid in full at checkout. If a target is missed, you choose a full refund or the new date.',
+    refund: 'Paid in full at checkout. Cancel any time before delivery for a full refund.',
     cta: 'See the hardware',
   };
 }

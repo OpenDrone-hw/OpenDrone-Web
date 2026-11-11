@@ -1,3 +1,5 @@
+import {batchChoiceOn} from '~/lib/shopify-storefront';
+import {catalogHasPreorders} from '~/lib/catalog';
 import {useEffect} from 'react';
 import {useNonce} from '~/lib/csp';
 import {
@@ -23,7 +25,10 @@ import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {launchedStatusFlags} from '~/lib/launched-roadmap';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {toCards} from '~/lib/catalog';
-import {buyerCountry, geoCountryForRequest} from '~/lib/shipping-rates';
+import {buyerCountry, geoCountryForRequest, isIsoCountry} from '~/lib/shipping-rates';
+import {resolveRegion} from '~/lib/region';
+import {DEALER_SESSION_KEY} from '~/lib/wholesale-codes';
+import {isInternationalRegion} from '~/lib/preorder-campaign';
 import {usSalesRate} from '~/lib/us-sales';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
 import {appCommerceEnabled, readCart} from '~/lib/commerce/app-api';
@@ -167,7 +172,6 @@ export async function loader(args: Route.LoaderArgs) {
   ]);
 
   const company = getCompanyIdentity(env as unknown as Record<string, string | undefined>);
-
   // Derive locale from the URL path so /nl/* actually renders <html lang="nl">.
   // Hydrogen's storefront.i18n is pinned to EN/US in app/lib/context.ts and
   // doesn't follow the URL; using it would force every page to en_US.
@@ -211,11 +215,23 @@ export async function loader(args: Route.LoaderArgs) {
     // and listings (display vocabulary; buyability is the map above).
     roadmapStatuses: roadmapStatusMap(statusFlags),
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
+    // Buy now or pre-order (BATCH_CHOICE): the footer's early bird link and /preorder's two lanes.
+    batchChoice: batchChoiceOn(env),
     // Picks the buy module's price note (VAT vs duties) and whether a buy
     // button shows. It is the destination the cart and checkout read
     // (`shipCountryForRequest`: ?country, the picked
     // destination, the IP, the browser), so every surface agrees.
     visitorCountry: buyerCountry(args.request, usRate),
+    // The visitor's region (app/lib/region.ts): country, market, currency,
+    // taxes shown, lanes and shipping, from the one resolver every other
+    // field here also reads. Components read this, never the request.
+    region: resolveRegion(args.request, usRate != null),
+    // The IP country alone, so the region control can offer "World" to a
+    // visitor whose IP is outside the EU after they picked another market.
+    ipCountry: (() => {
+      const ip = args.request.headers.get('CF-IPCountry')?.trim().toUpperCase() ?? null;
+      return ip && isIsoCountry(ip) ? ip : null;
+    })(),
     // The batch 1 ship line by where the visitor orders to
     // (app/lib/geo-availability.ts, `geoCountryForRequest`: ?country, the
     // picked destination, else CF-IPCountry): the country, its region and
@@ -223,7 +239,7 @@ export async function loader(args: Route.LoaderArgs) {
     // read it, and LocationNotice tells the visitor when it changes.
     geo: (() => {
       const country = geoCountryForRequest(args.request);
-      return {country, region: geoAvailabilityRegion(country), locale: urlLocale ?? getLocaleFromRequest(args.request)};
+      return {country, region: geoAvailabilityRegion(country, usRate != null), locale: urlLocale ?? getLocaleFromRequest(args.request)};
     })(),
     // Present only while US sales are open: the flat US rate in USD.
     ...(usRate != null ? {usShippingRate: usRate} : {}),
@@ -251,6 +267,13 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
 
   return {
     commerceHandoff: commerceHandoff(catalog, hasCart),
+    // Buy now or pre-order on and nothing is pre-order any more (a batch has
+    // landed): an ordinary shop, so the bar and /preorder name no batch. An
+    // empty catalog (a failed read) is never read as "everything in stock".
+    ordinaryShop: batchChoiceOn(context.env) && catalog.products.length > 0 && !catalogHasPreorders(catalog),
+    // A retailer (applied wholesale code in the session) outside the EU and
+    // the US: offered batch 1 stock by courier (founder 2026-11-11).
+    wholesaleExport: Boolean(context.session.get(DEALER_SESSION_KEY)) && isInternationalRegion(context.catalog.region),
     testBanner: context.env.TEST_BANNER?.trim() || null,
     // The app prices the cart and takes the destination at its own cart page: no Ship to select in the drawer.
     appCommerce: appMode,
@@ -518,8 +541,16 @@ export function ErrorBoundary() {
     <div className="route-error page-shell">
       <p className="route-error-status">{errorStatus}</p>
       <Txt id="not-found.error_title" as="h1" className="route-error-title" />
-      <Txt id="not-found.error_body" as="p" className="route-error-body" />
-      {errorMessage ? (
+      {/* A service that is down for a moment (a failed cart or catalog read) says so in its own
+          words, never "an unexpected error". */}
+      {errorStatus === 503 && errorMessage ? (
+        <p className="route-error-body" role="alert">
+          {errorMessage} {copyText('not-found.error_retry') ?? 'Try again in a minute. Nothing you added was lost.'}
+        </p>
+      ) : (
+        <Txt id="not-found.error_body" as="p" className="route-error-body" />
+      )}
+      {errorMessage && errorStatus !== 503 ? (
         <details className="route-error-details">
           <summary>
             <Txt id="not-found.error_details" />

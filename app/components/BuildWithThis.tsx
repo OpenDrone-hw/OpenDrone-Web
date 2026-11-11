@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
 import {HeroBuildGuide} from '~/components/HeroBuildGuide';
+import {HeroBuildChoice} from '~/components/HeroBuildChoice';
 import {CartPlacementProvider} from '~/components/AddToCartButton';
 import {copyText} from '~/lib/copy';
 import {airframeLabel} from '~/lib/hero-airframes';
@@ -51,7 +52,7 @@ export function BuildWithThis({
         </div>
       ) : null}
       <CartPlacementProvider value="build_block">
-        <HeroBuildGuide key={build.id} build={build} />
+        {build.choice ? <HeroBuildChoice key={build.id} build={build} /> : <HeroBuildGuide key={build.id} build={build} />}
       </CartPlacementProvider>
     </section>
   );

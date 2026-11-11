@@ -2,7 +2,7 @@
   "fileNumber": "03",
   "family": "ELRS Receiver",
   "status": "preorder",
-  "statusNote": "ships by 31 March 2027 if the target is reached by 15 December 2026",
+  "statusNote": "ships by 31 March 2027",
   "hero": {
     "line1": "",
     "line2Italic": "",
@@ -114,12 +114,12 @@
       "item": "OpenRX board"
     },
     {
-      "qty": "1×",
-      "item": "Silicone hook-up wire set, 30 AWG, four wires"
+      "qty": "4×",
+      "item": "Silicone wires, 28 AWG"
     },
     {
-      "qty": "1×",
-      "item": "Heat-shrink sleeve, clear, two-piece"
+      "qty": "3×",
+      "item": "Heat-shrink sleeves, clear"
     }
   ],
   "downloads": [],
@@ -274,11 +274,15 @@
       "inTheBox": [
         {
           "qty": "1×",
-          "item": "Bind and quick-start card"
+          "item": "Guide"
         },
         {
           "qty": "1×",
           "item": "ESD bag"
+        },
+        {
+          "qty": "1×",
+          "item": "Sticker"
         }
       ],
       "inTheBoxImage": {
@@ -364,11 +368,15 @@
         },
         {
           "qty": "1×",
-          "item": "Bind and quick-start card"
+          "item": "Guide"
         },
         {
           "qty": "1×",
           "item": "ESD bag"
+        },
+        {
+          "qty": "1×",
+          "item": "Sticker"
         }
       ],
       "pins": [
@@ -551,11 +559,15 @@
         },
         {
           "qty": "1×",
-          "item": "Bind and quick-start card"
+          "item": "Guide"
         },
         {
           "qty": "1×",
           "item": "ESD bag"
+        },
+        {
+          "qty": "1×",
+          "item": "Sticker"
         }
       ],
       "pins": [
@@ -755,11 +767,15 @@
         },
         {
           "qty": "1×",
-          "item": "Bind and quick-start card"
+          "item": "Guide"
         },
         {
           "qty": "1×",
           "item": "ESD bag"
+        },
+        {
+          "qty": "1×",
+          "item": "Sticker"
         }
       ],
       "pins": [

@@ -16,9 +16,11 @@ import {HeroDroneStage} from '~/components/HeroDroneStage';
 import type {HeroLoadState} from '~/components/HeroDroneScene';
 import {HeroWordmark} from '~/components/HeroWordmark';
 import {HeroSizeSlider} from '~/components/HeroSizeSlider';
-import {DEFAULT_HERO_SIZE} from '~/lib/hero-airframes';
+import {DEFAULT_HERO_SIZE, buildSizeFromSearch} from '~/lib/hero-airframes';
 import {HeroBuildGuide} from '~/components/HeroBuildGuide';
+import {HeroBuildChoice} from '~/components/HeroBuildChoice';
 import {HeroStackOffer} from '~/components/HeroStackOffer';
+import {batchChoiceOn} from '~/lib/shopify-storefront';
 import {resolveHeroBuilds, type HeroBuild} from '~/lib/hero-build';
 import {parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
@@ -98,7 +100,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
         // OpenStack is intentionally NOT here - it's just the FC + ESC bundled,
         // surfaced as a note on the showcase, not as a separate flagship slot.
         featured: [d.fc, d.esc, d.rx, d.motor, d.frame].filter(keep),
-        heroBuilds: resolveHeroBuilds(BUILDS, catalog),
+        heroBuilds: resolveHeroBuilds(BUILDS, catalog, batchChoiceOn(context.env)),
       };
     })
     .catch(() => ({featured: [], heroBuilds: []}));
@@ -194,6 +196,11 @@ function DesktopHome({
   const changeHeroSize = useCallback((next: string) => {
     setHeroSize(next);
     setActivePart(null);
+  }, []);
+  // "See the full 3-inch build" from a product page: open on that size.
+  useEffect(() => {
+    const asked = buildSizeFromSearch(window.location.search);
+    if (asked) setHeroSize(asked);
   }, []);
   const inspectPart = useRef<((id: string) => void) | null>(null);
   const [canInspect, setCanInspect] = useState(false);
@@ -715,6 +722,7 @@ function DesktopHome({
           </a>
 
           <div
+            id="build"
             className={`hero-buy hero-buy--guide${splashSettled ? ' is-visible' : ''}`}
             inert={!splashSettled}
             style={{opacity: splashSettled ? 1 : 0}}
@@ -723,7 +731,7 @@ function DesktopHome({
               <Await resolve={heroBuilds}>
                 {(builds) => {
                   const build = builds.find(item => item.size === heroSize);
-                  return build ? <><HeroStackOffer key={`${build.id}-stack`} build={build} show={stackOffer} /><HeroBuildGuide key={build.id} build={build} onInspect={canInspect ? id => inspectPart.current?.(id) : undefined} activePart={activePart} /></> : <Link to="/products" className="hero-build-loading"><Txt id="home.build_browse" fallback="Browse parts" /></Link>;
+                  return build ? build.choice ? <HeroBuildChoice key={build.id} build={build} onInspect={canInspect ? id => inspectPart.current?.(id) : undefined} activePart={activePart} /> : <><HeroStackOffer key={`${build.id}-stack`} build={build} show={stackOffer} /><HeroBuildGuide key={build.id} build={build} onInspect={canInspect ? id => inspectPart.current?.(id) : undefined} activePart={activePart} /></> : <Link to="/products" className="hero-build-loading"><Txt id="home.build_browse" fallback="Browse parts" /></Link>;
                 }}
               </Await>
             </Suspense>

@@ -2,7 +2,7 @@
   "fileNumber": "02",
   "family": "Flight Controller",
   "status": "preorder",
-  "statusNote": "ships late November 2026",
+  "statusNote": "in stock in Belgium, ships to EU addresses in a few working days",
   "hero": {
     "line1": "",
     "line2Italic": "",
@@ -543,19 +543,23 @@
       "inTheBox": [
         {
           "qty": "4×",
-          "item": "Silicone soft-mount grommets, M2"
+          "item": "Rubber mounts (soft-mount grommets), M2"
+        },
+        {
+          "qty": "4×",
+          "item": "Silicone wires, 28 AWG, four colours"
         },
         {
           "qty": "1×",
-          "item": "Silicone hook-up wire set, 28 AWG, four colours"
-        },
-        {
-          "qty": "1×",
-          "item": "Quick-start card"
+          "item": "Guide"
         },
         {
           "qty": "1×",
           "item": "ESD bag"
+        },
+        {
+          "qty": "1×",
+          "item": "Sticker"
         }
       ],
       "plugs": [
@@ -740,19 +744,23 @@
       "inTheBox": [
         {
           "qty": "4×",
-          "item": "Silicone soft-mount grommets, M3"
+          "item": "Rubber mounts (soft-mount grommets), M3"
+        },
+        {
+          "qty": "4×",
+          "item": "Silicone wires, 28 AWG, four colours"
         },
         {
           "qty": "1×",
-          "item": "Silicone hook-up wire set, 28 AWG, four colours"
-        },
-        {
-          "qty": "1×",
-          "item": "Quick-start card"
+          "item": "Guide"
         },
         {
           "qty": "1×",
           "item": "ESD bag"
+        },
+        {
+          "qty": "1×",
+          "item": "Sticker"
         }
       ],
       "inTheBoxImage": {

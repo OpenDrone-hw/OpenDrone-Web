@@ -57,7 +57,7 @@ function restoreFocus(target: HTMLElement | null): void {
 /**
  * A small fixed toast, bottom right (bottom on phones, above the cart's
  * checkout bar), that says the ship time for the visitor's destination when
- * it changes: a new country from the header RegionSwitch or the cart's Ship
+ * it changes: a new country from the header CountryPicker or the cart's Ship
  * to select (both revalidate the root loader), a `?country` link, or a cart
  * that quotes another country. The rules are in lib/location-notice.ts.
  *
@@ -70,7 +70,10 @@ function restoreFocus(target: HTMLElement | null): void {
  * shows without speaking, so the change is not announced twice.
  */
 export function LocationNotice() {
-  const geo = useRouteLoaderData<RootLoader>('root')?.geo;
+  const root = useRouteLoaderData<RootLoader>('root');
+  const geo = root?.geo;
+  // US sales open: the US reads the March 2027 line, not "Not shipping to the US yet."
+  const usOpen = root?.usShippingRate != null;
   const cartCountry = useCartCountry();
   const locale = geo?.locale ?? 'en';
   const current = geo?.country ?? null;
@@ -86,14 +89,14 @@ export function LocationNotice() {
     const seen = nextLastSeen(lastSeen, current);
     if (seen) write(NOTICE_LAST_SEEN_KEY, seen);
     if (!notice) return;
-    const line = noticeText(notice.country, locale);
+    const line = noticeText(notice.country, locale, usOpen);
     if (!line) return;
     write(NOTICE_ANNOUNCED_KEY, notice.key);
     const active = document.activeElement;
     returnTo.current = active instanceof HTMLElement && active !== document.body ? active : null;
     setLive(!cartAnnounces());
     setText(line);
-  }, [current, cartCountry, locale]);
+  }, [current, cartCountry, locale, usOpen]);
 
   // Closing unmounts the focused button: hand focus back first, so it never
   // drops to <body>.

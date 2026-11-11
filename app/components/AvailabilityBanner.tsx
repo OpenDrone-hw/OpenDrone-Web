@@ -11,7 +11,7 @@ import type {Locale} from '~/lib/i18n';
  * in localStorage; the inline script in root.tsx hides it (and zeroes its height) before the first
  * paint for a visitor who dismissed it, so a dismissed bar is never painted.
  */
-export function AvailabilityBar({geo}: {geo: {region: GeoAvailabilityRegion; locale: Locale} | null | undefined}) {
+export function AvailabilityBar({geo, ordinary = false, note = null}: {geo: {region: GeoAvailabilityRegion; locale: Locale} | null | undefined; ordinary?: boolean; note?: string | null}) {
   const [dismissed, setDismissed] = useState(false);
   useEffect(() => {
     try {
@@ -40,8 +40,8 @@ export function AvailabilityBar({geo}: {geo: {region: GeoAvailabilityRegion; loc
   return (
     <div className="top-strip avail-bar" role="region" aria-label={words.title} lang={geo.locale}>
       <p className="avail-bar-text">
-        <span className="avail-bar-long">{geoBarText(geo.region, geo.locale, false)}</span>
-        <span className="avail-bar-short">{geoBarText(geo.region, geo.locale, true)}</span>
+        <span className="avail-bar-long">{note ?? geoBarText(geo.region, geo.locale, false, ordinary)}</span>
+        <span className="avail-bar-short">{note ?? geoBarText(geo.region, geo.locale, true, ordinary)}</span>
       </p>
       <button type="button" className="avail-bar-close" onClick={dismiss} aria-label={words.dismiss}>
         <svg aria-hidden="true" width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

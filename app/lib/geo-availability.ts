@@ -3,7 +3,7 @@
  * that goes with it, so the copy and the structured data never disagree.
  *
  * - `eu`: Cloudflare's `CF-IPCountry` is an EU member state (the one list,
- *   `eu-countries.ts`): "In stock in Belgium, ships in a few days." InStock.
+ *   `eu-countries.ts`): "In stock in Belgium, ships in a few working days." InStock.
  * - `intl`: any other known country: "Pre-order, ships March 2027."
  *   PreOrder, available from March 2027.
  * - `fallback`: no header or an unknown country (`XX`, Tor): no override.
@@ -28,12 +28,13 @@ import type {Locale} from './i18n.ts';
 import {EU_COUNTRY_CODES, IMPORT_COUNTRY_CODES} from './eu-countries.ts';
 
 /**
- * - `eu`: an EU member state: batch 1 stock, "In stock in Belgium, ships in a few days."
+ * - `eu`: an EU member state: batch 1 stock, "In stock in Belgium, ships in a few working days."
  * - `import`: UK, Switzerland, Norway (`IMPORT_COUNTRY_CODES`, allocation region NEAR):
  *   the March 2027 batch like `intl` (batch 1 is EU only, `paidRegions`), plus
  *   "Import VAT and duties: paid by you on delivery, unless collected at checkout." (`GEO_DUTIES_NOTE`).
  * - `intl`: any other known country except the US: the March 2027 preorder batch only.
- * - `us`: on hold, "Not shipping to the US yet.", no ship promise.
+ * - `us`: only while US sales are closed (`PUBLIC_US_SALES`): "Not shipping to the US yet.", no ship promise.
+ *   Open, the US is `intl`.
  * - `fallback`: no known country: the batch promise itself.
  */
 export type GeoAvailabilityRegion = 'eu' | 'import' | 'intl' | 'us' | 'fallback';
@@ -42,13 +43,19 @@ export type KnownGeoRegion = Exclude<GeoAvailabilityRegion, 'fallback'>;
 const EU: ReadonlySet<string> = new Set(EU_COUNTRY_CODES);
 const IMPORT: ReadonlySet<string> = new Set(IMPORT_COUNTRY_CODES);
 
-/** The region of a visitor country (already validated, or null). */
-export function geoAvailabilityRegion(country: string | null | undefined): GeoAvailabilityRegion {
+/**
+ * The region of a visitor country (already validated, or null). `usOpen` is
+ * the US sales gate with its rate (`usSalesRate`, the root loader's
+ * `usShippingRate`): open, the US reads the March 2027 batch like every other
+ * destination outside the EU (duties are in its price, so no duties note);
+ * closed, it reads "Not shipping to the US yet."
+ */
+export function geoAvailabilityRegion(country: string | null | undefined, usOpen = false): GeoAvailabilityRegion {
   if (!country) return 'fallback';
   const code = country.toUpperCase();
   if (EU.has(code)) return 'eu';
   if (IMPORT.has(code)) return 'import';
-  return code === 'US' ? 'us' : 'intl';
+  return code === 'US' && !usOpen ? 'us' : 'intl';
 }
 
 /** True for a region batch 1 stock ships to now: sold as stock, not as a pre-order. */
@@ -56,24 +63,36 @@ export function stockRegion(region: GeoAvailabilityRegion | null | undefined): b
   return region === 'eu';
 }
 
+/** First day of the pre-order batch's ship month; a test checks it against
+ *  `content/preorders.json` (`shipsBy`). Every month in the lines below is
+ *  read from it, so no line names a batch month of its own. */
+export const INTL_AVAILABILITY_STARTS = '2027-03-01';
+
+/** The pre-order batch's month in a locale: "March 2027", "maart 2027"; short: "Mar 2027", "mrt 2027". */
+export function shipMonth(locale: Locale, style: 'long' | 'short' = 'long'): string {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : locale, {month: style, year: 'numeric', timeZone: 'UTC'})
+    .format(new Date(`${INTL_AVAILABILITY_STARTS}T12:00:00Z`))
+    .replace('.', '');
+}
+
 /** The line a visitor reads instead of the batch 1 promise, per locale. */
 export const GEO_AVAILABILITY_COPY: Record<Locale, Record<KnownGeoRegion, string>> = {
   en: {
-    eu: 'In stock in Belgium, ships in a few days.',
-    import: 'Pre-order, ships March 2027.',
-    intl: 'Pre-order, ships March 2027.',
+    eu: 'In stock in Belgium, ships in a few working days.',
+    import: `Pre-order, ships ${shipMonth('en')}.`,
+    intl: `Pre-order, ships ${shipMonth('en')}.`,
     us: 'Not shipping to the US yet.',
   },
   nl: {
-    eu: 'Op voorraad in België, wordt binnen enkele dagen verzonden.',
-    import: 'Pre-order, verzending in maart 2027.',
-    intl: 'Pre-order, verzending in maart 2027.',
+    eu: 'Op voorraad in België, wordt binnen enkele werkdagen verzonden.',
+    import: `Pre-order, verzending in ${shipMonth('nl')}.`,
+    intl: `Pre-order, verzending in ${shipMonth('nl')}.`,
     us: 'Nog geen verzending naar de VS.',
   },
   fr: {
-    eu: 'En stock en Belgique, expédié sous quelques jours.',
-    import: 'Précommande, expédition en mars 2027.',
-    intl: 'Précommande, expédition en mars 2027.',
+    eu: 'En stock en Belgique, expédié sous quelques jours ouvrables.',
+    import: `Précommande, expédition en ${shipMonth('fr')}.`,
+    intl: `Précommande, expédition en ${shipMonth('fr')}.`,
     us: 'Pas encore de livraison aux États-Unis.',
   },
 };
@@ -108,8 +127,6 @@ export type GeoOfferAvailability = {
   availabilityStarts?: string;
 };
 
-/** First day of the March 2027 promise; a test checks it against `content/preorders.json`. */
-export const INTL_AVAILABILITY_STARTS = '2027-03-01';
 
 /**
  * Where an Offer is not sold: the US while US sales are on hold (no US rate),
@@ -149,9 +166,17 @@ export function geoInStock(
 }
 
 /** The ship promises of paid batch 1 stock in `content/preorders.json`. */
-export function batchOnePromises(config: {skus: Record<string, {batches: ReadonlyArray<{paid?: boolean; ships?: string; [key: string]: unknown}>}>}): ReadonlySet<string> {
+export function batchOnePromises(config: {
+  skus: Record<string, {batches: ReadonlyArray<{paid?: boolean; ships?: string; [key: string]: unknown}>}>;
+  soldUnder?: unknown;
+}): ReadonlySet<string> {
   const out = new Set<string>();
   for (const sku of Object.values(config.skus)) for (const b of sku.batches) if (b.paid && b.ships) out.add(b.ships);
+  // The wording batch 1 was sold under before (`soldUnder` in preorders.json,
+  // "ships late November 2026"): a cart line or order that still carries it
+  // is the same stock.
+  const eras = config.soldUnder === undefined ? [] : Array.isArray(config.soldUnder) ? config.soldUnder : [config.soldUnder];
+  if (out.size) for (const era of eras as Array<{paidShips?: unknown}>) if (typeof era?.paidShips === 'string' && era.paidShips) out.add(era.paidShips);
   return out;
 }
 
@@ -176,19 +201,84 @@ export const GEO_BANNER_COPY: Record<Locale, Record<KnownGeoRegion, string> & {t
   fr: {title: 'Disponibilité', eu: 'UE', import: 'R.-U., CH, NO', intl: 'Ailleurs', us: 'É.-U.', dismiss: 'Fermer l’avis de disponibilité'},
 };
 
+const GEO_BAR_SHORT_EU: Record<Locale, string> = {en: 'In stock, ships in days', nl: 'Op voorraad, binnen dagen verzonden', fr: 'En stock, expédié sous quelques jours'};
+
 /** The shorter line per region for the bar on phones (one line, no wrap). */
 export const GEO_BAR_SHORT: Record<Locale, Record<KnownGeoRegion, string>> = {
-  en: {eu: 'In stock, ships in days', import: 'Mar 2027 + duties', intl: 'Pre-order, Mar 2027', us: 'Not shipping to the US yet'},
-  nl: {eu: 'Op voorraad, binnen dagen verzonden', import: 'mrt 2027 + rechten', intl: 'Pre-order, verzending mrt 2027', us: 'Nog geen verzending naar de VS'},
-  fr: {eu: 'En stock, expédié sous quelques jours', import: 'mars 2027 + droits', intl: 'Précommande, mars 2027', us: 'Pas encore de livraison aux É.-U.'},
+  en: {eu: GEO_BAR_SHORT_EU.en, import: `${shipMonth('en', 'short')} + duties`, intl: `Pre-order, ${shipMonth('en', 'short')}`, us: 'Not shipping to the US yet'},
+  nl: {eu: GEO_BAR_SHORT_EU.nl, import: `${shipMonth('nl', 'short')} + rechten`, intl: `Pre-order, verzending ${shipMonth('nl', 'short')}`, us: 'Nog geen verzending naar de VS'},
+  fr: {eu: GEO_BAR_SHORT_EU.fr, import: `${shipMonth('fr')} + droits`, intl: `Précommande, ${shipMonth('fr')}`, us: 'Pas encore de livraison aux É.-U.'},
 };
 
-/** The bar's one line: "EU: In stock in Belgium, ships in a few days" (the visitor's region), or both
- *  regions joined with " · " when the country is unknown. `short` is the phone line. Upper-cased by CSS. */
-export function geoBarText(region: GeoAvailabilityRegion, locale: Locale, short: boolean): string {
-  return geoBannerLines(region, locale)
-    .map((l) => `${l.label}: ${(short ? GEO_BAR_SHORT[locale][l.region] : l.text).replace(/\.$/, '')}`)
-    .join(' · ');
+/** The bar once nothing is pre-order any more (the "ordinary shop", `catalogHasPreorders` false):
+ *  stock everywhere the shop ships, no batch month. Long and short (phone) line per region. */
+export const GEO_STOCK_COPY: Record<Locale, Record<KnownGeoRegion, {long: string; short: string}>> = {
+  en: {
+    eu: {long: GEO_AVAILABILITY_COPY.en.eu, short: GEO_BAR_SHORT_EU.en},
+    import: {long: `In stock in Belgium, ships worldwide. ${GEO_DUTIES_NOTE.en}`, short: 'In stock + duties'},
+    intl: {long: 'In stock in Belgium, ships worldwide.', short: 'In stock, ships worldwide'},
+    us: {long: GEO_AVAILABILITY_COPY.en.us, short: 'Not shipping to the US yet'},
+  },
+  nl: {
+    eu: {long: GEO_AVAILABILITY_COPY.nl.eu, short: GEO_BAR_SHORT_EU.nl},
+    import: {long: `Op voorraad in België, wereldwijd verzonden. ${GEO_DUTIES_NOTE.nl}`, short: 'Op voorraad + rechten'},
+    intl: {long: 'Op voorraad in België, wereldwijd verzonden.', short: 'Op voorraad, wereldwijd verzonden'},
+    us: {long: GEO_AVAILABILITY_COPY.nl.us, short: 'Nog geen verzending naar de VS'},
+  },
+  fr: {
+    eu: {long: GEO_AVAILABILITY_COPY.fr.eu, short: GEO_BAR_SHORT_EU.fr},
+    import: {long: `En stock en Belgique, expédié dans le monde entier. ${GEO_DUTIES_NOTE.fr}`, short: 'En stock + droits'},
+    intl: {long: 'En stock en Belgique, expédié dans le monde entier.', short: 'En stock, expédié partout'},
+    us: {long: GEO_AVAILABILITY_COPY.fr.us, short: 'Pas encore de livraison aux É.-U.'},
+  },
+};
+
+/** The pre-order batch's ship-by day; a test checks it against
+ *  `content/preorders.json` (`shipsBy`). */
+export const PREORDER_SHIPS_BY = '2027-03-31';
+
+/** "31 March 2027" (long) or "31 Mar 2027" (short) in a locale. */
+export function shipByDate(locale: Locale, style: 'long' | 'short' = 'long'): string {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : locale, {day: 'numeric', month: style, year: 'numeric', timeZone: 'UTC'})
+    .format(new Date(`${PREORDER_SHIPS_BY}T12:00:00Z`))
+    .replace('.', '');
+}
+
+/** The bar's lines: the visitor's availability, nothing about markets or
+ *  taxes (those are on /markets). Long for laptops, short for phones. */
+const BAR: Record<Locale, {stock: [string, string]; preorder: (style: 'long' | 'short') => string; anywhere: [string, string]}> = {
+  en: {
+    stock: ['In stock in Belgium, ships in days', 'In stock, ships in days'],
+    preorder: (style) => `Pre-order, ships by ${shipByDate('en', style)}`,
+    anywhere: ['In stock, ships worldwide from Belgium', 'In stock, ships worldwide'],
+  },
+  nl: {
+    stock: ['Op voorraad in België, binnen enkele dagen verzonden', 'Op voorraad, binnen dagen verzonden'],
+    preorder: (style) => (style === 'long' ? `Pre-order, verzending uiterlijk ${shipByDate('nl')}` : `Pre-order, uiterlijk ${shipByDate('nl', 'short')}`),
+    anywhere: ['Op voorraad, wereldwijd verzonden vanuit België', 'Op voorraad, wereldwijd verzonden'],
+  },
+  fr: {
+    stock: ['En stock en Belgique, expédié sous quelques jours', 'En stock, expédié sous quelques jours'],
+    preorder: (style) => (style === 'long' ? `Précommande, expédition au plus tard le ${shipByDate('fr')}` : `Précommande, au plus tard ${shipByDate('fr', 'short')}`),
+    anywhere: ['En stock, expédié partout depuis la Belgique', 'En stock, expédié partout'],
+  },
+};
+
+/**
+ * The bar's one line for the visitor's region: "In stock in Belgium, ships
+ * in days" (EU), "Pre-order, ships by 31 March 2027" (everywhere else,
+ * and a visitor with no known country, who can only pre-order), "Not
+ * shipping to the US yet" (US while closed). `ordinary`: nothing is
+ * pre-order any more, stock ships everywhere. A country the shop cannot sell
+ * to reads the buy box's own words instead (PageLayout `note`). `short` is
+ * the phone line. Upper-cased by CSS.
+ */
+export function geoBarText(region: GeoAvailabilityRegion, locale: Locale, short: boolean, ordinary = false): string {
+  const at = short ? 1 : 0;
+  const words = BAR[locale];
+  if (region === 'us') return (short ? GEO_BAR_SHORT[locale].us : GEO_AVAILABILITY_COPY[locale].us).replace(/\.$/, '');
+  if (region === 'eu') return words.stock[at];
+  return ordinary ? words.anywhere[at] : words.preorder(short ? 'short' : 'long');
 }
 
 /** localStorage key of a dismissed banner; bump it when the lines change. */
@@ -243,7 +333,7 @@ export function geoPreorderLine(
 
 /**
  * The lines whose "Delivery by" date the parcel shows. A batch 1 line in a
- * stock region ships in a few days, so its late-November date drops; the US
+ * stock region ships in a few working days, so its late-November date drops; the US
  * (on hold) shows no date; elsewhere (`intl`, `fallback`) every line keeps its
  * own date. A line of another batch or a funding target always keeps it.
  */

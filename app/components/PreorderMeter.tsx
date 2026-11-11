@@ -25,12 +25,14 @@ export function StepBar({
   const at = (units: number) => `${(units / bar.max) * 100}%`;
   // A paid batch's count is a cap ("213 of 250 left"), a funding target's a
   // goal ("37 / 250 target").
-  const label =
-    bar.funded && fundedLabel
+  // A confirmed batch is a plain statement: no count, no bar.
+  const label = bar.confirmed
+    ? (copyText('preorder.confirmed') ?? 'Batch confirmed')
+    : bar.funded && fundedLabel
       ? fundedLabel
       : stepBarLabel(bar, batch ?? null, (key) => copyText(`preorder.${key}`));
   return (
-    <div className="step-bar" data-funded={bar.funded ? '' : undefined}>
+    <div className="step-bar" data-funded={bar.funded ? '' : undefined} data-confirmed={bar.confirmed ? '' : undefined}>
       <div className="step-bar-summary">
         <span className="step-bar-label">{label}</span>
         {prices.length > 1 ? (
@@ -54,20 +56,22 @@ export function StepBar({
           </InfoHint>
         ) : null}
       </div>
-      <span
-        className="step-bar-track"
-        role="progressbar"
-        aria-label={label}
-        aria-valuemin={0}
-        aria-valuemax={bar.max}
-        aria-valuenow={bar.value}
-        aria-valuetext={label}
-      >
-        <span className="step-bar-fill" style={{width: `${pct}%`}} />
-        {bar.ticks.map((tick) => (
-          <span key={tick} className="step-bar-tick" style={{left: at(tick)}} />
-        ))}
-      </span>
+      {bar.confirmed ? null : (
+        <span
+          className="step-bar-track"
+          role="progressbar"
+          aria-label={label}
+          aria-valuemin={0}
+          aria-valuemax={bar.max}
+          aria-valuenow={bar.value}
+          aria-valuetext={label}
+        >
+          <span className="step-bar-fill" style={{width: `${pct}%`}} />
+          {bar.ticks.map((tick) => (
+            <span key={tick} className="step-bar-tick" style={{left: at(tick)}} />
+          ))}
+        </span>
+      )}
     </div>
   );
 }

@@ -62,7 +62,7 @@
   "upsell_delay_short": "Holds your whole parcel until then (now {from}).",
   "extras_title": "Add-ons",
   "parcel_label": "Your parcel",
-  "parcel_rule": "Preorders ship when their funding target is reached. If a target is missed, you choose a refund or to keep waiting.",
+  "parcel_rule": "Pre-orders ship with their batch. Cancel any time before delivery for a full refund.",
   "bundle_title_sized": "Complete your {build} build",
   "bundle_title": "Complete your build",
   "bundle_total": "{count} parts, {price}",

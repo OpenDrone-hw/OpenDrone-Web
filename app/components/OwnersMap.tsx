@@ -20,7 +20,7 @@ import {
 } from '~/components/OwnersPilot';
 import {copyFill, copyText} from '~/lib/copy';
 import {drawWorld, placeAt, type Geo, type Shape} from '~/lib/owner-map-draw';
-import {bucketLabel, type Snapshot} from '~/lib/owner-map';
+import type {PublicSnapshot} from '~/lib/owner-map';
 import {cellHalfSpan, snapToCell, type Cell, type PilotCell} from '~/lib/pilot-map';
 import type {Topology} from 'topojson-specification';
 
@@ -86,7 +86,7 @@ function useSize(ref: React.RefObject<HTMLElement | null>): Size | null {
 }
 
 /** The land, drawn once per size: nothing in it depends on the view or the hover. */
-const Land = memo(function Land({shapes, snapshot}: {shapes: Shape[]; snapshot: Snapshot | null}) {
+const Land = memo(function Land({shapes, snapshot}: {shapes: Shape[]; snapshot: PublicSnapshot | null}) {
   return (
     <>
       {shapes.map((s) => {
@@ -98,10 +98,6 @@ const Land = memo(function Land({shapes, snapshot}: {shapes: Shape[]; snapshot: 
 });
 
 /** "50-99" for a region with owners, "-" for one without. */
-function rangeFor(shape: Shape, snapshot: Snapshot | null): string {
-  const bucket = shape.region === null || !snapshot ? undefined : snapshot.regions[shape.region];
-  return bucket === undefined ? '-' : bucketLabel(bucket);
-}
 
 export function OwnersMap({
   snapshot,
@@ -110,7 +106,7 @@ export function OwnersMap({
   notice,
   children,
 }: {
-  snapshot: Snapshot | null;
+  snapshot: PublicSnapshot | null;
   fixture: boolean;
   panel: OpenPanel | null;
   notice: Notice | null;
@@ -375,9 +371,8 @@ export function OwnersMap({
                   transform={`translate(${at[0].toFixed(1)} ${at[1].toFixed(1)})`}
                   className={`owners-pin${isOwn ? ' is-own' : ''}${selected === c.id ? ' is-active' : ''}`}
                 >
-                  <circle className="owners-pin-halo" r={c.count > 1 ? 13 : 10} />
-                  <circle className="owners-pin-dot" r={c.count > 1 ? 10 : 7} />
-                  {c.count > 1 ? <text y="3.5">{c.count}</text> : null}
+                  <circle className="owners-pin-halo" r={c.pilots.length > 1 ? 13 : 10} />
+                  <circle className="owners-pin-dot" r={c.pilots.length > 1 ? 10 : 7} />
                 </g>
               );
             })}
@@ -433,30 +428,40 @@ export function OwnersMap({
         </h1>
         <table className="visit-hours owners-figures">
           <tbody>
-            <tr aria-live="polite">
-              <th scope="row">
-                {current ? current.name : (copyText('owners.row_world') ?? 'Worldwide')}
-                <span className="visit-hours-what">{copyText('owners.row_owners') ?? 'Owners'}</span>
-              </th>
-              <td className="visit-hours-time">{current ? rangeFor(current, snapshot) : (snapshot?.total ? `${snapshot.total}+` : '-')}</td>
-            </tr>
-            {!current && snapshot?.countries ? (
-              <tr>
-                <th scope="row">{copyText('owners.row_countries') ?? 'Countries'}</th>
-                <td className="visit-hours-time">{snapshot.countries}</td>
+            {current ? (
+              <tr aria-live="polite">
+                <th scope="row">{current.name}</th>
+                <td className="visit-hours-time">
+                  {current.region && snapshot?.regions[current.region] !== undefined ? (copyText('owners.row_has') ?? 'Has owners') : '-'}
+                </td>
               </tr>
-            ) : null}
-            {!current && panel ? (
-              <tr>
-                <th scope="row">
-                  {copyText('owners.row_pilots') ?? 'Pilots'}
-                  <span className="visit-hours-what">{copyText('owners.row_pilots_what') ?? 'On the pilot map'}</span>
-                </th>
-                <td className="visit-hours-time">{panel.view.total}</td>
-              </tr>
-            ) : null}
+            ) : (
+              <>
+                {snapshot?.milestone ? (
+                  <tr aria-live="polite">
+                    <th scope="row">{copyText('owners.row_owners') ?? 'Owners'}</th>
+                    <td className="visit-hours-time">{snapshot.milestone}+</td>
+                  </tr>
+                ) : null}
+                {snapshot?.countriesFloor ? (
+                  <tr>
+                    <th scope="row">{copyText('owners.row_countries') ?? 'Countries'}</th>
+                    <td className="visit-hours-time">{snapshot.countriesFloor}+</td>
+                  </tr>
+                ) : null}
+              </>
+            )}
           </tbody>
         </table>
+        {hasRegions ? (
+          <div className="owners-legend" aria-hidden="true">
+            <span>{copyText('owners.legend_fewer') ?? 'fewer'}</span>
+            <i data-b="0" />
+            <i data-b="1" />
+            <i data-b="2" />
+            <span>{copyText('owners.legend_more') ?? 'more'}</span>
+          </div>
+        ) : null}
         <Txt id={hasRegions ? 'owners.note' : 'owners.empty'} as="p" className="visit-card-note" />
 
         {panel ? <PilotBlock panel={panel} notice={notice} geo={geo} draft={draft} onDraft={setDraft} onPlacing={onPlacing} /> : null}

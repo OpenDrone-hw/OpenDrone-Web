@@ -2,7 +2,7 @@ import type {Route} from './+types/preorder';
 import {ChatFpvWidget} from '~/components/ChatFpvWidget';
 import {chatFpvWidgetSrc} from '~/lib/support/chatfpv';
 import {InfoHint} from '~/components/InfoHint';
-import {Link, useLoaderData, useRouteLoaderData} from 'react-router';
+import {Link, redirect, useLoaderData, useRouteLoaderData} from 'react-router';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
@@ -10,12 +10,12 @@ import {StepBar} from '~/components/PreorderMeter';
 import {EarlyBirdNote, RetailPrice} from '~/components/EarlyPriceCue';
 import {preorderWords} from '~/components/Availability';
 import {batchPhrase, currentBatch} from '~/lib/availability';
-import {shipWord} from '~/components/ShipChip';
+import {shipWord, useGeoInStock, useGeoShipLine} from '~/components/ShipChip';
 import {AddToCartButton} from '~/components/AddToCartButton';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {Txt} from '~/components/Txt';
 import {copy, copyText} from '~/lib/copy';
-import {formatPrice, toCards} from '~/lib/catalog';
+import {catalogHasPreorders, formatPrice, toCards} from '~/lib/catalog';
 import {comingSoonFlag} from '~/lib/coming-soon';
 import {
   isPurchasableStatus,
@@ -34,11 +34,18 @@ import {
   isInternationalRegion,
   latestShipDay,
   stackPaidShips,
+  shipLabelFromPromise,
   shortCampaignDate,
+  stockPromise,
   tiersFor,
   type CampaignState,
 } from '~/lib/preorder-campaign';
 import {stepBarView} from '~/lib/preorder-meter';
+import {batchChoiceOn} from '~/lib/shopify-storefront';
+import {resolveHeroBuilds, stackOffer} from '~/lib/hero-build';
+import {parseBuilds} from '~/lib/build-recommendations';
+import buildsJson from '../../content/builds.json';
+import {HowOrdering, type HowOrderingStack} from '~/components/HowOrdering';
 import type {MoneyV2, ProductImage, SelectedOption} from '~/lib/product-shapes';
 
 /**
@@ -50,9 +57,9 @@ import type {MoneyV2, ProductImage, SelectedOption} from '~/lib/product-shapes';
  * product page, and a card appears only for a variant the status system
  * lets the shop sell.
  */
-export const meta: Route.MetaFunction = () =>
+export const meta: Route.MetaFunction = ({data}) =>
   buildSeoMeta({
-    title: copyText('preorder.meta_title') ?? 'Pre-orders',
+    title: data?.choice ? (copyText('preorder.why_meta_title') ?? 'Why pre-order') : (copyText('preorder.meta_title') ?? 'Pre-orders'),
     description: copyText('preorder.meta_description') ?? '',
     // Its own 1200x630 card: /preorder is the page shared at launch.
     image: '/og-preorder.png',
@@ -174,11 +181,33 @@ export async function loader({context}: Route.LoaderArgs) {
   );
 
   const latestDay = latestShipDay(CAMPAIGN);
+  // Buy now or pre-order: the stacks this visitor can buy now, per size.
+  const choice = batchChoiceOn(context.env);
+  // Nothing is pre-order any more (a batch has landed): the shop is an
+  // ordinary shop and this page has nothing to explain. A failed catalog
+  // read (no products) keeps the page.
+  if (choice && catalog.products.length > 0 && !catalogHasPreorders(catalog)) throw redirect('/products', 302);
+  const stacks: HowOrderingStack[] = choice
+    ? resolveHeroBuilds(parseBuilds(buildsJson), catalog, true).flatMap((build) => {
+        const offer = stackOffer(build);
+        return offer ? [{size: offer.size, lines: offer.lines, price: offer.price, currency: offer.currency}] : [];
+      })
+    : [];
   return {
+    choice,
+    stacks,
+    afterEndsOn: CAMPAIGN.afterEndsOn ?? 'retail',
     rows,
+    // The promise itself, so the page can read it as the visitor's region
+    // does (in the EU: in stock, as the bar and the product page say).
+    stackPromise: stackShips,
     stackMonth: shipMonth(stackShips),
     stackWhen: datedShipParts(stackShips)?.when ?? null,
     stackDay: promiseDay(stackShips),
+    // Batch 1 is stock on hand: no ship month, it ships now.
+    stackStock: stockPromise(stackShips),
+    // The March 2027 batch is confirmed: no target, no deadline.
+    confirmed: Boolean(CAMPAIGN.confirmed),
     endsDay: CAMPAIGN.endsOn,
     etaDay: latestDay,
     ends: shortCampaignDate(campaignDate(CAMPAIGN.endsOn)) ?? CAMPAIGN.endsOn,
@@ -196,6 +225,7 @@ export async function loader({context}: Route.LoaderArgs) {
       us && paidShips
         ? {
             first: shipMonth(paidShips),
+            stock: stockPromise(paidShips),
             batch: new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric', timeZone: 'UTC'}).format(
               new Date(`${latestDay}T00:00:00Z`),
             ),
@@ -210,6 +240,18 @@ export default function PreorderRoute() {
   const usBatchNote = 'usBatchNote' in data ? data.usBatchNote : null;
   const us = 'us' in data && data.us === true;
   const international = data.international;
+  // Batch 1 stock for a visitor whose region reads it as stock (the EU): the
+  // same line as the availability bar and the product page, not the batch's
+  // dated promise, and "Add to cart" as on the product page.
+  const stackInStock = useGeoInStock(null, data.stackPromise);
+  const stackLine = useGeoShipLine()(data.stackPromise)?.replace(/\.$/, '') ?? null;
+  const stackShort = useGeoShipLine(true)(data.stackPromise);
+  // A visitor without a known country reads the stock promise itself, which names the EU.
+  const stockNow = stackInStock && stackLine
+    ? {line: stackLine, short: stackShort ?? stackLine}
+    : data.stackStock && data.stackPromise
+      ? {line: shipLabelFromPromise(data.stackPromise, 'long')!.replace(/\.$/, ''), short: shipLabelFromPromise(data.stackPromise, 'short')!}
+      : null;
   const rootData = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
   const updates = copy('preorder.updates');
   // Entries are "YYYY-MM-DD · text", newest first, never edited: a
@@ -225,6 +267,25 @@ export default function PreorderRoute() {
     .sort((a, b) => a.variant.localeCompare(b.variant) || b.product.localeCompare(a.product));
   const targetRows = rows.filter((r) => !r.campaign.paidStock);
 
+  if (data.choice) {
+    return (
+      <EditorialShell slug="preorder" rail={false} reveal={false} pageClassName="preorder-page">
+        <HowOrdering
+          data={{
+            stacks: data.stacks,
+            endsDay: data.endsDay,
+            shipDay: data.etaDay,
+            afterEndsOn: data.afterEndsOn,
+            today: data.today,
+            us,
+            international,
+          }}
+        />
+        <ChatFpvWidget src={data.chatfpvWidget} />
+      </EditorialShell>
+    );
+  }
+
   return (
     <EditorialShell slug="preorder" rail={false} reveal={false} pageClassName="preorder-page">
       <header className="po-header">
@@ -234,7 +295,7 @@ export default function PreorderRoute() {
         </div>
         <Link to="#questions" className="po-help-link"><Txt id="preorder.how_it_works" /> <span aria-hidden="true">↓</span></Link>
       </header>
-      <Timeline data={data} />
+      <Timeline data={data} stock={stockNow?.short ?? null} />
       <div className="po-order-notes">
         <span><Txt id={international ? 'preorder.terms_summary_international' : us ? 'preorder.terms_summary_us' : 'preorder.terms_summary'} /></span>
         <EarlyBirdNote show={!unavailable && rows.some((r) => r.early)} className="po-early-note" />
@@ -284,9 +345,9 @@ export default function PreorderRoute() {
         <section className="po-group" id="stack">
           <h2 className="po-group-title">
             <Txt id="preorder.stack_title" />
-            {stackMonth ? <span className="po-group-meta">{shipWord('ships', stackWhen ?? stackMonth)}</span> : null}
+            {stockNow || stackMonth ? <span className="po-group-meta">{stockNow?.line ?? shipWord('ships', stackWhen ?? stackMonth ?? '')}</span> : null}
           </h2>
-          <Cards rows={stackRows} eta={eta} first />
+          <Cards rows={stackRows} eta={eta} first cta={stockNow ? (copyText('product-chrome.buy_cta_add') ?? 'Add to cart') : undefined} />
         </section>
       ) : null}
 
@@ -295,22 +356,26 @@ export default function PreorderRoute() {
           <h2 className="po-group-title">
             <Txt id="preorder.targets_title" />
             <span className="po-group-meta">
-              {`${shipWord('deadline', ends)}. ${(copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if the target is reached').replace('{date}', eta)}`}
+              {data.confirmed
+                ? (copyText('preorder.confirmed_meta') ?? 'Confirmed. Ships by {date}').replace('{date}', eta)
+                : `${shipWord('deadline', ends)}. ${(copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if the target is reached').replace('{date}', eta)}`}
             </span>
           </h2>
-          <Txt id="preorder.target_missed" as="p" className="po-group-line" />
-          {stackMonth ? (
+          {data.confirmed ? null : <Txt id="preorder.target_missed" as="p" className="po-group-line" />}
+          {stockNow || stackMonth ? (
             <p className="po-group-line">
-              {(copyText('preorder.targets_line') ?? '').replace('{month}', stackMonth)}
+              {stockNow
+                ? (copyText('preorder.targets_line_stock') ?? '')
+                : (copyText('preorder.targets_line') ?? '').replace('{month}', stackMonth ?? '')}
             </p>
           ) : null}
-          {usBatchNote?.first ? (
+          {usBatchNote?.first || usBatchNote?.stock ? (
             <p className="po-group-line">
-              {(
-                copyText('preorder.us_batch_note') ??
-                'FC and ESC batch 1 ({month}) is EU only. US orders ship from the {batch} batch.'
+              {(usBatchNote.stock
+                ? (copyText('preorder.us_batch_note_stock') ?? 'The FC and ESC stock in Belgium ships to EU addresses only. US orders ship with the {batch} batch.')
+                : (copyText('preorder.us_batch_note') ?? 'FC and ESC batch 1 ({month}) is EU only. US orders ship from the {batch} batch.')
               )
-                .replace('{month}', usBatchNote.first)
+                .replace('{month}', usBatchNote.first ?? '')
                 .replace('{batch}', usBatchNote.batch)}
             </p>
           ) : null}
@@ -366,9 +431,10 @@ const dayMs = (iso: string) => Date.parse(`${iso}T00:00:00Z`);
  * targets' deadline and latest ship date, with a "Today" marker. On a
  * phone the lanes read as two rows of dates.
  */
-function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>}) {
-  const {stackDay, stackMonth, endsDay, etaDay, ends, eta, today} = data;
-  const days = [today, endsDay, etaDay, ...(stackDay ? [stackDay] : [])].map(dayMs);
+function Timeline({data, stock}: {data: ReturnType<typeof useLoaderData<typeof loader>>; stock: string | null}) {
+  const {stackDay, stackMonth, endsDay, etaDay, ends, eta, today, confirmed} = data;
+  // A confirmed batch has no deadline to mark: today and its ship-by date.
+  const days = [today, ...(confirmed ? [] : [endsDay]), etaDay, ...(stackDay ? [stackDay] : [])].map(dayMs);
   const first = new Date(Math.min(...days));
   const last = new Date(Math.max(...days));
   const start = Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), 1);
@@ -377,21 +443,24 @@ function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>
   const todayPos = at(today);
 
   const lanes = [
-    stackDay && stackMonth
+    (stackDay && stackMonth) || stock
       ? {
           key: 'stack',
           label: copyText('preorder.timeline_stack') ?? 'Stack',
-          events: [{day: stackDay, date: stackMonth, what: copyText('preorder.timeline_ships') ?? 'Ships', kind: 'ship'}],
+          // In stock for this visitor: the lane says so at today, not at the batch's dated promise.
+          events: stock
+            ? [{day: today, date: stock, what: '', kind: 'stock'}]
+            : [{day: stackDay!, date: stackMonth!, what: copyText('preorder.timeline_ships') ?? 'Ships', kind: 'ship'}],
         }
       : null,
     {
       key: 'targets',
-      label: stackDay
+      label: stackDay || stock
         ? (copyText('preorder.timeline_targets') ?? 'RX, frames, motors')
         : (copyText('preorder.timeline_targets_us') ?? 'Every product'),
       events: [
-        {day: endsDay, date: ends, what: copyText('preorder.timeline_deadline') ?? 'Deadline', kind: 'deadline'},
-        {day: etaDay, date: eta, what: copyText('preorder.timeline_eta') ?? 'Ships if the target is reached', kind: 'eta'},
+        ...(confirmed ? [] : [{day: endsDay, date: ends, what: copyText('preorder.timeline_deadline') ?? 'Deadline', kind: 'deadline'}]),
+        {day: etaDay, date: eta, what: copyText('preorder.timeline_eta') ?? 'Ships, confirmed', kind: 'eta'},
       ],
     },
   ].filter((lane) => lane !== null);
@@ -451,19 +520,19 @@ function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>
 
 /** `first`: the section at the top of the page, whose first images are on
  *  screen at load and load at once, the first one with high priority. */
-function Cards({rows, eta, first = false}: {rows: Row[]; eta: string; first?: boolean}) {
+function Cards({rows, eta, first = false, cta}: {rows: Row[]; eta: string; first?: boolean; cta?: string}) {
   return (
     <ul className="po-cards">
       {rows.map((row, i) => (
-        <Card key={row.sku} row={row} eta={eta} eager={first && i < 4} lead={first && i === 0} />
+        <Card key={row.sku} row={row} eta={eta} eager={first && i < 4} lead={first && i === 0} cta={cta} />
       ))}
     </ul>
   );
 }
 
-function Card({row, eta, eager = false, lead = false}: {row: Row; eta: string; eager?: boolean; lead?: boolean}) {
+function Card({row, eta, eager = false, lead = false, cta: ctaOverride}: {row: Row; eta: string; eager?: boolean; lead?: boolean; cta?: string}) {
   const name = row.variant ? `${row.product} ${row.variant}` : row.product;
-  const cta = copyText('preorder.card_cta') ?? 'Pre-order';
+  const cta = ctaOverride ?? copyText('preorder.card_cta') ?? 'Pre-order';
   const currency = row.price.currencyCode;
   const bar = stepBarView(row.campaign, row.stepEnds);
   const funded = `${copyText('preorder.funded') ?? 'Pre-order target reached'}, ${shipWord('eta', shortCampaignDate(row.campaign.latestShip) ?? shipMonth(row.shipPromise) ?? eta)}`;
@@ -500,7 +569,10 @@ function Card({row, eta, eager = false, lead = false}: {row: Row; eta: string; e
         {row.priceUnit ? <span> {row.priceUnit}</span> : null}
         <RetailPrice retail={row.retail} />
       </p>
-      <StepBar bar={bar} fundedLabel={funded} batch={currentBatch(row.campaign) ? batchPhrase(currentBatch(row.campaign)!, preorderWords) : null} />
+      {/* A confirmed batch is stated once, in the group title: no bar per card. */}
+      {bar.confirmed ? null : (
+        <StepBar bar={bar} fundedLabel={funded} batch={currentBatch(row.campaign) ? batchPhrase(currentBatch(row.campaign)!, preorderWords) : null} />
+      )}
       <AddToCartButton
         className="po-card-cta"
         placement="catalog"

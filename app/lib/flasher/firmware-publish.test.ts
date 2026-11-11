@@ -285,7 +285,7 @@ describe('per-board direct install', () => {
   it('flow: a Mini board is refused before anything is downloaded or restarted', async () => {
     const r = rig({board: MINI.target, bytes: asset});
     assert.deepEqual(await startUpdate(r.deps), {kind: 'refused', text: boardGatedText(MINI)});
-    assert.equal(boardGatedText(MINI), "Direct install isn't available for the OpenFC-Lite Mini yet. Use Other ways.");
+    assert.equal(boardGatedText(MINI), "Direct install isn't available for the OpenFC Lite 20×20 yet. Use Other ways.");
     assert.deepEqual(r.log, []);
   });
 
@@ -293,7 +293,7 @@ describe('per-board direct install', () => {
     const r = rig({board: LITE.target, bytes: asset, installed: [MINI.target]});
     const res = await startUpdate(r.deps);
     assert.equal(res.kind, 'refused');
-    assert.match((res as {text: string}).text, /this board is OpenFC-Lite Mini, not OpenFC-Lite/);
+    assert.match((res as {text: string}).text, /this board is OpenFC Lite 20×20, not OpenFC Lite 30×30/);
     assert.ok(!r.log.includes('flash'));
   });
 

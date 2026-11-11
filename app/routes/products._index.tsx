@@ -11,7 +11,7 @@ import {EarlyBirdNote, anyEarlyPrice} from '~/components/EarlyPriceCue';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {toCards} from '~/lib/catalog';
 import {CAMPAIGN} from '~/lib/catalog-client';
-import {campaignSkus, datedShipParts} from '~/lib/preorder-campaign';
+import {campaignSkus} from '~/lib/preorder-campaign';
 import {FAMILIES} from '~/lib/families';
 import {buildOf, parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
@@ -25,7 +25,7 @@ import {
   shipMonth,
   variantDisplayName,
 } from '~/lib/product-content';
-import {shipWord, useGeoShipLine} from '~/components/ShipChip';
+import {datedShipText, useGeoShipLine} from '~/components/ShipChip';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {Txt} from '~/components/Txt';
 import {copyText, editAttrs} from '~/lib/copy';
@@ -797,12 +797,11 @@ export default function ProductsIndex() {
                   onClick={() => setParam('ships', activeShips === 'paid' ? null : 'paid')}
                 >
                   {geoChip(stackShips) ??
-                    (datedShipParts(stackShips)
-                    ? shipWord('ships', datedShipParts(stackShips)?.when ?? '')
-                    : (copyText('collections-all.chip_paid') ?? 'Ships {ships}').replace(
-                        '{ships}',
-                        stackShips.replace(/^ships\s+/i, ''),
-                      ))}
+                    datedShipText(stackShips) ??
+                    (copyText('collections-all.chip_paid') ?? 'Ships {ships}').replace(
+                      '{ships}',
+                      stackShips.replace(/^ships\s+/i, ''),
+                    )}
                 </button>
               ) : null}
             </div>

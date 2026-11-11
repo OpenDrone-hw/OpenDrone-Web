@@ -29,11 +29,12 @@ const EU_FIRST: CampaignBatch[] = [
 ];
 
 describe('US sales gate', () => {
-  it('keeps the US on hold in production: PUBLIC_US_SALES is "0" (founder 2026-11-03)', () => {
+  it('sells the March 2027 batch to the US in production: PUBLIC_US_SALES is "1" (founder 2026-11-05, 2026-11-11)', () => {
     const toml = fs.readFileSync(new URL('../../wrangler.production.toml', import.meta.url), 'utf8');
     const gate = /^PUBLIC_US_SALES = "([^"]*)"/m.exec(toml)?.[1];
-    assert.equal(gate, '0');
-    assert.equal(usSalesRate({PUBLIC_US_SALES: gate}), null);
+    assert.equal(gate, '1');
+    assert.equal(usSalesRate({PUBLIC_US_SALES: gate}), US_SALES.rate);
+    assert.equal(usSalesRate({PUBLIC_US_SALES: '0'}), null);
   });
 
   it('opens only with the gate "1" and a committed rate', () => {
@@ -132,7 +133,7 @@ describe('batch regions', () => {
       const batches = REAL.skus[sku].batches;
       assert.deepEqual(batches[0].regions, ['EU'], `${sku} batch 1 serves the EU only, not NEAR, INT or the US`);
       assert.equal(batches[0].paid, true);
-      assert.equal(batches[0].ships, 'ships late November 2026');
+      assert.equal(batches[0].ships, 'in stock in Belgium, ships to EU addresses in a few working days');
       for (const ordered of [0, 1, 249, 250, 400]) {
         const us = campaignState(batches, [{region: 'US', units: ordered}], REAL.pendingShips, [], null, 'US');
         assert.notEqual(us.batch, 1, `${sku}: a US unit never lands in batch 1 (${ordered} US units ordered)`);
@@ -192,7 +193,7 @@ describe('US market prices', () => {
     const usd = catalogOf([variant({sku: 'OPENESC-2020', price: 53, compare_price: 66.3, currency: 'USD'})], 'USD');
     const eu = applyCampaign(eur, REAL, {'OPENESC-2020': 12}, OPEN, 'EU').products[0].variants[0];
     assert.equal(eu.currency, 'EUR');
-    assert.match(eu.ship_promise ?? '', /November 2026/);
+    assert.match(eu.ship_promise ?? '', /^in stock in Belgium/);
     const us = withMarketPrices(applyCampaign(eur, REAL, {'OPENESC-2020': 12}, OPEN, 'US'), usd);
     const v = us.products[0].variants[0];
     assert.equal(us.currency, 'USD');

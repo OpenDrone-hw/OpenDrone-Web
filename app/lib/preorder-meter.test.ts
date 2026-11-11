@@ -15,7 +15,7 @@ describe('stepBarView', () => {
 
   it('counts paid stock sold out of batch 1, ticked at the step end inside it', () => {
     const bar = stepBarView(campaignState(STACK, 37, PENDING, TIERS), ENDS);
-    assert.deepEqual(bar, {value: 37, max: 250, ticks: [100], funded: false, label: '37 / 250', kind: 'paid'});
+    assert.deepEqual(bar, {value: 37, max: 250, ticks: [100], funded: false, confirmed: false, label: '37 / 250', kind: 'paid'});
   });
 
   it('ticks the EU and US bars of the same SKU identically', () => {

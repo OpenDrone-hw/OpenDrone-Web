@@ -1,24 +1,20 @@
 /**
- * The visitor's country, for display only: which price note the buy module
- * shows. Cloudflare sets `CF-IPCountry` on every request to the Worker; a
- * `?country=XX` query overrides it so a page can be checked as seen from
- * another country. Nothing about the order depends on it: Shopify checkout
- * decides tax and shipping from the shipping address. While US sales are
- * open the root loader uses `shipCountryForRequest` instead, the same
- * destination the cart and checkout read.
+ * The visitor's country and the price note it reads. The country is the one
+ * resolver's answer (`resolveCountry` in shipping-rates.ts: blocked IP, link,
+ * choice cookie, CF-IPCountry), the same destination the cart and checkout
+ * read. Shopify checkout still decides tax and shipping from the shipping
+ * address.
  *
- * Bundler-free (one relative import) so the node:test suites can load it.
+ * Bundler-free (relative imports) so the node:test suites can load it.
  */
 
 import {EU_COUNTRY_CODES} from './eu-countries.ts';
-import {isInternationalQuote, shippingQuote} from './shipping-rates.ts';
+import {isInternationalQuote, shipCountryForRequest, shippingQuote} from './shipping-rates.ts';
 
 const EU: ReadonlySet<string> = new Set(EU_COUNTRY_CODES);
 
 export function visitorCountry(request: Request): string | null {
-  const override = new URL(request.url).searchParams.get('country')?.trim().toUpperCase();
-  const raw = override || request.headers.get('CF-IPCountry')?.trim().toUpperCase();
-  return raw && /^[A-Z]{2}$/.test(raw) && raw !== 'XX' ? raw : null;
+  return shipCountryForRequest(request);
 }
 
 /** EU consumers pay the VAT-inclusive price; unknown counts as EU, the default market. */

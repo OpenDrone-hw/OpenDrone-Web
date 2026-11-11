@@ -34,7 +34,7 @@ describe('email shell', () => {
     assert.equal(p.shipsBy, '2027-03-31');
     // One promise phrase everywhere: the mails say what the site says.
     assert.equal(FACTS.shipBy, '31 March 2027');
-    assert.equal(p.pendingShips, `ships by ${FACTS.shipBy} if the target is reached by ${FACTS.close}, otherwise you choose a refund or to wait`);
+    assert.equal(p.pendingShips, `ships by ${FACTS.shipBy}`);
     assert.match(p.skus['OPENFC-LITE-2020'].batches[0].ships, new RegExp(FACTS.batch1));
     assert.equal(FACTS.shipByShort, '31 Mar 2027');
     assert.equal(FACTS.closeShort, '15 Dec 2026');
@@ -46,13 +46,15 @@ describe('email shell', () => {
       p.skus['OPENFC-LITE-2020'].batches[0].ships,
       p.pendingShips,
       `ships with the rest of this order by ${FACTS.shipBy}`,
+      // What an order from before terms 2.9 carries (`soldUnder`): it keeps its promise and its delivery date.
+      ...p.soldUnder.flatMap((era: any) => [era.paidShips, era.pendingShips]),
     ]);
     const dir = new URL('../../scripts/emails/fixtures/', import.meta.url);
     for (const f of readdirSync(dir)) {
       const text = readFileSync(new URL(f, dir), 'utf8');
       for (const m of text.matchAll(/"Preorder": "([^"]*)"/g)) assert.ok(allowed.has(m[1]), `${f}: unknown Preorder promise "${m[1]}"`);
       for (const m of text.matchAll(/"Delivery by": "([^"]*)"/g)) {
-        const arrivals = Object.values(p.skus).flatMap((sku: any) => sku.batches).flatMap((batch: any) => [batch.deliveryBy, batch.deliveryByUS, batch.deliveryByINT]).filter(Boolean);
+        const arrivals = Object.values(p.skus).flatMap((sku: any) => sku.batches).flatMap((batch: any) => [batch.deliveryBy, batch.deliveryByUS, batch.deliveryByINT]).concat(p.soldUnder.map((era: any) => era.paidDeliveryBy)).filter(Boolean);
         const labels = arrivals.map((iso: string) => new Intl.DateTimeFormat('en-GB', {day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC'}).format(new Date(`${iso}T00:00:00Z`)));
         assert.ok(labels.includes(m[1]), `${f}: unknown arrival deadline`);
       }
@@ -61,11 +63,12 @@ describe('email shell', () => {
 });
 
 describe('launch mail', () => {
-  it('says preorders are open, with batch 1 EU only and the close date', () => {
+  it('says preorders are open, with batch 1 in stock for the EU and the confirmed March batch', () => {
     for (const region of ['all', 'eu', 'us']) {
       const {subject, text, html} = renderBlast('all', region);
       assert.equal(subject, 'Preorders are open');
-      assert.match(text, /15 December 2026/i);
+      assert.match(text, /31 March 2027/);
+      assert.ok(!/target|15 December/i.test(text), 'no funding target or deadline: the batch is confirmed');
       assert.match(html, /RESEND_UNSUBSCRIBE_URL/);
       assert.ok(!/warehouse|Belgian QC/i.test(text));
     }

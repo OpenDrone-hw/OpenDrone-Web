@@ -166,8 +166,8 @@ const ESC_BROWSER_NOTE: Callout = {
 /** OpenFC-Lite published (2026-11-03); the Lite Mini not yet. */
 const FC_NOT_PUBLISHED: Callout = {
   kind: 'note',
-  title: 'The Lite Mini file is not published yet',
-  text: 'The [firmware page](/guides/flash) has the OpenFC-Lite file. For the Lite Mini it still shows "firmware not published yet": its download will appear there once it is released. Do not use firmware files from other places.',
+  title: 'The OpenFC Lite 20×20 file is not published yet',
+  text: 'The [firmware page](/guides/flash) has the OpenFC Lite 30×30 file. For the OpenFC Lite 20×20 it still shows "firmware not published yet": its download will appear there once it is released. Do not use firmware files from other places.',
 };
 
 /** The status every ESC page that mentions installing carries. Tested in guides.test.ts. */
@@ -182,7 +182,7 @@ const ESC_COMING: Callout = {
 const FC_TOOLS = [
   'A computer running Windows, macOS or Linux',
   'A USB-C cable that carries data (some cables only charge)',
-  'Your OpenFC-Lite or OpenFC-Lite Mini',
+  'Your OpenFC Lite 30×30 or OpenFC Lite 20×20',
 ];
 
 const ESC_TOOLS = [
@@ -211,7 +211,7 @@ const VERIFY_STEPS: GuideStep[] = [
     {
       title: 'Run the version command',
       text: 'Open the **CLI** tab, type `version` and press Enter.',
-      see: `A few lines that name Betaflight, its version number and the board: \`${LITE_TARGET}\` on an OpenFC-Lite, \`${MINI_TARGET}\` on a Mini.`,
+      see: `A few lines that name Betaflight, its version number and the board: \`${LITE_TARGET}\` on an OpenFC Lite 30×30, \`${MINI_TARGET}\` on an OpenFC Lite 20×20.`,
     },
     {
       title: 'Compare with the firmware page',
@@ -231,7 +231,7 @@ const VERIFY_STEPS: GuideStep[] = [
  */
 const BOOT_MODE_DIRECT: GuidePageDirect = {
   intro: [
-    'On an OpenFC-Lite (OpenFC-Lite only), clicking **Update firmware** on the [firmware page](/guides/flash) restarts the board into bootloader mode for you, so usually you can skip this page. Use it when that step fails, for the Lite Mini, or for the copy method.',
+    'On an OpenFC Lite 30×30 (this board only), clicking **Update firmware** on the [firmware page](/guides/flash) restarts the board into bootloader mode for you, so usually you can skip this page. Use it when that step fails, for the OpenFC Lite 20×20, or for the copy method.',
     'In bootloader mode the board shows up as a drive called **RP2350**. The bootloader is in ROM inside the chip and cannot be erased.',
   ],
   sections: [
@@ -247,7 +247,7 @@ const BOOT_MODE_DIRECT: GuidePageDirect = {
 const INSTALL_DIRECT: GuidePageDirect = {
   intro: [
     'In Chrome or Edge, the [firmware page](/guides/flash) installs Betaflight with one button. It checks the file and the board before it writes anything.',
-    'This works for the OpenFC-Lite. The Lite Mini file comes later.',
+    'This works for the OpenFC Lite 30×30. The OpenFC Lite 20×20 file comes later.',
     "Installing resets the board's settings, so save them first.",
   ],
   callouts: [
@@ -301,7 +301,7 @@ const INSTALL_DIRECT: GuidePageDirect = {
     },
     {
       problem: 'The page cannot identify the firmware on the board.',
-      fix: 'It refuses rather than guess. If you are sure the board is an OpenFC-Lite or Lite Mini, use the copy method above.',
+      fix: 'It refuses rather than guess. If you are sure the board is an OpenFC Lite 30×30 or OpenFC Lite 20×20, use the copy method above.',
     },
     {
       problem: 'The page says "Not installing".',
@@ -339,7 +339,7 @@ const OPENFC: GuideFamily = {
   board: 'OpenFC',
   firmware: 'Betaflight',
   blurb:
-    'Put Betaflight on an OpenFC-Lite or OpenFC-Lite Mini flight controller over USB, check it worked, and recover from a failed update.',
+    'Put Betaflight on an OpenFC Lite 30×30 or OpenFC Lite 20×20 flight controller over USB, check it worked, and recover from a failed update.',
   tool: {href: '/guides/flash', title: 'Open the firmware page', directTitle: 'Update firmware with one button'},
   pages: [
     {
@@ -372,7 +372,7 @@ const OPENFC: GuideFamily = {
         },
         {
           title: 'Find the BOOT button',
-          text: 'The board has a small push button for bootloader mode, usually labelled BOOT or BOOTSEL. Its position differs between the OpenFC-Lite and the Mini, so look at the label printed on your board and at the board\'s documentation: [OpenFC-Lite on GitHub](https://github.com/OpenDrone-hw/OpenFC-Lite) or [OpenFC-Lite Mini on GitHub](https://github.com/OpenDrone-hw/OpenFC-Lite-Mini).',
+          text: 'The board has a small push button for bootloader mode, usually labelled BOOT or BOOTSEL. Its position differs between the OpenFC Lite 30×30 and the OpenFC Lite 20×20, so look at the label printed on your board and at the board\'s documentation: [OpenFC Lite 30×30 on GitHub](https://github.com/OpenDrone-hw/OpenFC-Lite) or [OpenFC Lite 20×20 on GitHub](https://github.com/OpenDrone-hw/OpenFC-Lite-Mini).',
           see: 'You know which button to press. If you cannot find it, use the CLI method under "Other ways in" below.',
         },
         {
@@ -424,8 +424,8 @@ const OPENFC: GuideFamily = {
       description:
         'Step 2 of updating an OpenFC: download the verified Betaflight file from the firmware page and drag it onto the RP2350 drive.',
       intro: [
-        'The way to put the firmware on is **drag and drop**. It works in every browser and on every computer: you download the file from the firmware page and copy it onto the RP2350 drive. Installing straight from the web page works for the OpenFC-Lite in Chrome or Edge; for the Lite Mini it is not available yet.',
-        '**OpenFC-Lite: available. Lite Mini: not published yet.** Its download will appear on the firmware page once it is released.',
+        'The way to put the firmware on is **drag and drop**. It works in every browser and on every computer: you download the file from the firmware page and copy it onto the RP2350 drive. Installing straight from the web page works for the OpenFC Lite 30×30 in Chrome or Edge; for the OpenFC Lite 20×20 it is not available yet.',
+        '**OpenFC Lite 30×30: available. OpenFC Lite 20×20: not published yet.** Its download will appear on the firmware page once it is released.',
         'The firmware page checks the file before you get it: its size and checksum must match the release list built into the page, and it must be built for the board you picked.',
       ],
       tools: FC_TOOLS,
@@ -433,8 +433,8 @@ const OPENFC: GuideFamily = {
       steps: [
         {
           title: 'Open the firmware page and pick your board',
-          text: 'Go to [the firmware page](/guides/flash) and choose your board. The name is printed on the board: OpenFC-Lite or OpenFC-Lite Mini.',
-          see: `The page shows the firmware version, whether it is a stable release or a pre-release (alpha) build, and the target name: \`${LITE_TARGET}\` for the OpenFC-Lite, \`${MINI_TARGET}\` for the Mini. Write the version down; you will check it later. For the Lite Mini it still says "Firmware not published yet": come back later.`,
+          text: 'Go to [the firmware page](/guides/flash) and choose your board. The name is printed on the board: OpenFC Lite 30×30 or OpenFC Lite 20×20.',
+          see: `The page shows the firmware version, whether it is a stable release or a pre-release (alpha) build, and the target name: \`${LITE_TARGET}\` for the OpenFC Lite 30×30, \`${MINI_TARGET}\` for the OpenFC Lite 20×20. Write the version down; you will check it later. For the OpenFC Lite 20×20 it still says "Firmware not published yet": come back later.`,
         },
         {
           title: 'Download and verify the file',
@@ -459,9 +459,9 @@ const OPENFC: GuideFamily = {
       ],
       sections: [
         {
-          heading: 'Direct install: OpenFC-Lite only',
+          heading: 'Direct install: OpenFC Lite 30×30 only',
           paragraphs: [
-            'The firmware page can write the file straight to an OpenFC-Lite from Chrome or Edge (checked on real boards). For the Lite Mini it is not available yet. Drag and drop works for every board and in every browser.',
+            'The firmware page can write the file straight to an OpenFC Lite 30×30 from Chrome or Edge (checked on real boards). For the OpenFC Lite 20×20 it is not available yet. Drag and drop works for every board and in every browser.',
           ],
         },
         {
@@ -489,11 +489,11 @@ const OPENFC: GuideFamily = {
         },
         {
           problem: 'The page says "Firmware not published yet" and offers no download.',
-          fix: 'That is expected for the Lite Mini today. Its download will appear once it is released. Do not use a firmware file from anywhere else.',
+          fix: 'That is expected for the OpenFC Lite 20×20 today. Its download will appear once it is released. Do not use a firmware file from anywhere else.',
         },
         {
           problem: 'I cannot find an install button on the page.',
-          fix: 'The install button is for the OpenFC-Lite in Chrome or Edge only. In other browsers, or for the Lite Mini, save the file and drag it onto the RP2350 drive, which works everywhere.',
+          fix: 'The install button is for the OpenFC Lite 30×30 in Chrome or Edge only. In other browsers, or for the OpenFC Lite 20×20, save the file and drag it onto the RP2350 drive, which works everywhere.',
         },
       ],
     },
@@ -557,7 +557,7 @@ const OPENFC: GuideFamily = {
         },
         {
           title: 'Get a fresh, checked file',
-          text: 'Go to the [firmware page](/guides/flash), pick the board printed on yours and download the file again. Do not reuse a file from an interrupted download. If the page says "Firmware not published yet" (the Lite Mini today), stop here: the board is safe in bootloader mode, and you can leave it unplugged until the file is out.',
+          text: 'Go to the [firmware page](/guides/flash), pick the board printed on yours and download the file again. Do not reuse a file from an interrupted download. If the page says "Firmware not published yet" (the OpenFC Lite 20×20 today), stop here: the board is safe in bootloader mode, and you can leave it unplugged until the file is out.',
           see: 'The page reports the file as checked, and a `.uf2` file is saved.',
         },
         {

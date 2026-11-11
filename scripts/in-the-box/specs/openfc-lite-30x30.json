@@ -70,7 +70,7 @@
           "white"
         ]
       },
-      "item": "Silicone hook-up",
+      "item": "Silicone wires",
       "row": 1
     },
     {
@@ -80,7 +80,7 @@
         "size": "M3"
       },
       "count": 4,
-      "item": "Silicone soft-mount",
+      "item": "Rubber mounts",
       "below": "Quick-start card",
       "perRow": 4
     },
@@ -93,7 +93,7 @@
         "caption": "OpenFC Lite · Quick start"
       },
       "row": 1,
-      "item": "Quick-start card"
+      "item": "Guide"
     }
   ],
   "exclude": []

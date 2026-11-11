@@ -33,7 +33,7 @@
         "illustration": "^(Top|Base-Top|Base-Bot|Arm|Cross)$"
       },
       "row": 1,
-      "item": "Build card"
+      "item": "Guide"
     },
     {
       "label": "Top plate",

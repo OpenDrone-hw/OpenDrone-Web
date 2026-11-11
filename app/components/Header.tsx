@@ -6,7 +6,7 @@ import {AnimatePresence} from 'motion/react';
 import {MOBILE_DRAWER_ID, useAside} from '~/components/Aside';
 import {LangToggle} from '~/components/LangToggle';
 import {useHeaderPopover} from '~/components/header-popover';
-import {RegionSwitch} from '~/components/RegionSwitch';
+import {CountryPicker} from '~/components/CountryPicker';
 import {SiteWordmark} from '~/components/SiteWordmark';
 import {IncutecWordmark} from '~/components/IncutecWordmark';
 import {Pod} from '~/components/Pod';
@@ -551,6 +551,8 @@ export function HeaderMenu({
 }) {
   const {close} = useAside();
   const isMobile = viewport === 'mobile';
+  // An ordinary shop (nothing is pre-order): no Preorders item; /preorder redirects anyway.
+  const ordinaryShop = Boolean((useRouteLoaderData('root') as {ordinaryShop?: boolean} | undefined)?.ordinaryShop);
 
   return (
     <nav
@@ -635,7 +637,7 @@ export function HeaderMenu({
           </NavLink>
         </>
       )}
-      {HEADER_MENU.items.map((item) => {
+      {HEADER_MENU.items.filter((item) => !(ordinaryShop && item.url === '/preorder')).map((item) => {
         if (!item.url) return null;
         const url = item.url;
         // Desktop already exposes these destinations in its category bar,
@@ -887,7 +889,7 @@ function HeaderCtas({
           currency controls inside the drawer instead. */}
       <div className="site-header-utils">
         <LangToggle className="header-lang-toggle" />
-        <RegionSwitch variant="menu" className="header-region-switch" />
+        <CountryPicker className="header-region-switch" />
         {/* The community: desktop only here, the phone drawer lists it. */}
         <DiscordLink
           placement="header"

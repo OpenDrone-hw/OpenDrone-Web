@@ -189,8 +189,8 @@ describe('F: one-button FC update', () => {
     assert.equal((await startUpdate(unknown.deps)).kind, 'refused');
     assert.ok(!unknown.log.includes('bl rom'), 'an unknown board is not even restarted');
     const cases: [Opts, RegExp][] = [
-      [{installed: [MINI.target]}, /this board is OpenFC-Lite Mini, not OpenFC-Lite/],
-      [{pkg: 'QFN60', installed: [LITE.target]}, /chip doesn't match OpenFC-Lite/],
+      [{installed: [MINI.target]}, /this board is OpenFC Lite 20×20, not OpenFC Lite 30×30/],
+      [{pkg: 'QFN60', installed: [LITE.target]}, /chip doesn't match OpenFC Lite 30×30/],
       [{installed: []}, /Can't identify the firmware on this board.*Other ways/],
       [{pkg: null}, /Not installing: .*Chip package unreadable/],
     ];

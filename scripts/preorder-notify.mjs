@@ -9,7 +9,8 @@
 //   node --experimental-strip-types scripts/preorder-notify.mjs --record "#1001" --sku OPENRX-LITE --choice refund [--apply]
 //
 // Options:
-//   --kind moved|missed  which email (terms 7bis.3 and 7bis.3bis)
+//   --kind moved|missed  which email (terms 7bis.3 and 7bis.3bis): a moved ship date, or an item
+//                        not shipped by its ship-by date (refund or wait)
 //   --sku SKU            campaign SKU from content/preorders.json
 //   --batch N            only buyers whose units are in this batch (default: every batch)
 //   --new-date TEXT      the new ship date, as it reads after "ships", e.g. "mid November 2026"
@@ -148,11 +149,11 @@ const COPY = {
       '',
       'If the new date does not work for you, you can cancel before it ships and we refund everything you paid for it within 14 days. Reply to this email, or use the form at https://opendrone.be/herroepingsrecht.',
     ],
-    missedSubject: (o, p) => `Your OpenDrone order ${o}: ${p} did not reach its funding target`,
+    missedSubject: (o, p) => `Your OpenDrone order ${o}: ${p} has not shipped by its ship-by date`,
     missed: ({order, product, qty, newDate, deadline, replyBy, others}) => [
       'Hello,',
       '',
-      `${product} did not reach its funding target by ${deadline}. You ordered ${qty} in order ${order}.`,
+      `${product} has not shipped by its ship-by date, ${deadline}. You ordered ${qty} in order ${order}.`,
       '',
       'Please choose one of two options by replying to this email with REFUND or WAIT:',
       '',
@@ -177,11 +178,11 @@ const COPY = {
       '',
       'Past de nieuwe datum u niet, dan kunt u annuleren zolang het niet verzonden is. Wij betalen alles wat u ervoor betaalde binnen 14 dagen terug. Antwoord op deze e-mail of gebruik het formulier op https://opendrone.be/herroepingsrecht.',
     ],
-    missedSubject: (o, p) => `Uw OpenDrone-bestelling ${o}: ${p} haalde het financieringsdoel niet`,
+    missedSubject: (o, p) => `Uw OpenDrone-bestelling ${o}: ${p} is niet verzonden tegen de uiterste verzenddatum`,
     missed: ({order, product, qty, newDate, deadline, replyBy, others}) => [
       'Hallo,',
       '',
-      `${product} haalde het financieringsdoel niet vóór ${deadline}. U bestelde er ${qty} in bestelling ${order}.`,
+      `${product} is niet verzonden tegen de uiterste verzenddatum, ${deadline}. U bestelde er ${qty} in bestelling ${order}.`,
       '',
       'Kies een van deze twee opties door op deze e-mail te antwoorden met TERUGBETALING of WACHTEN:',
       '',
@@ -206,11 +207,11 @@ const COPY = {
       '',
       'Si la nouvelle date ne vous convient pas, vous pouvez annuler tant que l’article n’est pas expédié. Nous remboursons tout ce que vous avez payé pour cet article sous 14 jours. Répondez à ce courriel ou utilisez le formulaire sur https://opendrone.be/herroepingsrecht.',
     ],
-    missedSubject: (o, p) => `Votre commande OpenDrone ${o} : ${p} n’a pas atteint son objectif de financement`,
+    missedSubject: (o, p) => `Votre commande OpenDrone ${o} : ${p} n’a pas été expédié à la date limite d’expédition`,
     missed: ({order, product, qty, newDate, deadline, replyBy, others}) => [
       'Bonjour,',
       '',
-      `${product} n’a pas atteint son objectif de financement au ${deadline}. Vous en avez commandé ${qty} dans la commande ${order}.`,
+      `${product} n’a pas été expédié à la date limite d’expédition, le ${deadline}. Vous en avez commandé ${qty} dans la commande ${order}.`,
       '',
       'Choisissez l’une de ces deux options en répondant à ce courriel par REMBOURSEMENT ou ATTENDRE :',
       '',
@@ -384,7 +385,9 @@ async function main() {
       qty: r.line.currentQuantity,
       newDate: (locale === 'nl' && opts.newDateNl) || (locale === 'fr' && opts.newDateFr) || opts.newDate,
       reason: opts.reason,
-      deadline: formatDate(preorders.endsOn, locale),
+      // Terms 7bis.3bis (v2.9): the ship-by date the item missed. The batch is
+      // confirmed, so there is no funding target to miss.
+      deadline: formatDate(preorders.shipsBy, locale),
       replyBy: formatDate(replyByDay, locale),
       others: r.others,
       email: r.order.email,

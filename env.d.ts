@@ -192,6 +192,8 @@ declare global {
     // (app/lib/us-sales.ts). Anything else keeps the US on retailer
     // enquiries. Production and staging set it in their wrangler [vars].
     PUBLIC_US_SALES?: string;
+    /** "1" offers buy now beside pre-order on the boards (wrangler*.toml). */
+    BATCH_CHOICE?: string;
 
     PUBLIC_COMPANY_NAME?: string;
     PUBLIC_COMPANY_ADDRESS?: string;

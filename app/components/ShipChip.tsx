@@ -21,6 +21,8 @@ import {
   parseCampaignConfig,
   promiseBatchMonth,
   shortCampaignDate,
+  stockPromise,
+  STOCK_SHORT,
   type CampaignState,
 } from '~/lib/preorder-campaign';
 import preorders from '../../content/preorders.json';
@@ -37,12 +39,13 @@ export function useShipGeo() {
   const root = useRouteLoaderData<RootLoader>('root');
   // A blocked IP country stays there (cartQuoteCountry): no pending country is shown.
   const ipBlocked = shippingQuote(root?.visitorCountry ?? null)?.kind === 'blocked';
-  return withPendingShipTo(root?.geo, usePendingShipTo(), geoAvailabilityRegion, ipBlocked);
+  const usOpen = root?.usShippingRate != null;
+  return withPendingShipTo(root?.geo, usePendingShipTo(), (country) => geoAvailabilityRegion(country, usOpen), ipBlocked);
 }
 
 /**
  * The visitor's line in place of a batch 1 promise ("In stock in Belgium,
- * ships in a few days." in the EU, "Pre-order, ships March 2027." elsewhere),
+ * ships in a few working days." in the EU, "Pre-order, ships March 2027." elsewhere),
  * or null to show the promise itself: another batch, or no known country
  * (app/lib/geo-availability.ts).
  */
@@ -119,6 +122,8 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
  * Null when the promise names no month and year.
  */
 export function datedShipText(promise: string | null | undefined): string | null {
+  // Stock on hand names no month: its short line.
+  if (stockPromise(promise)) return copyText('preorder.ship_stock') ?? STOCK_SHORT;
   const parts = datedShipParts(promise);
   if (!parts) return null;
   return shipWord('ships', parts.when);
@@ -141,7 +146,8 @@ export function shipChipText(
   } else {
     const eta = shortCampaignDate(latestShipDate(CAMPAIGN));
     if (eta) {
-      text = ifFunded
+      // A confirmed batch has no condition, whatever the caller knows of its count.
+      text = ifFunded && !CAMPAIGN.confirmed
         ? (copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if the target is reached').replace('{date}', eta)
         : shipWord('eta', eta);
     }
@@ -246,7 +252,7 @@ export function shipLine(
       : (copyText('preorder.ships_with') ?? 'Ships with the {lead} batch');
     return `${head.replace('{lead}', lead)}. ${text}`;
   };
-  if (campaign?.targetReached) return {kind: 'target', text: withLead(shipWord('eta', eta))};
+  if (campaign?.targetReached || CAMPAIGN.confirmed) return {kind: 'target', text: withLead(shipWord('eta', eta))};
   const deadline =
     shortCampaignDate(campaign?.deadline ?? campaignDate(CAMPAIGN.endsOn)) ?? CAMPAIGN.endsOn;
   const ifFunded = (
@@ -281,7 +287,7 @@ export function ShipLine({
   if (!line) return null;
   // An accessory whose date is another product's funding target says so, so a
   // buyer of props does not wonder why a flight controller sets the date.
-  const lead = line.kind === 'target' && !campaign?.targetReached ? leadProduct(campaign?.shipsWith) : null;
+  const lead = line.kind === 'target' && !campaign?.targetReached && !CAMPAIGN.confirmed ? leadProduct(campaign?.shipsWith) : null;
   const shipLineEl = (
     <p className={`ship-line ${className}`.trim()} data-kind={line.kind}>
       {(line.kind === 'date' && geoText) || line.text}

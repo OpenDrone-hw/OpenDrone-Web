@@ -13,7 +13,8 @@
  * the Storefront API adapter is `app/lib/shopify-storefront.ts`.
  */
 
-import type {Catalog} from './catalog.ts';
+import {withoutBuyNow, type Catalog} from './catalog.ts';
+import {resolveRegion} from './region.ts';
 import {fetchShopifyCatalog} from './shopify-storefront.ts';
 import {REPLAN_REUSE_MS, memoCatalog, readAndRemember, recentCatalog} from './catalog-memo.ts';
 import {appCommerceEnabled} from './commerce/app-api.ts';
@@ -46,7 +47,7 @@ export type CatalogReader = {
   forBuyer: () => Promise<Catalog>;
   /** The catalog for one region, whatever this request's destination is:
    *  the cart country switch prices a cart for the country just picked. */
-  forRegion: (region: Region, country?: string) => Promise<Catalog>;
+  forRegion: (region: Region, country?: string, exportStock?: boolean) => Promise<Catalog>;
   /** The region `forBuyer` serves. */
   region: Region;
 };
@@ -65,7 +66,7 @@ export function buyerRegion(request: Request | undefined, env: Pick<Env, 'PUBLIC
   return isUsQuote(quote) ? 'US' : isInternationalQuote(quote) ? internationalRegion(quote?.country) : 'EU';
 }
 
-async function withCampaign(env: Env, catalog: Catalog, region: Region): Promise<Catalog> {
+async function withCampaign(env: Env, catalog: Catalog, region: Region, dealer = false): Promise<Catalog> {
   // A closed store has no campaign preorder variant and never calls the
   // Admin API. Its campaign SKUs still never show a compare-at price.
   if (!needsCampaignCounts(catalog, CAMPAIGN, region)) return {...catalog, campaign_skus: campaignSkus(CAMPAIGN)};
@@ -78,13 +79,18 @@ async function withCampaign(env: Env, catalog: Catalog, region: Region): Promise
       return null;
     },
   );
-  return applyCampaign(catalog, CAMPAIGN, units, new Date(), region);
+  return applyCampaign(catalog, CAMPAIGN, units, new Date(), region, dealer);
 }
 
 
-export function createCatalogClient({env, request}: {env: Env; request?: Request}): CatalogClient {
+/**
+ * `dealer`: the session carries an applied wholesale code (`DEALER_SESSION_KEY`).
+ * Outside the EU (and outside the US, which has its own partner) such a buyer
+ * is offered batch 1 stock too; the express checkout checks the code again.
+ */
+export function createCatalogClient({env, request, dealer = false}: {env: Env; request?: Request; dealer?: boolean}): CatalogClient {
   if (appCommerceEnabled(env)) return appCatalogClient(env);
-  const cached = catalogReader(env, request, (market = 'default') =>
+  const cached = catalogReader(env, request, dealer, (market = 'default') =>
     memoCatalog(market, () =>
       market === 'default' ? fetchShopifyCatalog(env) : fetchShopifyCatalog(env, fetch, market),
     ),
@@ -93,20 +99,21 @@ export function createCatalogClient({env, request}: {env: Env; request?: Request
     market === 'default' ? fetchShopifyCatalog(env) : fetchShopifyCatalog(env, fetch, market);
   // A fresh read is kept in the memo too, so the cart loader right after a
   // Ship to switch can reuse it (`recent`).
-  const fresh = catalogReader(env, request, (market = 'default') => readAndRemember(market, () => read(market)));
-  const recent = catalogReader(env, request, (market = 'default') => recentCatalog(market, REPLAN_REUSE_MS, () => read(market)));
+  const fresh = catalogReader(env, request, dealer, (market = 'default') => readAndRemember(market, () => read(market)));
+  const recent = catalogReader(env, request, dealer, (market = 'default') => recentCatalog(market, REPLAN_REUSE_MS, () => read(market)));
   return {...cached, fresh, recent};
 }
 
 function catalogReader(
   env: Env,
   request: Request | undefined,
+  dealer: boolean,
   load: (market?: string) => Promise<Catalog>,
 ): CatalogReader {
   const region = buyerRegion(request, env);
   const country = request ? shipCountryForRequest(request) ?? undefined : undefined;
   const get = async () => withCampaign(env, await load('default'), 'EU');
-  const forRegion = async (target: Region, destination = country): Promise<Catalog> => {
+  const forRegion = async (target: Region, destination = country, exportStock = false): Promise<Catalog> => {
     if (target === 'EU') return get();
     if (isInternationalRegion(target) && !destination) throw new Error('catalog: international destination missing');
     const [catalog, market] = await Promise.all([
@@ -119,8 +126,17 @@ function catalogReader(
         return null;
       }),
     ]);
-    const campaign = await withCampaign(env, catalog, target);
+    const campaign = await withCampaign(env, catalog, target, exportStock && target !== 'US');
     return target === 'US' ? withMarketPrices(campaign, market, CAMPAIGN) : withInternationalPrices(campaign, market);
   };
-  return {get, region, forRegion, forBuyer: () => forRegion(region)};
+  // The Buy now lane only where the visitor's region has it (region.ts
+  // `lanes.buyNow`): an EU country, never an unknown one. Without a request
+  // (sitemap, feeds) the catalog is the EU one, unchanged.
+  const buyNowLane = request ? resolveRegion(request, usSalesRate(env) != null).lanes.buyNow : true;
+  // A wholesale buyer outside the EU and the US keeps the Buy now lane.
+  const dealerLane = dealer && isInternationalRegion(region);
+  return {get, region, forRegion, forBuyer: async () => {
+    const catalog = await forRegion(region, country, dealerLane);
+    return buyNowLane || dealerLane ? catalog : withoutBuyNow(catalog);
+  }};
 }

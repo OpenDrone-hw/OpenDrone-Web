@@ -27,6 +27,7 @@ export function VariantLadder({
   activeValue,
   onSelect,
   showPrices = false,
+  offer,
 }: {
   axis: string;
   variants: Record<string, VariantContent>;
@@ -36,6 +37,8 @@ export function VariantLadder({
   /** Print each version's price on its button. Off while the product is
    *  not for sale, so a locked page never shows a price. */
   showPrices?: boolean;
+  /** The chosen offer of a board with the buy now or pre-order choice. */
+  offer?: 'buy_now' | 'preorder';
 }) {
   const navigate = useNavigate();
   // The tier card previews instantly via onSelect, but price/stock/cart wiring
@@ -76,11 +79,14 @@ export function VariantLadder({
     const soldOut = Boolean(optionValue && optionValue.exists && !optionValue.available);
     // Each version's own price on its button, as FPV shops show it on
     // the option: the buyer compares without clicking through.
+    // Buy now or pre-order: the button shows the price of the chosen offer.
+    const first = optionValue?.firstSelectableVariant;
+    const shownVariant = offer === 'preorder' && first?.preorderOffer ? first.preorderOffer : first;
     const price =
-      showPrices && !comingSoon && optionValue?.firstSelectableVariant
+      showPrices && !comingSoon && shownVariant
         ? formatPrice(
-            optionValue.firstSelectableVariant.price.amount,
-            optionValue.firstSelectableVariant.price.currencyCode,
+            shownVariant.price.amount,
+            shownVariant.price.currencyCode,
           )
         : '';
     return {

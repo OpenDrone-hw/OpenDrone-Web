@@ -7,17 +7,21 @@ const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf8'
 
 test('the availability bar is server-rendered on every page except /flash and /guides/*', () => {
   const layout = read('../components/PageLayout.tsx');
-  assert.match(layout, /\{shopOpen && !availabilityBannerHiddenOn\(pathname\) \? <AvailabilityBar geo=\{shipGeo \?\? geo\} \/> : null\}/);
+  assert.match(layout, /\{shopOpen && !availabilityBannerHiddenOn\(pathname\) \? \(?\s*<AvailabilityBar\s+geo=\{shipGeo \?\? geo\}[\s\S]*?\/>\s*\)? : null\}/);
   for (const p of ['/', '/products/openesc', '/support', '/cart', '/nl/products/openfc-lite']) assert.equal(availabilityBannerHiddenOn(p), false, p);
   for (const p of ['/guides', '/guides/flash', '/flash', '/fr/guides/flash-openfc/flash']) assert.equal(availabilityBannerHiddenOn(p), true, p);
   const banner = read('../components/AvailabilityBanner.tsx');
   assert.match(banner, /className="top-strip avail-bar"/);
 });
 
-test('bar text: the visitor line, both lines when unknown, and a shorter phone line', () => {
-  assert.equal(geoBarText('eu', 'en', false), 'EU: In stock in Belgium, ships in a few days');
-  assert.equal(geoBarText('eu', 'en', true), 'EU: In stock, ships in days');
-  assert.equal(geoBarText('fallback', 'en', false), 'EU: In stock in Belgium, ships in a few days · Elsewhere: Pre-order, ships March 2027');
+test('bar text: one availability line for the visitor, no market label or tax sentence, a shorter phone line', () => {
+  assert.equal(geoBarText('eu', 'en', false), 'In stock in Belgium, ships in days');
+  assert.equal(geoBarText('eu', 'en', true), 'In stock, ships in days');
+  for (const region of ['import', 'intl', 'fallback'] as const) {
+    assert.equal(geoBarText(region, 'en', false), 'Pre-order, ships by 31 March 2027', region);
+    assert.equal(geoBarText(region, 'en', true), 'Pre-order, ships by 31 Mar 2027', region);
+  }
+  assert.doesNotMatch(geoBarText('import', 'en', false), /duties|VAT|UK, CH, NO|:/);
   assert.ok(geoBarText('eu', 'en', true).length < geoBarText('eu', 'en', false).length);
   const css = read('../styles/site-ui.css');
   assert.match(css, /\.avail-bar-short \{ display: none; \}/);

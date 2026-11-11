@@ -4,7 +4,7 @@ import {describe, it} from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const cart = read('../routes/cart.$.tsx');
-const shipTo = read('../components/ShipToSelect.tsx');
+const shipTo = read('../components/CountryPicker.tsx');
 const css = read('../styles/app.css');
 
 describe('cart steppers', () => {
@@ -46,13 +46,13 @@ describe('focus after Remove', () => {
   });
 });
 
-describe('ShipToSelect', () => {
-  it('never uses the native disabled attribute while busy', () => {
-    const select = shipTo.slice(shipTo.indexOf('<select'), shipTo.indexOf('</select>'));
-    assert.doesNotMatch(select, /(?<![-\w])disabled=/);
-    assert.match(select, /aria-disabled=\{busy \|\| undefined\}/);
+describe("CountryPicker (the cart's Ship to)", () => {
+  it('never disables the trigger while busy (aria-busy on the picker instead)', () => {
+    const trigger = shipTo.slice(shipTo.indexOf('<button'), shipTo.indexOf('</button>'));
+    assert.doesNotMatch(trigger, /(?<![-\w])disabled=/);
+    assert.match(shipTo, /aria-busy=\{busy \|\| undefined\}/);
   });
-  it('restores focus after the switch', () => {
-    assert.match(shipTo, /restoreFocus/);
+  it('hands focus back to the trigger when a country is chosen', () => {
+    assert.match(shipTo, /close\(true\);/);
   });
 });

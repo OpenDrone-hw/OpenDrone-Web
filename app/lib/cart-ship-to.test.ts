@@ -3,11 +3,10 @@ import fs from 'node:fs';
 import {describe, it} from 'node:test';
 import type {Catalog, CatalogVariant} from './catalog.ts';
 import {applyCampaign, datedShipParts, parseCampaignConfig, shipLabelFromPromise, type Region} from './preorder-campaign.ts';
-import {shipCountryFromCookie} from './shipping-rates.ts';
+import {shipCountryFromCookie, shippingQuote} from './shipping-rates.ts';
 import {forwardedCountry, handleShopifyCartAction, withCountry, type ShopifyCartDependencies} from './shopify-cart-action.ts';
 import {handleCartCountry} from './shopify-cart-country.ts';
 import {cartReplannedFor, cartTag, planCartPage} from './cart-replan.ts';
-import {shippingQuote} from './shipping-rates.ts';
 import type {CartLineInput, CartLineUpdate, ShopifyCart, ShopifyCartLine} from './shopify-storefront.ts';
 
 const CAMPAIGN = parseCampaignConfig(
@@ -19,7 +18,7 @@ const REGISTRATIONS = {BE: {saleApproved: true}, DE: {saleApproved: true}};
 const CHECKOUT = 'https://checkout.opendrone.be/checkouts/cn/ok';
 const FC = 'gid://shopify/ProductVariant/OPENFC-LITE-2020';
 const RX = 'gid://shopify/ProductVariant/OPENRX-LITE';
-const EU_PROMISE = 'ships late November 2026';
+const EU_PROMISE = 'in stock in Belgium, ships to EU addresses in a few working days';
 
 function variant(sku: string, extra: Partial<CatalogVariant> = {}): CatalogVariant {
   return {
@@ -92,7 +91,7 @@ function shopify(country: string | null, lines: ShopifyCartLine[]) {
 }
 
 // An EU batch 1 line: "In stock in Belgium" at checkout, the promise hidden.
-const euLine = () => cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [{key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'}, {key: '_ship_promise', value: EU_PROMISE}]);
+const euLine = () => cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [{key: 'Shipping', value: 'In stock in Belgium, ships in a few working days.'}, {key: '_ship_promise', value: EU_PROMISE}]);
 
 function switchRequest(country: string): Request {
   return new Request('https://opendrone.be/api/shopify/cart-country', {
@@ -313,9 +312,11 @@ describe('add to cart forwards the resolved country', () => {
 });
 
 describe('one ship line everywhere', () => {
-  it('names the month qualifier and delivery date of the BE FC/ESC promise', () => {
-    assert.deepEqual(datedShipParts(EU_PROMISE), {when: 'late Nov 2026'});
-    assert.equal(shipLabelFromPromise(EU_PROMISE, 'short'), 'Ships late Nov 2026');
+  it('names the month qualifier of a dated promise, and keeps the words of stock on hand', () => {
+    assert.equal(datedShipParts(EU_PROMISE), null);
+    assert.equal(shipLabelFromPromise(EU_PROMISE, 'short'), 'In stock, ships in a few working days');
+    assert.equal(shipLabelFromPromise(EU_PROMISE, 'long'), 'In stock in Belgium, ships to EU addresses in a few working days.');
+    assert.deepEqual(datedShipParts('ships late November 2026'), {when: 'late Nov 2026'});
     assert.equal(shipLabelFromPromise('ships late November 2026', 'short'), 'Ships late Nov 2026');
     assert.equal(shipLabelFromPromise('ships October 2026', 'short'), 'Ships Oct 2026');
     assert.equal(datedShipParts('ships once funded'), null);
@@ -372,7 +373,7 @@ describe('blocked visitors, half-applied switches, checkout country', () => {
   it('honours the country a checkout form forwards over the request cookie', async () => {
     const fake = shopify('US', [
       cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [
-        {key: 'Preorder', value: 'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait'},
+        {key: 'Preorder', value: 'ships by 31 March 2027'},
         {key:'Delivery by',value:'30 April 2027'},
         {key: '_ship_region', value: 'US'},
       ]),
