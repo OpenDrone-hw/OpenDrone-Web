@@ -41,6 +41,11 @@ import {
   type CampaignState,
 } from '~/lib/preorder-campaign';
 import {stepBarView} from '~/lib/preorder-meter';
+import {batchChoiceOn} from '~/lib/shopify-storefront';
+import {resolveHeroBuilds, stackOffer} from '~/lib/hero-build';
+import {parseBuilds} from '~/lib/build-recommendations';
+import buildsJson from '../../content/builds.json';
+import {HowOrdering, type HowOrderingStack} from '~/components/HowOrdering';
 import type {MoneyV2, ProductImage, SelectedOption} from '~/lib/product-shapes';
 
 /**
@@ -52,9 +57,9 @@ import type {MoneyV2, ProductImage, SelectedOption} from '~/lib/product-shapes';
  * product page, and a card appears only for a variant the status system
  * lets the shop sell.
  */
-export const meta: Route.MetaFunction = () =>
+export const meta: Route.MetaFunction = ({data}) =>
   buildSeoMeta({
-    title: copyText('preorder.meta_title') ?? 'Pre-orders',
+    title: data?.choice ? (copyText('preorder.how_meta_title') ?? 'How ordering works') : (copyText('preorder.meta_title') ?? 'Pre-orders'),
     description: copyText('preorder.meta_description') ?? '',
     // Its own 1200x630 card: /preorder is the page shared at launch.
     image: '/og-preorder.png',
@@ -176,7 +181,18 @@ export async function loader({context}: Route.LoaderArgs) {
   );
 
   const latestDay = latestShipDay(CAMPAIGN);
+  // Buy now or pre-order: the stacks this visitor can buy now, per size.
+  const choice = batchChoiceOn(context.env);
+  const stacks: HowOrderingStack[] = choice
+    ? resolveHeroBuilds(parseBuilds(buildsJson), catalog, true).flatMap((build) => {
+        const offer = stackOffer(build);
+        return offer ? [{size: offer.size, lines: offer.lines, price: offer.price, currency: offer.currency}] : [];
+      })
+    : [];
   return {
+    choice,
+    stacks,
+    afterEndsOn: CAMPAIGN.afterEndsOn ?? 'retail',
     rows,
     // The promise itself, so the page can read it as the visitor's region
     // does (in the EU: in stock, as the bar and the product page say).
@@ -246,6 +262,25 @@ export default function PreorderRoute() {
     .filter((r) => r.campaign.paidStock)
     .sort((a, b) => a.variant.localeCompare(b.variant) || b.product.localeCompare(a.product));
   const targetRows = rows.filter((r) => !r.campaign.paidStock);
+
+  if (data.choice) {
+    return (
+      <EditorialShell slug="preorder" rail={false} reveal={false} pageClassName="preorder-page">
+        <HowOrdering
+          data={{
+            stacks: data.stacks,
+            endsDay: data.endsDay,
+            shipDay: data.etaDay,
+            afterEndsOn: data.afterEndsOn,
+            today: data.today,
+            us,
+            international,
+          }}
+        />
+        <ChatFpvWidget src={data.chatfpvWidget} />
+      </EditorialShell>
+    );
+  }
 
   return (
     <EditorialShell slug="preorder" rail={false} reveal={false} pageClassName="preorder-page">
