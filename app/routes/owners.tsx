@@ -7,12 +7,13 @@ import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {countryName, STATE_NAME} from '~/lib/owner-map-geo';
 import {loadOwnerMap, ownerMapFixture} from '~/lib/owner-map-data';
 import {pilotPanel} from '~/lib/pilot-map-server';
-import {bucketLabel, type Snapshot} from '~/lib/owner-map';
+import {publicSnapshot, type PublicSnapshot} from '~/lib/owner-map';
 
 /**
- * The public owners map: owners per country and US state, as published
- * buckets only (app/lib/owner-map.ts holds the suppression rules, README
- * "Owners map" the whole feature). Words live in `content/copy/owners.json`.
+ * The public owners map: which countries and US states have owners, never
+ * how many (app/lib/owner-map.ts holds the suppression rules, README
+ * "Owners map" the whole feature). The loader sends names-free ids, shading
+ * levels, a milestone and a country floor, and no other number. Words live in `content/copy/owners.json`.
  *
  * The page is one map (app/components/OwnersMap.tsx) under one card; the
  * opt-in pilot map (app/components/OwnersPilot.tsx) lives in that card and on
@@ -31,7 +32,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const env = context.env as unknown as Parameters<typeof loadOwnerMap>[0];
   const {panel, cookies} = await pilotPanel(context.env, request);
   const notice = pilotNotice(new URL(request.url).searchParams.get('pilot'));
-  const body = {snapshot: await loadOwnerMap(env), fixture: ownerMapFixture(env), pilot: panel, notice: panel.enabled ? notice : null};
+  const body = {snapshot: publicSnapshot(await loadOwnerMap(env)), fixture: ownerMapFixture(env), pilot: panel, notice: panel.enabled ? notice : null};
   if (!panel.enabled) return body;
   const headers = new Headers({'Cache-Control': 'private, no-store'});
   for (const c of cookies) headers.append('Set-Cookie', c);
@@ -46,16 +47,16 @@ export function headers({loaderHeaders}: Route.HeadersArgs) {
   return out;
 }
 
-type Row = {id: string; name: string; bucket: number};
+type Row = {id: string; name: string};
 
-/** Published regions as list rows: biggest bucket first, then by name. */
-function rowsOf(snapshot: Snapshot, pick: (region: string) => string | null): Row[] {
+/** Published regions as list rows: names only, alphabetical. */
+function rowsOf(snapshot: PublicSnapshot, pick: (region: string) => string | null): Row[] {
   const rows: Row[] = [];
-  for (const [region, bucket] of Object.entries(snapshot.regions)) {
+  for (const region of Object.keys(snapshot.regions)) {
     const name = pick(region);
-    if (name) rows.push({id: region, name, bucket});
+    if (name) rows.push({id: region, name});
   }
-  rows.sort((a, b) => b.bucket - a.bucket || a.name.localeCompare(b.name, 'en'));
+  rows.sort((a, b) => a.name.localeCompare(b.name, 'en'));
   return rows;
 }
 
@@ -66,9 +67,7 @@ function RegionList({id, title, rows}: {id: string; title: string; rows: Row[]})
       <h2 id={id}>{title}</h2>
       <ul>
         {rows.map((row) => (
-          <li key={row.id}>
-            {row.name}: {bucketLabel(row.bucket)} {copyText('owners.list_range') ?? 'owners'}
-          </li>
+          <li key={row.id}>{row.name}</li>
         ))}
       </ul>
     </section>

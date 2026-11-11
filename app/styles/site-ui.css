@@ -1716,14 +1716,26 @@ a.hero-build-add { text-decoration: none; }
   stroke-opacity: 0.8;
   stroke-width: 0.9px;
 }
-.owners-land[data-b='0'] { fill-opacity: 0.1; stroke-opacity: 0.55; }
-.owners-land[data-b='1'] { fill-opacity: 0.18; }
-.owners-land[data-b='2'] { fill-opacity: 0.26; }
-.owners-land[data-b='3'] { fill-opacity: 0.35; }
-.owners-land[data-b='4'] { fill-opacity: 0.45; }
-.owners-land[data-b='5'] { fill-opacity: 0.56; }
-.owners-land[data-b='6'] { fill-opacity: 0.67; }
-.owners-land[data-b='7'] { fill-opacity: 0.78; }
+.owners-land[data-b='0'] { fill-opacity: 0.14; stroke-opacity: 0.55; }
+.owners-land[data-b='1'] { fill-opacity: 0.34; }
+.owners-land[data-b='2'] { fill-opacity: 0.62; }
+.owners-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 8px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, inherit);
+}
+.owners-legend i {
+  width: 22px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-gold-fill);
+}
+.owners-legend i[data-b='0'] { opacity: 0.14; }
+.owners-legend i[data-b='1'] { opacity: 0.34; }
+.owners-legend i[data-b='2'] { opacity: 0.62; }
 .owners-land.is-active {
   stroke: var(--color-text);
   stroke-opacity: 0.7;
@@ -1747,14 +1759,6 @@ a.hero-build-add { text-decoration: none; }
 .owners-pin.is-active .owners-pin-dot {
   stroke: var(--color-text);
   stroke-width: 2px;
-}
-.owners-pin text {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  text-anchor: middle;
-  fill: var(--color-bg);
-  pointer-events: none;
 }
 /* The real ~10 km cell, like the lab building: gold outline, translucent fill. */
 .owners-cell {
