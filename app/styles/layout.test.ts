@@ -137,13 +137,15 @@ describe('buy now or pre-order blocks', () => {
     assert.match(plain, /\.home-mobile-build \.hero-build-choice \.hero-build-part\.is-active,\s*\.pdp-build \.hero-build-choice \.hero-build-part\.is-active \{ background: none; \}/);
   });
 
-  it('keeps the cart badge on one line and the mode labels readable', () => {
-    assert.match(rule('.cart-line-badge'), /white-space:\s*nowrap/);
-    assert.match(rule('.cart-choice-action'), /text-transform:\s*none/);
+  it('the cart says the pre-order lane once, with no per-line badges or mixed-order actions', () => {
+    assert.ok(rule('.cart-together'));
+    assert.doesNotMatch(plain, /\.cart-line-badge|\.cart-choice-action/);
   });
 
   it('keeps the pinned bar one slim row: the switch, never the cards', () => {
-    assert.match(plain, /\.buy-rail\.is-pinned \.offer-card-line,\s*\.buy-rail\.is-pinned \.product-buy:has\(\.offer-choice\) \.product-buy-price \{ display: none; \}/);
+    assert.match(plain, /\.buy-rail\.is-pinned \.offer-card-line,\s*\.buy-rail\.is-pinned \.offer-card-title,\s*\.buy-rail\.is-pinned \.offer-card-thumbs,\s*\.buy-rail\.is-pinned \.offer-choice-foot,\s*\.buy-rail\.is-pinned \.cta-full,\s*\.buy-rail\.is-pinned \.cta-short,\s*\.buy-rail\.is-pinned \.product-buy:has\(\.offer-choice\) \.product-buy-price \{ display: none; \}/);
+    // The short segment names ("Stack now", "Pre-order") and the short button label.
+    assert.match(plain, /\.buy-rail\.is-pinned \.offer-card-pin,\s*\.buy-rail\.is-pinned \.cta-pin \{ display: inline;/);
     assert.match(rule('.buy-rail.is-pinned .offer-choice'), /height:\s*var\(--pin-h, 36px\)/);
     // One button width for both labels.
     assert.match(plain, /\.buy-rail\.is-pinned \.product-buy:has\(\.offer-choice\) \.product-form \.btn-primary \{ min-width:/);
@@ -166,12 +168,9 @@ describe('buy now or pre-order blocks', () => {
     assert.match(rule('.offer-card.is-selected'), /box-shadow:\s*0 0 0 1\.75px var\(--color-gold\)/);
   });
 
-  it('gives the two cart badges equal weight', () => {
-    for (const state of ['.cart-line-badge.is-now', '.cart-line-badge.is-preorder']) {
-      assert.match(rule(state), /border-color:/);
-      assert.match(rule(state), /background:/);
-      assert.match(rule(state), /color:/);
-    }
+  it('keeps "Just this board" in one slot under the cards in both modes', () => {
+    assert.match(rule('.offer-choice-foot'), /min-height:/);
+    assert.match(rule('.offer-choice-foot'), /grid-column:\s*1/);
   });
 
   it('hides the hero beat copy on every height where the pre-order block reaches it', () => {

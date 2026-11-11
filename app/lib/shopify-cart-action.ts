@@ -630,8 +630,8 @@ export const CART_CHECK = {
    *  notice (one parcel, the whole order waits for the last item). */
   mixedDates: 'mixed-dates',
   /** A board bought as "Buy now" shares the cart with a March item: the
-   *  buyer chooses one order in March (the board moves to its pre-order
-   *  variant and price) or the in-stock items first. */
+   *  cart takes pre-orders only, so this is a cart built outside the site;
+   *  checkout is refused until the in-stock board is removed. */
   batchChoice: 'batch-choice',
   /** A US destination with a line that ships to the EU only. */
   usEuOnly: 'us-eu-only',
@@ -642,14 +642,13 @@ export const CART_CHECK = {
 
 /** The add field naming the offer of a board: `preorder` or `buy_now` (the default). */
 export const OFFER_FIELD = 'offer';
-/** The intent that moves every Buy now board of the cart to its pre-order variant. */
-export const KEEP_TOGETHER_INTENT = 'keep-together';
-
+/** Why an add of an in-stock board is refused. */
+export const BUY_NOW_NOT_IN_CART = 'In-stock boards are bought now from their product page and do not go in the cart.';
 /**
  * True when a board bought as "Buy now" (retail, batch 1 stock) shares the
- * cart with a line of the March batch or of a funding target. The one rule
- * behind the cart's notice and the checkout refusal: such an order would ship
- * whole in March, and nobody pays retail for a board that ships in March.
+ * cart with a line of the March batch. The cart takes pre-orders only, so
+ * only a cart built outside the site gets here; checkout refuses it, because
+ * such an order would ship whole in March and nobody pays retail for that.
  */
 export function batchChoiceConflict(
   cart: Pick<ShopifyCart, 'lines'>,
@@ -660,34 +659,61 @@ export function batchChoiceConflict(
 }
 
 /**
- * "Keep everything in one order": the update that moves each Buy now board
- * line to the board's pre-order variant, same quantity, with the pre-order
- * line attributes (so Shopify charges the pre-order price and the order
- * carries the March promise). Empty when the cart has no such line; null
- * when a board has no open pre-order to move to.
+ * The express purchase of in-stock boards (the "Buy now" lane): a Shopify
+ * cart of its own, made for this one checkout and never stored as the
+ * session cart, so nothing else can join that order and the session cart
+ * holds pre-orders only.
  */
-export function keepTogetherUpdates(
-  cart: Pick<ShopifyCart, 'lines'>,
+export const EXPRESS_INTENT = 'buy-now';
+/** The query parameter an express purchase that cannot go ahead returns with. */
+export const EXPRESS_PARAM = 'buy';
+/** Why an express purchase was refused: no EU destination, or not enough stock left. */
+export const EXPRESS_REFUSED = {region: 'eu-only', stock: 'sold-out'} as const;
+export type ExpressRefusal = (typeof EXPRESS_REFUSED)[keyof typeof EXPRESS_REFUSED];
+
+/**
+ * A board bought now is a board whose primary offer is Buy now (EU, batch 1
+ * units left, Shopify not denying it). Bought with a March item it would ship
+ * in March, and nobody pays retail for that: the cart never takes it.
+ */
+export function isBuyNowOnly(variant: Pick<CatalogVariant, 'offer'>): boolean {
+  return variant.offer === 'buy_now';
+}
+
+/**
+ * The lines of an express purchase, or why it cannot go ahead. Only Buy now
+ * boards, only to the EU, and never more units than batch 1 still holds:
+ * the offer fails cleanly instead of overselling when the stock ran out
+ * between page load and purchase.
+ */
+export function expressLines(
   catalog: Catalog,
-  destination: Region = 'EU',
+  requested: ReadonlyArray<{sku: string; quantity: number}>,
+  region: Region,
+  globalComingSoon: boolean,
   euStockKnown = true,
-): CartLineUpdate[] | null {
-  const moves: CartLineUpdate[] = [];
-  for (const line of cart.lines) {
-    if (line.offer !== 'buy_now') continue;
-    const board = bySku(catalog, line.sku)?.variant;
-    // The board's pre-order: beside its buy-now offer, or its only offer
-    // once batch 1 is gone.
-    const preorder = board ? preorderView(board) ?? (board.offer === 'preorder' && board.availability === 'preorder' ? board : null) : null;
-    if (!preorder?.merchandise_id || preorder.merchandise_id === line.merchandiseId) return null;
-    moves.push({
-      id: line.id,
-      quantity: line.quantity,
-      merchandiseId: preorder.merchandise_id,
-      attributes: lineAttributes(preorder, destination, euStockKnown) ?? [],
-    });
+): {lines: CartLineInput[]} | {refused: ExpressRefusal} {
+  if (region !== 'EU') return {refused: EXPRESS_REFUSED.region};
+  const lines: CartLineInput[] = [];
+  for (const {sku, quantity} of requested) {
+    const match = bySku(catalog, sku)?.variant;
+    const variant = match?.merchandise_id ? sellableVariant(catalog, match.merchandise_id, globalComingSoon) : null;
+    if (!variant?.merchandise_id || !isBuyNowOnly(variant)) return {refused: EXPRESS_REFUSED.stock};
+    const left = paidBatchLeft(variant);
+    if (left === null || quantity > left) return {refused: EXPRESS_REFUSED.stock};
+    const attributes = lineAttributes(variant, 'EU', euStockKnown);
+    lines.push(attributes ? {merchandiseId: variant.merchandise_id, quantity, attributes} : {merchandiseId: variant.merchandise_id, quantity});
   }
-  return moves;
+  return lines.length ? {lines} : {refused: EXPRESS_REFUSED.stock};
+}
+
+/** The page an express purchase returns to: a same-site path, else home. */
+export function expressReturn(form: FormData, refused: ExpressRefusal): string {
+  const raw = String(form.get('return') ?? '/');
+  const path = raw.startsWith('/') && !raw.startsWith('//') && !raw.includes('\\') ? raw : '/';
+  const url = new URL(path, 'https://opendrone.invalid');
+  url.searchParams.set(EXPRESS_PARAM, refused);
+  return `${url.pathname}${url.search}`;
 }
 
 /** The form field the cart page sends with checkout once it has shown the
@@ -852,24 +878,20 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         : redirect('/cart');
     }
 
-    if (intent === KEEP_TOGETHER_INTENT) {
-      if (!existingId || !dependencies.getCart || !dependencies.updateCartLines) throw fail('Cart is empty.', 409);
-      const [cart, catalog] = await Promise.all([
-        dependencies.getCart(existingId),
-        dependencies.fetchCatalog(region, destination?.country),
-      ]);
-      if (!cart) {
-        dependencies.unsetCartId?.();
-        return redirect('/cart');
+    if (intent === EXPRESS_INTENT) {
+      // Buy now: straight to a checkout that holds these in-stock lines only.
+      if (!destination || destination.kind !== 'direct' || region !== 'EU') {
+        return redirect(expressReturn(form, EXPRESS_REFUSED.region));
       }
-      const moves = keepTogetherUpdates(cart, catalog, region, euStockKnown);
-      if (moves === null) throw fail('One or more boards cannot be pre-ordered right now.', 409);
-      const updated = moves.length ? await dependencies.updateCartLines(existingId, moves) : cart;
-      // Proof, not trust: no board may still be on its Buy now variant.
-      if (updated.lines.some((l) => l.offer === 'buy_now')) throw new Error('shopify: a Buy now line did not move to pre-order');
-      return wantsSummary
-        ? Response.json(cartSummary(updated, catalog), {headers: NO_STORE})
-        : redirect('/cart');
+      const requested = requestedLines(form);
+      const catalog = await dependencies.fetchCatalog(region, destination.country);
+      const plan = expressLines(catalog, requested, region, globalComingSoon, euStockKnown);
+      if ('refused' in plan) return redirect(expressReturn(form, plan.refused));
+      const express = await dependencies.createCart(plan.lines, cartCountryFor(destination.country, dependencies.registrations, usRate));
+      // Shopify's own deny gate: a line it could not fill comes back short.
+      if (shortfall(express, plan.lines, new Map()).length) return redirect(expressReturn(form, EXPRESS_REFUSED.stock));
+      await recordAttribution(form, express, dependencies);
+      return redirect(express.checkoutUrl);
     }
 
     if (intent === 'checkout') {
@@ -966,9 +988,10 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       throw fail(destinationMessage(destination.kind, true), 403);
     }
     const requested = requestedLines(form);
+    // The cart holds pre-orders only: a board in stock is bought now through
+    // its own express checkout (EXPRESS_INTENT), never added here.
     const offer = form.get(OFFER_FIELD);
-    if (offer !== null && offer !== 'preorder' && offer !== 'buy_now') throw fail('Invalid cart offer.', 400);
-    const wantsPreorder = offer === 'preorder';
+    if (offer !== null && offer !== 'preorder') throw fail('Invalid cart offer.', 400);
     const catalog = await dependencies.fetchCatalog(region, destination?.country);
     const lines: CartLineInput[] = requested.map(({sku, quantity}) => {
       const match = bySku(catalog, sku);
@@ -976,10 +999,11 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         ? sellableVariant(catalog, match.variant.merchandise_id, globalComingSoon)
         : null;
       if (!primary?.merchandise_id) throw fail('Product is unavailable.', 409);
-      // `offer=preorder` buys a board's pre-order variant where it has both;
-      // every other product has one offer and takes it either way.
-      const variant = wantsPreorder ? preorderView(primary) ?? primary : primary;
+      // A board with both offers goes in as its pre-order; every other
+      // product has one offer and takes it either way.
+      const variant = preorderView(primary) ?? primary;
       if (!variant.merchandise_id) throw fail('Product is unavailable.', 409);
+      if (isBuyNowOnly(variant)) throw fail(BUY_NOW_NOT_IN_CART, 409);
       if (region !== 'EU' && !usSellable(variant)) throw fail(region === 'US' ? US_EU_ONLY_MESSAGE : 'This item ships from stock in Belgium to EU addresses only. International orders use the preorder batch.', 409);
       const attributes = lineAttributes(variant, region, euStockKnown);
       return attributes
@@ -1172,6 +1196,8 @@ export type CartLineInfo = {
    *  2027"). Null when the line's ship state is unknown. */
   ships: 'now' | 'preorder' | null;
   month: string | null;
+  /** The line's price is under the board's retail price: an early bird price. */
+  early: boolean;
 };
 
 /**
@@ -1213,6 +1239,7 @@ export function cartLineInfo(
           ? 'now'
           : line.shipPromise ? 'preorder' : null,
       month: stockPromise(line.shipPromise) ? null : promiseBatchMonth(line.shipPromise),
+      early: variant?.compare_price != null && variant.compare_price > variant.price,
     };
   }
   return out;

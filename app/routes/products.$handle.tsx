@@ -48,7 +48,8 @@ import {BuildWithThis} from '~/components/BuildWithThis';
 import {CartPlacementProvider} from '~/components/AddToCartButton';
 import {parseBuilds} from '~/lib/build-recommendations';
 import {batchChoiceOn} from '~/lib/shopify-storefront';
-import {resolveHeroBuilds} from '~/lib/hero-build';
+import {resolveHeroBuilds, stackOffer} from '~/lib/hero-build';
+import {ExpressBuy, useExpressRefusal} from '~/components/ExpressBuy';
 import {buildForProduct} from '~/lib/related-parts';
 import buildsJson from '../../content/builds.json';
 import {FirmwareSupport} from '~/components/FirmwareSupport';
@@ -937,6 +938,15 @@ function ProductPage() {
   const [offerMode, setOfferMode] = useState<BatchOffer>('buy_now');
   const offerChoice = pickedVariant?.preorderOffer ? {buyNow: pickedVariant, preorder: pickedVariant.preorderOffer} : null;
   const selectedVariant = offerChoice && offerMode === 'preorder' ? offerChoice.preorder : pickedVariant;
+  // The Buy now lane sells the FC and ESC stack of this board's size when
+  // both are in stock for this buyer; else this board alone. Either way it
+  // is an express checkout, never the cart.
+  const stack = useMemo(() => {
+    if (!offerChoice?.buyNow || !pickedVariant?.sku) return null;
+    const build = builds.find((b) => b.parts.some((part) => part.sku === pickedVariant.sku && (part.role === 'flight-controller' || part.role === 'esc')));
+    return build ? stackOffer(build) : null;
+  }, [offerChoice?.buyNow, pickedVariant?.sku, builds]);
+  const expressRefusal = useExpressRefusal();
 
   // Coming-soon state: no prices, no add-to-cart - the buy module becomes a
   // notify-at-launch signup. Root data feeds the Turnstile key.
@@ -1825,7 +1835,12 @@ function ProductPage() {
     content.statusNote,
     rootData?.shopOpen ?? false,
   );
-  const buyPrice = isBundle ? bundlePrice : selectedVariant?.price;
+  // The headline price follows the chosen card: the stack's when it sells.
+  const buyPrice = isBundle
+    ? bundlePrice
+    : stack && offerChoice && offerMode === 'buy_now'
+      ? {amount: stack.price.toFixed(2), currencyCode: stack.currency}
+      : selectedVariant?.price;
   const buyAvailable = isBundle
     ? bundleAvailable
     : Boolean(selectedVariant?.availableForSale);
@@ -1884,7 +1899,11 @@ function ProductPage() {
     ? (campaign.paidLeft ?? campaign.batchUnits - campaign.batchOrdered)
     : null;
   const maxQuantity =
-    paidLeft != null ? Math.max(1, Math.min(MAX_LINE_QUANTITY, paidLeft)) : MAX_LINE_QUANTITY;
+    stack && offerMode === 'buy_now'
+      ? Math.max(1, Math.min(MAX_LINE_QUANTITY, stack.max))
+      : offerChoice && offerMode === 'preorder'
+        ? MAX_LINE_QUANTITY
+        : paidLeft != null ? Math.max(1, Math.min(MAX_LINE_QUANTITY, paidLeft)) : MAX_LINE_QUANTITY;
   // The buy module's quantity, reset whenever the variant changes.
   // A product sold singly but used in sets (4 motors per quad) starts at
   // one set; the stepper still moves by one.
@@ -2055,8 +2074,19 @@ function ProductPage() {
           preorder={offerChoice.preorder}
           mode={offerMode}
           onChange={setOfferMode}
+          stack={stack ? {size: stack.size, price: stack.price, currency: stack.currency, thumbs: stack.parts.map((part) => part.image)} : null}
+          single={
+            stack && pickedVariant?.sku ? (
+              <ExpressBuy lines={[{sku: pickedVariant.sku, quantity: 1}]} className="offer-single" product={product.handle}>
+                {say('product-chrome.offer_single', 'Just this board, {price}', {
+                  price: formatPrice(offerChoice.buyNow.price.amount, offerChoice.buyNow.price.currencyCode),
+                })}
+              </ExpressBuy>
+            ) : null
+          }
         />
       ) : null}
+      {offerChoice && expressRefusal ? <p className="cart-alert" role="alert">{expressRefusal}</p> : null}
       {stepBar}
       {/* Star aggregate + link to the reviews chapter. Renders nothing
           without reviews. */}
@@ -2075,6 +2105,13 @@ function ProductPage() {
         maxQuantityNote={maxQuantityNote}
         onQuantityChange={isBundle || notDirect ? undefined : setQuantity}
         showLineTotal={Boolean(setOf)}
+        express={
+          offerChoice && offerMode === 'buy_now' && pickedVariant?.sku
+            ? stack
+              ? {lines: stack.lines, label: say('product-chrome.offer_cta_stack', 'Buy the {size}-inch stack now', {size: stack.size}), short: say('product-chrome.offer_cta_stack_short', 'Buy the stack now'), pin: say('product-chrome.buy_cta_buy_now', 'Buy now')}
+              : {lines: [{sku: pickedVariant.sku, quantity: 1}], label: say('product-chrome.buy_cta_buy_now', 'Buy now')}
+            : null
+        }
       />
       {notDirect === 'blocked' ? (
         <p className="product-buy-ship">
@@ -2111,8 +2148,8 @@ function ProductPage() {
           <p className="product-buy-ship offer-status" data-offer-status>
             <span>
               {offerMode === 'buy_now'
-                ? say('product-chrome.offer_status_buy_now', 'In stock in Belgium')
-                : say('product-chrome.offer_status_preorder', 'Batch confirmed')}
+                ? say('product-chrome.offer_status_buy_now', 'In stock in Belgium, ships in days, EU only')
+                : say('product-chrome.offer_status_preorder', 'Ships by {date}, worldwide', {date: offerChoice.preorder.campaign?.latestShip ?? ''})}
             </span>
             <Link prefetch="intent" to={offerMode === 'buy_now' ? '/terms' : '/preorder'} className="product-buy-terms-link">
               {offerMode === 'buy_now'

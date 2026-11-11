@@ -1,4 +1,6 @@
 import {useId, useState} from 'react';
+/** The cart's per-line limit (cart.$.tsx, products.$handle.tsx). */
+const MAX_LINE_QUANTITY = 50;
 import {useRouteLoaderData} from 'react-router';
 import {ArrowUpRight, Fan, Mail, Package, RadioTower, ShoppingBag} from 'lucide-react';
 import type {RootLoader} from '~/root';
@@ -9,9 +11,10 @@ import {Txt} from '~/components/Txt';
 import {useGeoShipLine} from '~/components/ShipChip';
 import {copyFill, copyText} from '~/lib/copy';
 import {useProductStatusResolver} from '~/lib/coming-soon';
-import {formatPrice} from '~/lib/catalog';
+import {cartAddUrl, formatPrice} from '~/lib/catalog';
 import {isPurchasableStatus, shortShipPromise} from '~/lib/product-content';
-import {BUILD_ROLES, buildModes, heroBuildSelection, modeAddUrl, type BuildMode, type HeroBuild} from '~/lib/hero-build';
+import {BUILD_ROLES, buildModes, heroBuildSelection, modeAddUrl, stackOffer, type BuildMode, type HeroBuild} from '~/lib/hero-build';
+import {ExpressBuy, useExpressRefusal} from '~/components/ExpressBuy';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import {latestShipDate, parseCampaignConfig, shortCampaignDate} from '~/lib/preorder-campaign';
 import preorders from '../../content/preorders.json';
@@ -54,23 +57,40 @@ export function HeroBuildChoice({
   // Global PUBLIC_COMING_SOON gate; fail closed when root data is missing.
   const comingSoon = useRouteLoaderData<RootLoader>('root')?.comingSoon ?? true;
   const selection = heroBuildSelection(shown, selected, sellable, comingSoon);
-  const geoLine = useGeoShipLine();
   const name = useId();
+  const stack = stackOffer(build);
+  const refusal = useExpressRefusal();
+  // One quantity for both modes, in one slot: stacks bought now, or builds
+  // pre-ordered. Never more stacks than batch 1 still holds.
+  const [quantity, setQuantity] = useState(1);
+  const maxQuantity = mode === 'buy_now' && stack ? Math.max(1, Math.min(MAX_LINE_QUANTITY, stack.max)) : MAX_LINE_QUANTITY;
+  const qty = Math.min(quantity, maxQuantity);
   const say = (key: string, fallback: string, vars: Record<string, string | number> = {}) => copyFill(`home.${key}`, fallback, vars);
 
-  // One status line: stock in the visitor's words, or the one ship-by date.
-  const stockPromise = shown.parts[0]?.shipPromise ?? null;
+  // One status line: where and when the chosen lane ships.
   const shipBy = shortCampaignDate(latestShipDate(CAMPAIGN));
   const statusLine = !selection.available
     ? null
     : mode === 'buy_now'
-      ? geoLine(stockPromise) ?? shortShipPromise(stockPromise)?.text ?? null
+      ? say('choice_status_buy_now', 'In stock in Belgium, ships in days, EU only')
       : shipBy ? say('build_ship_target', 'Ships by {date}', {date: shipBy}) : null;
+  // The pre-order build's total with every part in it, for its option.
+  const fullBuild = heroBuildSelection(modes.preorder, new Set(modes.preorder.parts.map((part) => part.sku)), sellable, comingSoon);
+  const total = (amount: number | null, currency: string | undefined) => (amount !== null && currency ? formatPrice(amount.toFixed(2), currency) : null);
 
   const options: Array<{mode: BuildMode; title: string; what: string}> = [
-    {mode: 'buy_now', title: say('choice_buy_now', 'Buy now'), what: say('choice_buy_now_what', 'FC and ESC stack')},
-    {mode: 'preorder', title: say('choice_preorder', 'Pre-order'), what: say('choice_preorder_what', 'The full build')},
+    {
+      mode: 'buy_now',
+      title: say('choice_buy_now', 'Buy the stack now'),
+      what: [total(stack?.price ?? null, stack?.currency), say('choice_buy_now_what', 'FC and ESC')].filter(Boolean).join(' · '),
+    },
+    {
+      mode: 'preorder',
+      title: say('choice_preorder', 'Pre-order the full build'),
+      what: [total(fullBuild.total, fullBuild.currency), say('choice_preorder_what', 'All parts')].filter(Boolean).join(' · '),
+    },
   ];
+  const lineTotal = selection.total !== null ? Math.round(selection.total * 100 * qty) / 100 : null;
 
   return (
     <section
@@ -201,21 +221,47 @@ export function HeroBuildChoice({
             </span>
           </Link>
         ) : (
-          <AddToCartButton
-            href={modeAddUrl(selection.href, mode)}
-            disabled={!selection.available}
-            product={`${mode === 'buy_now' ? 'stack' : 'build'}-${build.id}`}
-            className="hero-build-add"
-            compactError
-            revenue={selection.total !== null && selection.currency ? {amount: selection.total, currency: selection.currency} : null}
-          >
-            <ShoppingBag size={16} aria-hidden="true" />
-            {mode === 'buy_now' ? say('choice_add_buy_now', 'Buy now') : say('choice_add_preorder', 'Pre-order')}
-            {selection.total !== null && selection.currency ? (
-              <span className="hero-build-total">{formatPrice(selection.total.toFixed(2), selection.currency)}</span>
-            ) : null}
-          </AddToCartButton>
+          <div className="hero-build-buyrow">
+            <div className="product-qty hero-build-qty" role="group" aria-label={copyText('product-chrome.buy_qty_aria') ?? 'Quantity'}>
+              <button type="button" className="product-qty-step" onClick={() => setQuantity(Math.max(1, qty - 1))} disabled={qty <= 1} aria-label={copyText('product-chrome.buy_qty_decrease') ?? 'Decrease quantity'}>
+                −
+              </button>
+              <span className="product-qty-value" aria-live="polite">{qty}</span>
+              <button type="button" className="product-qty-step" onClick={() => setQuantity(Math.min(maxQuantity, qty + 1))} disabled={qty >= maxQuantity} aria-label={copyText('product-chrome.buy_qty_increase') ?? 'Increase quantity'}>
+                +
+              </button>
+            </div>
+            {mode === 'buy_now' && stack ? (
+              <ExpressBuy lines={stack.lines} quantity={qty} product={`stack-${build.id}`} className="hero-build-add" disabled={!selection.available}>
+                <ShoppingBag size={16} aria-hidden="true" />
+                {/* The block's title names the size; a phone drops it from the button. */}
+                <span>
+                  {say('choice_add_buy_now_lead', 'Buy the')} <span className="cta-size">{say('choice_add_buy_now_size', '{size}-inch', {size: build.size})} </span>
+                  {say('choice_add_buy_now_tail', 'stack now')}
+                </span>
+                {lineTotal !== null && selection.currency ? (
+                  <span className="hero-build-total">{formatPrice(lineTotal.toFixed(2), selection.currency)}</span>
+                ) : null}
+              </ExpressBuy>
+            ) : (
+              <AddToCartButton
+                href={modeAddUrl(cartAddUrl(build.addUrl, selection.parts.map((part) => ({sku: part.sku, quantity: part.quantity * qty}))), 'preorder')}
+                disabled={!selection.available}
+                product={`build-${build.id}`}
+                className="hero-build-add"
+                compactError
+                revenue={lineTotal !== null && selection.currency ? {amount: lineTotal, currency: selection.currency} : null}
+              >
+                <ShoppingBag size={16} aria-hidden="true" />
+                {say('choice_add_preorder', 'Pre-order the full build')}
+                {lineTotal !== null && selection.currency ? (
+                  <span className="hero-build-total">{formatPrice(lineTotal.toFixed(2), selection.currency)}</span>
+                ) : null}
+              </AddToCartButton>
+            )}
+          </div>
         )}
+        {refusal && mode === 'buy_now' ? <p className="hero-build-ship cart-line-error" role="alert">{refusal}</p> : null}
         {statusLine && !selection.notify ? (
           <p className="hero-build-ship hero-build-status" role="status">{statusLine}</p>
         ) : null}

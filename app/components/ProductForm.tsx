@@ -1,6 +1,7 @@
 import {useLocation, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useState} from 'react';
 import {AddToCartButton} from './AddToCartButton';
+import {ExpressBuy} from './ExpressBuy';
 import {useGeoInStock} from './ShipChip';
 import {useComingSoon, useProductStatus} from '~/lib/coming-soon';
 import {copyFill, copyText} from '~/lib/copy';
@@ -27,7 +28,11 @@ export function ProductForm({
   maxQuantityNote,
   onQuantityChange,
   showLineTotal = false,
+  express,
 }: {
+  /** The Buy now lane: the button goes straight to a checkout of these
+   *  in-stock lines (times the quantity) instead of adding to the cart. */
+  express?: {lines: ReadonlyArray<{sku: string; quantity: number}>; label: string; short?: string; pin?: string} | null;
   productOptions: MappedProductOptions[];
   selectedVariant: ProductVariantFragment | null;
   /** Option names already handled elsewhere (e.g. the comparison ladder
@@ -244,6 +249,17 @@ export function ProductForm({
           </button>
         </div>
       ) : null}
+      {express ? (
+        <ExpressBuy lines={express.lines} quantity={qty} product={selectedVariant?.product?.handle} disabled={disabled}>
+          {express.pin ? (
+            <>
+              <span className="cta-full">{express.label}</span>
+              {express.short ? <span className="cta-short">{express.short}</span> : null}
+              <span className="cta-pin">{express.pin}</span>
+            </>
+          ) : express.label}
+        </ExpressBuy>
+      ) : (
       <AddToCartButton
         href={href}
         disabled={disabled}
@@ -260,6 +276,7 @@ export function ProductForm({
             ? (lineTotalLabel ?? ctaLabelAvailable)
             : ctaLabelSoldOut}
       </AddToCartButton>
+      )}
       {onQuantityChange && !isBundle && maxQuantityNote && qty >= maxQuantity ? (
         <p className="product-qty-note" role="status">
           {maxQuantityNote}

@@ -36,6 +36,9 @@ export type HeroBuildPart = {
   offer?: BatchOffer;
   /** The pre-order beside a buy-now board: its price and ship promise. */
   preorder?: {price: number; shipPromise: string | null};
+  /** Units left in the paid batch (batch 1) for this buyer, or null when
+   *  the part is not sold from it: the most an express stack may take. */
+  left?: number | null;
 };
 
 export type HeroBuild = {
@@ -81,6 +84,9 @@ export function resolveHeroBuilds(
         shipPromise: variant?.ship_promise ?? null,
         early: isEarlyPrice(variant),
         ...(variant?.offer ? {offer: variant.offer} : {}),
+        ...(variant?.offer === 'buy_now' && variant.campaign?.paidStock
+          ? {left: Math.max(0, variant.campaign.paidLeft ?? variant.campaign.batchUnits - variant.campaign.batchOrdered)}
+          : {}),
         ...(variant?.preorder_offer
           ? {preorder: {price: variant.preorder_offer.price, shipPromise: variant.preorder_offer.ship_promise}}
           : {}),
@@ -192,4 +198,35 @@ export function buildModes(build: HeroBuild): {buy_now: HeroBuild | null; preord
 /** The add link of a mode: a pre-order build asks for the pre-order offer. */
 export function modeAddUrl(href: string, mode: BuildMode): string {
   return mode === 'preorder' ? `${href}${href.includes('?') ? '&' : '?'}offer=preorder` : href;
+}
+
+/** The FC and ESC stack a buyer can buy now, as the express offer: its
+ *  lines per stack, its price per stack and the most stacks batch 1 still
+ *  holds. Null unless both boards are in stock for this buyer. */
+export function stackOffer(build: HeroBuild): {
+  size: string;
+  parts: HeroBuildPart[];
+  lines: Array<{sku: string; quantity: number}>;
+  price: number;
+  currency: string;
+  max: number;
+} | null {
+  const stack = buildModes(build).buy_now;
+  if (!stack || stack.parts.some((part) => part.price === null)) return null;
+  const price = stack.parts.reduce((sum, part) => sum + Math.round(part.price! * 100) * part.quantity, 0) / 100;
+  const max = Math.min(...stack.parts.map((part) => Math.floor((part.left ?? Infinity) / part.quantity)));
+  if (!(max > 0)) return null;
+  return {
+    size: build.size,
+    parts: stack.parts,
+    lines: stack.parts.map((part) => ({sku: part.sku, quantity: part.quantity})),
+    price,
+    currency: stack.parts[0].currency,
+    max,
+  };
+}
+
+/** The `lines` field of an express purchase: each line times the quantity. */
+export function expressLinesField(lines: ReadonlyArray<{sku: string; quantity: number}>, quantity: number): string {
+  return lines.map((line) => `${line.sku}:${line.quantity * quantity}`).join(',');
 }
