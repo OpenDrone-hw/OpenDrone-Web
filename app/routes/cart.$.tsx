@@ -56,7 +56,7 @@ import {usePendingShipTo} from '~/lib/pending-ship-to';
 import {cartReplannedFor, planCartPage} from '~/lib/cart-replan';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
-import {cartWholesaleCode} from '~/lib/wholesale-codes';
+import {WHOLESALE_SESSION_KEY, cartWholesaleCode, wholesaleFieldShown} from '~/lib/wholesale-codes';
 import type {RootLoader} from '~/root';
 import {
   CartAddError,
@@ -180,7 +180,13 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   const compat = compatForLines(cart?.lines ?? [], country, compatLocale(readLocaleCookie(request.headers.get('Cookie'))));
   // Buy now or pre-order is on: every line says which it is.
   const choice = batchChoiceOn(context.env);
-  return {cart, info, check, payments, country, shippingFrom, compat, choice};
+  // The "Wholesale code" field: only for a retailer's visit while the choice is on.
+  const wholesaleField = wholesaleFieldShown({
+    choice,
+    visited: context.session.get(WHOLESALE_SESSION_KEY) === '1',
+    applied: Boolean(cartWholesaleCode(cart?.discountCodes)),
+  });
+  return {cart, info, check, payments, country, shippingFrom, compat, choice, wholesaleField};
 }
 
 type Removed = SplitItem[];
@@ -209,7 +215,7 @@ function checkNotice(check: string | null): string | null {
 }
 
 export default function CartPage() {
-  const {cart, info, check, payments, country, shippingFrom, compat, choice} = useLoaderData<typeof loader>();
+  const {cart, info, check, payments, country, shippingFrom, compat, choice, wholesaleField} = useLoaderData<typeof loader>();
   const rootData = useRouteLoaderData<RootLoader>('root');
   // Lines moved out for a second order: kept in this browser so the list
   // survives a reload and the trip through checkout.
@@ -243,6 +249,7 @@ export default function CartPage() {
         <PopulatedCart
           cart={cart}
           choice={choice}
+          wholesaleField={wholesaleField}
           info={info}
           payments={payments}
           country={cartQuoteCountry(pendingShipTo ?? country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
@@ -566,9 +573,12 @@ function PopulatedCart({
   shippingFrom,
   onSplit,
   choice = false,
+  wholesaleField = true,
 }: {
-  /** Buy now or pre-order is on: lines carry their badge. */
+  /** Buy now or pre-order is on: the cart holds pre-orders only. */
   choice?: boolean;
+  /** Show the "Wholesale code" field (`wholesaleFieldShown`). */
+  wholesaleField?: boolean;
   cart: ShopifyCart;
   info: Record<string, CartLineInfo>;
   payments: string[];
@@ -748,7 +758,7 @@ function PopulatedCart({
               </p>
               <button type="submit" className="mt-1 text-[13px] underline underline-offset-4">{t('wholesale_code_remove', 'Remove code')}</button>
             </Form>
-            ) : (
+            ) : wholesaleField ? (
             <Form method="post" action="/api/shopify/cart" className="cart-code">
               <input type="hidden" name="intent" value="discount" />
               <label className="block text-[13px] text-[var(--color-text-muted)]">
@@ -757,7 +767,7 @@ function PopulatedCart({
               </label>
               <button type="submit" className="mt-2 text-[13px] underline underline-offset-4">{t('wholesale_code_apply', 'Apply code')}</button>
             </Form>
-            )}
+            ) : null}
             <Form
               id={CHECKOUT_FORM_ID}
               method="post"

@@ -56,7 +56,7 @@ Percentages are stored with 4 decimals (0.1667). Every unit still lands on 75% o
 
 The opendrone.be session is not passed to checkout: the cart is created without buyer identity and the sign-in keeps no Shopify token (`app/lib/accounts/shopify-idp.ts`, data minimisation, kept on purpose). So:
 
-1. The retailer adds to cart and enters the code in the cart's "Wholesale code" field.
+1. The retailer adds to cart and enters the code in the cart's "Wholesale code" field (with `BATCH_CHOICE` on it shows after a visit to /wholesale or on /cart?wholesale=1).
 2. At Shopify checkout the retailer signs in with the approved email (Shopify mails a code). Shopify's help says exempt customers "need to check out using the same email address as the one listed on their customer account"; the customer-limited codes apply to a signed-in customer.
 3. Pay at checkout.
 
@@ -100,11 +100,11 @@ Refund or cancel in Shopify as usual: the unit leaves the batch count and the pr
 English:
 
 ```
-Your application is approved. How it works: order in our shop at opendrone.be. Put your products in the cart, enter your personal code WS25-NAME in the Wholesale code field, and sign in with this email address at checkout (Shopify sends you a code). You pay 25% off retail. Belgian shops pay 21% VAT. Shops in another EU country with a valid VAT number pay no Belgian VAT (reverse charge); we check the number in VIES. Outside the EU we confirm VAT and shipping per country. You pay at checkout and shipping is charged as normal. Every order ships with its batch. Current prices and dates are on each product page.
+Your application is approved. How it works: order in our shop at opendrone.be. Put your products in the cart, open opendrone.be/cart?wholesale=1, enter your personal code WS25-NAME in the Wholesale code field, and sign in with this email address at checkout (Shopify sends you a code). You pay 25% off retail. Belgian shops pay 21% VAT. Shops in another EU country with a valid VAT number pay no Belgian VAT (reverse charge); we check the number in VIES. Outside the EU we confirm VAT and shipping per country. You pay at checkout and shipping is charged as normal. Every order ships with its batch. Current prices and dates are on each product page.
 ```
 
 Nederlands:
 
 ```
-Je aanvraag is goedgekeurd. Zo werkt het: bestel in onze shop op opendrone.be. Leg je producten in de winkelwagen, vul je persoonlijke code WS25-NAAM in bij Wholesale code en meld je bij het afrekenen aan met dit e-mailadres (Shopify stuurt je een code). Je betaalt 25% korting op de adviesprijs. Belgische winkels betalen 21% btw. Winkels in een ander EU-land met een geldig btw-nummer betalen geen Belgische btw (verlegging); wij controleren het nummer in VIES. Buiten de EU bevestigen we btw en verzending per land. Je betaalt bij het afrekenen en verzending wordt normaal aangerekend. Elke bestelling wordt verzonden met haar batch. Actuele prijzen en data staan op elke productpagina.
+Je aanvraag is goedgekeurd. Zo werkt het: bestel in onze shop op opendrone.be. Leg je producten in de winkelwagen, open opendrone.be/cart?wholesale=1, vul je persoonlijke code WS25-NAAM in bij Wholesale code en meld je bij het afrekenen aan met dit e-mailadres (Shopify stuurt je een code). Je betaalt 25% korting op de adviesprijs. Belgische winkels betalen 21% btw. Winkels in een ander EU-land met een geldig btw-nummer betalen geen Belgische btw (verlegging); wij controleren het nummer in VIES. Buiten de EU bevestigen we btw en verzending per land. Je betaalt bij het afrekenen en verzending wordt normaal aangerekend. Elke bestelling wordt verzonden met haar batch. Actuele prijzen en data staan op elke productpagina.
 ```

@@ -33,3 +33,27 @@ export function cartWholesaleCode(
 ): {code: string; applicable: boolean} | null {
   return codes?.find((c) => wholesaleMainCode(c.code) === c.code.toUpperCase()) ?? null;
 }
+
+/** The session key that remembers a retailer's visit: the cart then shows
+ *  its "Wholesale code" field for the rest of the session. */
+export const WHOLESALE_SESSION_KEY = 'wholesaleVisit';
+/** The link parameter that marks a retailer's visit: `/cart?wholesale=1`
+ *  (any value) on any page, the link approved retailers are given. */
+export const WHOLESALE_PARAM = 'wholesale';
+
+/** True when this URL marks a retailer's visit: the wholesale page itself,
+ *  or any page reached through a link with the `wholesale` parameter. */
+export function wholesaleVisit(url: URL): boolean {
+  return url.searchParams.has(WHOLESALE_PARAM) || /^\/(?:[a-z]{2}\/)?wholesale\/?$/.test(url.pathname);
+}
+
+/**
+ * Whether the cart shows the "Wholesale code" field. Not everyone needs to
+ * see it: with buy now or pre-order on (`choice`) only a visitor who came
+ * through the wholesale page or a wholesale link this session, or whose
+ * cart already carries a code (so it can be seen and removed). Off, it
+ * shows as before.
+ */
+export function wholesaleFieldShown(state: {choice: boolean; visited: boolean; applied: boolean}): boolean {
+  return !state.choice || state.visited || state.applied;
+}

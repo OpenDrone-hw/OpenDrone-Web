@@ -249,7 +249,11 @@ off, `WHOLESALE_PERCENT` in `scripts/wholesale_lib.py`) whatever preorder price
 step a product is on. Retail is the Shopify compare-at price. The retailer
 types one personal code, `WS<rate>-<NAME>` (for example `WS25-FPV24`), in the
 cart's "Wholesale code" field (`intent=discount` in
-`app/lib/shopify-cart-action.ts`). The cart sends that code with its price-group
+`app/lib/shopify-cart-action.ts`). With `BATCH_CHOICE` on, that field shows
+only to a retailer: after a visit to `/wholesale` or through any link with the
+`wholesale` parameter (`/cart?wholesale=1`, the link the approval mail gives),
+remembered for the session, or when the cart already carries a code
+(`wholesaleFieldShown` in `app/lib/wholesale-codes.ts`). The cart sends that code with its price-group
 companions `-G2` to `-G4` (`app/lib/wholesale-codes.ts`) through
 `cartDiscountCodesUpdate`. Each is a customer-limited Shopify percentage code
 scoped to the variants of one price group, because Shopify takes a percentage

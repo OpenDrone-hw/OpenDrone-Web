@@ -2,6 +2,7 @@ import {useEffect, useRef, useState} from 'react';
 import {data, Form, Link, useActionData, useLoaderData, useNavigation, useRouteLoaderData} from 'react-router';
 import {Check, ArrowUpRight, ChevronDown} from 'lucide-react';
 import type {Route} from './+types/wholesale';
+import {WHOLESALE_SESSION_KEY} from '~/lib/wholesale-codes';
 import type {RootLoader} from '~/root';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
@@ -18,6 +19,8 @@ export const meta: Route.MetaFunction = () => buildSeoMeta({title: t('meta_title
 // Form results contain personal details; never let an edge cache retain them.
 export const headers: Route.HeadersFunction = () => ({'Cache-Control': 'private, no-store'});
 export async function loader({context}: Route.LoaderArgs) {
+  // A retailer's visit: the cart shows its "Wholesale code" field this session.
+  context.session.set(WHOLESALE_SESSION_KEY, '1');
   return {email: getCompanyIdentity(context.env as unknown as Record<string, string | undefined>).email, ready: tradeConfigured(context.env)};
 }
 
@@ -162,12 +165,21 @@ function ApplicationForm() {
 
 export default function WholesaleRoute() {
   const {email} = useLoaderData<typeof loader>();
+  // Buy now or pre-order on: the cart's code field shows only through this link.
+  const codeLink = Boolean((useRouteLoaderData('root') as {batchChoice?: boolean} | undefined)?.batchChoice);
   return (
     <div className="page-shell wholesale-page">
       <div className="mx-auto max-w-[560px] pb-6 sm:pb-12">
         <header className="mb-8 sm:mb-10">
           <h1 className="page-title">{t('title')}</h1>
           <p className="wholesale-lead max-w-md text-[var(--color-text-muted)]">{t('lead')}</p>
+          {codeLink ? (
+          <p className="mt-3 text-[14px]">
+            <Link to="/cart?wholesale=1" className="underline underline-offset-4">
+              {copyText('wholesale.code_link') ?? 'Approved retailer? Enter your code in the cart'}
+            </Link>
+          </p>
+          ) : null}
         </header>
         <section aria-labelledby="how-title" className="mb-10">
           <h2 id="how-title" className="m-0 text-base font-medium">{t('how_title')}</h2>
