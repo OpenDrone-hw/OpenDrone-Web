@@ -134,7 +134,10 @@ export function OfferChoice({
           </span>
           <span className="offer-card-line">{card.ships}</span>
           <span className="offer-card-line is-muted">{card.where}</span>
-          {card.extra ? <span className={`offer-card-line offer-card-extra is-${card.offer}`}>{card.extra}</span> : null}
+          {/* Always the slot, so a size without a saving keeps the card's height. */}
+          <span className={`offer-card-line offer-card-extra is-${card.offer}`} aria-hidden={card.extra ? undefined : true}>
+            {card.extra ?? '\u00a0'}
+          </span>
         </label>
       ))}
       {/* One row under the cards in both modes, so choosing moves nothing. */}

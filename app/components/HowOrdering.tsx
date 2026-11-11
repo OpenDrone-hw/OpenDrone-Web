@@ -32,11 +32,11 @@ const say = (key: string, fallback: string, vars: Record<string, string | number
   copyFill(`preorder.${key}`, fallback, vars);
 
 /**
- * /preorder with buy now or pre-order on: the one page that explains
- * ordering. Two blocks in the words of the home and product page (the stack
- * in stock, everything on pre-order), a short line of dated stages the
- * campaign file states, and what the buyer pays. A visitor outside the EU
- * sees the pre-order block alone.
+ * /preorder with buy now or pre-order on: why pre-order, first. A few
+ * reasons the company's own sources state, what happens to the order (the
+ * dated stages of the campaign file), the buyer's rights when something goes
+ * wrong (terms 2.9), then how to order: the stack in stock and everything on
+ * pre-order. A visitor outside the EU sees the pre-order block alone.
  */
 export function HowOrdering({data}: {data: HowOrderingData}) {
   const refusal = useExpressRefusal();
@@ -59,13 +59,64 @@ export function HowOrdering({data}: {data: HowOrderingData}) {
     {key: 'ships', label: say('stage_ships', 'Ships by'), day: data.shipDay, now: false},
   ];
 
+  // Reasons, each from a source the company owns (PR #818 lists them).
+  const reasons = [
+    // Terms 2.9, art. 7bis.3bis; content/preorders.json `confirmed`.
+    {key: 'confirmed', title: say('why_confirmed_title', 'Batch confirmed'), line: say('why_confirmed_line', 'The March 2027 batch is made whatever the number of orders.')},
+    // content/preorders.json `endsOn` and `afterEndsOn`.
+    ...(earlyOpen && data.afterEndsOn === 'retail'
+      ? [{key: 'early', title: say('why_early_title', 'Early bird price'), line: say('why_early_line', 'Under retail until {date}.', {date: ends})}]
+      : []),
+    // Batch 1: built, tested and shipped to EU customers in November 2026.
+    {key: 'proven', title: say('why_proven_title', 'Done once already'), line: say('why_proven_line', 'Batch 1 was built, tested and shipped to EU customers in November 2026.'), link: {to: '/testing', text: say('why_proven_link', 'How we test')}},
+    // The OSHWA certification chips and /open-source.
+    {key: 'open', title: say('why_open_title', 'Open and inspectable'), line: say('why_open_line', 'The designs are open source and OSHWA certified.'), link: {to: '/open-source', text: say('why_open_link', 'Open source')}},
+  ];
+
   return (
     <div className="ho">
-      <h1 className="po-title">{say('how_title', 'How ordering works')}</h1>
+      <header className="ho-head">
+        <h1 className="po-title">{say('why_title', 'Why pre-order?')}</h1>
+        <p className="ho-lead">{say('why_lead', 'OpenDrone is open-source hardware, made in production batches. A pre-order is your place in the next batch.')}</p>
+      </header>
+      <ul className="ho-reasons">
+        {reasons.map((reason) => (
+          <li key={reason.key} className="ho-reason">
+            <strong>{reason.title}</strong>
+            <span>{reason.line}</span>
+            {'link' in reason && reason.link ? (
+              <Link to={reason.link.to} prefetch="intent" className="product-buy-terms-link">{reason.link.text}</Link>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      <div className="ho-pair">
+        <section className="ho-panel" aria-labelledby="ho-when">
+          <h2 id="ho-when" className="ho-lane-title">{say('when_title', 'What happens to my order')}</h2>
+          <ol className="ho-stages" aria-label={say('stages_aria', 'Pre-order dates')}>
+            {stages.map((stage) => (
+              <li key={stage.key} className={stage.now ? 'is-now' : undefined}>
+                <span className="ho-stage-dot" aria-hidden="true" />
+                <span className="ho-stage-label">{stage.label}</span>
+                <time dateTime={stage.day}>{shortCampaignDate(campaignDate(stage.day)) ?? stage.day}</time>
+              </li>
+            ))}
+          </ol>
+        </section>
+        <section className="ho-panel is-trust" aria-labelledby="ho-wrong">
+          <h2 id="ho-wrong" className="ho-lane-title">{say('wrong_title', 'If something goes wrong')}</h2>
+          <ul className="ho-rights">
+            <li>{say('wrong_cancel', 'Cancel any time before delivery: full refund.')}</li>
+            <li>{say('wrong_late', 'Ship date missed: you choose a refund or to wait.')}</li>
+          </ul>
+          <Link to="/en/algemene-voorwaarden#art-7bis" className="product-buy-terms-link">{say('pay_terms', 'Pre-order terms')}</Link>
+        </section>
+      </div>
+      <h2 className="ho-section-title">{say('how_title', 'How to order')}</h2>
       <div className={`ho-lanes${data.stacks.length ? '' : ' is-single'}`}>
         {data.stacks.length ? (
           <section className="ho-lane" aria-labelledby="ho-stock">
-            <h2 id="ho-stock" className="ho-lane-title">{say('lane_stock_title', 'In stock: the FC and ESC stack')}</h2>
+            <h3 id="ho-stock" className="ho-lane-title">{say('lane_stock_title', 'In stock: the FC and ESC stack')}</h3>
             <p className="ho-line is-stock">{say('lane_stock_line', 'Ships in days from Belgium, EU only')}</p>
             <div className="ho-actions">
               {data.stacks.map((stack) => (
@@ -80,36 +131,18 @@ export function HowOrdering({data}: {data: HowOrderingData}) {
           </section>
         ) : null}
         <section className="ho-lane" aria-labelledby="ho-preorder">
-          <h2 id="ho-preorder" className="ho-lane-title">{say('lane_preorder_title', 'Pre-order: everything')}</h2>
+          <h3 id="ho-preorder" className="ho-lane-title">{say('lane_preorder_title', 'Pre-order: everything')}</h3>
           <p className="ho-line">{say('lane_preorder_line', 'Every product, FC and ESC included. Ships by {date}, worldwide.', {date: shipBy})}</p>
-          {earlyOpen && data.afterEndsOn === 'retail' ? (
-            <p className="ho-line is-muted">{say('lane_preorder_price', 'Early bird price until {date}, then retail.', {date: ends})}</p>
-          ) : null}
           <div className="ho-actions">
             <Link to="/products" prefetch="intent" className="hero-build-add">
               <span className="btn-label">{say('lane_preorder_cta', 'Pre-order from the products')}</span>
             </Link>
           </div>
-          <ol className="ho-stages" aria-label={say('stages_aria', 'Pre-order dates')}>
-            {stages.map((stage) => (
-              <li key={stage.key} className={stage.now ? 'is-now' : undefined}>
-                <span className="ho-stage-dot" aria-hidden="true" />
-                <span className="ho-stage-label">{stage.label}</span>
-                <time dateTime={stage.day}>{shortCampaignDate(campaignDate(stage.day)) ?? stage.day}</time>
-              </li>
-            ))}
-          </ol>
         </section>
       </div>
-      <section className="ho-pay" aria-labelledby="ho-pay">
-        <h2 id="ho-pay" className="ho-lane-title">{say('pay_title', 'What you pay')}</h2>
-        <ul>
-          <li>{say('pay_full', 'Pay in full when you order.')}</li>
-          {priceLine ? <li>{priceLine.replace(/\.?$/, '.')}</li> : null}
-          <li>{say('pay_cancel', 'Cancel a pre-order any time before delivery, for a full refund.')}</li>
-        </ul>
-        <Link to="/terms" className="product-buy-terms-link">{say('pay_terms', 'Pre-order terms')}</Link>
-      </section>
+      <p className="ho-line is-muted ho-pay-line">
+        {[say('pay_full', 'Pay in full when you order.'), priceLine ? priceLine.replace(/\.?$/, '.') : null].filter(Boolean).join(' ')}
+      </p>
     </div>
   );
 }

@@ -2738,3 +2738,47 @@ body:has(.avail-bar) .site-header {
 .ho-pay ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: var(--fs-sm); line-height: 1.45; }
 .ho-pay .product-buy-terms-link { width: fit-content; font-size: var(--fs-sm); }
 .ho-pay li { margin: 0; }
+/* "Why pre-order?": the lead, four reason tiles, then when and the rights side by side. */
+.ho-head { display: grid; gap: var(--sp-2); }
+.ho-lead { margin: 0; max-width: 40rem; font-size: var(--fs-md, 1.0625rem); line-height: 1.5; color: var(--color-text-muted); }
+.ho-reasons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ho-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+.ho-reason strong { font-family: var(--font-display); font-size: var(--fs-md, 1.0625rem); font-weight: 600; color: var(--color-text); }
+.ho-reason span { color: var(--color-text-muted); }
+.ho-reason .product-buy-terms-link { margin-top: auto; padding-top: 4px; width: fit-content; }
+.ho-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+@media (max-width: 720px) { .ho-pair { grid-template-columns: minmax(0, 1fr); } }
+.ho-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+}
+.ho-panel.is-trust { border-color: var(--color-gold); }
+.ho-rights { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: var(--fs-sm); line-height: 1.45; color: var(--color-text); }
+.ho-rights li { margin: 0; }
+.ho-panel .product-buy-terms-link { width: fit-content; font-size: var(--fs-sm); }
+.ho-section-title { margin: var(--sp-3) 0 calc(-1 * var(--sp-2)); font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 600; color: var(--color-text); }
+.ho-lane .ho-lane-title { font-size: var(--fs-md, 1.0625rem); }
+.ho-pay-line { margin-top: calc(-1 * var(--sp-2)); }

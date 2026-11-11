@@ -9,7 +9,14 @@
 //      keeps its bounding box;
 //   3. the pinned buy bar is one slim row and holds the switch, not the cards;
 //   4. the home build block is inside the first screen, clear of the header,
-//      and on a laptop clear of the centre of the 3D hero.
+//      and on a laptop clear of the centre of the 3D hero (on a phone its
+//      title and the two options are);
+//   5. switching the size (product page tile, home size switch) moves
+//      nothing either;
+//   6. /preorder ("How ordering works") has nothing under the header, no
+//      overflow, the two lanes in the EU and the pre-order lane alone in the
+//      US, and the US product page shows the pre-order card alone (no
+//      batch boxes).
 //
 // Usage: BASE=http://localhost:3101 node scripts/choice-layout-check.mjs
 // Chrome is used when Playwright has no bundled browser (CHANNEL=chrome).
@@ -95,6 +102,16 @@ for (const [width, height] of SIZES) {
   const wrapped = await page.evaluate(() => [...document.querySelectorAll('main .offer-card-line')].filter((el) => el.scrollWidth > el.clientWidth).map((el) => el.textContent));
   if (wrapped.length) fail(at('product page'), `offer card lines cut: ${wrapped.join(' | ')}`);
 
+  // Size: the 30x30 tile swaps price and stack, and moves nothing in the
+  // buy area (the chapters below are that size's own content).
+  const sizeArea = buyArea.filter((selector) => selector !== '.chapter');
+  before = await boxes(page, sizeArea);
+  await page.locator('.product-hero-copy .variant-tier').nth(1).click().catch(() => fail(at('product page'), 'no second size tile'));
+  await page.waitForTimeout(700);
+  same(at('product page size'), before, await boxes(page, sizeArea));
+  await page.locator('.product-hero-copy .variant-tier').nth(0).click().catch(() => {});
+  await page.waitForTimeout(700);
+
   // Pinned bar: one row, the switch and the button.
   await page.evaluate(() => scrollTo(0, 1600));
   await page.waitForSelector('.buy-rail.is-pinned', {timeout: 8000}).catch(() => fail(at('pinned bar'), 'the pinned bar did not show'));
@@ -121,13 +138,39 @@ for (const [width, height] of SIZES) {
   await page.locator('.hero-choice-option input').nth(1).check({force: true});
   await page.waitForTimeout(250);
   same(at('home'), before, await boxes(page, homeParts));
+  // Size switch: the other drone moves nothing in the block or around it.
+  before = await boxes(page, homeParts);
+  await page.getByRole('button', {name: /3″ Freestyle/}).first().click().catch(() => fail(at('home'), 'no size switch'));
+  await page.waitForTimeout(phone ? 600 : 1500);
+  same(at('home size'), before, await boxes(page, homeParts));
   const block = before['.hero-build-choice#0'];
+  if (phone && block) {
+    const options = before['.hero-choice-option#1'];
+    if (!options || options[1] + options[3] > height) fail(at('home'), 'the build block title and its two options are not inside the first screen');
+  }
   if (!phone && block) {
     if (block[1] + block[3] > height) fail(at('home'), `the build block ends at ${block[1] + block[3]} px, under the fold`);
     if (block[0] < width / 2 + 40) fail(at('home'), `the build block starts at x ${block[0]}, over the centre of the hero`);
     const type = await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.hero-build-choice .hero-build-name strong')).fontSize));
     if (type < 14) fail(at('home'), `part names are ${type} px`);
   }
+  // How ordering works, EU then US.
+  for (const [country, lanes] of [['BE', 2], ['US', 1]]) {
+    await page.goto(`${BASE}/preorder?country=${country}`, {waitUntil: 'networkidle'}).catch(() => {});
+    await page.waitForSelector('.ho-lanes', {timeout: 15000}).catch(() => fail(at(`preorder ${country}`), 'no ordering page'));
+    await clearOfHeader(page, at(`preorder ${country}`), ['.po-title', '.ho-lane', '.ho-pay']);
+    const found = await page.locator('.ho-lane').count();
+    if (found !== lanes) fail(at(`preorder ${country}`), `${found} lanes, expected ${lanes}`);
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+    if (wide > 0) fail(at(`preorder ${country}`), `page is ${wide} px wider than the screen`);
+  }
+  // A US product page: the same components, the Buy now lane absent.
+  await page.goto(BASE + PDP.replace('country=BE', 'country=US'), {waitUntil: 'networkidle'}).catch(() => {});
+  await page.waitForSelector('[data-offer-choice]', {timeout: 15000}).catch(() => fail(at('product page US'), 'no pre-order card'));
+  const usCards = await page.locator('main [data-offer-choice] .offer-card').count();
+  if (usCards !== 1) fail(at('product page US'), `${usCards} offer cards, expected the pre-order card alone`);
+  if (await page.locator('main ul.avail, main [data-batches]').count()) fail(at('product page US'), 'the batch boxes still show');
+  await clearOfHeader(page, at('product page US'), ['h1', '[data-offer-choice]', '.product-buy']);
   await context.close();
 }
 await browser.close();
@@ -137,4 +180,4 @@ if (failures.length) {
   console.error(`\n${failures.length} layout failure(s)`);
   process.exit(1);
 }
-process.stdout.write(`choice layout: ${SIZES.length} sizes, no page content under the header at scroll zero, no shift between the two modes\n`);
+process.stdout.write(`choice layout: ${SIZES.length} sizes, no page content under the header at scroll zero, no shift between modes or sizes, ordering page and US product page checked\n`);

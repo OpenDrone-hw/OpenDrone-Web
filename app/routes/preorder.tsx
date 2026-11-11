@@ -59,7 +59,7 @@ import type {MoneyV2, ProductImage, SelectedOption} from '~/lib/product-shapes';
  */
 export const meta: Route.MetaFunction = ({data}) =>
   buildSeoMeta({
-    title: data?.choice ? (copyText('preorder.how_meta_title') ?? 'How ordering works') : (copyText('preorder.meta_title') ?? 'Pre-orders'),
+    title: data?.choice ? (copyText('preorder.why_meta_title') ?? 'Why pre-order') : (copyText('preorder.meta_title') ?? 'Pre-orders'),
     description: copyText('preorder.meta_description') ?? '',
     // Its own 1200x630 card: /preorder is the page shared at launch.
     image: '/og-preorder.png',
