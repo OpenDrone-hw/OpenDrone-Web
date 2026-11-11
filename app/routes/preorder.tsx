@@ -34,7 +34,9 @@ import {
   isInternationalRegion,
   latestShipDay,
   stackPaidShips,
+  shipLabelFromPromise,
   shortCampaignDate,
+  stockPromise,
   tiersFor,
   type CampaignState,
 } from '~/lib/preorder-campaign';
@@ -182,6 +184,10 @@ export async function loader({context}: Route.LoaderArgs) {
     stackMonth: shipMonth(stackShips),
     stackWhen: datedShipParts(stackShips)?.when ?? null,
     stackDay: promiseDay(stackShips),
+    // Batch 1 is stock on hand: no ship month, it ships now.
+    stackStock: stockPromise(stackShips),
+    // The March 2027 batch is confirmed: no target, no deadline.
+    confirmed: Boolean(CAMPAIGN.confirmed),
     endsDay: CAMPAIGN.endsOn,
     etaDay: latestDay,
     ends: shortCampaignDate(campaignDate(CAMPAIGN.endsOn)) ?? CAMPAIGN.endsOn,
@@ -199,6 +205,7 @@ export async function loader({context}: Route.LoaderArgs) {
       us && paidShips
         ? {
             first: shipMonth(paidShips),
+            stock: stockPromise(paidShips),
             batch: new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric', timeZone: 'UTC'}).format(
               new Date(`${latestDay}T00:00:00Z`),
             ),
@@ -219,7 +226,12 @@ export default function PreorderRoute() {
   const stackInStock = useGeoInStock(null, data.stackPromise);
   const stackLine = useGeoShipLine()(data.stackPromise)?.replace(/\.$/, '') ?? null;
   const stackShort = useGeoShipLine(true)(data.stackPromise);
-  const stockNow = stackInStock && stackLine ? {line: stackLine, short: stackShort ?? stackLine} : null;
+  // A visitor without a known country reads the stock promise itself, which names the EU.
+  const stockNow = stackInStock && stackLine
+    ? {line: stackLine, short: stackShort ?? stackLine}
+    : data.stackStock && data.stackPromise
+      ? {line: shipLabelFromPromise(data.stackPromise, 'long')!.replace(/\.$/, ''), short: shipLabelFromPromise(data.stackPromise, 'short')!}
+      : null;
   const rootData = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
   const updates = copy('preorder.updates');
   // Entries are "YYYY-MM-DD · text", newest first, never edited: a
@@ -294,7 +306,7 @@ export default function PreorderRoute() {
         <section className="po-group" id="stack">
           <h2 className="po-group-title">
             <Txt id="preorder.stack_title" />
-            {stackMonth ? <span className="po-group-meta">{stockNow?.line ?? shipWord('ships', stackWhen ?? stackMonth)}</span> : null}
+            {stockNow || stackMonth ? <span className="po-group-meta">{stockNow?.line ?? shipWord('ships', stackWhen ?? stackMonth ?? '')}</span> : null}
           </h2>
           <Cards rows={stackRows} eta={eta} first cta={stockNow ? (copyText('product-chrome.buy_cta_add') ?? 'Add to cart') : undefined} />
         </section>
@@ -305,24 +317,26 @@ export default function PreorderRoute() {
           <h2 className="po-group-title">
             <Txt id="preorder.targets_title" />
             <span className="po-group-meta">
-              {`${shipWord('deadline', ends)}. ${(copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if the target is reached').replace('{date}', eta)}`}
+              {data.confirmed
+                ? (copyText('preorder.confirmed_meta') ?? 'Confirmed. Ships by {date}').replace('{date}', eta)
+                : `${shipWord('deadline', ends)}. ${(copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if the target is reached').replace('{date}', eta)}`}
             </span>
           </h2>
-          <Txt id="preorder.target_missed" as="p" className="po-group-line" />
-          {stackMonth ? (
+          {data.confirmed ? null : <Txt id="preorder.target_missed" as="p" className="po-group-line" />}
+          {stockNow || stackMonth ? (
             <p className="po-group-line">
               {stockNow
                 ? (copyText('preorder.targets_line_stock') ?? '')
-                : (copyText('preorder.targets_line') ?? '').replace('{month}', stackMonth)}
+                : (copyText('preorder.targets_line') ?? '').replace('{month}', stackMonth ?? '')}
             </p>
           ) : null}
-          {usBatchNote?.first ? (
+          {usBatchNote?.first || usBatchNote?.stock ? (
             <p className="po-group-line">
-              {(
-                copyText('preorder.us_batch_note') ??
-                'FC and ESC batch 1 ({month}) is EU only. US orders ship from the {batch} batch.'
+              {(usBatchNote.stock
+                ? (copyText('preorder.us_batch_note_stock') ?? 'The FC and ESC stock in Belgium ships to EU addresses only. US orders ship with the {batch} batch.')
+                : (copyText('preorder.us_batch_note') ?? 'FC and ESC batch 1 ({month}) is EU only. US orders ship from the {batch} batch.')
               )
-                .replace('{month}', usBatchNote.first)
+                .replace('{month}', usBatchNote.first ?? '')
                 .replace('{batch}', usBatchNote.batch)}
             </p>
           ) : null}
@@ -379,8 +393,9 @@ const dayMs = (iso: string) => Date.parse(`${iso}T00:00:00Z`);
  * phone the lanes read as two rows of dates.
  */
 function Timeline({data, stock}: {data: ReturnType<typeof useLoaderData<typeof loader>>; stock: string | null}) {
-  const {stackDay, stackMonth, endsDay, etaDay, ends, eta, today} = data;
-  const days = [today, endsDay, etaDay, ...(stackDay ? [stackDay] : [])].map(dayMs);
+  const {stackDay, stackMonth, endsDay, etaDay, ends, eta, today, confirmed} = data;
+  // A confirmed batch has no deadline to mark: today and its ship-by date.
+  const days = [today, ...(confirmed ? [] : [endsDay]), etaDay, ...(stackDay ? [stackDay] : [])].map(dayMs);
   const first = new Date(Math.min(...days));
   const last = new Date(Math.max(...days));
   const start = Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), 1);
@@ -389,24 +404,24 @@ function Timeline({data, stock}: {data: ReturnType<typeof useLoaderData<typeof l
   const todayPos = at(today);
 
   const lanes = [
-    stackDay && stackMonth
+    (stackDay && stackMonth) || stock
       ? {
           key: 'stack',
           label: copyText('preorder.timeline_stack') ?? 'Stack',
           // In stock for this visitor: the lane says so at today, not at the batch's dated promise.
           events: stock
             ? [{day: today, date: stock, what: '', kind: 'stock'}]
-            : [{day: stackDay, date: stackMonth, what: copyText('preorder.timeline_ships') ?? 'Ships', kind: 'ship'}],
+            : [{day: stackDay!, date: stackMonth!, what: copyText('preorder.timeline_ships') ?? 'Ships', kind: 'ship'}],
         }
       : null,
     {
       key: 'targets',
-      label: stackDay
+      label: stackDay || stock
         ? (copyText('preorder.timeline_targets') ?? 'RX, frames, motors')
         : (copyText('preorder.timeline_targets_us') ?? 'Every product'),
       events: [
-        {day: endsDay, date: ends, what: copyText('preorder.timeline_deadline') ?? 'Deadline', kind: 'deadline'},
-        {day: etaDay, date: eta, what: copyText('preorder.timeline_eta') ?? 'Ships if the target is reached', kind: 'eta'},
+        ...(confirmed ? [] : [{day: endsDay, date: ends, what: copyText('preorder.timeline_deadline') ?? 'Deadline', kind: 'deadline'}]),
+        {day: etaDay, date: eta, what: copyText('preorder.timeline_eta') ?? 'Ships, confirmed', kind: 'eta'},
       ],
     },
   ].filter((lane) => lane !== null);
@@ -515,7 +530,10 @@ function Card({row, eta, eager = false, lead = false, cta: ctaOverride}: {row: R
         {row.priceUnit ? <span> {row.priceUnit}</span> : null}
         <RetailPrice retail={row.retail} />
       </p>
-      <StepBar bar={bar} fundedLabel={funded} batch={currentBatch(row.campaign) ? batchPhrase(currentBatch(row.campaign)!, preorderWords) : null} />
+      {/* A confirmed batch is stated once, in the group title: no bar per card. */}
+      {bar.confirmed ? null : (
+        <StepBar bar={bar} fundedLabel={funded} batch={currentBatch(row.campaign) ? batchPhrase(currentBatch(row.campaign)!, preorderWords) : null} />
+      )}
       <AddToCartButton
         className="po-card-cta"
         placement="catalog"

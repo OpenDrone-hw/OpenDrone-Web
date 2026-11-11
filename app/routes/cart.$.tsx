@@ -37,6 +37,7 @@ import {
 } from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
 import {isPurchasableStatus, lineDisplayName, setSize, shortShipPromise, variantDisplayName} from '~/lib/product-content';
+import {shipLabelFromPromise} from '~/lib/preorder-campaign';
 import {Txt} from '~/components/Txt';
 import {ShipChip, parcelPromise, soonerMonth, useGeoDutiesNote, useGeoParcel} from '~/components/ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from '~/components/ParcelChip';
@@ -478,7 +479,7 @@ function CartSuggestions({cart, group}: {cart: ShopifyCart; group: 'build' | 'ex
 function ParcelPanel({lines}: {lines: ShopifyCartLine[]}) {
   const promises = lines.map((l) => l.shipPromise);
   const promise = parcelPromise(promises) ?? promises.find(Boolean) ?? null;
-  // In a stock region batch 1 ships in a few days: no late-November date;
+  // In a stock region batch 1 ships in a few working days: no late-November date;
   // the US (on hold) gets none (`geoDeliveryLines`).
   const deliveryBy = latestDeliveryBy(useGeoParcel().deliveryLines(lines));
   if (!promise && !deliveryBy) return null;
@@ -504,11 +505,11 @@ function ParcelPanel({lines}: {lines: ShopifyCartLine[]}) {
           </ul>
         ) : null}
         <p>
-          {/* A funding-target parcel states its own promise (`pendingShips`:
-              the ship-by date, the target deadline, refund or wait). */}
+          {/* A parcel of the March batch states its promise in full, read as
+              the confirmed batch even on a line that still names a target. */}
           {shortShipPromise(promise)?.kind === 'target' && promise
-            ? `${promise.charAt(0).toUpperCase()}${promise.slice(1)}.`
-            : t('parcel_rule', 'Preorders ship when their funding target is reached. If a target is missed, you choose a refund or to keep waiting.')}{' '}
+            ? shipLabelFromPromise(promise, 'long')
+            : t('parcel_rule', 'Pre-orders ship with their batch. Cancel any time before delivery for a full refund.')}{' '}
           <Link prefetch="intent" to="/preorder">{copyText('product-chrome.buy_terms_link') ?? 'Pre-order terms'}</Link>
         </p>
       </div>

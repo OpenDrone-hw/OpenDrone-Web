@@ -1,6 +1,6 @@
 /**
  * When the location notice (components/LocationNotice.tsx) shows, and what
- * it says: "Shipping to Belgium: In stock in Belgium, ships in a few days."
+ * it says: "Shipping to Belgium: In stock in Belgium, ships in a few working days."
  *
  * It shows once per change of the country the visitor orders to (root
  * loader `geo.country`: `?country`, the picked destination, else

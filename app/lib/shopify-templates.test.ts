@@ -118,7 +118,7 @@ describe('Shopify notification templates', async () => {
     const euBatchOne = renderLiquid(tpl.html, euLine({'Preorder': 'ships late November 2026', _batch: 'OPENFC-LITE-2020:1'})).output;
     assert.match(euBatchOne, /Delivery address review/);
     assert.match(euBatchOne, /Stock from Belgium ships only to the EU\./);
-    const euStock = renderLiquid(tpl.html, euLine({'Shipping': 'In stock in Belgium, ships in a few days.', _ship_promise: 'ships late November 2026', _batch: 'OPENFC-LITE-2020:1'})).output;
+    const euStock = renderLiquid(tpl.html, euLine({'Shipping': 'In stock in Belgium, ships in a few working days.', _ship_promise: 'ships late November 2026', _batch: 'OPENFC-LITE-2020:1'})).output;
     assert.match(euStock, /Stock from Belgium ships only to the EU\./);
     const euMarch = renderLiquid(tpl.html, euLine({'Preorder': 'ships by 31 March 2027 if the target is reached', _batch: 'OPENFC-LITE-2020:2'})).output;
     assert.match(euMarch, /Delivery address review/);
@@ -144,14 +144,14 @@ describe('Shopify notification templates', async () => {
     const tpl = templates.find((t) => t.key === 'order-confirmation')!;
     const eu = fixtures.find((f) => f.id === 'eu-preorder-be')!;
     const stockLine = {
-      Shipping: 'In stock in Belgium, ships in a few days.',
+      Shipping: 'In stock in Belgium, ships in a few working days.',
       _ship_promise: 'ships late November 2026',
       _batch: 'OPENFC-LITE-2020:1',
     };
     const lines = (eu.context.line_items as Array<Record<string, unknown>>).map((l) => ({...l, properties: stockLine}));
     const be = renderLiquid(tpl.html, {...eu.context, line_items: lines});
     assert.deepEqual(be.errors, []);
-    assert.match(be.output, /In stock in Belgium, ships in a few days\./);
+    assert.match(be.output, /In stock in Belgium, ships in a few working days\./);
     assert.doesNotMatch(be.output, /Preorder, paid in full|Delivery by|Delivery address review|late November/);
     const ch = renderLiquid(tpl.html, {
       ...eu.context,

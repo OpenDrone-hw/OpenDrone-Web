@@ -54,7 +54,7 @@ describe('geoAvailabilityRegion', () => {
 
 describe('geoShipText', () => {
   it('serves the approved English lines', () => {
-    assert.equal(geoShipText('eu', 'en'), 'In stock in Belgium, ships in a few days.');
+    assert.equal(geoShipText('eu', 'en'), 'In stock in Belgium, ships in a few working days.');
     assert.equal(geoShipText('intl', 'en'), 'Pre-order, ships March 2027.');
   });
 
@@ -84,7 +84,12 @@ describe('structured data matches the line', () => {
 
 describe('batchOnePromises', () => {
   it('reads the paid batch promise from content/preorders.json (#784)', () => {
-    assert.deepEqual([...batchOnePromises(PREORDERS)], ['ships late November 2026']);
+    // Today's stock wording first, then what batch 1 was sold under before (existing carts and orders).
+    assert.deepEqual([...batchOnePromises(PREORDERS)], [
+      'in stock in Belgium, ships to EU addresses in a few working days',
+      'ships late October 2026',
+      'ships late November 2026',
+    ]);
   });
   it('ignores batches that are not paid stock', () => {
     assert.equal(batchOnePromises({skus: {X: {batches: [{ships: 'ships soon'}]}}}).size, 0);
@@ -119,7 +124,7 @@ describe('hasBatchOne', () => {
 
 describe('geoBannerLines', () => {
   it('shows only the visitor line when the country is known', () => {
-    assert.deepEqual(geoBannerLines('eu', 'en'), [{region: 'eu', label: 'EU', text: 'In stock in Belgium, ships in a few days.'}]);
+    assert.deepEqual(geoBannerLines('eu', 'en'), [{region: 'eu', label: 'EU', text: 'In stock in Belgium, ships in a few working days.'}]);
     assert.deepEqual(geoBannerLines('intl', 'en'), [{region: 'intl', label: 'Elsewhere', text: 'Pre-order, ships March 2027.'}]);
     assert.deepEqual(geoBannerLines('import', 'en'), [{region: 'import', label: 'UK, CH, NO', text: 'Pre-order, ships March 2027. Import VAT and duties: paid by you on delivery, unless collected at checkout.'}]);
     assert.deepEqual(geoBannerLines('us', 'en'), [{region: 'us', label: 'US', text: 'Not shipping to the US yet.'}]);
@@ -128,7 +133,7 @@ describe('geoBannerLines', () => {
   it('shows both lines, labelled, when the country is unknown', () => {
     assert.deepEqual(
       geoBannerLines('fallback', 'en').map((l) => `${l.label}: ${l.text}`),
-      ['EU: In stock in Belgium, ships in a few days.', 'Elsewhere: Pre-order, ships March 2027.'],
+      ['EU: In stock in Belgium, ships in a few working days.', 'Elsewhere: Pre-order, ships March 2027.'],
     );
   });
 

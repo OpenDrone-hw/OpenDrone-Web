@@ -115,7 +115,7 @@ test('checkout states distinct paid-stock, EU funding and international arrival 
     assert.equal(attributes.find(a=>a.key==='Delivery by')?.value,date);
     assert.equal(attributes.find(a=>a.key===(stock?'_ship_promise':'Preorder'))?.value,variant.ship_promise);
     assert.equal(attributes.find(a=>a.key==='Preorder')?.value,stock?undefined:variant.ship_promise);
-    assert.equal(attributes.find(a=>a.key==='Shipping')?.value,stock?'In stock in Belgium, ships in a few days.':undefined);
+    assert.equal(attributes.find(a=>a.key==='Shipping')?.value,stock?'In stock in Belgium, ships in a few working days.':undefined);
     // Only NEAR lines tell the buyer they pay import VAT and duties on delivery.
     assert.equal(attributes.find(a=>a.key==='Import VAT and duties')?.value,region==='NEAR' ? 'Paid by you on delivery, unless collected at checkout' : undefined,region);
     assert.doesNotMatch(variant.ship_promise??'',/delivered|30 April|15 April/);
@@ -131,8 +131,8 @@ test('EU batch 1 cart lines say in stock in Belgium with no preorder date; NEAR 
   };
   const eu = attrs('EU');
   assert.deepEqual(eu, [
-    {key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'},
-    {key: '_ship_promise', value: 'ships late November 2026'},
+    {key: 'Shipping', value: 'In stock in Belgium, ships in a few working days.'},
+    {key: '_ship_promise', value: 'in stock in Belgium, ships to EU addresses in a few working days'},
     {key: '_batch', value: 'OPENFC-LITE-2020:1'},
   ]);
   // Nothing visible (no leading underscore) says preorder or names the November date.
