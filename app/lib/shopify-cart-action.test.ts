@@ -1355,10 +1355,11 @@ describe('Shopify cart action: wholesale code', () => {
     assert.equal(ok.headers.get('Location'), '/cart');
     assert.deepEqual(sent[0], ['WS25-FPV24', 'WS25-FPV24-G2', 'WS25-FPV24-G3', 'WS25-FPV24-G4']);
     const bad = await handleShopifyCartAction(request({intent: 'discount', code: 'SUMMER10'}), ENABLED_ENV, deps);
-    assert.equal(bad.headers.get('Location'), '/cart?check=code');
+    // Back with the field open, so the retailer can correct the code.
+    assert.equal(bad.headers.get('Location'), '/cart?wholesale=1&check=code');
     assert.equal(sent.length, 1);
     const cleared = await handleShopifyCartAction(request({intent: 'discount', code: ''}), ENABLED_ENV, deps);
-    assert.equal(cleared.headers.get('Location'), '/cart');
+    assert.equal(cleared.headers.get('Location'), '/cart?wholesale=1');
     assert.deepEqual(sent[1], []);
   });
   it('returns to the cart with a notice when Shopify fails or does not take the code', async () => {
@@ -1366,11 +1367,11 @@ describe('Shopify cart action: wholesale code', () => {
     const failed = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
       ...base, setDiscountCodes: async () => { throw new Error('shopify: cartDiscountCodesUpdate failed'); },
     });
-    assert.equal(failed.headers.get('Location'), '/cart?check=code-failed');
+    assert.equal(failed.headers.get('Location'), '/cart?wholesale=1&check=code-failed');
     const refused = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
       ...base, setDiscountCodes: async (_id, codes) => codes.map((code) => ({code, applicable: false})),
     });
-    assert.equal(refused.headers.get('Location'), '/cart?check=code-not-applied');
+    assert.equal(refused.headers.get('Location'), '/cart?wholesale=1&check=code-not-applied');
     const taken = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
       ...base, setDiscountCodes: async (_id, codes) => codes.map((code, i) => ({code, applicable: i === 0})),
     });

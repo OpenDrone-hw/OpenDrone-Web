@@ -6,7 +6,7 @@ import {requestedLines} from './shopify-cart-input.ts';
 import {destinationForRequest, geoCountryForRequest, isInternationalQuote, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
-import {wholesaleCodes, wholesaleMainCode} from './wholesale-codes.ts';
+import {wholesaleCartPath, wholesaleCodes, wholesaleMainCode} from './wholesale-codes.ts';
 import {cartAttributesFromForm, ORDER_ATTRIBUTE} from './growth/attribution.ts';
 import {internationalShippingFrom} from './international-shipping.ts';
 import {GEO_AVAILABILITY_COPY, hasBatchOne} from './geo-availability.ts';
@@ -25,6 +25,7 @@ import {
   type CartLineInput,
   type CartLineUpdate,
   type ShopifyCart,
+  type ShopifyCartLine,
 } from './shopify-storefront.ts';
 
 export {PREORDER_ATTRIBUTE};
@@ -672,6 +673,39 @@ export const EXPRESS_REFUSED = {region: 'eu-only', stock: 'sold-out'} as const;
 export type ExpressRefusal = (typeof EXPRESS_REFUSED)[keyof typeof EXPRESS_REFUSED];
 
 /**
+ * A cart from before the two lanes may hold a Buy now (in-stock) board. The
+ * cart is the pre-order lane, so each such line moves to the Pre-order
+ * variant of the same board, same quantity, instead of asking the buyer to
+ * remove it by hand. Lines whose board has no pre-order variant in this
+ * catalog are left alone.
+ */
+export function buyNowToPreorder(cart: Pick<ShopifyCart, 'lines'>, catalog: Catalog): CartLineUpdate[] {
+  const moves: CartLineUpdate[] = [];
+  for (const line of cart.lines) {
+    if (line.offer !== 'buy_now') continue;
+    const variant = bySku(catalog, line.sku)?.variant;
+    if (!variant) continue;
+    const target = variant.offer === 'buy_now' ? variant.preorder_offer?.merchandise_id : variant.merchandise_id;
+    if (target && target !== line.merchandiseId) moves.push({id: line.id, quantity: line.quantity, merchandiseId: target});
+  }
+  return moves;
+}
+
+/** True when this catalog sells in-stock boards to its buyer (the EU while batch 1 lasts). */
+export function sellsBuyNow(catalog: Catalog): boolean {
+  return catalog.products.some((product) => product.variants.some((variant) => variant.offer === 'buy_now'));
+}
+
+/**
+ * Lines Shopify did not price in the destination's currency after the cart
+ * moved there: an item not sold in that market. The cart names them at the
+ * top instead of showing two currencies.
+ */
+export function cartCurrencyMisses(cart: Pick<ShopifyCart, 'lines'>, currency: string): ShopifyCartLine[] {
+  return cart.lines.filter((line) => line.total.currencyCode !== currency);
+}
+
+/**
  * A board bought now is a board whose primary offer is Buy now (EU, batch 1
  * units left, Shopify not denying it). Bought with a March item it would ship
  * in March, and nobody pays retail for that: the cart never takes it.
@@ -806,19 +840,20 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       if (!existingId || !dependencies.setDiscountCodes) throw fail('Cart is empty.', 409);
       const typed = String(form.get('code') ?? '');
       const main = wholesaleMainCode(typed);
-      if (typed.trim() && !main) return redirect(`/cart?check=${CART_CHECK.code}`);
+      if (typed.trim() && !main) return redirect(wholesaleCartPath(CART_CHECK.code));
       // A failed apply returns to the cart with a notice, never the 503 page.
       let applied: Array<{code: string; applicable: boolean}> | void;
       try {
         applied = await dependencies.setDiscountCodes(existingId, main ? wholesaleCodes(main) : []);
       } catch (error) {
         dependencies.logError?.(`wholesale code not applied: ${error instanceof Error ? error.message : 'unknown error'}`);
-        return redirect(`/cart?check=${CART_CHECK.codeFailed}`);
+        return redirect(wholesaleCartPath(CART_CHECK.codeFailed));
       }
       if (main && applied && !applied.some((c) => c.code.toUpperCase() === main && c.applicable)) {
-        return redirect(`/cart?check=${CART_CHECK.codeNotApplied}`);
+        return redirect(wholesaleCartPath(CART_CHECK.codeNotApplied));
       }
-      return redirect('/cart');
+      // Applied or cleared: the field shows with the applied code, or not at all.
+      return redirect(main ? '/cart' : wholesaleCartPath());
     }
 
     if (intent === 'update' || intent === 'remove') {

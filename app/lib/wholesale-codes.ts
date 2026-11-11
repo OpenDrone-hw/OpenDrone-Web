@@ -34,26 +34,29 @@ export function cartWholesaleCode(
   return codes?.find((c) => wholesaleMainCode(c.code) === c.code.toUpperCase()) ?? null;
 }
 
-/** The session key that remembers a retailer's visit: the cart then shows
- *  its "Wholesale code" field for the rest of the session. */
-export const WHOLESALE_SESSION_KEY = 'wholesaleVisit';
-/** The link parameter that marks a retailer's visit: `/cart?wholesale=1`
- *  (any value) on any page, the link approved retailers are given. */
+/** The link parameter that opens the cart's "Wholesale code" field:
+ *  `/cart?wholesale=1` (any value), the link approved retailers are given
+ *  and the one at the foot of /wholesale. */
 export const WHOLESALE_PARAM = 'wholesale';
 
-/** True when this URL marks a retailer's visit: the wholesale page itself,
- *  or any page reached through a link with the `wholesale` parameter. */
+/** True when this URL asks for the wholesale field: it carries the
+ *  `wholesale` parameter. Nothing is remembered: a later plain visit to
+ *  /cart on the same (perhaps shared) computer shows no field. */
 export function wholesaleVisit(url: URL): boolean {
-  return url.searchParams.has(WHOLESALE_PARAM) || /^\/(?:[a-z]{2}\/)?wholesale\/?$/.test(url.pathname);
+  return url.searchParams.has(WHOLESALE_PARAM);
 }
 
 /**
- * Whether the cart shows the "Wholesale code" field. Not everyone needs to
- * see it: with buy now or pre-order on (`choice`) only a visitor who came
- * through the wholesale page or a wholesale link this session, or whose
- * cart already carries a code (so it can be seen and removed). Off, it
- * shows as before.
+ * Whether the cart shows the "Wholesale code" field. With buy now or
+ * pre-order on (`choice`) only when the cart URL carries the wholesale
+ * parameter, or the cart already carries a code (so it can be seen and
+ * removed). Off, it shows as before.
  */
 export function wholesaleFieldShown(state: {choice: boolean; visited: boolean; applied: boolean}): boolean {
   return !state.choice || state.visited || state.applied;
+}
+
+/** Where a code apply returns to: the cart with the field still open. */
+export function wholesaleCartPath(check?: string): string {
+  return `/cart?${WHOLESALE_PARAM}=1${check ? `&check=${check}` : ''}`;
 }

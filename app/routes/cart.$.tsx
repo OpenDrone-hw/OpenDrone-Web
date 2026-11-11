@@ -10,7 +10,10 @@ import {
   CART_CHECK,
   DATES_SEEN_FIELD,
   batchChoiceConflict,
+  buyNowToPreorder,
+  cartCurrencyMisses,
   cartLineInfo,
+  sellsBuyNow,
   checkoutOpen,
   hasMixedShipDates,
   loadSessionCart,
@@ -56,7 +59,8 @@ import {usePendingShipTo} from '~/lib/pending-ship-to';
 import {cartReplannedFor, planCartPage} from '~/lib/cart-replan';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
-import {WHOLESALE_SESSION_KEY, cartWholesaleCode, wholesaleFieldShown} from '~/lib/wholesale-codes';
+import {cartWholesaleCode, wholesaleFieldShown, wholesaleVisit} from '~/lib/wholesale-codes';
+import {Notice} from '~/components/Notice';
 import type {RootLoader} from '~/root';
 import {
   CartAddError,
@@ -140,33 +144,52 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   let info: Record<string, CartLineInfo> = {};
   let replanned: string | null = null;
   let payments: string[] = [];
+  let movedToPreorder: 'stock-region' | 'elsewhere' | null = null;
+  let notPriced: {currency: string; lines: string[]} | null = null;
   const country = shipCountryForRequest(request);
   if (cart?.lines.length) {
     // Re-plan and read the payment methods together. Right after a Ship to
     // switch (its marker cookie names this country and the cart carries it)
     // the re-plan reuses the catalog that switch just read instead of a
     // second Shopify read (lib/cart-replan.ts).
-    const plan = await planCartPage(
-      cart,
-      shippingQuote(country, undefined, usSalesRate(context.env)),
-      context.env,
-      cartReplannedFor(request.headers.get('Cookie')),
-      {
-        fresh: (region, destination) => context.catalog.fresh.forRegion(region, destination),
-        recent: (region, destination) => context.catalog.recent.forRegion(region, destination),
-        setCountry: (id, code) => setCartCountry(context.env, id, code),
-        getCart: (id) => getCart(context.env, id),
-        updateCartLines: (id, lines) => updateCartLines(context.env, id, lines),
-        fetchPaymentMethods: () => fetchPaymentMethods(context.env),
-        // EU stock wording only for a country the page's `geo` knows too.
-        euStockKnown: geoCountryForRequest(request) != null,
-        logError: (message, error) => console.error(`[shopify-cart] ${message}`, error instanceof Error ? error.message : 'unknown error'),
-      },
-    );
+    const destination = shippingQuote(country, undefined, usSalesRate(context.env));
+    const planDependencies = {
+      fresh: (region: Parameters<typeof context.catalog.fresh.forRegion>[0], to?: string) => context.catalog.fresh.forRegion(region, to),
+      recent: (region: Parameters<typeof context.catalog.recent.forRegion>[0], to?: string) => context.catalog.recent.forRegion(region, to),
+      setCountry: (id: string, code: string) => setCartCountry(context.env, id, code),
+      getCart: (id: string) => getCart(context.env, id),
+      updateCartLines: (id: string, lines: Parameters<typeof updateCartLines>[2]) => updateCartLines(context.env, id, lines),
+      fetchPaymentMethods: () => fetchPaymentMethods(context.env),
+      // EU stock wording only for a country the page's `geo` knows too.
+      euStockKnown: geoCountryForRequest(request) != null,
+      logError: (message: string, error?: unknown) => console.error(`[shopify-cart] ${message}`, error instanceof Error ? error.message : 'unknown error'),
+    };
+    let plan = await planCartPage(cart, destination, context.env, cartReplannedFor(request.headers.get('Cookie')), planDependencies);
+    // A cart from before the two lanes: its in-stock boards move to the
+    // pre-order variant of the same board, then the cart is planned again
+    // (ship promise, batch) for that variant.
+    const moves = batchChoiceOn(context.env) && plan.catalog ? buyNowToPreorder(plan.cart, plan.catalog) : [];
+    if (moves.length && plan.catalog) {
+      try {
+        const sellsNow = sellsBuyNow(plan.catalog);
+        const updated = await updateCartLines(context.env, plan.cart.id, moves);
+        plan = await planCartPage(updated, destination, context.env, null, planDependencies);
+        movedToPreorder = sellsNow ? 'stock-region' : 'elsewhere';
+      } catch (error) {
+        console.error('[shopify-cart] moving in-stock boards to pre-order failed', error instanceof Error ? error.message : 'unknown error');
+      }
+    }
     cart = plan.cart;
     replanned = replanCheck(plan.change);
     payments = plan.payments;
     info = cartLineInfo(cart, plan.catalog);
+    // One currency, the destination's: a line Shopify could not price in it
+    // is named at the top of the cart.
+    if (plan.catalog) {
+      const currency = plan.catalog.currency;
+      notPriced = {currency, lines: cartCurrencyMisses(cart, currency).map((line) => lineDisplayName(line.handle, line.title, line.variantTitle))};
+      if (!notPriced.lines.length) notPriced = null;
+    }
   }
   const check = new URL(request.url).searchParams.get('check') ?? replanned;
   // International shipping is priced by Shopify from weight-based rates:
@@ -183,10 +206,11 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   // The "Wholesale code" field: only for a retailer's visit while the choice is on.
   const wholesaleField = wholesaleFieldShown({
     choice,
-    visited: context.session.get(WHOLESALE_SESSION_KEY) === '1',
+    // Only this URL: nothing remembered from an earlier /wholesale visit.
+    visited: wholesaleVisit(new URL(request.url)),
     applied: Boolean(cartWholesaleCode(cart?.discountCodes)),
   });
-  return {cart, info, check, payments, country, shippingFrom, compat, choice, wholesaleField};
+  return {cart, info, check, payments, country, shippingFrom, compat, choice, wholesaleField, movedToPreorder, notPriced};
 }
 
 type Removed = SplitItem[];
@@ -204,7 +228,7 @@ const CHECK_NOTICES: Record<CartCheck, () => string> = {
   [CART_CHECK.price]: () => t('check_price', 'A price changed. Check the total below.'),
   [CART_CHECK.priceAndDate]: () => t('check_price_and_date', 'A price and a ship date changed. Check the dates and the total below.'),
   [CART_CHECK.mixedDates]: () => t('parcel_note', 'Your order ships in one parcel, when its last item is ready.'),
-  [CART_CHECK.batchChoice]: () => t('check_batch_choice', 'In-stock boards are bought now from their product page. Remove them here to check out.'),
+  [CART_CHECK.batchChoice]: () => t('check_batch_choice', 'An in-stock board could not be moved to pre-order. Remove it here, or buy it from its product page.'),
   [CART_CHECK.usEuOnly]: () => t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.'),
   [CART_CHECK.market]: () => t('check_market', "Your cart moved to your delivery country's prices. Check the total below."),
 };
@@ -215,7 +239,7 @@ function checkNotice(check: string | null): string | null {
 }
 
 export default function CartPage() {
-  const {cart, info, check, payments, country, shippingFrom, compat, choice, wholesaleField} = useLoaderData<typeof loader>();
+  const {cart, info, check, payments, country, shippingFrom, compat, choice, wholesaleField, movedToPreorder, notPriced} = useLoaderData<typeof loader>();
   const rootData = useRouteLoaderData<RootLoader>('root');
   // Lines moved out for a second order: kept in this browser so the list
   // survives a reload and the trip through checkout.
@@ -227,7 +251,8 @@ export default function CartPage() {
     setRemoved(items);
     storeSplitItems(items);
   };
-  const notice = checkNotice(check);
+  // The move to pre-order says it once; the checkout's old refusal is not repeated.
+  const notice = movedToPreorder && check === CART_CHECK.batchChoice ? null : checkNotice(check);
   const [announcement, setAnnouncement] = useState('');
   // A Ship to switch in flight: the destination gate (Checkout, the shops and
   // blocked notes) follows the picked country at once; Checkout stays
@@ -240,7 +265,28 @@ export default function CartPage() {
         <h1 className="page-title" id={CART_HEADING_ID} tabIndex={-1}><Txt id="cart.title" /></h1>
       </header>
       <div className="sr-only" role="status">{announcement}</div>
-      {notice ? <p className="cart-alert" role="alert">{notice}</p> : null}
+      {/* Every cart message: at the top, in the site's notice. */}
+      {movedToPreorder ? (
+        <Notice dismissible>
+          {movedToPreorder === 'stock-region' ? (
+            <>
+              {t('moved_to_preorder', 'Your in-stock boards were moved to pre-order so everything ships together.')}{' '}
+              {t('moved_to_preorder_now', 'Want them now? Buy them from the product page.')}
+            </>
+          ) : (
+            t('moved_to_preorder_short', 'Your in-stock boards were moved to pre-order.')
+          )}
+        </Notice>
+      ) : null}
+      {notPriced ? (
+        <Notice tone="error">
+          {t('not_priced', '{items}: not sold in {currency} for this delivery country, so it cannot be priced here. Remove it, or choose another delivery country.', {
+            items: notPriced.lines.join(', '),
+            currency: notPriced.currency,
+          })}
+        </Notice>
+      ) : null}
+      {notice ? <Notice tone="warn">{notice}</Notice> : null}
       {removed.length ? (
         <SplitReminder items={removed} cartHasLines={Boolean(cart?.lines.length)} onChange={updateRemoved} />
       ) : null}
@@ -653,6 +699,12 @@ function PopulatedCart({
     <PendingContext.Provider value={onPending}>
       <section className="cart-main">
         <div className="cart-details">
+          {euOnlyForUs ? (
+            <Notice tone="error">
+              {t('check_non_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.')}
+            </Notice>
+          ) : null}
+          {choiceOpen ? <Notice tone="warn">{CHECK_NOTICES[CART_CHECK.batchChoice]()}</Notice> : null}
           {together ? (
             <p className="cart-together" data-cart-together>
               {t('together', 'Everything in this cart ships together by {date}.', {date: SHIP_BY})}
@@ -700,12 +752,8 @@ function PopulatedCart({
             ) : null}
           </dl>
           <EarlyBirdNote show={anyEarly} stock={stockEarly} className="cart-summary-note" />
-          {usBuyer ? (
-            <p className="cart-summary-note">
-              {cart.subtotal.currencyCode === 'USD'
-                ? t('us_price_note', 'Duties included')
-                : t('us_reprice', 'This cart was priced for the EU. Checkout moves it to US prices and ship dates first.')}
-            </p>
+          {usBuyer && cart.subtotal.currencyCode === 'USD' ? (
+            <p className="cart-summary-note">{t('us_price_note', 'Duties included')}</p>
           ) : null}
           {shippingRate && offersPickup(country) ? (
             <p className="cart-summary-note">{t('pickup_note', 'Or pick up free at our Leuven office: choose Pickup at checkout.')}</p>
@@ -782,14 +830,6 @@ function PopulatedCart({
             >
               <input type="hidden" name="intent" value="checkout" />
               {country ? <input type="hidden" name="country" value={country} /> : null}
-              {euOnlyForUs ? (
-                <p className="cart-alert" role="alert">
-                  {t('check_non_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.')}
-                </p>
-              ) : null}
-              {choiceOpen ? (
-                <p className="cart-alert" role="alert">{CHECK_NOTICES[CART_CHECK.batchChoice]()}</p>
-              ) : null}
               {/* This page shows the one-parcel line, so checkout may go on. */}
               {mixed ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
               <button ref={checkoutRef} className="cart-checkout-cta" type="submit" disabled={blocked || choiceOpen} aria-disabled={blocked || choiceOpen || undefined}>

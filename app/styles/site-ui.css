@@ -2822,3 +2822,42 @@ body:has(.avail-bar) .site-header {
 .ho-section-title { margin: var(--sp-3) 0 calc(-1 * var(--sp-2)); font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 600; color: var(--color-text); }
 .ho-lane .ho-lane-title { font-size: var(--fs-md, 1.0625rem); }
 .ho-pay-line { margin-top: calc(-1 * var(--sp-2)); }
+
+/* ============================================
+   Notice (site standard): one bordered line with an icon, at the top of
+   the content it is about. Neutral, gold (check this), red (stops the order).
+   ============================================ */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--color-text);
+}
+.notice.is-warn { border-color: var(--color-gold); }
+.notice.is-error { border-color: var(--color-error); }
+.notice-icon { flex: none; margin-top: 0.15em; color: var(--color-text-muted); }
+.notice.is-warn .notice-icon { color: var(--color-gold); }
+.notice.is-error .notice-icon { color: var(--color-error); }
+.notice-text { flex: 1 1 auto; min-width: 0; }
+.notice-text a { color: var(--color-text); text-decoration: underline; text-underline-offset: 3px; }
+.notice-close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: calc(-1 * var(--sp-3)) calc(-1 * var(--sp-3)) calc(-1 * var(--sp-3)) 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.notice-close:hover { color: var(--color-text); }

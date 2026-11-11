@@ -12,7 +12,10 @@ import {
   EXPRESS_PARAM,
   EXPRESS_REFUSED,
   batchChoiceConflict,
+  buyNowToPreorder,
+  cartCurrencyMisses,
   cartLineInfo,
+  sellsBuyNow,
   expressLines,
   handleShopifyCartAction as actualCartAction,
   splitPlan,
@@ -300,6 +303,31 @@ async function run(values: Record<string, string | string[]>, deps: Partial<Shop
     throw error;
   }
 }
+
+describe('cart: an old cart with an in-stock board, and one currency', () => {
+  it('EU: a Buy now line moves to the Pre-order variant of the same board, same quantity; other lines stay', () => {
+    const catalog = live();
+    assert.equal(sellsBuyNow(catalog), true);
+    assert.deepEqual(buyNowToPreorder(cart([buyNowLine(1, 3), preorderLine(2), motorLine(3)]), catalog), [
+      {id: buyNowLine(1).id, quantity: 3, merchandiseId: CHOICE_IDS[FC].preorder},
+    ]);
+  });
+  it('outside the EU, or batch 1 gone: the same move (the region sells no in-stock boards)', () => {
+    for (const catalog of [live({}, 'US'), live({[FC]: 200})]) {
+      assert.deepEqual(buyNowToPreorder(cart([buyNowLine(1, 2)]), catalog), [{id: buyNowLine(1).id, quantity: 2, merchandiseId: CHOICE_IDS[FC].preorder}]);
+    }
+    assert.equal(sellsBuyNow(live({}, 'US')), false);
+  });
+  it('a cart of pre-orders only moves nothing', () => {
+    assert.deepEqual(buyNowToPreorder(cart([preorderLine(2), motorLine(3)]), live()), []);
+  });
+  it('names a line Shopify did not price in the destination currency', () => {
+    const usd = (l: ShopifyCartLine) => ({...l, total: {amount: '1.00', currencyCode: 'USD'}});
+    const lines = [usd(preorderLine(2)), motorLine(3)];
+    assert.deepEqual(cartCurrencyMisses(cart(lines), 'USD').map((l) => l.id), [motorLine(3).id]);
+    assert.deepEqual(cartCurrencyMisses(cart(lines.map(usd)), 'USD'), []);
+  });
+});
 
 describe('cart: the pre-order lane takes pre-orders only', () => {
   it('an add of a board puts its Pre-order variant in the cart, never its Buy now variant', async () => {

@@ -1,4 +1,3 @@
-import {WHOLESALE_SESSION_KEY, wholesaleVisit} from '~/lib/wholesale-codes';
 import {batchChoiceOn} from '~/lib/shopify-storefront';
 import {useEffect} from 'react';
 import {useNonce} from '~/lib/csp';
@@ -169,12 +168,6 @@ export async function loader(args: Route.LoaderArgs) {
   ]);
 
   const company = getCompanyIdentity(env as unknown as Record<string, string | undefined>);
-  // A retailer's visit (the wholesale page, or a link with `?wholesale`):
-  // the cart shows its "Wholesale code" field for the rest of the session.
-  if (wholesaleVisit(new URL(args.request.url)) && args.context.session.get(WHOLESALE_SESSION_KEY) !== '1') {
-    args.context.session.set(WHOLESALE_SESSION_KEY, '1');
-  }
-
   // Derive locale from the URL path so /nl/* actually renders <html lang="nl">.
   // Hydrogen's storefront.i18n is pinned to EN/US in app/lib/context.ts and
   // doesn't follow the URL; using it would force every page to en_US.
