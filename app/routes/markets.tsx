@@ -70,7 +70,7 @@ export default function MarketsRoute() {
           </table>
         </div>
         <ul className="markets-notes">
-          <li>{t('why_prices', 'EU prices include VAT. Outside the EU there is no EU VAT; your country charges its own import tax on delivery.')}</li>
+          <li>{t('why_prices', 'Prices: EU prices include VAT. Outside the EU, import VAT and duties, if any, are charged on delivery (in the United States they are included in the price).')}</li>
           <li>
             {t('wholesale', 'Shops and dealers outside the EU: in-stock boards available on wholesale orders.')}{' '}
             <Link prefetch="intent" to="/wholesale">{t('wholesale_link', 'Wholesale')}</Link>

@@ -7,7 +7,7 @@
   "lead": "One row per market. Choose your country in the header to see your prices.",
   "table_caption": "Markets, currency, what the price includes, and shipping",
   "your_market": "You",
-  "why_prices": "Why prices differ: EU prices include VAT. Outside the EU there is no EU VAT; your country charges its own import tax on delivery.",
+  "why_prices": "Prices: EU prices include VAT. Outside the EU, import VAT and duties, if any, are charged on delivery (in the United States they are included in the price).",
   "wholesale": "Shops and dealers outside the EU: in-stock boards available on wholesale orders.",
   "wholesale_link": "Wholesale",
   "preorder_terms": "Pre-orders follow the pre-order terms.",
