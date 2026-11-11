@@ -39,6 +39,8 @@ for (const f of fs.readdirSync(COPY_DIR)) {
 function has(id) {
   const i = id.indexOf('.');
   if (i < 0) return false;
+  // 'preorder.json' is the copy file's own name, not a copy id.
+  if (id.slice(i + 1) === 'json' && pages.has(id.slice(0, i))) return true;
   return pages.get(id.slice(0, i))?.has(id.slice(i + 1)) ?? false;
 }
 
