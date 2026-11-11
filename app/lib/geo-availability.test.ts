@@ -34,6 +34,12 @@ describe('geoAvailabilityRegion', () => {
     // UK, Switzerland and Norway get batch 1 with duties on delivery; the US is on hold.
     for (const c of ['GB', 'CH', 'NO']) assert.equal(geoAvailabilityRegion(c), 'import', c);
     assert.equal(geoAvailabilityRegion('US'), 'us');
+    // US sales open: the US reads the March 2027 batch like any destination outside the EU; nothing else moves.
+    assert.equal(geoAvailabilityRegion('US', true), 'intl');
+    assert.equal(geoAvailabilityRegion('us', true), 'intl');
+    assert.equal(geoAvailabilityRegion('BE', true), 'eu');
+    assert.equal(geoAvailabilityRegion('GB', true), 'import');
+    assert.equal(geoAvailabilityRegion(null, true), 'fallback');
     for (const c of ['IS', 'CA', 'AU', 'JP']) assert.equal(geoAvailabilityRegion(c), 'intl', c);
   });
 
@@ -201,7 +207,7 @@ describe('every buy CTA asks the geo hook before saying "Pre-order"', () => {
     assert.match(read('../routes/products.$handle.tsx'), /preorder && !isBundle && !notDirect && !geoInStock/);
   });
   it('the root loader takes the ship line country from geoCountryForRequest', () => {
-    assert.match(read('../root.tsx'), /geoAvailabilityRegion\(country\)/);
+    assert.match(read('../root.tsx'), /geoAvailabilityRegion\(country, usRate != null\)/);
     assert.match(read('../root.tsx'), /geoCountryForRequest\(args\.request\)/);
   });
 });
