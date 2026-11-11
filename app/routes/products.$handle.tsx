@@ -947,6 +947,8 @@ function ProductPage() {
     return build ? stackOffer(build) : null;
   }, [offerChoice?.buyNow, pickedVariant?.sku, builds]);
   const expressRefusal = useExpressRefusal();
+  // Buy now or pre-order on (BATCH_CHOICE): one page for every region.
+  const choiceOn = Boolean(useRouteLoaderData<RootLoader>('root')?.batchChoice);
 
   // Coming-soon state: no prices, no add-to-cart - the buy module becomes a
   // notify-at-launch signup. Root data feeds the Turnstile key.
@@ -1855,6 +1857,11 @@ function ProductPage() {
   const dutiesNote = useGeoDutiesNote();
   // An early bird preorder price names the retail price it rises to.
   const earlyPrice = campaign ? (selectedVariant?.earlyPrice ?? null) : null;
+  // No Buy now lane for this visitor: the pre-order card alone, as the EU
+  // page shows it beside Buy now (same place, type and saving line).
+  const soloPreorder = choiceOn && !offerChoice && !isBundle && Boolean(campaign) && preorder && !geoInStock && pickedVariant
+    ? {preorder: pickedVariant, retail: {price: earlyPrice?.retail ?? pickedVariant.price, campaign: null}}
+    : null;
   const retail = selectedVariant?.sku ? (retailBySku[selectedVariant.sku] ?? null) : null;
   const tiers = tiersFor(CAMPAIGN_CONFIG, selectedVariant?.sku ?? '');
   // A flat-price SKU (an accessory shipping with a campaign SKU) has no
@@ -1879,7 +1886,7 @@ function ProductPage() {
     current: nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
   }));
   const stepBarState =
-    campaign && tiers.length && !offerChoice ? stepBarView(campaign, tiers.map((tier) => tier.upTo)) : null;
+    campaign && tiers.length && !offerChoice && !choiceOn ? stepBarView(campaign, tiers.map((tier) => tier.upTo)) : null;
   const stepBar =
     campaign && stepBarState ? (
       <StepBar
@@ -1951,8 +1958,11 @@ function ProductPage() {
   const accessoryBatches = Boolean(
     campaign?.shipsWith && campaign.batches.some((b) => b.paid || b.status === 'other_region'),
   );
+  // Buy now or pre-order on: one page for every region. A product without
+  // the Buy now lane for this visitor (outside the EU, batch 1 gone, every
+  // other campaign part) shows one pre-order line, never the batch boxes.
   // A board with the two offer cards says where and when on the cards.
-  const showAvailability = Boolean(!offerChoice && campaign && ((tiers.length && stepBarState) || accessoryBatches));
+  const showAvailability = Boolean(!offerChoice && !choiceOn && campaign && ((tiers.length && stepBarState) || accessoryBatches));
   const usEuOnly = usBuyer && !isBundle && !selectedVariant?.campaign && Boolean(selectedVariant?.availableForSale);
   // A unit that waits for a funding target: what happens if it is missed.
   const waitsForTarget = Boolean(campaign && !campaign.targetReached && currentBatch(campaign) && !currentBatch(campaign)!.paid);
@@ -2047,9 +2057,9 @@ function ProductPage() {
           ) : null}
           {vatNote ? <span className="product-buy-vat">{vatNote}</span> : null}
           {/* With the two offer cards, the pre-order card states the saving. */}
-          {offerChoice ? null : <RetailPrice retail={earlyPrice?.retail} />}
+          {offerChoice || soloPreorder ? null : <RetailPrice retail={earlyPrice?.retail} />}
         </span>
-        {offerChoice ? null : <EarlyBirdLine early={earlyPrice} />}
+        {offerChoice || soloPreorder ? null : <EarlyBirdLine early={earlyPrice} />}
         {isBundle ? (
           (() => {
             // Name the actual pair for the tier (20×20 ships the Mini).
@@ -2085,6 +2095,9 @@ function ProductPage() {
             ) : null
           }
         />
+      ) : null}
+      {soloPreorder && !notDirect ? (
+        <OfferChoice solo buyNow={soloPreorder.retail} preorder={soloPreorder.preorder} mode="preorder" onChange={() => undefined} />
       ) : null}
       {offerChoice && expressRefusal ? <p className="cart-alert" role="alert">{expressRefusal}</p> : null}
       {stepBar}
@@ -2143,16 +2156,19 @@ function ProductPage() {
       preorder && !isBundle ? (
         showAvailability && campaign ? (
           <Availability campaign={campaign} region={usBuyer ? 'US' : internationalBuyer ? 'INT' : 'EU'} countShown={Boolean(stepBar)} />
-        ) : offerChoice ? (
-          // One line in one slot for both offers, so choosing moves nothing.
+        ) : offerChoice || (choiceOn && campaign && !geoInStock) ? (
+          // One line in one slot for both offers, so choosing moves nothing;
+          // the same pre-order line in every region.
           <p className="product-buy-ship offer-status" data-offer-status>
             <span>
-              {offerMode === 'buy_now'
+              {offerChoice && offerMode === 'buy_now'
                 ? say('product-chrome.offer_status_buy_now', 'In stock in Belgium, ships in days, EU only')
-                : say('product-chrome.offer_status_preorder', 'Ships by {date}, worldwide', {date: offerChoice.preorder.campaign?.latestShip ?? ''})}
+                : say('product-chrome.offer_status_preorder', 'Ships by {date}, worldwide', {
+                    date: (offerChoice ? offerChoice.preorder.campaign?.latestShip : campaign?.latestShip) ?? '',
+                  })}
             </span>
-            <Link prefetch="intent" to={offerMode === 'buy_now' ? '/terms' : '/preorder'} className="product-buy-terms-link">
-              {offerMode === 'buy_now'
+            <Link prefetch="intent" to={offerChoice && offerMode === 'buy_now' ? '/terms' : '/preorder'} className="product-buy-terms-link">
+              {offerChoice && offerMode === 'buy_now'
                 ? say('product-chrome.offer_terms_buy_now', 'Terms of sale')
                 : say('product-chrome.buy_terms_link', 'Pre-order terms')}
             </Link>
@@ -2182,7 +2198,7 @@ function ProductPage() {
       )}
       {notDirect ? null : usNotice}
       {notDirect || !dutiesNote ? null : <p className="product-buy-ship">{dutiesNote}</p>}
-      {preorder && !isBundle && !notDirect && !geoInStock && !offerChoice ? (
+      {preorder && !isBundle && !notDirect && !geoInStock && !offerChoice && !choiceOn ? (
         <p className="product-buy-ship">
           {targetMissed ? <>{targetMissed}{' '}</> : null}
           <Link prefetch="intent" to="/preorder" className="product-buy-terms-link">

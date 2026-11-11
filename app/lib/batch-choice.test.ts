@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {describe, it} from 'node:test';
 import {bySku, offerSaving, preorderView, variantByMerchandise, type Catalog} from './catalog.ts';
-import {buildModes, heroBuildSelection, modeAddUrl, resolveHeroBuilds} from './hero-build.ts';
+import {buildModes, heroBuildSelection, modeAddUrl, resolveHeroBuilds, stackOffer} from './hero-build.ts';
 import {parseBuilds} from './build-recommendations.ts';
 import {applyCampaign, parseCampaignConfig, preorderChoiceLine, shipsOnlyWithPaid, type CampaignConfig} from './preorder-campaign.ts';
 import {assignBatches, batchPromiseMismatch, batchTag, type PreorderOrder} from './preorder-fulfilment.ts';
@@ -40,7 +40,7 @@ const FC30 = 'OPENFC-LITE-3030';
 
 const map = (on: boolean, data = choiceCatalogData()) =>
   mapShopifyCatalog(data, 'open-drone-test.myshopify.com', JSON.stringify(CHOICE_POLICY), '1', 'default', on);
-const live = (ordered: Record<string, number> = {}, region: 'EU' | 'US' = 'EU', on = true): Catalog =>
+const live = (ordered: Record<string, number> = {}, region: 'EU' | 'US' | 'NEAR' | 'INT' = 'EU', on = true): Catalog =>
   applyCampaign(map(on), CONFIG, ordered, NOW, region);
 
 describe('catalog: two Batch variants fold into one board', () => {
@@ -435,6 +435,30 @@ describe('buy now lane: an express checkout of in-stock boards, never the cart',
   it('the return path stays on the site', async () => {
     const {response} = express({sku: FC, qty: '5', return: '//evil.example/x'}, {fetchCatalog: async () => live({[FC]: 198})});
     assert.equal((await response).headers.get('Location'), `/?${EXPRESS_PARAM}=${EXPRESS_REFUSED.stock}`);
+  });
+});
+
+describe('one page for every region: outside the EU the Buy now lane is simply absent', () => {
+  const builds = parseBuilds(JSON.parse(fs.readFileSync(new URL('../../content/builds.json', import.meta.url), 'utf8')));
+  // US, GB/CH (NEAR), CA/AU (INT): the regions the catalog resolves them to.
+  for (const region of ['US', 'NEAR', 'INT'] as const) {
+    it(`${region}: every board is pre-order only, at its pre-order price, with no stack offer`, () => {
+      const catalog = live({}, region);
+      for (const sku of [FC, FC30, 'OPENESC-2020', 'OPENESC-3030']) {
+        const board = bySku(catalog, sku)!.variant;
+        assert.notEqual(board.offer, 'buy_now', `${region} ${sku}`);
+        assert.equal(board.preorder_offer, undefined);
+      }
+      assert.deepEqual(resolveHeroBuilds(builds, catalog, true).map((b) => stackOffer(b)), [null, null]);
+    });
+  }
+  it('EU: both sizes offer the stack at the sum of the two Buy now prices', () => {
+    const stacks = resolveHeroBuilds(builds, live(), true).map((b) => stackOffer(b));
+    assert.deepEqual(stacks.map((s) => s && [s.size, s.price]).sort(), [['3', 78], ['5', 98]]);
+  });
+  it('EU, one board of a size sold out: no stack for that size', () => {
+    const stacks = resolveHeroBuilds(builds, live({[FC]: 200}), true).map((b) => stackOffer(b));
+    assert.deepEqual(stacks.filter(Boolean).map((s) => s!.size), ['5']);
   });
 });
 

@@ -87,7 +87,7 @@
   "us_batch_note": "The {month} FC and ESC stock does not ship to the US. US orders ship with the {batch} batch.",
   "us_batch_note_stock": "The FC and ESC stock in Belgium ships to EU addresses only. US orders ship with the {batch} batch.",
   "timeline_targets_us": "Every product",
-  "scope_international": "EU, US and more",
+  "scope_international": "Worldwide",
   "not_in_international": "Not available in your country",
   "terms_summary_international": "Pay in full",
   "shipping_summary_international": "International orders",

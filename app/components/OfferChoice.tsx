@@ -48,7 +48,7 @@ export function offerCards(
     price: samePrice && !stack ? null : formatPrice(preorder.price.amount, preorder.price.currencyCode),
     ships: shipBy ? say('offer_preorder_ships', 'Ships by {date}', {date: shipBy}) : say('offer_preorder_ships_plain', 'Ships with the next batch'),
     where: say('offer_preorder_where', 'Worldwide'),
-    extra: saving !== null && !stack ? say('offer_save', 'Save {amount}', {amount: formatPrice(saving, preorder.price.currencyCode)}) : null,
+    extra: saving !== null ? say('offer_save', 'Save {amount}', {amount: formatPrice(saving, preorder.price.currencyCode)}) : null,
   };
   // The stack: this board and its partner of the same size, bought now.
   if (stack) {
@@ -93,8 +93,13 @@ export function OfferChoice({
   onChange,
   stack = null,
   single = null,
+  solo = false,
 }: {
-  buyNow: ProductVariantFragment;
+  /** No Buy now lane for this visitor (outside the EU, batch 1 gone): the
+   *  pre-order card alone, in the same place and type as beside Buy now.
+   *  `buyNow` then only carries the retail price the saving is read from. */
+  solo?: boolean;
+  buyNow: Pick<ProductVariantFragment, 'price' | 'campaign'>;
   preorder: ProductVariantFragment;
   mode: BatchOffer;
   onChange: (mode: BatchOffer) => void;
@@ -105,16 +110,16 @@ export function OfferChoice({
 }) {
   const name = useId();
   return (
-    <fieldset className="offer-choice" data-offer-choice>
+    <fieldset className={`offer-choice${solo ? ' is-solo' : ''}`} data-offer-choice>
       <legend className="sr-only">{copyText('product-chrome.offer_legend') ?? 'Buy now or pre-order'}</legend>
-      {offerCards(buyNow, preorder, stack).map((card) => (
-        <label key={card.offer} className={`offer-card${mode === card.offer ? ' is-selected' : ''}`} data-offer={card.offer}>
+      {offerCards(buyNow, preorder, stack).filter((card) => !solo || card.offer === 'preorder').map((card) => (
+        <label key={card.offer} className={`offer-card${mode === card.offer || solo ? ' is-selected' : ''}`} data-offer={card.offer}>
           <input
             type="radio"
             className="offer-card-input"
             name={name}
             value={card.offer}
-            checked={mode === card.offer}
+            checked={mode === card.offer || solo}
             onChange={() => onChange(card.offer)}
           />
           <span className="offer-card-head">
