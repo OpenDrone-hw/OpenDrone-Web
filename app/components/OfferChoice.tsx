@@ -9,7 +9,9 @@ import type {ProductVariantFragment} from '~/lib/product-shapes';
 export type OfferCard = {
   offer: BatchOffer;
   title: string;
-  price: string;
+  /** The offer's price, or null when both offers cost the same: the cards
+   *  then differ only by when and where the board ships. */
+  price: string | null;
   ships: string;
   where: string;
   /** "12 left" on buy now, "Save €2.90" on a cheaper pre-order, else null. */
@@ -30,19 +32,20 @@ export function offerCards(
   const left = buyNow.campaign?.paidLeft ?? null;
   const saving = offerSaving(Number(buyNow.price.amount), Number(preorder.price.amount));
   const shipBy = preorder.campaign?.latestShip ?? null;
+  const samePrice = Number(buyNow.price.amount) === Number(preorder.price.amount);
   return [
     {
       offer: 'buy_now',
       title: say('offer_buy_now', 'Buy now'),
-      price: formatPrice(buyNow.price.amount, buyNow.price.currencyCode),
-      ships: say('offer_buy_now_ships', 'Ships in a few working days'),
+      price: samePrice ? null : formatPrice(buyNow.price.amount, buyNow.price.currencyCode),
+      ships: say('offer_buy_now_ships', 'Ships in days'),
       where: say('offer_buy_now_where', 'From Belgium, EU only'),
       extra: left != null ? say('offer_left', '{count} left', {count: left}) : null,
     },
     {
       offer: 'preorder',
       title: say('offer_preorder', 'Pre-order'),
-      price: formatPrice(preorder.price.amount, preorder.price.currencyCode),
+      price: samePrice ? null : formatPrice(preorder.price.amount, preorder.price.currencyCode),
       ships: shipBy ? say('offer_preorder_ships', 'Ships by {date}', {date: shipBy}) : say('offer_preorder_ships_plain', 'Ships with the next batch'),
       where: say('offer_preorder_where', 'Worldwide'),
       extra: saving !== null ? say('offer_save', 'Save {amount}', {amount: formatPrice(saving, preorder.price.currencyCode)}) : null,
@@ -83,13 +86,11 @@ export function OfferChoice({
           />
           <span className="offer-card-head">
             <span className="offer-card-title">{card.title}</span>
-            <span className="offer-card-price">{card.price}</span>
+            {card.price ? <span className="offer-card-price">{card.price}</span> : null}
           </span>
           <span className="offer-card-line">{card.ships}</span>
-          <span className="offer-card-line is-muted">
-            {card.where}
-            {card.extra ? <span className={`offer-card-extra is-${card.offer}`}>{card.extra}</span> : null}
-          </span>
+          <span className="offer-card-line is-muted">{card.where}</span>
+          {card.extra ? <span className={`offer-card-line offer-card-extra is-${card.offer}`}>{card.extra}</span> : null}
         </label>
       ))}
     </fieldset>

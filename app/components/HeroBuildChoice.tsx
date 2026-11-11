@@ -43,6 +43,11 @@ export function HeroBuildChoice({
   const [wanted, setWanted] = useState<BuildMode>('buy_now');
   const mode: BuildMode = wanted === 'buy_now' && modes.buy_now ? 'buy_now' : 'preorder';
   const shown = modes[mode] ?? modes.preorder;
+  // Every part is listed in both modes, so the block keeps one height and
+  // the buyer sees what "Buy now" leaves out: a part that is not in the
+  // chosen mode is dimmed and reads "Pre-order" where its price would be.
+  const inMode = new Map(shown.parts.map((part) => [part.sku, part]));
+  const rows = modes.preorder.parts.map((part) => ({part: inMode.get(part.sku) ?? part, later: !inMode.has(part.sku)}));
   const [selected, setSelected] = useState(() => new Set(build.parts.map((part) => part.sku)));
   const status = useProductStatusResolver();
   const sellable = (handle: string) => isPurchasableStatus(status(handle));
@@ -102,8 +107,8 @@ export function HeroBuildChoice({
         </fieldset>
       ) : null}
       <ul className="hero-build-parts" onWheel={(event) => event.stopPropagation()}>
-        {shown.parts.map((part) => {
-          const included = selected.has(part.sku);
+        {rows.map(({part, later}) => {
+          const included = !later && selected.has(part.sku);
           const available = part.available && sellable(part.handle);
           const role = BUILD_ROLES[part.role];
           const roleLabel = copyText(`home.build_role_${part.role}`) ?? role.label;
@@ -131,12 +136,13 @@ export function HeroBuildChoice({
           return (
             <li
               key={part.sku}
-              className={`hero-build-part${included ? '' : ' is-excluded'}${activePart === role.beat ? ' is-active' : ''}`}
+              className={`hero-build-part${included ? '' : ' is-excluded'}${later ? ' is-later' : ''}${activePart === role.beat ? ' is-active' : ''}`}
             >
               <label className="hero-build-check">
                 <input
                   type="checkbox"
                   checked={included}
+                  disabled={later}
                   aria-label={copyFill('home.build_include_aria', 'Include {part}', {part: part.title})}
                   onChange={() =>
                     setSelected((previous) => {
@@ -164,7 +170,9 @@ export function HeroBuildChoice({
                 </Link>
               )}
               <span className="hero-build-price">
-                {!available ? (
+                {later ? (
+                  <span className="hero-build-later">{say('choice_later', 'Pre-order')}</span>
+                ) : !available ? (
                   <Txt id="home.build_unavailable" />
                 ) : part.price === null || !selection.showPrices ? (
                   ''

@@ -1777,6 +1777,7 @@ function ProductPage() {
         activeValue={activeTier}
         onSelect={selectTier}
         showPrices={!soon}
+        offer={offerChoice ? offerMode : undefined}
       />
     ) : null;
   // A Specs column header selects its version the way a ladder button does:
@@ -1863,7 +1864,7 @@ function ProductPage() {
     current: nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
   }));
   const stepBarState =
-    campaign && tiers.length && selectedVariant?.offer !== 'buy_now' ? stepBarView(campaign, tiers.map((tier) => tier.upTo)) : null;
+    campaign && tiers.length && !offerChoice ? stepBarView(campaign, tiers.map((tier) => tier.upTo)) : null;
   const stepBar =
     campaign && stepBarState ? (
       <StepBar
@@ -1891,7 +1892,8 @@ function ProductPage() {
   const [quantity, setQuantity] = useState(setOf ?? 1);
   useEffect(() => {
     setQuantity(setOf ?? 1);
-  }, [selectedVariant?.id, setOf]);
+    // Keyed on the picked variant: choosing buy now or pre-order keeps the quantity.
+  }, [pickedVariant?.id, setOf]);
   const buyQuantity = Math.min(quantity, maxQuantity);
   // Why the stepper stops: the per-order cap, or the units left in the
   // paid batch when fewer remain.
@@ -2104,7 +2106,21 @@ function ProductPage() {
       preorder && !isBundle ? (
         showAvailability && campaign ? (
           <Availability campaign={campaign} region={usBuyer ? 'US' : internationalBuyer ? 'INT' : 'EU'} countShown={Boolean(stepBar)} />
-        ) : offerChoice ? null : (
+        ) : offerChoice ? (
+          // One line in one slot for both offers, so choosing moves nothing.
+          <p className="product-buy-ship offer-status" data-offer-status>
+            <span>
+              {offerMode === 'buy_now'
+                ? say('product-chrome.offer_status_buy_now', 'In stock in Belgium')
+                : say('product-chrome.offer_status_preorder', 'Batch confirmed')}
+            </span>
+            <Link prefetch="intent" to={offerMode === 'buy_now' ? '/terms' : '/preorder'} className="product-buy-terms-link">
+              {offerMode === 'buy_now'
+                ? say('product-chrome.offer_terms_buy_now', 'Terms of sale')
+                : say('product-chrome.buy_terms_link', 'Pre-order terms')}
+            </Link>
+          </p>
+        ) : (
           <ShipLine campaign={campaign} promise={shipPromise} className="product-buy-stock" />
         )
       ) : (
@@ -2129,7 +2145,7 @@ function ProductPage() {
       )}
       {notDirect ? null : usNotice}
       {notDirect || !dutiesNote ? null : <p className="product-buy-ship">{dutiesNote}</p>}
-      {preorder && !isBundle && !notDirect && !geoInStock ? (
+      {preorder && !isBundle && !notDirect && !geoInStock && !offerChoice ? (
         <p className="product-buy-ship">
           {targetMissed ? <>{targetMissed}{' '}</> : null}
           <Link prefetch="intent" to="/preorder" className="product-buy-terms-link">

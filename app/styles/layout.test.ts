@@ -139,7 +139,39 @@ describe('buy now or pre-order blocks', () => {
 
   it('keeps the cart badge on one line and the mode labels readable', () => {
     assert.match(rule('.cart-line-badge'), /white-space:\s*nowrap/);
-    assert.match(rule('.cart-choice-action,\n.cart-summary-page .cart-choice-action'), /text-transform:\s*none/);
+    assert.match(rule('.cart-choice-action'), /text-transform:\s*none/);
+  });
+
+  it('keeps the pinned bar one slim row: the switch, never the cards', () => {
+    assert.match(plain, /\.buy-rail\.is-pinned \.offer-card-line,\s*\.buy-rail\.is-pinned \.product-buy:has\(\.offer-choice\) \.product-buy-price \{ display: none; \}/);
+    assert.match(rule('.buy-rail.is-pinned .offer-choice'), /height:\s*var\(--pin-h, 36px\)/);
+    // One button width for both labels.
+    assert.match(plain, /\.buy-rail\.is-pinned \.product-buy:has\(\.offer-choice\) \.product-form \.btn-primary \{ min-width:/);
+  });
+
+  it('moves nothing when the mode changes: one status slot, one price column, tabular digits', () => {
+    assert.match(rule('.offer-status'), /min-height:/);
+    assert.match(rule('.offer-status'), /white-space:\s*nowrap/);
+    assert.match(rule('.hero-build-choice .hero-build-price'), /min-width:\s*\d+px/);
+    assert.match(rule('.hero-build-choice .hero-build-price'), /tabular-nums/);
+    assert.match(rule('.offer-card-title,\n.offer-card-price'), /tabular-nums/);
+  });
+
+  it('sets the offer cards on the size tile scale and selection style', () => {
+    const title = rule('.offer-card-title,\n.offer-card-price');
+    assert.match(title, /font-size:\s*var\(--fs-sm\)/);
+    assert.match(rule('.offer-card-line'), /font-size:\s*var\(--fs-xs\)/);
+    assert.match(rule('.offer-card'), /padding:\s*var\(--sp-3\)/);
+    assert.match(rule('.offer-choice'), /gap:\s*var\(--sp-2\)/);
+    assert.match(rule('.offer-card.is-selected'), /box-shadow:\s*0 0 0 1\.75px var\(--color-gold\)/);
+  });
+
+  it('gives the two cart badges equal weight', () => {
+    for (const state of ['.cart-line-badge.is-now', '.cart-line-badge.is-preorder']) {
+      assert.match(rule(state), /border-color:/);
+      assert.match(rule(state), /background:/);
+      assert.match(rule(state), /color:/);
+    }
   });
 
   it('hides the hero beat copy on every height where the pre-order block reaches it', () => {
