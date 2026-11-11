@@ -143,9 +143,11 @@ describe('buy now or pre-order blocks', () => {
   });
 
   it('keeps the pinned bar one slim row: the switch, never the cards', () => {
-    assert.match(plain, /\.buy-rail\.is-pinned \.offer-card-line,\s*\.buy-rail\.is-pinned \.offer-card-title,\s*\.buy-rail\.is-pinned \.offer-card-thumbs,\s*\.buy-rail\.is-pinned \.offer-choice-foot,\s*\.buy-rail\.is-pinned \.cta-full,\s*\.buy-rail\.is-pinned \.cta-short,\s*\.buy-rail\.is-pinned \.product-buy:has\(\.offer-choice\) \.product-buy-price \{ display: none; \}/);
-    // The short segment names ("Stack now", "Pre-order") and the short button label.
-    assert.match(plain, /\.buy-rail\.is-pinned \.offer-card-pin,\s*\.buy-rail\.is-pinned \.cta-pin \{ display: inline;/);
+    assert.match(plain, /\.buy-rail\.is-pinned \.offer-card-line,\s*\.buy-rail\.is-pinned \.offer-card-title,\s*\.buy-rail\.is-pinned \.offer-card-price,\s*\.buy-rail\.is-pinned \.offer-addon,\s*\.buy-rail\.is-pinned \.buy-total,\s*\.buy-rail\.is-pinned \.product-buy:has\(\.offer-choice\) \.product-buy-price \{ display: none; \}/);
+    // The segments: "Buy now 29.00", "Pre-order 26.10", the price shown even when both cost the same.
+    assert.match(plain, /\.buy-rail\.is-pinned \.offer-card-pin,\s*\.buy-rail\.is-pinned \.offer-card-pinprice \{ display: inline;/);
+    // A phone: name over price, so "Buy the stack now" still fits the row.
+    assert.match(plain, /@media \(max-width: 480px\) \{[^}]*\.buy-rail\.is-pinned \.offer-card-head \{ flex-direction: column;/);
     assert.match(rule('.buy-rail.is-pinned .offer-choice'), /height:\s*var\(--pin-h, 36px\)/);
     // One button width for both labels.
     assert.match(plain, /\.buy-rail\.is-pinned \.product-buy:has\(\.offer-choice\) \.product-form \.btn-primary \{ min-width:/);
@@ -168,9 +170,11 @@ describe('buy now or pre-order blocks', () => {
     assert.match(rule('.offer-card.is-selected'), /box-shadow:\s*0 0 0 1\.75px var\(--color-gold\)/);
   });
 
-  it('keeps "Just this board" in one slot under the cards in both modes', () => {
-    assert.match(rule('.offer-choice-foot'), /min-height:/);
-    assert.match(rule('.offer-choice-foot'), /grid-column:\s*1/);
+  it('reserves the stack add-on row and the stack total slot, so choosing or ticking moves nothing', () => {
+    assert.match(rule('.offer-addon'), /min-height:/);
+    assert.match(rule('.offer-addon-text'), /white-space:\s*nowrap/);
+    assert.match(rule('.product-buy .product-form > .buy-total,\n.product-buy .product-form:has(> .product-qty) > .product-qty ~ .buy-total'), /flex:\s*0 0 4\.75rem/);
+    assert.doesNotMatch(plain, /\.offer-single|\.offer-choice-foot|\.cta-short/);
   });
 
   it('hides the hero beat copy on every height where the pre-order block reaches it', () => {

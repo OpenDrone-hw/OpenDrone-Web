@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {describe, it} from 'node:test';
 import {bySku, offerSaving, preorderView, variantByMerchandise, type Catalog} from './catalog.ts';
-import {buildModes, heroBuildSelection, modeAddUrl, resolveHeroBuilds, stackOffer} from './hero-build.ts';
+import {boardExpressLines, buildModes, expressLinesField, heroBuildSelection, modeAddUrl, resolveHeroBuilds, stackOffer} from './hero-build.ts';
 import {parseBuilds} from './build-recommendations.ts';
 import {applyCampaign, parseCampaignConfig, preorderChoiceLine, shipsOnlyWithPaid, type CampaignConfig} from './preorder-campaign.ts';
 import {assignBatches, batchPromiseMismatch, batchTag, type PreorderOrder} from './preorder-fulfilment.ts';
@@ -430,6 +430,44 @@ describe('buy now lane: an express checkout of in-stock boards, never the cart',
     const {response, made} = express({lines: `${FC}:1,OPENMOTOR-1604:4`});
     assert.match((await response).headers.get('Location') ?? '', /buy=sold-out$/);
     assert.deepEqual(made, []);
+  });
+
+  describe('board page: the stack is an add-on to this board, unticked by default', () => {
+    const builds = parseBuilds(JSON.parse(fs.readFileSync(new URL('../../content/builds.json', import.meta.url), 'utf8')));
+    const stackFor = (catalog: Catalog) => {
+      const build = resolveHeroBuilds(builds, catalog, true).find((b) => b.parts.some((part) => part.sku === FC));
+      return build ? stackOffer(build) : null;
+    };
+
+    it('toggle off: one line, this board, straight to checkout', async () => {
+      const lines = boardExpressLines(FC, stackFor(live()), false);
+      assert.deepEqual(lines, [{sku: FC, quantity: 1}]);
+      const {response, made} = express({lines: expressLinesField(lines, 2)});
+      assert.equal((await response).headers.get('Location'), EXPRESS_CHECKOUT);
+      assert.deepEqual(made[0].map((l) => [l.merchandiseId, l.quantity]), [[CHOICE_IDS[FC].buyNow, 2]]);
+    });
+
+    it('toggle on: two lines, this board and its partner, both batch 1', async () => {
+      const lines = boardExpressLines(FC, stackFor(live()), true);
+      assert.deepEqual(lines.map((l) => l.sku).sort(), [ESC, FC].sort());
+      const {response, made} = express({lines: expressLinesField(lines, 1)});
+      assert.equal((await response).headers.get('Location'), EXPRESS_CHECKOUT);
+      assert.deepEqual(made[0].map((l) => l.merchandiseId).sort(), [CHOICE_IDS[FC].buyNow, CHOICE_IDS[ESC].buyNow].sort());
+      assert.deepEqual(made[0].map((l) => l.attributes?.find((a) => a.key === '_batch')?.value).sort(), [`${ESC}:1`, `${FC}:1`].sort());
+    });
+
+    it('partner in stock at page load, sold out at purchase: back with a message, nothing created', async () => {
+      const lines = boardExpressLines(FC, stackFor(live()), true);
+      const {response, made} = express({lines: expressLinesField(lines, 1)}, {fetchCatalog: async () => live({[ESC]: 200})});
+      assert.match((await response).headers.get('Location') ?? '', /buy=sold-out$/);
+      assert.deepEqual(made, []);
+    });
+
+    it('partner sold out: no stack add-on, and a ticked box still buys this board alone', () => {
+      const stack = stackFor(live({[ESC]: 200}));
+      assert.equal(stack, null);
+      assert.deepEqual(boardExpressLines(FC, stack, true), [{sku: FC, quantity: 1}]);
+    });
   });
 
   it('the return path stays on the site', async () => {

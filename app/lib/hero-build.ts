@@ -226,6 +226,18 @@ export function stackOffer(build: HeroBuild): {
   };
 }
 
+/**
+ * What a board page's Buy now button buys: this board alone, or, with the
+ * stack add-on ticked and the stack in stock, this board and its partner.
+ */
+export function boardExpressLines(
+  sku: string,
+  stack: {lines: ReadonlyArray<{sku: string; quantity: number}>} | null,
+  withStack: boolean,
+): Array<{sku: string; quantity: number}> {
+  return withStack && stack ? stack.lines.map((line) => ({...line})) : [{sku, quantity: 1}];
+}
+
 /** The `lines` field of an express purchase: each line times the quantity. */
 export function expressLinesField(lines: ReadonlyArray<{sku: string; quantity: number}>, quantity: number): string {
   return lines.map((line) => `${line.sku}:${line.quantity * quantity}`).join(',');

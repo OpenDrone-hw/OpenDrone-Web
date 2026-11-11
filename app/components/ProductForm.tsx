@@ -29,10 +29,13 @@ export function ProductForm({
   onQuantityChange,
   showLineTotal = false,
   express,
+  buyAside,
 }: {
+  /** A small slot beside the buy button (the stack total). */
+  buyAside?: React.ReactNode;
   /** The Buy now lane: the button goes straight to a checkout of these
    *  in-stock lines (times the quantity) instead of adding to the cart. */
-  express?: {lines: ReadonlyArray<{sku: string; quantity: number}>; label: string; short?: string; pin?: string} | null;
+  express?: {lines: ReadonlyArray<{sku: string; quantity: number}>; label: string} | null;
   productOptions: MappedProductOptions[];
   selectedVariant: ProductVariantFragment | null;
   /** Option names already handled elsewhere (e.g. the comparison ladder
@@ -251,13 +254,7 @@ export function ProductForm({
       ) : null}
       {express ? (
         <ExpressBuy lines={express.lines} quantity={qty} product={selectedVariant?.product?.handle} disabled={disabled}>
-          {express.pin ? (
-            <>
-              <span className="cta-full">{express.label}</span>
-              {express.short ? <span className="cta-short">{express.short}</span> : null}
-              <span className="cta-pin">{express.pin}</span>
-            </>
-          ) : express.label}
+          {express.label}
         </ExpressBuy>
       ) : (
       <AddToCartButton
@@ -277,6 +274,7 @@ export function ProductForm({
             : ctaLabelSoldOut}
       </AddToCartButton>
       )}
+      {buyAside}
       {onQuantityChange && !isBundle && maxQuantityNote && qty >= maxQuantity ? (
         <p className="product-qty-note" role="status">
           {maxQuantityNote}

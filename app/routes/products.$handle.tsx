@@ -33,7 +33,7 @@ import {
   toProduct,
   type BatchOffer,
 } from '~/lib/catalog';
-import {OfferChoice} from '~/components/OfferChoice';
+import {OfferChoice, StackAddonRow} from '~/components/OfferChoice';
 import {buyUrl, commerceHandoff} from '~/lib/shop-links';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
@@ -48,7 +48,7 @@ import {BuildWithThis} from '~/components/BuildWithThis';
 import {CartPlacementProvider} from '~/components/AddToCartButton';
 import {parseBuilds} from '~/lib/build-recommendations';
 import {batchChoiceOn} from '~/lib/shopify-storefront';
-import {resolveHeroBuilds, stackOffer} from '~/lib/hero-build';
+import {boardExpressLines, resolveHeroBuilds, stackOffer} from '~/lib/hero-build';
 import {ExpressBuy, useExpressRefusal} from '~/components/ExpressBuy';
 import {buildForProduct} from '~/lib/related-parts';
 import buildsJson from '../../content/builds.json';
@@ -938,14 +938,21 @@ function ProductPage() {
   const [offerMode, setOfferMode] = useState<BatchOffer>('buy_now');
   const offerChoice = pickedVariant?.preorderOffer ? {buyNow: pickedVariant, preorder: pickedVariant.preorderOffer} : null;
   const selectedVariant = offerChoice && offerMode === 'preorder' ? offerChoice.preorder : pickedVariant;
-  // The Buy now lane sells the FC and ESC stack of this board's size when
-  // both are in stock for this buyer; else this board alone. Either way it
-  // is an express checkout, never the cart.
+  // The Buy now lane sells this board. The stack (this board and its
+  // partner of the same size) is an optional add-on, unticked by default,
+  // offered only while both are in stock for this buyer. Either way it is
+  // an express checkout, never the cart.
   const stack = useMemo(() => {
     if (!offerChoice?.buyNow || !pickedVariant?.sku) return null;
     const build = builds.find((b) => b.parts.some((part) => part.sku === pickedVariant.sku && (part.role === 'flight-controller' || part.role === 'esc')));
     return build ? stackOffer(build) : null;
   }, [offerChoice?.buyNow, pickedVariant?.sku, builds]);
+  const partner = stack && pickedVariant?.sku ? (stack.parts.find((part) => part.sku !== pickedVariant.sku) ?? null) : null;
+  const [withStack, setWithStack] = useState(false);
+  // A new size starts on this board alone.
+  useEffect(() => setWithStack(false), [pickedVariant?.id]);
+  // The stack is bought only from Buy now, with the box ticked.
+  const stackOn = Boolean(withStack && stack && partner && offerMode === 'buy_now');
   const expressRefusal = useExpressRefusal();
   // Buy now or pre-order on (BATCH_CHOICE): one page for every region.
   const choiceOn = Boolean(useRouteLoaderData<RootLoader>('root')?.batchChoice);
@@ -1837,12 +1844,8 @@ function ProductPage() {
     content.statusNote,
     rootData?.shopOpen ?? false,
   );
-  // The headline price follows the chosen card: the stack's when it sells.
-  const buyPrice = isBundle
-    ? bundlePrice
-    : stack && offerChoice && offerMode === 'buy_now'
-      ? {amount: stack.price.toFixed(2), currencyCode: stack.currency}
-      : selectedVariant?.price;
+  // The headline price is this board's, for the chosen card; never a stack total.
+  const buyPrice = isBundle ? bundlePrice : selectedVariant?.price;
   const buyAvailable = isBundle
     ? bundleAvailable
     : Boolean(selectedVariant?.availableForSale);
@@ -1906,7 +1909,7 @@ function ProductPage() {
     ? (campaign.paidLeft ?? campaign.batchUnits - campaign.batchOrdered)
     : null;
   const maxQuantity =
-    stack && offerMode === 'buy_now'
+    stackOn && stack
       ? Math.max(1, Math.min(MAX_LINE_QUANTITY, stack.max))
       : offerChoice && offerMode === 'preorder'
         ? MAX_LINE_QUANTITY
@@ -2084,16 +2087,18 @@ function ProductPage() {
           preorder={offerChoice.preorder}
           mode={offerMode}
           onChange={setOfferMode}
-          stack={stack ? {size: stack.size, price: stack.price, currency: stack.currency, thumbs: stack.parts.map((part) => part.image)} : null}
-          single={
-            stack && pickedVariant?.sku ? (
-              <ExpressBuy lines={[{sku: pickedVariant.sku, quantity: 1}]} className="offer-single" product={product.handle}>
-                {say('product-chrome.offer_single', 'Just this board, {price}', {
-                  price: formatPrice(offerChoice.buyNow.price.amount, offerChoice.buyNow.price.currencyCode),
-                })}
-              </ExpressBuy>
-            ) : null
+        />
+      ) : null}
+      {offerChoice && !notDirect ? (
+        <StackAddonRow
+          addon={
+            partner
+              ? {name: partner.title, price: formatPrice(partner.price ?? 0, partner.currency), thumb: partner.image}
+              : null
           }
+          shown={offerMode === 'buy_now'}
+          checked={withStack}
+          onChange={setWithStack}
         />
       ) : null}
       {soloPreorder && !notDirect ? (
@@ -2120,10 +2125,27 @@ function ProductPage() {
         showLineTotal={Boolean(setOf)}
         express={
           offerChoice && offerMode === 'buy_now' && pickedVariant?.sku
-            ? stack
-              ? {lines: stack.lines, label: say('product-chrome.offer_cta_stack', 'Buy the {size}-inch stack now', {size: stack.size}), short: say('product-chrome.offer_cta_stack_short', 'Buy the stack now'), pin: say('product-chrome.buy_cta_buy_now', 'Buy now')}
-              : {lines: [{sku: pickedVariant.sku, quantity: 1}], label: say('product-chrome.buy_cta_buy_now', 'Buy now')}
+            ? {
+                lines: boardExpressLines(pickedVariant.sku, stack, stackOn),
+                label: stackOn
+                  ? say('product-chrome.offer_cta_stack', 'Buy the stack now')
+                  : say('product-chrome.buy_cta_buy_now', 'Buy now'),
+              }
             : null
+        }
+        buyAside={
+          // One slot beside the button for both offers (only filled with
+          // the stack ticked), so neither the choice nor the box moves it.
+          offerChoice && !notDirect && builds.some((b) => b.parts.some((part) => part.handle === product.handle) && stackOffer(b)) ? (
+            <span className="buy-total" aria-live="polite">
+              {stackOn && stack ? (
+                <>
+                  <span className="buy-total-label">{say('product-chrome.offer_stack_total', 'Stack total')}</span>
+                  <span className="buy-total-amount">{formatPrice((stack.price * buyQuantity).toFixed(2), stack.currency)}</span>
+                </>
+              ) : null}
+            </span>
+          ) : null
         }
       />
       {notDirect === 'blocked' ? (

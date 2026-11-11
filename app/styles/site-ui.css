@@ -2450,10 +2450,37 @@ body:has(.avail-bar) .site-header {
   font-variant-numeric: tabular-nums;
 }
 .offer-card.is-selected .offer-card-title { font-weight: 700; }
-.offer-card-head:has(.offer-card-thumbs) { justify-content: flex-start; }
-.offer-card-head:has(.offer-card-thumbs) .offer-card-price { margin-left: auto; }
-.offer-card-thumbs { display: inline-flex; align-self: center; flex: none; }
-.offer-card-thumbs img {
+.offer-card-pin { display: none; }
+.offer-card-pinprice { display: none; }
+/* The stack, an optional add-on under the cards: one compact row, the slot
+   always reserved so choosing an offer or ticking the box moves nothing. */
+.offer-addon {
+  min-height: 1.75rem;
+  margin: calc(-1 * var(--sp-1)) 0 var(--sp-3);
+}
+.offer-addon-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  min-height: 1.75rem;
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.offer-addon-row:hover { color: var(--color-text); }
+.offer-addon-input {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--color-gold);
+  cursor: pointer;
+}
+.offer-addon-row img {
+  flex: none;
   width: 22px;
   height: 22px;
   border-radius: var(--r-xs);
@@ -2461,36 +2488,41 @@ body:has(.avail-bar) .site-header {
   background: var(--color-bg);
   object-fit: contain;
 }
-.offer-card-thumbs img + img { margin-left: -6px; }
-.offer-card-pin,
-.cta-pin,
-.cta-short { display: none; }
-/* A phone's buy button keeps one line: "Buy the stack now" (the size is on the tile above). */
-@media (max-width: 480px) {
-  .product-buy .cta-short { display: inline; }
-  .product-buy .cta-short ~ .cta-pin { display: none; }
-  .product-buy .cta-full:has(+ .cta-short) { display: none; }
+.offer-addon-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-/* "Just this board, 29.00": a quiet link under the stack card, in both modes. */
-.offer-choice-foot {
-  grid-column: 1;
-  min-height: 1.5em;
-  margin-top: calc(-1 * var(--sp-1));
-}
-.offer-choice-foot .express-buy { display: inline; }
-.offer-single {
-  padding: 0;
-  border: 0;
-  background: none;
-  font-size: var(--fs-xs);
-  line-height: 1.5;
-  color: var(--color-text-muted);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
+.offer-addon-input:checked ~ .offer-addon-text { color: var(--color-text); }
+/* "Stack total 78.00" beside the button: a fixed slot, empty unless the stack is ticked. */
+.product-buy .product-form > .buy-total,
+.product-buy .product-form:has(> .product-qty) > .product-qty ~ .buy-total {
+  display: flex;
+  flex: 0 0 4.75rem;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  line-height: 1.25;
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.offer-single:hover { color: var(--color-text); }
+.buy-total-label { font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap; }
+/* A phone's buy row has no room beside the button: the total takes its own
+   reserved line under it, "Stack total 78.00", right-aligned. */
+@media (max-width: 480px) {
+  .product-buy .product-form > .buy-total,
+  .product-buy .product-form:has(> .product-qty) > .product-qty ~ .buy-total {
+    flex: 1 1 100%;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 0.375rem;
+    min-height: 1.25rem;
+    margin-top: calc(-1 * var(--sp-1));
+  }
+}
+.buy-total-amount { font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); white-space: nowrap; }
 .offer-card-line {
   font-size: var(--fs-xs);
   line-height: 1.45;
@@ -2504,8 +2536,6 @@ body:has(.avail-bar) .site-header {
 .offer-card-extra.is-preorder { color: var(--color-gold-text); }
 @media (max-width: 480px) {
   .offer-choice { grid-template-columns: minmax(0, 1fr); }
-  /* Stacked: "Just this board" stays right under the stack card. */
-  .offer-card[data-offer="preorder"] { order: 2; }
 }
 
 /* The line under the button: one slot, the same height for both offers. */
@@ -2553,14 +2583,17 @@ body:has(.avail-bar) .site-header {
 .buy-rail.is-pinned .offer-card.is-selected .offer-card-price { color: var(--color-on-accent); }
 .buy-rail.is-pinned .offer-card-line,
 .buy-rail.is-pinned .offer-card-title,
-.buy-rail.is-pinned .offer-card-thumbs,
-.buy-rail.is-pinned .offer-choice-foot,
-.buy-rail.is-pinned .cta-full,
-.buy-rail.is-pinned .cta-short,
+.buy-rail.is-pinned .offer-card-price,
+.buy-rail.is-pinned .offer-addon,
+.buy-rail.is-pinned .buy-total,
 .buy-rail.is-pinned .product-buy:has(.offer-choice) .product-buy-price { display: none; }
 .buy-rail.is-pinned .offer-card-pin,
-.buy-rail.is-pinned .cta-pin { display: inline; font-size: 13px; line-height: 1; white-space: nowrap; color: var(--color-text); font-weight: 600; }
-.buy-rail.is-pinned .offer-card.is-selected .offer-card-pin { color: var(--color-on-accent); }
+.buy-rail.is-pinned .offer-card-pinprice { display: inline; font-size: 13px; line-height: 1; white-space: nowrap; color: var(--color-text); font-weight: 600; }
+.buy-rail.is-pinned .offer-card-pinprice { font-weight: 500; }
+.buy-rail.is-pinned .product-buy .product-form > .buy-total,
+.buy-rail.is-pinned .product-buy .product-form:has(> .product-qty) > .product-qty ~ .buy-total { display: none; }
+.buy-rail.is-pinned .offer-card.is-selected .offer-card-pin,
+.buy-rail.is-pinned .offer-card.is-selected .offer-card-pinprice { color: var(--color-on-accent); }
 /* One button width for "Buy now" and "Pre-order". */
 .buy-rail.is-pinned .product-buy:has(.offer-choice) .product-form .btn-primary { min-width: 7.25rem; }
 @media (max-width: 959px) {
@@ -2569,6 +2602,13 @@ body:has(.avail-bar) .site-header {
   .buy-rail.is-pinned:has(.offer-choice) > .buy-rail-chips { display: none; }
   .buy-rail.is-pinned .offer-choice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1 1 auto; min-width: 0; }
   .buy-rail.is-pinned .offer-card { padding: 0 8px; }
+}
+@media (max-width: 480px) {
+  /* Name over price in each segment, so "Buy now 29.00 | Pre-order 26.10"
+     and "Buy the stack now" share one row on a 390 px phone. */
+  .buy-rail.is-pinned .offer-card-head { flex-direction: column; align-items: center; gap: 2px; }
+  .buy-rail.is-pinned .offer-card-pin,
+  .buy-rail.is-pinned .offer-card-pinprice { font-size: 12px; line-height: 1.1; }
   .buy-rail.is-pinned .product-buy:has(.offer-choice) .product-form { flex: 0 0 auto; }
   .buy-rail.is-pinned .product-buy:has(.offer-choice) .product-form .btn-primary { width: auto; min-width: 6.5rem; padding: 0 12px; }
 }

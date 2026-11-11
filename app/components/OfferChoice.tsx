@@ -10,10 +10,10 @@ import {shopifyImageUrl} from '~/lib/shopify-image';
 export type OfferCard = {
   offer: BatchOffer;
   title: string;
-  /** The card's name in the pinned bar's one-row switch ("Stack now"). */
+  /** The card's name in the pinned bar's one-row switch ("Buy now"). */
   pin: string;
-  /** Small pictures of the boards a stack card sells. */
-  thumbs?: Array<string | null>;
+  /** The price in the pinned bar's switch, shown even when both cost the same. */
+  pinPrice: string;
   /** The offer's price, or null when both offers cost the same: the cards
    *  then differ only by when and where the board ships. */
   price: string | null;
@@ -24,16 +24,13 @@ export type OfferCard = {
 };
 
 /**
- * The two cards of a board that is in stock and can be pre-ordered. Pure, so
- * the wording is tested without a browser: the saving is the price gap and
- * is stated only when there is one.
+ * The two cards of a board that is in stock and can be pre-ordered, both
+ * about this board. Pure, so the wording is tested without a browser: the
+ * saving is the price gap and is stated only when there is one.
  */
-export type StackCard = {size: string; price: number; currency: string; thumbs: Array<string | null>};
-
 export function offerCards(
   buyNow: Pick<ProductVariantFragment, 'price' | 'campaign'>,
   preorder: Pick<ProductVariantFragment, 'price' | 'campaign'>,
-  stack: StackCard | null = null,
 ): [OfferCard, OfferCard] {
   const say = (key: string, fallback: string, vars: Record<string, string | number> = {}) =>
     copyFill(`product-chrome.${key}`, fallback, vars);
@@ -41,43 +38,69 @@ export function offerCards(
   const saving = offerSaving(Number(buyNow.price.amount), Number(preorder.price.amount));
   const shipBy = preorder.campaign?.latestShip ?? null;
   const samePrice = Number(buyNow.price.amount) === Number(preorder.price.amount);
-  const preorderCard: OfferCard = {
-    offer: 'preorder',
-    title: say('offer_preorder', 'Pre-order'),
-    pin: say('offer_pin_preorder', 'Pre-order'),
-    price: samePrice && !stack ? null : formatPrice(preorder.price.amount, preorder.price.currencyCode),
-    ships: shipBy ? say('offer_preorder_ships', 'Ships by {date}', {date: shipBy}) : say('offer_preorder_ships_plain', 'Ships with the next batch'),
-    where: say('offer_preorder_where', 'Worldwide'),
-    extra: saving !== null ? say('offer_save', 'Save {amount}', {amount: formatPrice(saving, preorder.price.currencyCode)}) : null,
-  };
-  // The stack: this board and its partner of the same size, bought now.
-  if (stack) {
-    return [
-      {
-        offer: 'buy_now',
-        title: say('offer_stack', 'FC and ESC stack'),
-        pin: say('offer_pin_stack', 'Stack now'),
-        thumbs: stack.thumbs,
-        price: formatPrice(stack.price.toFixed(2), stack.currency),
-        ships: say('offer_buy_now_ships', 'In stock, ships in days'),
-        where: say('offer_buy_now_where', 'From Belgium, EU only'),
-        extra: null,
-      },
-      preorderCard,
-    ];
-  }
   return [
     {
       offer: 'buy_now',
       title: say('offer_buy_now', 'Buy now'),
       pin: say('offer_pin_buy_now', 'Buy now'),
+      pinPrice: formatPrice(buyNow.price.amount, buyNow.price.currencyCode),
       price: samePrice ? null : formatPrice(buyNow.price.amount, buyNow.price.currencyCode),
       ships: say('offer_buy_now_ships', 'In stock, ships in days'),
       where: say('offer_buy_now_where', 'From Belgium, EU only'),
       extra: left != null ? say('offer_left', '{count} left', {count: left}) : null,
     },
-    preorderCard,
+    {
+      offer: 'preorder',
+      title: say('offer_preorder', 'Pre-order'),
+      pin: say('offer_pin_preorder', 'Pre-order'),
+      pinPrice: formatPrice(preorder.price.amount, preorder.price.currencyCode),
+      price: samePrice ? null : formatPrice(preorder.price.amount, preorder.price.currencyCode),
+      ships: shipBy ? say('offer_preorder_ships', 'Ships by {date}', {date: shipBy}) : say('offer_preorder_ships_plain', 'Ships with the next batch'),
+      where: say('offer_preorder_where', 'Worldwide'),
+      extra: saving !== null ? say('offer_save', 'Save {amount}', {amount: formatPrice(saving, preorder.price.currencyCode)}) : null,
+    },
   ];
+}
+
+/** The partner board a stack add-on offers beside this board, bought now. */
+export type StackAddon = {
+  /** "OpenESC 20x20". */
+  name: string;
+  /** The partner's Buy now price, formatted. */
+  price: string;
+  thumb: string | null;
+};
+
+/**
+ * The stack as an optional add-on under the cards: one row, unticked by
+ * default, shown only while Buy now is chosen. The slot is always there
+ * (`slot`), so choosing an offer or ticking the box moves nothing; without
+ * a partner in stock the row is empty.
+ */
+export function StackAddonRow({
+  addon,
+  shown,
+  checked,
+  onChange,
+}: {
+  addon: StackAddon | null;
+  shown: boolean;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="offer-addon" data-stack-addon>
+      {addon && shown ? (
+        <label className="offer-addon-row">
+          <input type="checkbox" className="offer-addon-input" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+          {addon.thumb ? <img src={shopifyImageUrl(addon.thumb, 64)} alt="" width={22} height={22} loading="lazy" decoding="async" aria-hidden="true" /> : null}
+          <span className="offer-addon-text">
+            {copyFill('product-chrome.offer_addon', 'Add the {name} to make a stack, +{price}', {name: addon.name, price: addon.price})}
+          </span>
+        </label>
+      ) : null}
+    </div>
+  );
 }
 
 /**
@@ -91,8 +114,6 @@ export function OfferChoice({
   preorder,
   mode,
   onChange,
-  stack = null,
-  single = null,
   solo = false,
 }: {
   /** No Buy now lane for this visitor (outside the EU, batch 1 gone): the
@@ -103,16 +124,12 @@ export function OfferChoice({
   preorder: ProductVariantFragment;
   mode: BatchOffer;
   onChange: (mode: BatchOffer) => void;
-  /** The stack this board makes with its partner, when both are in stock. */
-  stack?: StackCard | null;
-  /** The quiet "Just this board" express link under the stack card. */
-  single?: React.ReactNode;
 }) {
   const name = useId();
   return (
     <fieldset className={`offer-choice${solo ? ' is-solo' : ''}`} data-offer-choice>
       <legend className="sr-only">{copyText('product-chrome.offer_legend') ?? 'Buy now or pre-order'}</legend>
-      {offerCards(buyNow, preorder, stack).filter((card) => !solo || card.offer === 'preorder').map((card) => (
+      {offerCards(buyNow, preorder).filter((card) => !solo || card.offer === 'preorder').map((card) => (
         <label key={card.offer} className={`offer-card${mode === card.offer || solo ? ' is-selected' : ''}`} data-offer={card.offer}>
           <input
             type="radio"
@@ -123,13 +140,9 @@ export function OfferChoice({
             onChange={() => onChange(card.offer)}
           />
           <span className="offer-card-head">
-            {card.thumbs ? (
-              <span className="offer-card-thumbs" aria-hidden="true">
-                {card.thumbs.map((src, i) => (src ? <img key={i} src={shopifyImageUrl(src, 64)} alt="" width={22} height={22} loading="lazy" decoding="async" /> : null))}
-              </span>
-            ) : null}
             <span className="offer-card-title">{card.title}</span>
             <span className="offer-card-pin">{card.pin}</span>
+            <span className="offer-card-pinprice">{card.pinPrice}</span>
             {card.price ? <span className="offer-card-price">{card.price}</span> : null}
           </span>
           <span className="offer-card-line">{card.ships}</span>
@@ -140,8 +153,6 @@ export function OfferChoice({
           </span>
         </label>
       ))}
-      {/* One row under the cards in both modes, so choosing moves nothing. */}
-      {single ? <div className="offer-choice-foot">{single}</div> : null}
     </fieldset>
   );
 }

@@ -13,6 +13,8 @@
 //      title and the two options are);
 //   5. switching the size (product page tile, home size switch) moves
 //      nothing either;
+//   7. ticking the stack add-on (board page) moves nothing in the buy area,
+//      and the pinned bar stays one row with "Buy the stack now";
 //   6. /preorder ("How ordering works") has nothing under the header, no
 //      overflow, the two lanes in the EU and the pre-order lane alone in the
 //      US, and the US product page shows the pre-order card alone (no
@@ -102,6 +104,24 @@ for (const [width, height] of SIZES) {
   const wrapped = await page.evaluate(() => [...document.querySelectorAll('main .offer-card-line')].filter((el) => el.scrollWidth > el.clientWidth).map((el) => el.textContent));
   if (wrapped.length) fail(at('product page'), `offer card lines cut: ${wrapped.join(' | ')}`);
 
+  // The stack add-on: back on Buy now, ticking the box moves nothing.
+  await pick(page, '.product-hero', 'buy_now').catch(() => pick(page, 'main', 'buy_now'));
+  await page.waitForTimeout(250);
+  const addonArea = [...buyArea, '[data-stack-addon]', '.buy-total'];
+  before = await boxes(page, addonArea);
+  const addon = page.locator('main .offer-addon-input').first();
+  if (!(await addon.count())) fail(at('product page'), 'no stack add-on with both boards in stock');
+  else {
+    if (await addon.isChecked()) fail(at('product page'), 'the stack add-on is ticked by default');
+    await addon.check();
+    await page.waitForTimeout(250);
+    same(at('product page stack add-on'), before, await boxes(page, addonArea));
+    const label = (await page.locator('main .product-form .btn-primary').first().textContent())?.trim();
+    if (label !== 'Buy the stack now') fail(at('product page'), `button reads "${label}" with the stack ticked`);
+    await addon.uncheck();
+    await page.waitForTimeout(250);
+  }
+
   // Size: the 30x30 tile swaps price and stack, and moves nothing in the
   // buy area (the chapters below are that size's own content).
   const sizeArea = buyArea.filter((selector) => selector !== '.chapter');
@@ -127,6 +147,18 @@ for (const [width, height] of SIZES) {
   await pick(page, '.buy-rail.is-pinned', 'buy_now');
   await page.waitForTimeout(250);
   same(at('pinned bar'), before, await boxes(page, pinnedParts));
+  // The stack ticked: the bar's button reads "Buy the stack now", still one row.
+  await page.locator('main .offer-addon-input').first().check({force: true}).catch(() => {});
+  await page.waitForTimeout(300);
+  const stacked = await boxes(page, pinnedParts);
+  const barOn = stacked['.buy-rail.is-pinned#0'];
+  if (barOn && barOn[3] > 64) fail(at('pinned bar'), `with the stack ticked the bar is ${barOn[3]} px tall`);
+  const segs = [stacked['.buy-rail.is-pinned .offer-card#0'], stacked['.buy-rail.is-pinned .offer-card#1'], stacked['.buy-rail.is-pinned .btn-primary#0']];
+  if (segs.every(Boolean) && new Set(segs.map((r) => Math.round(r[1] + r[3] / 2))).size > 1 && Math.abs(segs[0][1] + segs[0][3] / 2 - (segs[2][1] + segs[2][3] / 2)) > 2) fail(at('pinned bar'), 'with the stack ticked the switch and the button are not one row');
+  const clipped = await page.evaluate(() => [...document.querySelectorAll('.buy-rail.is-pinned .offer-card-pin, .buy-rail.is-pinned .offer-card-pinprice, .buy-rail.is-pinned .btn-primary')].filter((el) => el.scrollWidth > el.clientWidth + 1).map((el) => el.textContent));
+  if (clipped.length) fail(at('pinned bar'), `cut in the bar: ${clipped.join(' | ')}`);
+  if (await page.locator('.buy-rail.is-pinned').evaluate((el) => el.scrollWidth > el.clientWidth + 1).catch(() => false)) fail(at('pinned bar'), 'the bar overflows with the stack ticked');
+  await page.locator('main .offer-addon-input').first().uncheck({force: true}).catch(() => {});
 
   // Home build block.
   await page.goto(`${BASE}/?country=BE`, {waitUntil: 'networkidle'}).catch(() => {});
