@@ -1,4 +1,4 @@
-import {bySku, preorderView, variantByMerchandise, type Catalog, type CatalogVariant} from './catalog.ts';
+import {bySku, catalogHasPreorders, preorderView, variantByMerchandise, type Catalog, type CatalogVariant} from './catalog.ts';
 import {appCommerceEnabled} from './commerce/app-api.ts';
 import {campaignDate, promiseBatchMonth, stockPromise, internationalRegion, isInternationalRegion, mixedShipPromise, regionOf, shipGroupKey, shipLabelFromPromise, shipOrderDay, type Region} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
@@ -681,6 +681,8 @@ export type ExpressRefusal = (typeof EXPRESS_REFUSED)[keyof typeof EXPRESS_REFUS
  */
 export function buyNowToPreorder(cart: Pick<ShopifyCart, 'lines'>, catalog: Catalog): CartLineUpdate[] {
   const moves: CartLineUpdate[] = [];
+  // An ordinary shop (nothing is pre-order): in-stock lines stay as they are.
+  if (!catalogHasPreorders(catalog)) return moves;
   for (const line of cart.lines) {
     if (line.offer !== 'buy_now') continue;
     const variant = bySku(catalog, line.sku)?.variant;
@@ -1038,7 +1040,8 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       // product has one offer and takes it either way.
       const variant = preorderView(primary) ?? primary;
       if (!variant.merchandise_id) throw fail('Product is unavailable.', 409);
-      if (isBuyNowOnly(variant)) throw fail(BUY_NOW_NOT_IN_CART, 409);
+      // Only while pre-orders exist is the cart the pre-order lane.
+      if (isBuyNowOnly(variant) && catalogHasPreorders(catalog)) throw fail(BUY_NOW_NOT_IN_CART, 409);
       if (region !== 'EU' && !usSellable(variant)) throw fail(region === 'US' ? US_EU_ONLY_MESSAGE : 'This item ships from stock in Belgium to EU addresses only. International orders use the preorder batch.', 409);
       const attributes = lineAttributes(variant, region, euStockKnown);
       return attributes

@@ -1963,6 +1963,9 @@ function ProductPage() {
   // The add-on slot, one for both lanes: the partner board at the chosen
   // lane's price (Buy now: the stack, express; Pre-order: both boards into
   // the cart in one add) and the link to the full build on the home page.
+  // One offer, in stock (nothing to pre-order for this product): the status
+  // row says so, in the slot the cards use.
+  const inStockOnly = Boolean(choiceOn && !offerChoice && !soloPreorder && !isBundle && !campaign && !notDirect && selectedVariant?.availableForSale);
   const preorderLane = Boolean(soloPreorder) || Boolean(offerChoice && offerMode === 'preorder');
   const lane = preorderLane ? 'preorder' : 'buy_now';
   const partner = build && (offerChoice || soloPreorder) ? partnerBoard(build, pickedVariant?.sku, lane) : null;
@@ -2123,6 +2126,11 @@ function ProductPage() {
           <OfferStatus buyNow={soloPreorder.retail} preorder={soloPreorder.preorder} />
         </div>
       ) : null}
+      {inStockOnly && selectedVariant ? (
+        <div className="offer-slot">
+          <OfferStatus offer="buy_now" buyNow={selectedVariant} preorder={selectedVariant} />
+        </div>
+      ) : null}
       {addonShown ? (
         <AddonRow
           partner={partner ? {name: partner.title, price: formatPrice(((partner.price ?? 0) * partner.quantity).toFixed(2), partner.currency), thumb: partner.image} : null}
@@ -2241,7 +2249,7 @@ function ProductPage() {
                   : 'product-chrome.buy_stock_bundle_out',
               )
             : selectedVariant?.availableForSale
-              ? copyText('product-chrome.buy_stock_in')
+              ? inStockOnly ? null : copyText('product-chrome.buy_stock_in')
               : shipPromise
                 ? (
                     <>

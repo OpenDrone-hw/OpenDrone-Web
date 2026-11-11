@@ -122,6 +122,39 @@ export function preorderView(variant: CatalogVariant): CatalogVariant | null {
   };
 }
 
+/**
+ * What a variant can be bought as, read only from the catalog (Shopify
+ * variants and policy) and the campaign file (content/preorders.json): zero,
+ * one or two offers. `in_stock` ships now (batch 1 today, every product once
+ * a batch has landed); `preorder` ships with its batch's date. The page shows
+ * two offers as two cards, one as a status row, none as sold out.
+ */
+export type VariantOffer =
+  | {kind: 'in_stock'; price: number; left: number | null}
+  | {kind: 'preorder'; price: number; shipPromise: string | null};
+
+export function variantOffers(variant: CatalogVariant): VariantOffer[] {
+  const left = (v: CatalogVariant) => (v.campaign?.paidStock ? Math.max(0, v.campaign.paidLeft ?? v.campaign.batchUnits - v.campaign.batchOrdered) : null);
+  if (variant.offer === 'buy_now') {
+    const out: VariantOffer[] = [{kind: 'in_stock', price: variant.price, left: left(variant)}];
+    if (variant.preorder_offer) out.push({kind: 'preorder', price: variant.preorder_offer.price, shipPromise: variant.preorder_offer.ship_promise});
+    return out;
+  }
+  if (variant.availability === 'preorder') return [{kind: 'preorder', price: variant.price, shipPromise: variant.ship_promise}];
+  if (variant.availability === 'in_stock') return [{kind: 'in_stock', price: variant.price, left: left(variant)}];
+  return [];
+}
+
+/**
+ * True while any product can still be pre-ordered. Then the cart is the
+ * pre-order lane and in-stock boards go straight to checkout; once nothing
+ * is pre-order (a batch has landed and the campaign file lists no SKU) the
+ * site is an ordinary shop and in-stock items use the cart.
+ */
+export function catalogHasPreorders(catalog: Pick<Catalog, 'products'>): boolean {
+  return catalog.products.some((product) => product.variants.some((variant) => variantOffers(variant).some((offer) => offer.kind === 'preorder')));
+}
+
 /** The offer a Shopify variant id sells: the primary entry, or the
  *  pre-order view of a board whose primary offer is buy now. */
 export function variantByMerchandise(

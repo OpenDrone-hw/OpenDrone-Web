@@ -50,11 +50,12 @@ if (await page.locator('input[name="code"]:visible').count()) fail('cart, plain 
 
 // 3. A Buy now board slipped in from before the two lanes (written straight
 // into the stand-in's cart, the way an old cart would hold it).
+// This browser's cart is the newest one the stand-in holds.
 let cartId = null;
-for (let n = 1; n < 400 && !cartId; n += 1) {
+for (let n = 1, misses = 0; misses < 60; n += 1) {
   const id = `gid://shopify/Cart/preview${n}?key=preview${n}`;
   const out = await gql('query C($id: ID!) { cart(id: $id) { id } }', {id});
-  if (out?.data?.cart) cartId = id;
+  if (out?.data?.cart) { cartId = id; misses = 0; } else misses += 1;
 }
 if (!cartId) fail('old cart', 'could not find the preview cart');
 else {

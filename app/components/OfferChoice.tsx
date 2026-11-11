@@ -127,7 +127,11 @@ export function OfferStatus({
   preorder: Pick<ProductVariantFragment, 'price' | 'campaign'>;
   offer?: BatchOffer;
 }) {
-  const card = offerCards(buyNow, preorder).find((c) => c.offer === offer)!;
+  const found = offerCards(buyNow, preorder).find((c) => c.offer === offer)!;
+  // A product simply in stock (no pre-order anywhere for it): "In stock · Ships in days".
+  const card = offer === 'buy_now'
+    ? {...found, title: copyText('product-chrome.offer_in_stock') ?? 'In stock', ships: copyText('product-chrome.offer_in_stock_ships') ?? 'Ships in days', where: copyText('product-chrome.offer_in_stock_where') ?? 'From Belgium'}
+    : found;
   const extra = offer === 'preorder' ? card.extra : null;
   return (
     <p className="offer-status-row" data-offer-choice data-offer-single={offer}>

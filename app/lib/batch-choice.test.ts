@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {describe, it} from 'node:test';
-import {bySku, offerSaving, preorderView, variantByMerchandise, type Catalog} from './catalog.ts';
+import {bySku, catalogHasPreorders, offerSaving, preorderView, variantByMerchandise, variantOffers, type Catalog} from './catalog.ts';
 import {boardExpressLines, buildAddonTotal, buildAddonUrl, buildForPart, buildModes, expressLinesField, fullBuildHref, partnerBoard, heroBuildSelection, modeAddUrl, resolveHeroBuilds, stackOffer} from './hero-build.ts';
 import {parseBuilds} from './build-recommendations.ts';
 import {applyCampaign, parseCampaignConfig, preorderChoiceLine, shipsOnlyWithPaid, type CampaignConfig} from './preorder-campaign.ts';
@@ -611,5 +611,66 @@ describe('rollout order is held by the repository', () => {
     const config = parseCampaignConfig(JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')));
     if (flag('wrangler.production.toml') === '1') assert.ok(config.choiceFrom, 'set choiceFrom in content/preorders.json in the PR that sets BATCH_CHOICE = "1"');
     else assert.equal(config.choiceFrom, undefined, 'choiceFrom is set in the same PR as BATCH_CHOICE = "1", not before');
+  });
+});
+
+describe('the day batch 2 lands: every product in stock, no pre-order left', () => {
+  // Shopify: the `<Model> / Pre-order` variants deleted and the `Batch`
+  // option removed, so each board is one plain variant (the former Buy now);
+  // every SKU's catalog policy `in_stock`; content/preorders.json lists no SKU.
+  const landed = () => {
+    const data = choiceCatalogData();
+    for (const product of data.products.nodes) {
+      product.variants.nodes = product.variants.nodes
+        .filter((v) => !v.selectedOptions.some((o) => o.name === 'Batch' && o.value === 'Pre-order'))
+        .map((v) => ({...v, title: v.title.replace(' / Buy now', ''), selectedOptions: v.selectedOptions.filter((o) => o.name !== 'Batch')}));
+    }
+    const policy = Object.fromEntries(Object.keys(CHOICE_POLICY).map((sku) => [sku, {saleMode: 'in_stock', shipPromise: null}]));
+    const raw = JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+    const config = parseCampaignConfig({...raw, skus: {}, shipsWith: {}, usStock: undefined});
+    return (region: 'EU' | 'US' = 'EU') =>
+      applyCampaign(mapShopifyCatalog(data, 'open-drone-test.myshopify.com', JSON.stringify(policy), '1', 'default', true), config, {}, new Date('2027-04-02T12:00:00Z'), region);
+  };
+
+  it('every product has exactly one offer, in stock; nothing is pre-order; the site is an ordinary shop', () => {
+    for (const region of ['EU', 'US'] as const) {
+      const catalog = landed()(region);
+      for (const product of catalog.products) {
+        for (const variant of product.variants) {
+          assert.deepEqual(variantOffers(variant).map((o) => o.kind), ['in_stock'], `${region} ${variant.sku}`);
+          assert.equal(variant.preorder_offer, undefined);
+        }
+      }
+      assert.equal(catalogHasPreorders(catalog), false);
+    }
+    // Today, for contrast: the boards have two offers, the rest pre-order only.
+    assert.equal(catalogHasPreorders(live()), true);
+    assert.deepEqual(variantOffers(bySku(live(), FC)!.variant).map((o) => o.kind), ['in_stock', 'preorder']);
+    assert.deepEqual(variantOffers(bySku(live(), 'OPENFRAME-3')!.variant).map((o) => o.kind), ['preorder']);
+  });
+
+  it('the cart works normally: a board goes in as its one variant, with no pre-order attribute or March date', async () => {
+    const catalog = landed()();
+    const created: CartLineInput[][] = [];
+    const response = await run({sku: FC, qty: '2'}, {
+      fetchCatalog: async () => catalog,
+      getCartId: () => undefined,
+      createCart: async (lines) => { created.push(lines); return cart([]); },
+    });
+    assert.ok(response.status < 400, `add refused: ${response.status}`);
+    assert.equal(created[0][0].merchandiseId, CHOICE_IDS[FC].buyNow);
+    assert.equal(created[0][0].quantity, 2);
+    assert.doesNotMatch(JSON.stringify(created), /Preorder|March|2027/);
+    // An in-stock line stays in stock: nothing to move to pre-order.
+    assert.deepEqual(buyNowToPreorder(cart([buyNowLine(1, 2)]), catalog), []);
+    assert.equal(sellsBuyNow(catalog), false);
+  });
+
+  it('no stack, no pre-order partner, no ship date: no "March 2027" in anything the catalog gives the pages', () => {
+    const catalog = landed()();
+    const builds = parseBuilds(JSON.parse(fs.readFileSync(new URL('../../content/builds.json', import.meta.url), 'utf8')));
+    const resolved = resolveHeroBuilds(builds, catalog, true);
+    assert.deepEqual(resolved.map((b) => stackOffer(b)), [null, null]);
+    assert.doesNotMatch(JSON.stringify({catalog, resolved}), /March 2027|31 Mar|2027-03|Pre-order/);
   });
 });
