@@ -18,5 +18,6 @@
   "error_body": "An unexpected error occurred. ",
   "error_details": "Technical details",
   "error_cta_home": "Home",
-  "error_cta_shop": "Shop"
+  "error_cta_shop": "Shop",
+  "error_retry": "Try again in a minute. Nothing you added was lost."
 }

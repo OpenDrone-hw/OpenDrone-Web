@@ -89,5 +89,7 @@
   "ship_to_failed": "Could not change the country. Try again.",
   "international_note": "Shipping and any sales tax are confirmed at checkout. You may pay import duties, taxes and customs fees on delivery.",
   "international_note_near": "Shipping is confirmed at checkout.",
-  "check_non_eu_only": "An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country."
+  "check_non_eu_only": "An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.",
+  "bundle_total_one": "1 part, {price}",
+  "bundle_add_one": "Add {name}"
 }

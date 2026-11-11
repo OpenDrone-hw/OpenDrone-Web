@@ -36,5 +36,6 @@
   "steps_nav_aria": "Guide steps",
   "pager_aria": "Previous and next step",
   "done_label": "All guides",
-  "flash_link": "Go to the firmware page"
+  "flash_link": "Go to the firmware page",
+  "flasher_heading": "Update firmware"
 }

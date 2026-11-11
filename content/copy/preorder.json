@@ -94,5 +94,7 @@
   "channel_international_text": "FC and ESC stock in Belgium ships to EU addresses only. Outside the EU, everything ships with the confirmed March 2027 preorder batch. Shipping is confirmed at checkout. Import VAT, duties and customs fees are paid by you on delivery, unless collected at checkout.",
   "early_note": "Early bird preorder prices.",
   "early_price": "Early bird price.",
-  "early_retail_short": "Retail {price}"
+  "early_retail_short": "Retail {price}",
+  "early_note_stock": "Early bird prices.",
+  "why_meta_title": "Why pre-order"
 }
