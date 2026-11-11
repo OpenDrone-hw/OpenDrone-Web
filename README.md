@@ -87,7 +87,7 @@ in `.dev.vars` and run `npm run dev`.
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
 | `npm run emails:preview` | local gallery of every customer and internal email, per scenario, at desktop and 375 px width; reloads on save (see "Preview emails") |
-| `npm run emails:build` | the same gallery as one self-contained file as `index.html` in the git-ignored `.review/emails` folder of the workspace, created by the build (`--out <path>` elsewhere), plus one file per mail in `cards/` |
+| `npm run emails:build` | the same gallery as one self-contained `index.html` that the build creates in the workspace's `.review/emails` folder (`--out <path>` elsewhere), plus one file per mail in `cards/` |
 | `npm run emails:chrome` / `emails:paste` | start the dedicated Shopify Chrome; dry-run or apply the templates into Shopify admin (see "Paste into Shopify admin") |
 | `npm run emails:hash` | sha256 of every pasteable `out/*.html` (`-- --json` for the paste list with notification name and subject) |
 | `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU>` | dry run: the held orders of a batch; `--apply` releases their holds (see "Fulfil a batch") |
