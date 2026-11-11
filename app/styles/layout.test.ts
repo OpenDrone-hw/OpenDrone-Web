@@ -72,3 +72,31 @@ describe('PDP chapters never shift the page', () => {
     assert.doesNotMatch(noComments(CSS), /\.chapter[^{,]*\{[^}]*content-visibility:\s*auto/);
   });
 });
+
+describe('order cards and the pinned buy bar keep clear of other content', () => {
+  const UI = readFileSync(new URL('./site-ui.css', import.meta.url), 'utf8');
+
+  it('pins the desktop buy bar below the header, under the availability and test bars', () => {
+    const desktop = CSS.match(/@media \(min-width: 960px\) \{\s*\.buy-rail\.is-pinned \{([^}]*)\}/);
+    assert.ok(desktop, 'desktop rule for .buy-rail.is-pinned is missing');
+    const top = desktop[1].replace(/\/\*[\s\S]*?\*\//g, '').match(/top:\s*([^;]+);/);
+    assert.ok(top, 'the pinned bar needs a top');
+    for (const part of ['--avail-bar-h', '--test-banner-h', '--header-height']) {
+      assert.ok(top[1].includes(part), `the pinned bar's top must add ${part}`);
+    }
+  });
+
+  it('gives the product page build card no section padding', () => {
+    assert.ok(
+      blocksFor('.pdp-build .hero-build-guide').some((b) => /padding:\s*0;/.test(b)),
+      '.pdp-build .hero-build-guide needs padding: 0',
+    );
+  });
+
+  it('hides the hero beat copy where the stack offer makes the card column cover it', () => {
+    const rule = UI.match(/@media \(max-height: (\d+)px\) and \(min-width: 769px\) \{\s*\.homepage:has\(\.hero-stack-offer\) \.hp-copy \{ display: none; \}/);
+    assert.ok(rule, 'the stack offer rule for .hp-copy is missing');
+    // Card column 725 px + 36 px bottom offset + the copy down to 264 px + 12 px clear.
+    assert.ok(Number(rule[1]) >= 1037, 'the copy must be hidden on every height where the cards reach it');
+  });
+});

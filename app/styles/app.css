@@ -15848,7 +15848,10 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
 @media (min-width: 960px) {
   .buy-rail.is-pinned {
     position: fixed;
-    top: calc(var(--header-height) + 1.1rem);
+    /* Below the floating header, which itself starts under the test banner
+       and the availability bar: without their heights the pill sat on the
+       header's lower edge whenever a bar was shown. */
+    top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px) + var(--header-height) + 1.1rem);
     right: max(var(--rail-gutter, 1rem), calc((100vw - 1240px) / 2));
     left: auto;
     flex-direction: row;
@@ -15876,7 +15879,9 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
     gap: 0.35rem;
     padding: 0.45rem max(0.8rem, env(safe-area-inset-left))
       max(0.45rem, calc(env(safe-area-inset-bottom) * 0.5)) max(0.8rem, env(safe-area-inset-right));
-    background: var(--pod-bg-strong, var(--color-bg-elevated));
+    /* Opaque: the strip covers page content, and a translucent one let the
+       text and buttons under it read through. */
+    background: var(--color-bg-elevated);
     border-top: 1px solid var(--pod-border, var(--color-border));
     animation: buy-rail-rise 0.2s ease;
   }
@@ -18716,6 +18721,14 @@ summary,
 }
 .pdp-build .hero-build-guide {
   animation: none;
+  /* The card is a <section>: without this it takes the page's section
+     padding and shows an empty band above its title and under its button. */
+  padding: 0;
+}
+/* The chapter's own intro and the "You also need" list beside the card say
+   it already; a third copy inside the card only crowds it. */
+.pdp-build .hero-build-guide > .hero-build-ship {
+  display: none;
 }
 
 .home-community-owners {
