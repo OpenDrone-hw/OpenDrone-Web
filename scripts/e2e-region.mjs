@@ -6,7 +6,7 @@
 //
 // For each case it opens a product page in a fresh browser, as a visitor
 // from `ip` (the CF-IPCountry header; only a local server honours it) or
-// through a `?country` link, picks a market in the header menu and asserts
+// through a `?country` link, picks a country in the header picker and asserts
 // that the control, the currency on the page and the choice cookie all moved,
 // that the choice survives the next page, and that a ?country link never
 // outranks a later pick (the "cannot choose US / USD" fault of 2026-11-11).
@@ -18,17 +18,20 @@ const BASE = (process.env.BASE ?? 'http://localhost:3000').replace(/\/+$/, '');
 const LOCAL = /localhost|127\.0\.0\.1/.test(BASE);
 
 const CASES = [
-  {name: 'BE visitor picks US', ip: 'BE', pick: 1, label: 'US / USD', currency: 'US$', cookie: 'US'},
-  {name: 'US visitor picks EU', ip: 'US', pick: 0, label: 'EU / EUR', currency: '€', cookie: 'BE'},
-  {name: 'JP visitor picks US then World again', ip: 'JP', pick: 1, label: 'US / USD', currency: 'US$', cookie: 'US', back: {pick: 3, label: 'JP / EUR', cookie: 'JP'}},
-  {name: '?country=BE link, then picks US (the reported fault)', link: 'BE', pick: 1, label: 'US / USD', currency: 'US$', cookie: 'US'},
+  {name: 'BE visitor picks US', ip: 'BE', pick: 'US', label: 'US · USD', currency: 'US$', cookie: 'US'},
+  {name: 'US visitor picks Belgium', ip: 'US', pick: 'BE', label: 'BE · EUR', currency: '€', cookie: 'BE'},
+  {name: 'JP visitor picks US then Japan again', ip: 'JP', pick: 'US', label: 'US · USD', currency: 'US$', cookie: 'US', back: {pick: 'JP', label: 'JP · EUR', cookie: 'JP'}},
+  {name: '?country=BE link, then picks US (the reported fault)', link: 'BE', pick: 'US', label: 'US · USD', currency: 'US$', cookie: 'US'},
+  {name: '?country=US link, then picks Belgium', link: 'US', pick: 'BE', label: 'BE · EUR', currency: '€', cookie: 'BE'},
+  {name: '?country=JP link, picks US then Japan again', link: 'JP', pick: 'US', label: 'US · USD', currency: 'US$', cookie: 'US', back: {pick: 'JP', label: 'JP · EUR', cookie: 'JP'}},
 ];
 
 const trigger = (page) => page.locator('.header-region-switch .header-popover-trigger');
 
-async function pick(page, index) {
+/** Opens the header country picker and chooses the country with this ISO code. */
+async function pick(page, code) {
   await trigger(page).click();
-  const item = page.locator('.header-region-switch [role=menuitemradio]').nth(index);
+  const item = page.locator(`.header-region-switch [role=option][id$="-o-${code}"]`).first();
   await item.waitFor();
   // The switch posts the country, then React Router reads the loaders again.
   const posted = page.waitForResponse((r) => r.url().includes('/api/shopify/cart-country'), {timeout: 60000});
