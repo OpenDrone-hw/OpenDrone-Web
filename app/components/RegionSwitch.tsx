@@ -2,42 +2,68 @@ import {useEffect, useId, useRef, useState} from 'react';
 import type {KeyboardEvent} from 'react';
 import {useFetcher, useRevalidator, useRouteLoaderData} from 'react-router';
 import {useHeaderPopover} from '~/components/header-popover';
+import {ShipToSelect} from '~/components/ShipToSelect';
 import {copyText} from '~/lib/copy';
 import {CART_COUNTRY_ACTION, CART_UPDATED_EVENT, type CartCountryReply} from '~/lib/cart-client';
-import {currencyForCountry, regionSwitchCountry, type SwitchCurrency} from '~/lib/region-switch';
-import {shipCountryCookie, shippingQuote} from '~/lib/shipping-rates';
+import {listedMarkets, marketCountry, regionFor, type MarketId, type Region} from '~/lib/region';
+import {countryName, shipCountryCookie} from '~/lib/shipping-rates';
 import type {loader as rootLoader} from '~/root';
 
-const CHOICES: readonly SwitchCurrency[] = ['EUR', 'USD'];
+type Choice = Exclude<MarketId, 'none'>;
 
-/** What a choice reads as: the region it ships to and its currency. */
-function choiceLabel(choice: SwitchCurrency): string {
-  return choice === 'USD'
-    ? (copyText('chrome.region_switch_us') ?? 'US / USD')
-    : (copyText('chrome.region_switch_eu') ?? 'EU / EUR');
+const LABELS: Record<Choice, [string, string]> = {
+  eu: ['chrome.region_switch_eu', 'EU / EUR'],
+  us: ['chrome.region_switch_us', 'US / USD'],
+  import: ['chrome.region_switch_import', 'UK, CH, NO / EUR'],
+  world: ['chrome.region_switch_world', 'World / EUR'],
+};
+
+const NOTES: Record<Choice, [string, string]> = {
+  eu: ['chrome.region_switch_eu_note', 'EU addresses. Euro, VAT included'],
+  us: ['chrome.region_switch_us_note', 'United States. Dollars, duties included'],
+  import: ['chrome.region_switch_import_note', 'UK, Switzerland, Norway. Euro, import VAT and duties on delivery'],
+  world: ['chrome.region_switch_world_note', 'Other countries. Euro, import charges on delivery'],
+};
+
+/** What a choice reads as: the market it ships to and its currency. */
+export function choiceLabel(choice: Choice): string {
+  return copyText(LABELS[choice][0]) ?? LABELS[choice][1];
 }
 
-function choiceNote(choice: SwitchCurrency): string {
-  return choice === 'USD'
-    ? (copyText('chrome.region_switch_us_note') ?? 'Ships to the United States, prices in dollars')
-    : (copyText('chrome.region_switch_eu_note') ?? 'Ships to the EU, prices in euro');
+function choiceNote(choice: Choice): string {
+  return copyText(NOTES[choice][0]) ?? NOTES[choice][1];
 }
 
 /**
- * The region switch of the header and the mobile menu: a compact "EU / EUR" menu
- * button in the header (`variant="menu"`), the full "EU / EUR | US / USD" segmented pill
- * in the drawer (default). It is a region
- * switch, not a display toggle: it posts the destination to the same route
- * action as the cart's "Ship to" select (`/api/shopify/cart-country`), which
- * sets the `od_ship_country` cookie, moves the cart to that market and
- * rewrites its ship promises; React Router then reads every active loader
- * again, so prices, cart and checkout follow together.
+ * The trigger text: the market, or the country itself where one market
+ * holds many countries (UK / CH / NO, world) so it is never a guess, or
+ * "<Country>: not shipping yet" where nothing can be bought.
+ */
+export function regionTriggerLabel(region: Pick<Region, 'market' | 'country' | 'currency'>): string {
+  if (region.market === 'eu' || region.market === 'us') return choiceLabel(region.market);
+  if (region.market === 'none') {
+    return (copyText('chrome.region_switch_none') ?? '{country}: not shipping yet').replace(
+      '{country}',
+      region.country ?? '',
+    );
+  }
+  return `${region.country ?? ''} / ${region.currency}`;
+}
+
+/**
+ * The region control of the header (`variant="menu"`) and the mobile drawer
+ * (`variant="segmented"`). It lists exactly the markets Shopify sells to
+ * (`listedMarkets`: EU, US while its gate is open, UK / CH / NO, rest of
+ * world) and shows the current one from the root loader's `region`, the one
+ * resolver's answer, so the server renders the right one already checked.
  *
- * The state is read from the root loader, so the server renders the right
- * side already pressed. While the shop is closed there is no cart to move and
- * the cart route refuses, so the pick is only remembered: the same cookie,
- * written with the same helper, then the loaders read again. Nothing renders while US sales are closed (the root
- * loader carries no US rate) or for a visitor from a blocked country.
+ * A choice posts the destination to `/api/shopify/cart-country` (cookie,
+ * cart buyer country and ship promises move together); React Router then
+ * reads every active loader again, so prices and lanes re-render in place.
+ * While the shop is closed the cookie is written directly, then the loaders
+ * read again. "Another country" (the cart's Ship to list) picks any single
+ * country. A failed switch says so visibly. Nothing renders for a visitor
+ * from a blocked country.
  */
 export function RegionSwitch({
   className,
@@ -48,7 +74,8 @@ export function RegionSwitch({
 }) {
   const root = useRouteLoaderData<typeof rootLoader>('root');
   const usRate = root && 'usShippingRate' in root ? (root.usShippingRate ?? null) : null;
-  const country = root?.visitorCountry ?? null;
+  const region = root?.region ?? null;
+  const ipCountry = root?.ipCountry ?? null;
   const shopOpen = root?.shopOpen === true;
   const fetcher = useFetcher<CartCountryReply>();
   const revalidator = useRevalidator();
@@ -71,21 +98,22 @@ export function RegionSwitch({
     }
   }, [busy, fetcher.data]);
 
-  if (usRate == null) return null;
-  if (shippingQuote(country, undefined, usRate)?.kind === 'blocked') return null;
+  if (!region) return null;
+  if (region.shipping.available === false && region.shipping.reason === 'blocked') return null;
+  const usOpen = usRate != null;
+  const choices = listedMarkets(usOpen);
 
-  // While a switch is in flight the pill already shows the target side.
+  // While a switch is in flight the control already shows the target.
   const pending = fetcher.formData?.get('country');
-  const active = currencyForCountry(
-    typeof pending === 'string' ? pending : revalidator.state !== 'idle' && picked ? picked : country,
-    usRate,
-  );
-  const activeLabel = active ? choiceLabel(active) : `${country} / ${root?.catalogCurrency ?? ''}`;
+  const target = typeof pending === 'string' ? pending : revalidator.state !== 'idle' && picked ? picked : null;
+  const shown = target ? regionFor(target, 'choice', usOpen) : region;
+  const active: Choice | null = shown.market === 'none' ? null : shown.market;
+  const activeLabel = regionTriggerLabel(shown);
   const label = copyText('chrome.region_switch_aria') ?? 'Ship to and currency';
 
-  const choose = (choice: SwitchCurrency) => {
+  const choose = (choice: Choice) => {
     if (busy || choice === active) return;
-    const next = regionSwitchCountry(choice, country, usRate);
+    const next = marketCountry(choice, region, ipCountry, usOpen);
     if (!next) return;
     if (!shopOpen) {
       const cookie = shipCountryCookie(next, window.location.protocol === 'https:');
@@ -97,18 +125,31 @@ export function RegionSwitch({
     }
     void fetcher.submit({country: next}, {method: 'post', action: CART_COUNTRY_ACTION});
   };
+  // A choice that has no country to switch to (rest of world with no known
+  // rest-of-world country) is offered through the country list instead.
+  const selectable = (choice: Choice) => marketCountry(choice, region, ipCountry, usOpen) != null;
+  const other = shopOpen ? (
+    <ShipToSelect
+      country={region.country}
+      usRate={usRate}
+      className="ship-to region-other"
+    />
+  ) : null;
 
   if (variant === 'menu') {
     return (
       <RegionMenu
         className={className}
         label={label}
+        choices={choices}
+        selectable={selectable}
         active={active}
         activeLabel={activeLabel}
         busy={busy}
         failed={failed}
         failedId={labelId}
         onChoose={choose}
+        other={other}
       />
     );
   }
@@ -119,23 +160,23 @@ export function RegionSwitch({
       role="group"
       aria-label={label}
       aria-busy={busy || undefined}
-      data-currency={active}
+      data-market={shown.market}
     >
-      <span className="region-switch-caption" aria-hidden="true">
-        {active == null ? activeLabel : (copyText('chrome.region_switch_caption') ?? 'Ship to')}
-      </span>
-      {CHOICES.map((choice) => (
+      {choices.map((choice) => (
         <button
           key={choice}
           type="button"
           title={choiceNote(choice)}
           aria-pressed={active === choice}
           data-active={active === choice ? 'true' : undefined}
+          disabled={!selectable(choice) && active !== choice}
           onClick={() => choose(choice)}
         >
           {choiceLabel(choice)}
         </button>
       ))}
+      {active == null ? <span className="region-switch-caption">{activeLabel}</span> : null}
+      {other}
       {failed ? <RegionFailed id={labelId} /> : null}
     </div>
   );
@@ -143,7 +184,7 @@ export function RegionSwitch({
 
 function RegionFailed({id}: {id: string}) {
   return (
-    <span id={id} className="sr-only" role="alert">
+    <span id={id} className="region-switch-failed" role="alert">
       {copyText('chrome.region_switch_failed') ?? 'Could not change the region. Try again.'}
     </span>
   );
@@ -159,21 +200,27 @@ function RegionFailed({id}: {id: string}) {
 function RegionMenu({
   className,
   label,
+  choices,
+  selectable,
   active,
   activeLabel,
   busy,
   failed,
   failedId,
   onChoose,
+  other,
 }: {
   className?: string;
   label: string;
-  active: SwitchCurrency | null;
+  choices: Choice[];
+  selectable: (choice: Choice) => boolean;
+  active: Choice | null;
   activeLabel: string;
   busy: boolean;
   failed: boolean;
   failedId: string;
-  onChoose: (choice: SwitchCurrency) => void;
+  onChoose: (choice: Choice) => void;
+  other: React.ReactNode;
 }) {
   const {open, setOpen, close, rootRef, triggerRef, onBlur} = useHeaderPopover();
   const menuId = useId();
@@ -219,7 +266,7 @@ function RegionMenu({
       onBlur={onBlur}
       className={`header-popover region-menu${className ? ` ${className}` : ''}`}
       aria-busy={busy || undefined}
-      data-currency={active}
+      data-market={active ?? 'none'}
       data-open={open ? 'true' : undefined}
     >
       <button
@@ -248,14 +295,16 @@ function RegionMenu({
           className="header-popover-panel"
           onKeyDown={onMenuKey}
         >
-          {CHOICES.map((choice) => (
+          {choices.map((choice) => (
             <button
               key={choice}
               type="button"
               role="menuitemradio"
               aria-checked={active === choice}
+              aria-disabled={!selectable(choice) && active !== choice ? true : undefined}
               className="header-popover-item"
               onClick={() => {
+                if (!selectable(choice) && active !== choice) return;
                 onChoose(choice);
                 close(true);
               }}
@@ -271,6 +320,7 @@ function RegionMenu({
               ) : null}
             </button>
           ))}
+          {other ? <div role="none" className="region-menu-other">{other}</div> : null}
         </div>
       ) : null}
       {failed ? <RegionFailed id={failedId} /> : null}

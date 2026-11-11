@@ -23,7 +23,8 @@ import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {launchedStatusFlags} from '~/lib/launched-roadmap';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {toCards} from '~/lib/catalog';
-import {buyerCountry, geoCountryForRequest} from '~/lib/shipping-rates';
+import {buyerCountry, geoCountryForRequest, isIsoCountry} from '~/lib/shipping-rates';
+import {resolveRegion} from '~/lib/region';
 import {usSalesRate} from '~/lib/us-sales';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
 import {appCommerceEnabled, readCart} from '~/lib/commerce/app-api';
@@ -216,6 +217,16 @@ export async function loader(args: Route.LoaderArgs) {
     // (`shipCountryForRequest`: ?country, the picked
     // destination, the IP, the browser), so every surface agrees.
     visitorCountry: buyerCountry(args.request, usRate),
+    // The visitor's region (app/lib/region.ts): country, market, currency,
+    // taxes shown, lanes and shipping, from the one resolver every other
+    // field here also reads. Components read this, never the request.
+    region: resolveRegion(args.request, usRate != null),
+    // The IP country alone, so the region control can offer "World" to a
+    // visitor whose IP is outside the EU after they picked another market.
+    ipCountry: (() => {
+      const ip = args.request.headers.get('CF-IPCountry')?.trim().toUpperCase() ?? null;
+      return ip && isIsoCountry(ip) ? ip : null;
+    })(),
     // The batch 1 ship line by where the visitor orders to
     // (app/lib/geo-availability.ts, `geoCountryForRequest`: ?country, the
     // picked destination, else CF-IPCountry): the country, its region and

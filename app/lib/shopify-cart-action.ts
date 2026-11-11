@@ -183,7 +183,7 @@ export function lineLimitMessage(inCart: number): string {
 /**
  * The buyer country a new cart starts with: the destination the buyer
  * picked (`od_ship_country` cookie), else the visitor's country
- * (Cloudflare's `CF-IPCountry`, then `Accept-Language`), so Shopify checkout
+ * (Cloudflare's `CF-IPCountry`; `resolveCountry`), so Shopify checkout
  * opens in that market with its shipping rate and tax treatment. Undefined
  * when the country is unknown, blocked or sold only through shops: the cart
  * then starts in the shop's primary market and checkout still decides from
