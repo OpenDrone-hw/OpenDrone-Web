@@ -806,7 +806,7 @@ describe('EU batch 1 stock ships now (founder 2026-11-03)', () => {
   });
   /** The attributes the cart writes today for a line (shopify-cart-action `lineAttributes`). */
   const euStockLine = [
-    {key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'},
+    {key: 'Shipping', value: 'In stock in Belgium, ships in a few working days.'},
     {key: SHIP_PROMISE_LINE_ATTRIBUTE, value: 'ships late November 2026'},
     {key: '_batch', value: 'OPENFC-LITE-2020:1'},
   ];

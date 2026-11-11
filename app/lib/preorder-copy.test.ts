@@ -23,7 +23,8 @@ describe('/preorder channel copy', () => {
   it('international text: March 2027 batch with the duties note, never Belgian stock or November for non-EU', () => {
     const text = copy.channel_international_text;
     assert.match(text, /stock in Belgium ships to EU addresses only/);
-    assert.match(text, /Outside the EU, everything ships with the March 2027 preorder batch/);
+    assert.match(text, /Outside the EU, everything ships with the confirmed March 2027 preorder batch\./);
+    assert.doesNotMatch(text, /target/i);
     assert.match(text, /Import VAT, duties and customs fees are paid by you on delivery, unless collected at checkout/);
     assert.doesNotMatch(text, /ships to your country/);
     assert.doesNotMatch(text, /November/i);
@@ -48,7 +49,9 @@ describe('batch 1 stock on /preorder', () => {
   const route = readFileSync(new URL('../routes/preorder.tsx', import.meta.url), 'utf8');
   it('reads as stock for a visitor whose region gets it as stock, like the bar and the product page', () => {
     assert.match(route, /useGeoInStock\(null, data\.stackPromise\)/);
-    assert.match(route, /stockNow\?\.line \?\? shipWord\('ships', stackWhen \?\? stackMonth\)/);
+    assert.match(route, /stockNow\?\.line \?\? shipWord\('ships', stackWhen \?\? stackMonth \?\? ''\)/);
+    // A visitor without a known country reads the stock promise itself, which names the EU.
+    assert.match(route, /data\.stackStock && data\.stackPromise/);
   });
   it('has a parcel line without a ship month for that visitor', () => {
     assert.match(copy.targets_line_stock, /^One order ships in one parcel, when its last item is ready\./);

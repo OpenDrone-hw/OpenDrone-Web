@@ -82,6 +82,8 @@ in `.dev.vars` and run `npm run dev`.
 | `npm run tokens:check` | fails when `app/styles/opendrone-tokens.css` no longer matches the hash on its first line |
 | `npm run studio:tokens`, `studio:products` | regenerate the studio's token catalogue from `@theme`; rewrite `content/products/*.json` in normal form |
 | `npm run goals:update` | move the auto-mode goals in `content/goals.json` from the shop's order totals |
+| `npm run check:reach` | read-only: Shopify markets and shipping zones against `NO_SHOPIFY_ROUTE` in `app/lib/shipping-rates.ts`; exits 1 when they differ |
+| `BASE=<url> npm run e2e:region` | drives the header region control in Chrome (pick a market, page currency, cookie, next page, a `?country` link); IP cases only against a local server |
 | `npm run us:prices` | compare the US price uplift in `content/us-sales.json` with Shopify's price list (`-- --apply` writes it; see "US prices") |
 | `npm run sync:lab-visit -- <game dir>` | copy the lab walkthrough's runtime files into `public/lab-visit/` (`-- --check <game dir>` diffs only) |
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
@@ -91,7 +93,7 @@ in `.dev.vars` and run `npm run dev`.
 | `npm run emails:chrome` / `emails:paste` | start the dedicated Shopify Chrome; dry-run or apply the templates into Shopify admin (see "Paste into Shopify admin") |
 | `npm run emails:hash` | sha256 of every pasteable `out/*.html` (`-- --json` for the paste list with notification name and subject) |
 | `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU>` | dry run: the held orders of a batch; `--apply` releases their holds (see "Fulfil a batch") |
-| `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved\|missed --sku <SKU> --new-date <text>` | dry run: renders the ship-date or missed-target email per order; `--send` sends through Resend (see "Tell buyers") |
+| `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved\|missed --sku <SKU> --new-date <text>` | dry run: renders the moved ship date or missed ship-by date email per order; `--send` sends through Resend (see "Tell buyers") |
 | `node scripts/launch-blast.mjs <handle>` | dry run of the product mail to the `notify-<handle>` Resend segment; `--create` drafts, `--send` sends |
 | `BASE=<url> node scripts/smoke.mjs` | GETs the main routes of any base URL and asserts status and content; passes with the shop open or closed (`SMOKE_AUTH=opendrone:<password>` for staging) |
 
@@ -154,9 +156,11 @@ also renders every product as coming soon, with a notify-me signup instead of
 prices.
 
 **Preorders.** `content/preorders.json` lists production batches per SKU: paid
-stock with its own ship date, or a funding target whose supplier order is
-placed once that many units are ordered. Only SKUs the policy sells as
-`preorder` are affected.
+stock (on hand in Belgium when `inStock`), or a funding batch. With
+`confirmed: true` (founder 2026-11-11, terms 2.9) every funding batch is
+produced whatever its count and ships by `shipsBy`; without it a funding batch
+is a target whose supplier order is placed once that many units are ordered.
+Only SKUs the policy sells as `preorder` are affected.
 
 | Piece | Where | Does |
 |---|---|---|
@@ -247,7 +251,11 @@ off, `WHOLESALE_PERCENT` in `scripts/wholesale_lib.py`) whatever preorder price
 step a product is on. Retail is the Shopify compare-at price. The retailer
 types one personal code, `WS<rate>-<NAME>` (for example `WS25-FPV24`), in the
 cart's "Wholesale code" field (`intent=discount` in
-`app/lib/shopify-cart-action.ts`). The cart sends that code with its price-group
+`app/lib/shopify-cart-action.ts`). With `BATCH_CHOICE` on, that field shows
+only to a retailer: after a visit to `/wholesale` or through any link with the
+`wholesale` parameter (`/cart?wholesale=1`, the link the approval mail gives),
+remembered for the session, or when the cart already carries a code
+(`wholesaleFieldShown` in `app/lib/wholesale-codes.ts`). The cart sends that code with its price-group
 companions `-G2` to `-G4` (`app/lib/wholesale-codes.ts`) through
 `cartDiscountCodesUpdate`. Each is a customer-limited Shopify percentage code
 scoped to the variants of one price group, because Shopify takes a percentage
@@ -1128,9 +1136,18 @@ page renders as before. Open:
 | Batch | first batch with room whose `regions` include US | first with room whose `regions` include EU |
 | Cart | `buyerIdentity.countryCode` US, hidden `_ship_region: US` line attribute | unchanged |
 
-The destination is `shipCountryForRequest` (`?country`, the
-`od_ship_country` cookie, `CF-IPCountry`, `Accept-Language`) for the page, the
-cart, the line promise and the checkout gate alike (`buyerCountry`). The hold
+The destination is `resolveCountry` in `app/lib/shipping-rates.ts`, in this
+order: a blocked IP country, a `?country=XX` link, the `od_ship_country`
+cookie (the header control or the cart's Ship to), `CF-IPCountry`, else
+unknown; the browser language is never read. A page load with `?country`
+stores it in the cookie and redirects to the URL without it, so a link never
+outranks a later pick. The page, the cart, the line promise and the checkout
+gate all read it (`buyerCountry`, `geoCountryForRequest`); the root loader's
+`region` (`app/lib/region.ts`) is the typed answer components read: market
+(EU, US, UK / CH / NO, rest of world, none), currency, taxes shown, lanes and
+shipping. Countries Shopify has no market or zone for (`NO_SHOPIFY_ROUTE`,
+`npm run check:reach`) read "Not shipping to <country> yet" with the launch
+signup instead of a checkout that dead-ends. The hold
 pass tags an order `promise-mismatch` when it ships to another region than a
 line's promise was computed for, and holds and tags `us-review` every order
 shipping to the US with a line no US-serving batch carries (a line from an EU
@@ -1208,7 +1225,7 @@ those tags automatically. An earlier accepted promise is not silently extended.
 
 | Source | Owns |
 |---|---|
-| `content/preorders.json` | `countFrom`, `endsOn`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `reserved`, `paid`, `ships`, `deliveryBy`, `deliveryByUS`, `deliveryByINT`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
+| `content/preorders.json` | `countFrom`, `endsOn`, `confirmed`, `afterEndsOn`, `soldUnder`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `reserved`, `paid`, `ships`, `deliveryBy`, `deliveryByUS`, `deliveryByINT`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
 | `content/registrations.json` | producer numbers and explicit `saleApproved` per EU destination |
 | `content/us-sales.json` | the US flat shipping rate in USD (`null` keeps the US closed) and `priceUpliftPct`, the US price uplift (`npm run us:prices`) |
 | Shopify | compare-at (retail) price, current price, catalog identity, orders, payments |
@@ -1219,14 +1236,47 @@ those tags automatically. An earlier accepted promise is not silently extended.
    `countFrom` to the first day whose paid orders count, the batches with
    `units`, `paid` and `ships` for ordered stock (plus `reserved` for units
    of it held back from sale), `endsOn`, `shipsBy` and `pendingShips`
-   for funding targets, and `priceTiers`. `npm test` checks that
-   `pendingShips` names `endsOn` and `shipsBy`.
+   for funding batches, and `priceTiers`. `npm test` checks that
+   `pendingShips` names `shipsBy`.
 2. In Shopify, set each campaign SKU's compare-at price to retail and its
    price to the first step. A SKU priced under its step stays closed.
 3. Set the SKU to `preorder` in `SHOPIFY_PREVIEW_POLICY_JSON` with
    `shipPromise: null`, and `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`.
 4. Open the shop (above) and check `/api/status/campaign`: every campaign SKU
    `open`, `allOpen: true`, no pending price step.
+
+**Confirmed batches.** `confirmed: true` removes the funding condition:
+`pendingShips` names `shipsBy` only ("ships by 31 March 2027"), the product
+page and /preorder read "Batch confirmed" in place of a count toward a target,
+every line of the batch ships together (one ship group) and no SKU closes for
+a missed target. `afterEndsOn` is the one value for what the funding batches
+do after `endsOn`:
+
+| `afterEndsOn` | From the day after `endsOn` |
+|---|---|
+| `closed` | ordering stops (run `scripts/close-preorder-run.mjs --apply` so Shopify stops too) |
+| `retail` (default) | ordering stays open at the retail price: `tiersFor` returns no step, the price writer sets retail |
+| `earlyBird` | ordering stays open and the price steps keep running |
+
+Changing it is a one-line edit of `content/preorders.json`. After the price
+writer has set retail (it clears the compare-at price), going back to
+`earlyBird` needs the compare-at prices set again in Shopify first.
+
+`soldUnder` lists, oldest first, what orders created before each `before`
+instant were promised (`pendingShips`, `paidShips`, `paidDeliveryBy`, and the
+dates that differed). The account page, the hold pass and the notify script
+read an order through `configSoldUnder`, so an order keeps the delivery date
+it was sold with. A promise that still names a target ("... if the target is
+reached by ...") is recognised as the same batch (`fundingPromise`) and reads
+as confirmed. The last entry's `before` is the end of the publication day of
+the current terms in Brussels: a test holds it to the version line of
+`app/content/legal/en/algemene-voorwaarden.md`, so set both on the publish day.
+
+`inStock: true` on a paid batch: its units are on hand in Belgium. Its `ships`
+names no month ("in stock in Belgium, ships to EU addresses in a few working
+days"), it has no `deliveryBy`, and its lines never carry a `Preorder`
+property (checkout and the confirmation read "Shipping: In stock in Belgium,
+ships in a few working days.").
 
 Every funding-target unit ships by the one `shipsBy` date, however early
 its target is reached. A SKU's last batch has no end when it is a funding
@@ -1252,7 +1302,9 @@ number alone does not open a destination; `saleApproved` does, after its
 evidence is reviewed. The strategy behind a campaign lives in
 the team's private knowledge base, not here.
 
-**Close the run at `endsOn`.** The storefront stops selling a funding-target
+**Close the run at `endsOn`.** Only when `afterEndsOn` is `closed`, or the
+campaign is not `confirmed` (otherwise the script reports nothing to close).
+The storefront stops selling a funding-batch
 unit after `endsOn`, but Shopify does not: an old checkout link or an
 abandoned-checkout recovery mail can still complete an order. After the end
 of `endsOn` (Europe/Brussels):
@@ -1265,6 +1317,31 @@ of `endsOn` (Europe/Brussels):
 2. With the founder's go, run it again with `--apply`: it sets those
    variants' inventory policy to DENY. It refuses `--apply` before `endsOn`
    has ended and writes nothing else.
+
+## Buy now or pre-order
+
+Off in every environment (`BATCH_CHOICE = "0"` in `wrangler*.toml`). Off, the site reads and sells exactly as it does without this section.
+
+On (`BATCH_CHOICE = "1"`), each of the four boards (OpenFC Lite and OpenESC, 20x20 and 30x30) sells two ways:
+
+| Offer | Shopify variant | Price | Ships | Where | Limit |
+| --- | --- | --- | --- | --- | --- |
+| Buy now | `<Model> / Buy now` | retail | in a few working days from Belgium | EU only | units left in batch 1 (`paidLeft`), and Shopify denies the sale at zero stock |
+| Pre-order | `<Model> / Pre-order` (the variant the board always had) | the pre-order price | with the March batch | every region | none |
+
+Both variants carry the board's one SKU string, under a Shopify option named `Batch`. `mapShopifyCatalog` folds the pair into one catalog entry and still throws on any other duplicate, unpaired or unknown SKU. `applyCampaign` makes Buy now the entry's offer for an EU buyer while stock is left (with the pre-order beside it as `preorder_offer`); for everyone else the board is a pre-order from the March batch.
+
+| Surface | What shows |
+| --- | --- |
+| Board product page | two cards, one button named after the chosen card; the saving is stated only where pre-ordering is cheaper |
+| Home and product page build block | one block per drone size: "Buy now" is the FC and ESC stack, "Pre-order" the full build with every line added as a pre-order (`offer=preorder`) |
+| Cart | each line says "Ships now" or "Pre-order, <month>" |
+
+The cart rule (`batchChoiceConflict` in `app/lib/shopify-cart-action.ts`): a Buy now board together with a March item cannot be checked out. The cart offers "Keep everything in one order" (intent `keep-together`: each board line moves to its Pre-order variant, so Shopify charges the pre-order price) or "Check out the in-stock items first" (the March lines are set aside). Shopify binds the price to the variant, so no cart edit gets a ships-now board at the pre-order price.
+
+Counting: from `choiceFrom` in `content/preorders.json` on, an order line whose recorded variant title names `Pre-order` is a March unit and makes its whole order a March order (`preorderChoiceLine`); `Buy now` lines and every earlier order take batch 1 as before. The hold pass writes the same `batch:<sku>:<n>` tags, so the shipping tool needs no change. The price-step writer skips `Buy now` variants.
+
+Turning it on, in this order: this code live with the flag off; the `Buy now` variants created in Shopify; then one PR that sets `BATCH_CHOICE = "1"` in `wrangler.production.toml` and `choiceFrom` (the UTC instant of that deploy) in `content/preorders.json`. `app/lib/batch-choice.test.ts` fails if one is set without the other. It changes prices shown: founder's go.
 
 ## Fulfil a batch
 
@@ -1291,18 +1368,19 @@ batch arrives:
    fulfilled there without notifying the buyer.
 
 The script reads the Shopify Admin credentials from `.env` and never prints
-them. An order with an item whose target was missed is released once that
+them. An order with an item that missed its ship-by date is released once that
 item is refunded in Shopify admin: a line with nothing left to ship no longer
 holds the order back.
 
 ## Tell buyers
 
-Terms 7bis.3 and 7bis.3bis promise an email when a ship date moves and when a
-funding target is missed. `scripts/preorder-notify.mjs` writes them per order,
+Terms 7bis.3 and 7bis.3bis promise an email when a ship date moves and when an
+item has not shipped by its ship-by date (the March 2027 batch is confirmed,
+so there is no funding target to miss). `scripts/preorder-notify.mjs` writes them per order,
 in the buyer's language (English, Dutch or French):
 
 - Ship date moved: `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved --sku <SKU> --batch <N> --new-date "<date>" --new-date-nl "<datum>" --new-date-fr "<date>"`.
-- Target missed by `endsOn`: `--kind missed --sku <SKU> --batch <N> --new-date "<new target date>"`.
+- Not shipped by `shipsBy`: `--kind missed --sku <SKU> --batch <N> --new-date "<new ship date>"`.
   The email offers a refund or to wait, and states the 30-day reply deadline
   after which the item is refunded.
 

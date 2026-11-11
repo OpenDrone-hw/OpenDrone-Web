@@ -57,7 +57,7 @@ function restoreFocus(target: HTMLElement | null): void {
 /**
  * A small fixed toast, bottom right (bottom on phones, above the cart's
  * checkout bar), that says the ship time for the visitor's destination when
- * it changes: a new country from the header RegionSwitch or the cart's Ship
+ * it changes: a new country from the header CountryPicker or the cart's Ship
  * to select (both revalidate the root loader), a `?country` link, or a cart
  * that quotes another country. The rules are in lib/location-notice.ts.
  *

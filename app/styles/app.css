@@ -822,87 +822,147 @@ html.anim-paused .board-sheet.is-active {
   }
 }
 
-/* Region switch (EUR | USD): the lang-toggle pill, one side pressed. Sits in
-   the header on desktop; on phones the drawer carries the full-size copy. */
-.region-switch {
-  display: inline-flex;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  overflow: hidden;
+/* Country picker (CountryPicker.tsx): the header pill "BE · EUR", and the
+   labelled "Ship to" field of the cart, the added-to-cart dialog and the
+   phone drawer. Both open the same panel: a search field, one country list
+   with the current country ticked, one link to /markets. */
+.country-picker {
+  position: relative;
 }
-
-.region-switch button {
-  background: transparent;
-  color: var(--color-text-muted);
-  border: 0;
-  padding: 0.4rem 0.85rem;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease;
+.country-picker--field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
 }
-
-.region-switch button + button {
-  border-left: 1px solid var(--color-border);
-}
-
-.region-switch button:hover:not([aria-pressed="true"]) {
-  color: var(--color-text);
-}
-
-.region-switch button[aria-pressed="true"] {
-  background: var(--color-gold-fill);
-  color: var(--color-on-accent);
-  cursor: default;
-}
-
-.region-switch button:focus-visible {
-  outline: 2px solid var(--color-gold-fill);
-  outline-offset: -2px;
-}
-
-.region-switch[aria-busy="true"] {
-  opacity: 0.7;
-}
-
-.region-switch-caption {
+.country-picker-field {
   display: inline-flex;
   align-items: center;
-  padding: 0 0.7rem;
-  border-right: 1px solid var(--color-border);
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex: 1 1 12rem;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0.55rem 0.75rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--r-sm);
+  color: var(--color-text);
+  font-family: var(--font-sans, inherit);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.country-picker-field:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-field-border));
+}
+.country-picker-field:focus-visible {
+  outline: 2px solid var(--color-gold-fill);
+  outline-offset: 2px;
+}
+.country-picker-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.country-picker[aria-busy='true'] .country-picker-field,
+.country-picker[aria-busy='true'] .country-picker-trigger {
+  opacity: 0.6;
+  cursor: progress;
+}
+.country-picker .country-picker-panel {
+  background: var(--color-bg-card);
+  width: min(20rem, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  gap: 0.3rem;
+  padding: 0.4rem;
+}
+.country-picker--field .country-picker-panel {
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: auto;
+}
+.country-picker-search {
+  width: 100%;
+  min-height: 36px;
+  padding: 0.45rem 0.65rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--r-sm);
+  color: var(--color-text);
+  font-family: var(--font-sans, inherit);
+  font-size: 16px; /* 16 px: iOS does not zoom into the field */
+}
+.country-picker-search:focus-visible {
+  outline: 2px solid var(--color-gold-fill);
+  outline-offset: 0;
+}
+.country-picker-list {
+  max-height: min(19rem, 50vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.country-picker-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.country-picker-group {
+  display: block;
+  padding: 0.55rem 0.6rem 0.2rem;
   color: var(--color-text-muted);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
 }
-
-.region-menu-choice {
-  display: grid;
-  gap: 2px;
-  text-align: left;
-}
-
-.region-menu-choice small {
+.country-picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 36px;
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--r-sm);
   color: var(--color-text-muted);
-  font-size: 11px;
-  letter-spacing: 0;
-  text-transform: none;
-  white-space: nowrap;
+  font-size: var(--fs-sm);
+  cursor: pointer;
 }
-
-.region-switch.mobile-menu-region {
+.country-picker-option[data-active='true'] {
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+}
+.country-picker-option[aria-selected='true'] {
+  color: var(--color-text);
+}
+.country-picker-empty {
+  padding: 0.6rem;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+.country-picker-help {
+  display: block;
+  padding: 0.5rem 0.6rem 0.35rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.country-picker-help:hover {
+  color: var(--color-text);
+}
+.country-picker-failed {
+  flex-basis: 100%;
+  display: block;
+  font-size: 12px;
+}
+.country-picker.mobile-menu-region {
   margin: 0 0 0.75rem;
-  align-self: flex-start;
-  /* The drawer body is a shrinking flex column: never squash the pill. */
   flex-shrink: 0;
-}
-
-.region-switch.mobile-menu-region button {
-  min-height: 40px;
-  padding: 0.5rem 1.1rem;
 }
 
 @supports (view-transition-name: root) {
@@ -1141,9 +1201,6 @@ html.anim-paused .board-sheet.is-active {
 .header-more-panel .site-header-link.is-active {
   color: var(--color-text);
 }
-.region-menu[aria-busy='true'] {
-  opacity: 0.7;
-}
 /* A dropdown open under the pill sits above the pinned buy rail (z 60). */
 .site-header:has(.header-popover[data-open]) {
   z-index: 70;
@@ -1225,7 +1282,7 @@ html.anim-paused .board-sheet.is-active {
     padding-left: 0;
   }
   .site-header-actions .header-region-switch.header-popover-trigger,
-  .site-header-actions .region-menu .header-popover-trigger {
+  .site-header-actions .country-picker .header-popover-trigger {
     padding: 0 0.5rem;
     gap: 0.3rem;
     letter-spacing: 0.04em;
@@ -18338,31 +18395,6 @@ html.hero-header-in .homepage-layout .site-header {
   letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
 }
-.ship-to-select {
-  appearance: none;
-  flex: 1 1 12rem;
-  min-width: 0;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-field-border);
-  color: var(--color-text);
-  font-family: var(--font-sans, inherit);
-  font-size: var(--fs-sm);
-  padding: 0.55rem 2rem 0.55rem 0.75rem;
-  border-radius: var(--r-sm);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  cursor: pointer;
-}
-.ship-to-select:hover:not([aria-disabled='true']) {
-  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-field-border));
-}
-/* Busy while a switch is in flight: aria-disabled, not disabled, so the
-   select keeps focus (ShipToSelect). */
-.ship-to-select[aria-disabled='true'] {
-  opacity: 0.6;
-  cursor: progress;
-}
 .ship-to .cart-line-error {
   flex-basis: 100%;
 }
@@ -19334,4 +19366,167 @@ summary,
 }
 .flash-more p {
   margin: 0;
+}
+
+/* "In the EU? Choose your country to buy in stock": a link-styled button. */
+.choose-country-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* The price line's tax wording links to /markets, styled as the plain note. */
+a.product-buy-vat-link {
+  text-decoration: none;
+}
+a.product-buy-vat-link:hover,
+a.product-buy-vat-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* /markets ("Where we ship"): one table, phone first. On a phone each market
+   is a block of label / value pairs (the column heading from data-label);
+   from 900 px it is a plain table. One type scale: --fs-sm body, --fs-xs labels. */
+.markets-inner {
+  max-width: 64rem;
+}
+.markets-header {
+  margin-bottom: var(--sp-6, 1.5rem);
+}
+.markets-lead {
+  margin: 0.75rem 0 0;
+  max-width: 36rem;
+  color: var(--color-text-muted);
+  font-size: var(--fs-base);
+  line-height: 1.6;
+}
+.markets-table-scroll {
+  max-width: 100%;
+}
+.markets-table-scroll:focus-visible {
+  outline: 2px solid var(--color-gold-fill);
+  outline-offset: 4px;
+}
+.markets-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+.markets-table thead {
+  display: none;
+}
+.markets-table tr {
+  display: grid;
+  grid-template-columns: minmax(7rem, 38%) 1fr;
+  gap: 0.15rem 0.75rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--color-border);
+}
+.markets-table tr[data-current='true'] {
+  border-top-color: var(--color-gold);
+}
+.markets-table th[scope='row'] {
+  grid-column: 1 / -1;
+  margin-bottom: 0.25rem;
+  color: var(--color-text);
+  font-weight: 500;
+  text-align: left;
+}
+.markets-table td {
+  display: contents;
+  color: var(--color-text);
+}
+.markets-table td::before {
+  content: attr(data-label);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  padding-top: 0.15rem;
+}
+.markets-you {
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--color-gold);
+  border-radius: var(--r-pill);
+  color: var(--color-gold);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  vertical-align: 0.1em;
+}
+@media (min-width: 900px) {
+  .markets-table thead {
+    display: table-header-group;
+  }
+  .markets-table tr {
+    display: table-row;
+    padding: 0;
+  }
+  .markets-table th,
+  .markets-table td {
+    display: table-cell;
+    padding: 0.75rem 1rem 0.75rem 0;
+    border-top: 1px solid var(--color-border);
+    text-align: left;
+    vertical-align: top;
+  }
+  .markets-table tr[data-current='true'] > * {
+    border-top-color: var(--color-gold);
+  }
+  .markets-table thead th {
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    letter-spacing: var(--ls-label);
+    text-transform: uppercase;
+    border-top: 0;
+  }
+  .markets-table td::before {
+    content: none;
+  }
+  .markets-table th[scope='row'] {
+    margin: 0;
+    width: 22%;
+  }
+}
+.markets-notes {
+  margin: var(--sp-6, 1.5rem) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+  max-width: 44rem;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+.markets-notes a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.markets-notify {
+  margin-top: 2rem;
+  max-width: 28rem;
+}
+/* One line, then the launch-list form: no newsletter eyebrow or lede here. */
+.markets-notify-form > div > p:first-child,
+.markets-notify-form > div > h3 + p {
+  display: none;
+}
+.markets-notify-form h3 {
+  font-family: inherit;
+  font-size: var(--fs-base);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  margin-bottom: 0.5rem;
 }

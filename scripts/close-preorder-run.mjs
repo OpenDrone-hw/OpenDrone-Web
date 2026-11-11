@@ -73,6 +73,12 @@ export function parseArgs(argv) {
 export function planClose(campaign, config, units) {
   const close = [];
   const keep = [];
+  // A confirmed campaign closes its funding batches only in the `closed`
+  // mode of `afterEndsOn` (content/preorders.json): at retail or early-bird
+  // they keep selling after `endsOn`, so nothing is set to DENY.
+  if (config.confirmed && (config.afterEndsOn ?? 'retail') !== 'closed') {
+    return {close, keep: [...Object.keys(config.skus), ...Object.keys(config.shipsWith ?? {}).filter((sku) => config.skus[config.shipsWith[sku].sku])]};
+  }
   for (const [sku, entry] of Object.entries(config.skus)) {
     const state = campaign.campaignState(entry.batches, units[sku] ?? 0, config.pendingShips, campaign.tiersFor(config, sku), null, 'EU');
     (state.shipsOnTarget && !state.paidStock ? close : keep).push(sku);

@@ -6,7 +6,7 @@ import {Aside} from '~/components/Aside';
 import {Footer} from '~/components/Footer';
 import {Header, HeaderMenu, type HeaderFamilyProduct} from '~/components/Header';
 import {LangToggle} from '~/components/LangToggle';
-import {RegionSwitch} from '~/components/RegionSwitch';
+import {CountryPicker} from '~/components/CountryPicker';
 import {RouteProgress} from '~/components/RouteProgress';
 import {RouteAnnouncer} from '~/components/RouteAnnouncer';
 import {Txt} from '~/components/Txt';
@@ -15,6 +15,7 @@ import {LocationNotice} from '~/components/LocationNotice';
 import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
 import type {CommerceHandoff} from '~/lib/shop-links';
 import {AvailabilityBar} from '~/components/AvailabilityBanner';
+import {notSoldNote} from '~/components/AddToCartButton';
 import {useShipGeo} from '~/components/ShipChip';
 import {reconcilePendingShipTo} from '~/lib/pending-ship-to';
 import {availabilityBannerHiddenOn, type GeoAvailabilityRegion} from '~/lib/geo-availability';
@@ -72,7 +73,12 @@ export function PageLayout({
           <RouteAnnouncer />
           {/* Ordering is open: the batch line for the visitor's country, a bar at the very top (under the
               staging strip on staging). Never on /flash or /guides/*. */}
-          {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBar geo={shipGeo ?? geo} /> : null}
+          {shopOpen && !availabilityBannerHiddenOn(pathname) ? <AvailabilityBar
+              geo={shipGeo ?? geo}
+              ordinary={Boolean((rootData as {ordinaryShop?: boolean} | undefined)?.ordinaryShop)}
+              // A country the shop cannot sell to reads the buy box's own words, never a ship date.
+              note={(shipGeo ?? geo)?.region === 'us' ? null : notSoldNote(((shipGeo ?? geo) as {country?: string | null} | null | undefined)?.country ?? null, (rootData as {usShippingRate?: number} | undefined)?.usShippingRate ?? null)}
+            /> : null}
           <Header
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}
@@ -99,10 +105,10 @@ export function PageLayout({
 function MobileMenuAside({accountUrl}: {accountUrl: string | null}) {
   return (
     <Aside type="mobile" heading={<Txt id="chrome.aside_menu_heading" />}>
-      {/* Region switch: hidden from the phone top bar (a 320px row), rendered
-          here at full tap size, first so it never scrolls out of the drawer.
-          Nothing while US sales are closed. */}
-      <RegionSwitch className="mobile-menu-region" />
+      {/* The country picker: hidden from the phone top bar (a 320px row),
+          rendered here at full tap size, first so it never scrolls out of
+          the drawer. The same control as the header pill and the cart. */}
+      <CountryPicker variant="field" className="ship-to mobile-menu-region" />
       <HeaderMenu viewport="mobile" accountUrl={accountUrl} />
       {/* Language switch lives in the drawer on phones - it's hidden from the
           top bar there to keep the header row inside a 320px viewport.

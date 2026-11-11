@@ -76,13 +76,13 @@ test('one header offset: html scroll-padding-top, no scroll-margin-top on top of
   }
 });
 
-test('cart: Remove moves focus only from body; copy keys for the announcements; busy ship-to style', () => {
+test('cart: Remove moves focus only from body; copy keys for the announcements; busy country picker style', () => {
   const cart = read('../routes/cart.$.tsx');
   assert.match(cart, /const active = document\.activeElement;\s+if \(active && active !== document\.body\) return;/);
   const copy = JSON.parse(read('../../content/copy/cart.json')) as Record<string, string>;
   assert.equal(copy.line_removed, 'Removed {name}');
   assert.equal(copy.line_qty_announce, 'Quantity {count}, {name}');
   const css = read('../styles/app.css');
-  assert.match(css, /\.ship-to-select\[aria-disabled='true'\] \{/);
-  assert.doesNotMatch(css, /\.ship-to-select:disabled/);
+  assert.match(css, /\.country-picker\[aria-busy='true'\] \.country-picker-field/);
+  assert.doesNotMatch(css, /\.country-picker-field:disabled/);
 });

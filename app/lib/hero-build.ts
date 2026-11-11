@@ -1,4 +1,4 @@
-import {bySku, cartAddUrl, isEarlyPrice, type Catalog, type CartLine} from './catalog.ts';
+import {bySku, cartAddUrl, isEarlyPrice, type BatchOffer, type Catalog, type CartLine} from './catalog.ts';
 import {
   partHandle,
   type BuildsConfig,
@@ -31,6 +31,14 @@ export type HeroBuildPart = {
   shipPromise: string | null;
   /** The price is an early bird preorder price. */
   early?: boolean;
+  /** A board with the buy now or pre-order choice: which offer `price` and
+   *  `shipPromise` are. */
+  offer?: BatchOffer;
+  /** The pre-order beside a buy-now board: its price and ship promise. */
+  preorder?: {price: number; shipPromise: string | null};
+  /** Units left in the paid batch (batch 1) for this buyer, or null when
+   *  the part is not sold from it: the most an express stack may take. */
+  left?: number | null;
 };
 
 export type HeroBuild = {
@@ -38,15 +46,20 @@ export type HeroBuild = {
   size: string;
   parts: HeroBuildPart[];
   addUrl: string;
+  /** Buy now or pre-order is on (`BATCH_CHOICE`): the home shows this build
+   *  as one block with the two modes ({@link buildModes}). */
+  choice?: boolean;
 };
 
 /** Use the same exact SKU recipes as the cart's build suggestions. */
 export function resolveHeroBuilds(
   config: BuildsConfig,
   catalog: Catalog,
+  choice = false,
 ): HeroBuild[] {
   return config.builds.map((build) => ({
     id: build.id,
+    ...(choice ? {choice} : {}),
     size: build.id.replace(/-inch$/, ''),
     addUrl: catalog.add_url,
     parts: build.parts.map((part) => {
@@ -70,6 +83,13 @@ export function resolveHeroBuilds(
         available: Boolean(variant && variant.availability !== 'sold_out'),
         shipPromise: variant?.ship_promise ?? null,
         early: isEarlyPrice(variant),
+        ...(variant?.offer ? {offer: variant.offer} : {}),
+        ...(variant?.offer === 'buy_now' && variant.campaign?.paidStock
+          ? {left: Math.max(0, variant.campaign.paidLeft ?? variant.campaign.batchUnits - variant.campaign.batchOrdered)}
+          : {}),
+        ...(variant?.preorder_offer
+          ? {preorder: {price: variant.preorder_offer.price, shipPromise: variant.preorder_offer.ship_promise}}
+          : {}),
       };
     }),
   }));
@@ -141,4 +161,129 @@ export function heroBuildSelection(
       | 'date'
       | 'none',
   };
+}
+
+export type BuildMode = 'buy_now' | 'preorder';
+
+const isBoard = (part: Pick<HeroBuildPart, 'role'>) => part.role === 'flight-controller' || part.role === 'esc';
+
+/**
+ * A build as its two modes, each a build of its own whose rows carry that
+ * mode's price, so the total of a mode is always the sum of its rows:
+ * - `buy_now`: the FC and ESC stack from stock at the retail price, or null
+ *   unless both boards are in stock for this buyer;
+ * - `preorder`: the full build, the boards at their pre-order price, every
+ *   line added as a pre-order (`offer=preorder`), so nothing in it is a
+ *   board paid at retail that then waits for March.
+ */
+export function buildModes(build: HeroBuild): {buy_now: HeroBuild | null; preorder: HeroBuild} {
+  const boards = build.parts.filter(isBoard);
+  const stocked = boards.length === 2 && boards.every((part) => part.offer === 'buy_now' && part.available);
+  return {
+    buy_now: stocked ? {...build, id: `${build.id}-stack`, parts: boards} : null,
+    preorder: {
+      ...build,
+      parts: build.parts.map((part) =>
+        part.offer !== 'buy_now'
+          ? part
+          : part.preorder
+            ? {...part, offer: 'preorder' as const, price: part.preorder.price, shipPromise: part.preorder.shipPromise}
+            // In stock but its pre-order is closed: not part of a pre-order build.
+            : {...part, available: false},
+      ),
+    },
+  };
+}
+
+/** The add link of a mode: a pre-order build asks for the pre-order offer. */
+export function modeAddUrl(href: string, mode: BuildMode): string {
+  return mode === 'preorder' ? `${href}${href.includes('?') ? '&' : '?'}offer=preorder` : href;
+}
+
+/** The FC and ESC stack a buyer can buy now, as the express offer: its
+ *  lines per stack, its price per stack and the most stacks batch 1 still
+ *  holds. Null unless both boards are in stock for this buyer. */
+export function stackOffer(build: HeroBuild): {
+  size: string;
+  parts: HeroBuildPart[];
+  lines: Array<{sku: string; quantity: number}>;
+  price: number;
+  currency: string;
+  max: number;
+} | null {
+  const stack = buildModes(build).buy_now;
+  if (!stack || stack.parts.some((part) => part.price === null)) return null;
+  const price = stack.parts.reduce((sum, part) => sum + Math.round(part.price! * 100) * part.quantity, 0) / 100;
+  const max = Math.min(...stack.parts.map((part) => Math.floor((part.left ?? Infinity) / part.quantity)));
+  if (!(max > 0)) return null;
+  return {
+    size: build.size,
+    parts: stack.parts,
+    lines: stack.parts.map((part) => ({sku: part.sku, quantity: part.quantity})),
+    price,
+    currency: stack.parts[0].currency,
+    max,
+  };
+}
+
+/**
+ * What a board page's Buy now button buys: this board alone, or, with the
+ * stack add-on ticked and the stack in stock, this board and its partner.
+ */
+export function boardExpressLines(
+  sku: string,
+  stack: {lines: ReadonlyArray<{sku: string; quantity: number}>} | null,
+  withStack: boolean,
+): Array<{sku: string; quantity: number}> {
+  return withStack && stack ? stack.lines.map((line) => ({...line})) : [{sku, quantity: 1}];
+}
+
+/**
+ * The build a product page's part belongs to: the build listing this SKU,
+ * else the first build listing the product (a motor winding or receiver
+ * that no build names by SKU).
+ */
+export function buildForPart(builds: ReadonlyArray<HeroBuild>, sku: string | null | undefined, handle: string): HeroBuild | null {
+  return builds.find((build) => build.parts.some((part) => part.sku === sku)) ?? builds.find((build) => build.parts.some((part) => part.handle === handle)) ?? null;
+}
+
+/**
+ * The partner board a board page offers in one tick row: the other of FC
+ * and ESC in the same build, at the chosen lane's price (`buildModes`, the
+ * home block's own rows), or null when that lane does not offer it to this
+ * buyer (out of stock, not sold in the region).
+ */
+export function partnerBoard(build: HeroBuild, sku: string | null | undefined, mode: BuildMode): HeroBuildPart | null {
+  if (!build.parts.some((part) => part.sku === sku && isBoard(part))) return null;
+  const modes = buildModes(build);
+  const lane = mode === 'buy_now' ? modes.buy_now : modes.preorder;
+  const partner = lane?.parts.find((part) => isBoard(part) && part.sku !== sku) ?? null;
+  return partner && partner.available && partner.price !== null && Number.isFinite(partner.price) ? partner : null;
+}
+
+/** The home page's build block for this size: `/?build=3#build`. */
+export function fullBuildHref(size: string): string {
+  return `/?build=${encodeURIComponent(size)}#build`;
+}
+
+/** One add of this part and the ticked parts, every line a pre-order, each times the quantity. */
+export function buildAddonUrl(
+  build: Pick<HeroBuild, 'addUrl'>,
+  sku: string,
+  ticked: ReadonlyArray<Pick<HeroBuildPart, 'sku' | 'quantity'>>,
+  quantity: number,
+): string {
+  const lines: CartLine[] = [{sku, quantity}, ...ticked.map((part) => ({sku: part.sku, quantity: part.quantity * quantity}))];
+  return modeAddUrl(cartAddUrl(build.addUrl, lines), 'preorder');
+}
+
+/** The total beside the button: this part and the ticked parts, times the quantity, in cents then back. */
+export function buildAddonTotal(ownPrice: number, ticked: ReadonlyArray<Pick<HeroBuildPart, 'price' | 'quantity'>>, quantity: number): number {
+  const cents = Math.round(ownPrice * 100) + ticked.reduce((sum, part) => sum + Math.round((part.price ?? 0) * 100) * part.quantity, 0);
+  return (cents * quantity) / 100;
+}
+
+/** The `lines` field of an express purchase: each line times the quantity. */
+export function expressLinesField(lines: ReadonlyArray<{sku: string; quantity: number}>, quantity: number): string {
+  return lines.map((line) => `${line.sku}:${line.quantity * quantity}`).join(',');
 }

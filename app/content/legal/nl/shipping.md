@@ -34,7 +34,7 @@ Voor leveringen naar de Verenigde Staten verkoopt Incutec BV rechtstreeks aan co
 - **Verkoopbelasting:** Geïnd waar de wet dit vereist en meegedeeld vóór de betaling
 - **Verzending:** Vast tarief van USD 9,95 per bestelling
 - **Verzonden vanuit:** Incutec of zijn fulfilmentpartner
-- **Verzenddatum:** Uiterlijk 31 maart 2027, als het financieringsdoel uiterlijk 15 december 2026 wordt bereikt
+- **Verzenddatum:** Uiterlijk 31 maart 2027 (de batch van maart 2027 is bevestigd)
 
 De verzenddatum op de productpagina en in uw orderbevestiging is die welke voor uw bestelling geldt. Terugbetalingen, vertraagde verzending en het recht om te annuleren bij leveringen naar de Verenigde Staten volgen [Artikel 7ter van de voorwaarden](/nl/algemene-voorwaarden#art-7ter).
 
@@ -44,15 +44,15 @@ Consumenten kunnen pre-orders afrekenen voor de bestemmingen die aan de checkout
 
 Tenzij ze uitdrukkelijk vóór de betaling worden geïnd, betaalt de ontvanger invoerrechten, invoer-btw of GST, inklaringskosten en administratiekosten van de vervoerder. Die kosten komen boven op de productprijs en verzendkosten en hangen af van de bestemming, zending en vervoerder. Dezelfde belastingverplichting mag niet dubbel worden betaald; neem bij een dubbele aanslag contact op met Incutec BV voor correctie of terugbetaling.
 
-Voor de gefinancierde batch van maart 2027 worden goederen uiterlijk 31 maart 2027 verzonden en uiterlijk 30 april 2027 geleverd, als het financieringsdoel uiterlijk op de deadline wordt bereikt. Het aanbod vóór de betaling en uw orderbevestiging leggen de batch en termijnen voor uw bestelling vast. Levering vereist naleving van de toepasselijke product- en invoerregels. Kan Incutec BV een artikel niet rechtmatig leveren, dan betaalt zij alle daarvoor betaalde bedragen terug; wordt de volledige bestelling geannuleerd, dan worden ook de verzendkosten terugbetaald. Dwingende lokale consumentenbescherming blijft van toepassing. Zie [Artikel 7quater van de voorwaarden](/nl/algemene-voorwaarden#art-7quater).
+De batch van maart 2027 is bevestigd: goederen worden uiterlijk 31 maart 2027 verzonden en uiterlijk 30 april 2027 geleverd. Het aanbod vóór de betaling en uw orderbevestiging leggen de batch en termijnen voor uw bestelling vast. Levering vereist naleving van de toepasselijke product- en invoerregels. Kan Incutec BV een artikel niet rechtmatig leveren, dan betaalt zij alle daarvoor betaalde bedragen terug; wordt de volledige bestelling geannuleerd, dan worden ook de verzendkosten terugbetaald. Dwingende lokale consumentenbescherming blijft van toepassing. Zie [Artikel 7quater van de voorwaarden](/nl/algemene-voorwaarden#art-7quater).
 
 Winkels kunnen [een offerte aanvragen](/wholesale). Beschikbaarheid bij buitenlandse winkels wordt niet beloofd.
 
 ### Pre-orders
 
-Pre-orders worden volledig betaald. Het productaanbod en de orderbevestiging vermelden de batch, de financieringsvoorwaarden en de uiterste verzenddatum. De campagnedata staan op [/preorder](/preorder). Verzending is geen levering: levering betekent ontvangst van de goederen door u. Bestellingen uit de betaalde batch 1 worden uiterlijk 30 november 2026 in de EU geleverd. Wordt het financieringsdoel voor de batch van maart 2027 uiterlijk op de deadline bereikt, dan wordt die batch uiterlijk 15 april 2027 in de EU en uiterlijk 30 april 2027 in de Verenigde Staten en andere bestemmingen buiten de EU geleverd. De uiterste leverdatum die vóór de betaling en in uw orderbevestiging is vermeld, geldt voor uw bestelling (Artikel 7bis.2 van de voorwaarden).
+Pre-orders worden volledig betaald. Het productaanbod en de orderbevestiging vermelden de batch en de uiterste verzenddatum. De batchdata staan op [/preorder](/preorder). Verzending is geen levering: levering betekent ontvangst van de goederen door u. De voorraad van batch 1 ligt in België en wordt binnen enkele werkdagen na de bestelling naar adressen in de EU verzonden; een bestelling waarvoor vóór de betaling een leverdatum van 30 november 2026 is vermeld, behoudt die datum. De batch van maart 2027 is bevestigd en hangt niet af van een financieringsdoel: zij wordt uiterlijk 31 maart 2027 verzonden en uiterlijk 15 april 2027 in de EU en uiterlijk 30 april 2027 in de Verenigde Staten en andere bestemmingen buiten de EU geleverd. De uiterste leverdatum die vóór de betaling en in uw orderbevestiging is vermeld, geldt voor uw bestelling (Artikel 7bis.2 van de voorwaarden).
 
-Annulering, niet-behaalde doelen, gewijzigde verzenddata, terugbetalingen en bestellingen met meerdere batches volgen [Artikel 7bis van de voorwaarden](/nl/algemene-voorwaarden#art-7bis). U kunt vóór de levering herroepen en behoudt de wettelijke herroepingsrechten na ontvangst. Gebruik het [online herroepingsformulier](/nl/herroepingsrecht#withdraw). Voor leveringen naar de Verenigde Staten geldt daarnaast Artikel 7ter. Voor andere bestemmingen buiten de EU geldt daarnaast Artikel 7quater.
+Annulering, gewijzigde verzenddata, terugbetalingen en bestellingen met meerdere batches volgen [Artikel 7bis van de voorwaarden](/nl/algemene-voorwaarden#art-7bis). U kunt vóór de levering herroepen en behoudt de wettelijke herroepingsrechten na ontvangst. Gebruik het [online herroepingsformulier](/nl/herroepingsrecht#withdraw). Voor leveringen naar de Verenigde Staten geldt daarnaast Artikel 7ter. Voor andere bestemmingen buiten de EU geldt daarnaast Artikel 7quater.
 
 ### Leveringstermijn voor artikelen op voorraad
 

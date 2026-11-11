@@ -95,8 +95,8 @@ describe('createCatalogClient: fresh writes the memo, recent reuses it', () => {
   it('createCatalogClient wires fresh through readAndRemember and recent through recentCatalog', () => {
     // catalog-client imports JSON without an import attribute, so node:test cannot load it; check its wiring.
     const src = readFileSync(new URL('./catalog-client.ts', import.meta.url), 'utf8');
-    assert.match(src, /const fresh = catalogReader\(env, request, \(market = 'default'\) => readAndRemember\(market, \(\) => read\(market\)\)\);/);
-    assert.match(src, /const recent = catalogReader\(env, request, \(market = 'default'\) => recentCatalog\(market, REPLAN_REUSE_MS, \(\) => read\(market\)\)\);/);
+    assert.match(src, /const fresh = catalogReader\(env, request, dealer, \(market = 'default'\) => readAndRemember\(market, \(\) => read\(market\)\)\);/);
+    assert.match(src, /const recent = catalogReader\(env, request, dealer, \(market = 'default'\) => recentCatalog\(market, REPLAN_REUSE_MS, \(\) => read\(market\)\)\);/);
     assert.match(src, /return \{\.\.\.cached, fresh, recent\};/);
     assert.doesNotMatch(src, /from '\.\/cart-replan\.ts'/);
   });

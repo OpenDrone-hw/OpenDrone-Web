@@ -9,6 +9,8 @@
 
 import {
   datedShipParts,
+  fundingPromise,
+  stockPromise,
   promiseBatchMonth,
   shortCampaignDate,
   type CampaignState,
@@ -111,13 +113,16 @@ export function batchText(
 }
 
 function detailOf(b: Batch, dates: TargetDates, reached: boolean, words: Words, lead: string | null): string {
-  const waits = /\bif the target is reached\b/.test(b.shipPromise);
-  if (!waits) {
+  const funding = fundingPromise(b.shipPromise);
+  if (!funding) {
+    // Stock on hand names no month: one short line, the scope says where.
+    if (stockPromise(b.shipPromise)) return words('ship_stock', 'In stock, ships in a few working days');
     const parts = datedShipParts(b.shipPromise);
     return parts ? words('ship_ships', 'Ships {date}', {date: parts.when}) : b.shipPromise;
   }
   const eta = words('ship_eta', 'Ships by {date}', {date: dates.eta});
-  if (reached) return eta;
+  // A confirmed batch (its promise names no target) or a reached target: the date alone.
+  if (reached || !funding.conditional) return eta;
   return `${words('ship_deadline', 'Deadline {date}', {date: dates.deadline})}. ${
     lead
       ? words('ship_eta_if_lead_funded', 'Ships by {date} if that target is reached', {date: dates.eta})

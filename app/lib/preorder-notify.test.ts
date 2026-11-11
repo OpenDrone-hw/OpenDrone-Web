@@ -61,13 +61,13 @@ describe('preorder-notify', () => {
     assert.equal(again.length, 3);
   });
 
-  it('renders the missed-target email with both choices and the reply deadline', () => {
+  it('renders the missed ship-by date email with both choices and the reply deadline', () => {
     const mail = renderEmail('missed', {
       order: '#1001',
       product: 'OpenRX Lite',
       qty: 2,
       newDate: 'by the end of June 2027',
-      deadline: formatDate('2026-12-31', 'en'),
+      deadline: formatDate('2027-03-31', 'en'),
       replyBy: formatDate(addDays('2027-01-02', 30), 'en'),
       others: false,
       email: 'buyer@example.com',
@@ -75,7 +75,8 @@ describe('preorder-notify', () => {
     });
     assert.equal(mail.to, 'buyer@example.com');
     assert.match(mail.subject, /#1001/);
-    assert.match(mail.text, /31 December 2026/);
+    assert.match(mail.text, /has not shipped by its ship-by date, 31 March 2027/);
+    assert.doesNotMatch(`${mail.subject} ${mail.text}`, /funding target/);
     assert.match(mail.text, /REFUND/);
     assert.match(mail.text, /WAIT: .*ships by the end of June 2027/);
     assert.match(mail.text, /by 1 February 2027/);

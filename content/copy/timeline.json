@@ -21,7 +21,7 @@
   "event_esc30_repo_split_title": "OpenESC 30×30 split into its own repo",
   "event_esc_first_production_files_title": "First production files exported",
   "event_esc_first_production_files_detail": "20×20 V1 and 30×30 V0.1 gerbers, BOM and placement.",
-  "event_fc_mini_first_commit_title": "OpenFC Lite Mini: first commit",
+  "event_fc_mini_first_commit_title": "OpenFC Lite 20×20: first commit",
   "event_fc_mini_first_commit_detail": "A stripped, cost-down flight controller begins.",
   "event_web_first_commit_title": "This webshop: first commit",
   "event_rx_first_commit_title": "OpenRX: first commit",

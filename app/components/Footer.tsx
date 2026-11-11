@@ -1,3 +1,4 @@
+import {useRouteLoaderData} from 'react-router';
 import {NavLink} from '~/components/nav';
 import {
   DISCORD_INVITE_URL,
@@ -52,6 +53,7 @@ const SOCIAL_LINKS: Array<{href: string; copy: string}> = [
 const HELP_LINKS: Array<{to: string; copy: string}> = [
   {to: '/support', copy: 'nav_support'},
   {to: '/shipping', copy: 'nav_shipping'},
+  {to: '/markets', copy: 'nav_markets'},
   {to: '/herroepingsrecht', copy: 'nav_returns'},
   {to: '/warranty', copy: 'nav_warranty'},
   {to: '/support/find', copy: 'nav_find_ticket'},
@@ -339,6 +341,13 @@ const BUILD_DATE = typeof __BUILD_DATE__ === 'string' ? __BUILD_DATE__ : '';
 
 export function Footer({company, turnstileSiteKey}: FooterProps) {
   const legalLocale = useLegalLocale();
+  // Buy now or pre-order on: the early bird Discord role moves here from /preorder.
+  const root = useRouteLoaderData('root') as {batchChoice?: boolean; ordinaryShop?: boolean} | undefined;
+  const batchChoice = Boolean(root?.batchChoice);
+  // An ordinary shop (nothing is pre-order): no Preorders link, /preorder redirects anyway.
+  const baseLinks = root?.ordinaryShop ? SHOP_LINKS.filter((link) => link.to !== '/preorder') : SHOP_LINKS;
+  // The early bird role is a pre-order perk: gone in the ordinary shop (founder 2026-11-11).
+  const shopLinks = batchChoice && !root?.ordinaryShop ? [...baseLinks, {to: '/early-bird', copy: 'nav_early_bird'}] : baseLinks;
   // Reference designators run across the whole parts list, J1 to Jn.
   let refNo = 0;
   const nextRef = () => ++refNo;
@@ -400,13 +409,13 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
               <div className="footer-parts-grid">
                 <FooterGroup id="chrome.heading_shop" open>
                   <nav aria-label={copyText('chrome.heading_shop') ?? 'Shop'} className="flex flex-col gap-1.5 md:gap-0">
-                    {SHOP_LINKS.map((link) => (
+                    {shopLinks.map((link) => (
                       <FooterNavLink
                         key={link.to}
                         to={link.to}
                         refNo={nextRef()}
                       >
-                        <Txt id={`chrome.${link.copy}`} />
+                        <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                       </FooterNavLink>
                     ))}
                   </nav>
@@ -420,7 +429,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                         to={legalHref(link.to, legalLocale)}
                         refNo={nextRef()}
                       >
-                        <Txt id={`chrome.${link.copy}`} />
+                        <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                       </FooterNavLink>
                     ))}
                   </nav>
@@ -445,7 +454,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                         className="footer-link text-xs text-[var(--color-text-muted)] transition-colors flex items-center min-h-[36px] md:min-h-[24px]"
                       >
                         <RefTag n={nextRef()} />
-                        <Txt id={`chrome.${link.copy}`} />
+                        <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                       </a>
                     ))}
                   </nav>
@@ -459,7 +468,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                         to={link.to}
                         refNo={nextRef()}
                       >
-                        <Txt id={`chrome.${link.copy}`} />
+                        <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                       </FooterNavLink>
                     ))}
                   </nav>
@@ -474,7 +483,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                           to={legalHref(link.to, legalLocale)}
                           refNo={nextRef()}
                         >
-                          <Txt id={`chrome.${link.copy}`} />
+                          <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                         </FooterNavLink>
                       ))}
                     </nav>

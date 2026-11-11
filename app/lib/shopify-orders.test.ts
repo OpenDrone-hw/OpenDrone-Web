@@ -276,7 +276,7 @@ describe('PAID_ORDERS_QUERY cost', () => {
     assert.equal(ORDERS_PAGE_SIZE, 250);
     assert.equal(LINE_ITEMS_PAGE, 50);
     assert.match(PAID_ORDERS_QUERY, /lineItems\(first: 50\)/);
-    assert.match(PAID_ORDERS_QUERY, /nodes \{ sku currentQuantity customAttributes \{ key value \} \}/);
+    assert.match(PAID_ORDERS_QUERY, /nodes \{ sku variantTitle currentQuantity customAttributes \{ key value \} \}/);
     assert.equal(cost(250, 250, 1), 63_502);
     assert.equal(cost(ORDERS_PAGE_SIZE, LINE_ITEMS_PAGE, 2), 26_002);
     assert.ok(cost(ORDERS_PAGE_SIZE, LINE_ITEMS_PAGE, 2) <= cost(250, 250, 1));

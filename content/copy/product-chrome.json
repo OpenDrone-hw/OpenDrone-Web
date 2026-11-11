@@ -620,5 +620,6 @@
   "build_bring_video": "An FPV camera and video transmitter on the quad, plus goggles of the same video system (DJI goggles with a DJI air unit, analog goggles with an analog camera and transmitter), to see from the quad",
   "build_bring_power": "LiPo batteries with the same cell count (the S number, 4S or 6S) as your motors, and a LiPo balance charger. LiPo batteries can ignite when damaged, shorted or overcharged; never charge unattended.",
   "build_bring_tools": "A soldering iron, solder and the skill to use them: the motors and the battery lead are soldered to the ESC pads",
-  "build_bring_setup": "A computer with the free Betaflight Configurator to set up the flight controller over USB"
+  "build_bring_setup": "A computer with the free Betaflight Configurator to set up the flight controller over USB",
+  "buy_not_shipping": "Not shipping to {country} yet"
 }

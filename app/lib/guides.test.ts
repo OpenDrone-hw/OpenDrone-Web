@@ -145,7 +145,7 @@ test('FC install guide: the Lite Mini file is not published yet, direct install 
   const loc = findGuide('flash-openfc', 'flash');
   assert.ok(loc);
   assert.ok(loc.page.callouts.some((c) => /not published yet/i.test(c.title)));
-  assert.ok(loc.page.sections?.some((s) => /OpenFC-Lite only/i.test(s.heading)));
+  assert.ok(loc.page.sections?.some((s) => /OpenFC Lite 30×30 only/i.test(s.heading)));
   assert.doesNotMatch(JSON.stringify(loc.page), /switched off/i);
   assert.doesNotMatch(JSON.stringify(buildHowToJsonLd(loc, 'https://opendrone.be')), /switched off/i);
   for (const slug of ['boot-mode', 'recovery']) assert.doesNotMatch(JSON.stringify(findGuide('flash-openfc', slug)?.page), /switched off/i, slug);

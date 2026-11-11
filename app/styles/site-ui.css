@@ -1356,6 +1356,20 @@
 a.hero-build-add { text-decoration: none; }
 .hero-build-add .btn-label { display: flex; align-items: center; gap: 7px; width: 100%; }
 .hero-build-total { margin-left: auto; font-variant-numeric: tabular-nums; }
+/* The home block's buy row: one quantity and one button, the same in both modes. */
+.hero-build-buyrow { display: flex; align-items: stretch; gap: 8px; }
+.hero-build-buyrow > form, .hero-build-buyrow > .hero-build-add { flex: 1 1 auto; min-width: 0; }
+.hero-build-buyrow .add-to-cart-form { display: flex; }
+.hero-build-buyrow .add-to-cart-form .hero-build-add { flex: 1 1 auto; }
+.hero-build-qty { flex: none; margin: 0; border-radius: 10px; }
+.hero-build-qty .product-qty-step { width: 2rem; min-height: 44px; }
+.hero-build-qty .product-qty-value { display: flex; align-items: center; justify-content: center; width: 2rem; font-variant-numeric: tabular-nums; }
+.hero-build-buyrow .hero-build-add .btn-label { white-space: nowrap; }
+@media (max-width: 480px) {
+  .hero-build-buyrow .cta-size,
+  .hero-build-buyrow .hero-build-add svg { display: none; }
+  .hero-build-buyrow .hero-build-qty .product-qty-value { flex-basis: 32px; width: 32px; }
+}
 .hero-build-add:hover { background: var(--color-gold-fill-hover); }
 .hero-build-add:disabled { opacity: 0.45; cursor: not-allowed; }
 .hero-build-loading { display: block; padding: 20px; background: var(--pod-bg-strong); border-radius: 12px; pointer-events: auto; }
@@ -2374,3 +2388,523 @@ body:has(.avail-bar) .site-header {
     bottom: calc(5.5rem + env(safe-area-inset-bottom));
   }
 }
+
+/* ============================================
+   Buy now or pre-order (OfferChoice): two cards, one choice
+   ============================================ */
+.offer-choice {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2);
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+/* One system with the size tiles above: their padding, gap, border, radius
+   and type, and the same selected state (gold ring, gold wash, bold name). */
+.offer-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  padding: var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+  cursor: pointer;
+}
+.offer-card:hover { border-color: var(--color-gold); }
+.offer-card.is-selected {
+  border-color: transparent;
+  box-shadow: 0 0 0 1.75px var(--color-gold);
+  background: color-mix(in srgb, var(--color-gold) 11%, var(--color-bg-card));
+}
+/* The radio itself stays in the accessibility tree and takes the keyboard;
+   the card is what is seen. */
+.offer-card-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.offer-card:has(.offer-card-input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.offer-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: 0.25rem;
+}
+.offer-card-title,
+.offer-card-price {
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.offer-card.is-selected .offer-card-title { font-weight: 700; }
+.offer-card-pin { display: none; }
+.offer-card-pinprice { display: none; }
+/* The add-on slot under the cards, the same in both lanes: the partner
+   board's tick row at the left edge of the cards, the full build link at the
+   right. One row (two on a narrow phone), the same height in both lanes. */
+.offer-addon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: var(--sp-3);
+  min-width: 0;
+  min-height: 1.75rem;
+  margin: calc(-1 * var(--sp-1)) 0 0;
+  font-size: var(--fs-base);
+  line-height: 1.4;
+}
+.offer-addon-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  min-height: 1.75rem;
+  color: var(--color-text);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.offer-addon-input {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--color-gold);
+  cursor: pointer;
+}
+.offer-addon-row img {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  object-fit: contain;
+}
+.offer-addon-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.offer-addon-build-link {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.offer-addon-build-link:hover { color: var(--color-text); }
+/* One offer: a status row in the cards' slot, no selectable card. */
+.offer-slot { display: grid; min-width: 0; margin: 0 0 1rem; }
+.offer-slot > * { grid-area: 1 / 1; min-width: 0; }
+.offer-slot-ghost { visibility: hidden; }
+.offer-slot-ghost .offer-choice { margin: 0; }
+.offer-status-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  align-self: start;
+  min-width: 0;
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--color-text);
+}
+.offer-status-row-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.offer-status-row-title { font-family: var(--font-display); font-size: var(--fs-sm); font-weight: 600; }
+.offer-status-row .is-muted { color: var(--color-text-muted); }
+.offer-status-row-extra { flex: none; white-space: nowrap; color: var(--color-gold-text); }
+@media (max-width: 480px) {
+  .offer-status-row-text { white-space: normal; }
+}
+/* "Stack total 78.00" beside the button: a fixed slot, empty unless the stack is ticked. */
+.product-buy .product-form > .buy-total,
+.product-buy .product-form:has(> .product-qty) > .product-qty ~ .buy-total {
+  display: flex;
+  flex: 0 0 4.75rem;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  line-height: 1.25;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.buy-total-label { font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap; }
+/* A phone's buy row has no room beside the button: the total takes its own
+   reserved line under it, "Stack total 78.00", right-aligned. */
+@media (max-width: 480px) {
+  .product-buy .product-form > .buy-total,
+  .product-buy .product-form:has(> .product-qty) > .product-qty ~ .buy-total {
+    flex: 1 1 100%;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 0.375rem;
+    min-height: 1.25rem;
+    margin-top: calc(-1 * var(--sp-1));
+  }
+}
+.buy-total-amount { font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); white-space: nowrap; }
+.offer-card-line {
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text);
+}
+.offer-card-line.is-muted,
+.offer-card-extra.is-buy_now { color: var(--color-text-muted); }
+.offer-card-extra.is-preorder { color: var(--color-gold-text); }
+@media (max-width: 480px) {
+  .offer-choice { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* The line under the button: one slot, the same height for both offers. */
+.offer-status {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 1.5em;
+  white-space: nowrap;
+}
+.offer-status > span { color: var(--color-stock); }
+
+/* The pinned bar carries the choice as one slim switch, never the cards:
+   "Buy now 29.00 | Pre-order 26.10", the chosen segment filled. The cards'
+   lines and the price beside them stay in the main buy area. */
+.buy-rail.is-pinned .offer-choice {
+  display: inline-grid;
+  grid-template-columns: repeat(2, auto);
+  flex: none;
+  gap: 0;
+  height: var(--pin-h, 36px);
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.buy-rail.is-pinned .offer-card {
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.buy-rail.is-pinned .offer-card.is-selected { background: var(--color-gold-fill); box-shadow: none; }
+.buy-rail.is-pinned .offer-card-head { align-items: baseline; gap: 6px; margin: 0; }
+.buy-rail.is-pinned .offer-card-title,
+.buy-rail.is-pinned .offer-card-price { font-size: 13px; line-height: 1; white-space: nowrap; color: var(--color-text); }
+.buy-rail.is-pinned .offer-card-price { font-weight: 500; }
+.buy-rail.is-pinned .offer-card.is-selected .offer-card-title,
+.buy-rail.is-pinned .offer-card.is-selected .offer-card-price { color: var(--color-on-accent); }
+.buy-rail.is-pinned .offer-card-line,
+.buy-rail.is-pinned .offer-card-title,
+.buy-rail.is-pinned .offer-card-price,
+.buy-rail.is-pinned .offer-addon,
+.buy-rail.is-pinned .offer-slot,
+.buy-rail.is-pinned .buy-total,
+.buy-rail.is-pinned .product-buy:has(> .offer-choice) .product-buy-price { display: none; }
+.buy-rail.is-pinned .offer-card-pin,
+.buy-rail.is-pinned .offer-card-pinprice { display: inline; font-size: 13px; line-height: 1; white-space: nowrap; color: var(--color-text); font-weight: 600; }
+.buy-rail.is-pinned .offer-card-pinprice { font-weight: 500; }
+.buy-rail.is-pinned .product-buy .product-form > .buy-total,
+.buy-rail.is-pinned .product-buy .product-form:has(> .product-qty) > .product-qty ~ .buy-total { display: none; }
+.buy-rail.is-pinned .offer-card.is-selected .offer-card-pin,
+.buy-rail.is-pinned .offer-card.is-selected .offer-card-pinprice { color: var(--color-on-accent); }
+/* One button width for "Buy now" and "Pre-order". */
+.buy-rail.is-pinned .product-buy:has(> .offer-choice) .product-form .btn-primary { min-width: 7.25rem; }
+@media (max-width: 959px) {
+  /* Phone: the switch and the button, one row; the size tiles stay in the page. */
+  .buy-rail.is-pinned:has(.product-buy > .offer-choice) > .variant-ladder,
+  .buy-rail.is-pinned:has(.product-buy > .offer-choice) > .buy-rail-chips { display: none; }
+  .buy-rail.is-pinned .offer-choice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1 1 auto; min-width: 0; }
+  .buy-rail.is-pinned .offer-card { padding: 0 8px; }
+}
+@media (max-width: 480px) {
+  /* Name over price in each segment, so "Buy now 29.00 | Pre-order 26.10"
+     and "Buy the stack now" share one row on a 390 px phone. */
+  .buy-rail.is-pinned .offer-card-head { flex-direction: column; align-items: center; gap: 2px; }
+  .buy-rail.is-pinned .offer-card-pin,
+  .buy-rail.is-pinned .offer-card-pinprice { font-size: 12px; line-height: 1.1; }
+  .buy-rail.is-pinned .product-buy:has(> .offer-choice) .product-form { flex: 0 0 auto; }
+  .buy-rail.is-pinned .product-buy:has(> .offer-choice) .product-form .btn-primary { width: auto; min-width: 6.5rem; padding: 0 12px; }
+}
+
+/* Cart: the pre-order lane, said once at the top. */
+.cart-together {
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--color-gold) 8%, var(--color-bg-card));
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+}
+
+/* ============================================
+   Home build block with the two modes (HeroBuildChoice)
+   One inset (12 px) for the mode switch, the rows and the button; one gap
+   (8 px) between the parts of the block.
+   ============================================ */
+.hero-build-choice .hero-build-heading { padding: 6px 4px 2px 12px; }
+.hero-choice {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0 12px 8px;
+  border: 0;
+  min-width: 0;
+}
+.hero-choice-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.hero-choice-option:hover { border-color: var(--color-accent-light); }
+.hero-choice-option.is-selected { border-color: var(--color-gold); background: var(--color-gold-soft); }
+.hero-choice-option:has(input:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.hero-choice-option strong { font-size: 13px; font-weight: 600; line-height: 1.25; }
+.hero-choice-option small { font-size: 11px; line-height: 1.3; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hero-build-choice .hero-build-parts { padding: 0 8px 4px; }
+/* A part name is never cut: it wraps onto a second line instead. */
+.hero-build-choice .hero-build-name strong { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.25; }
+/* The link to the part's page is a quiet affordance, not a second button. */
+.hero-build-choice .hero-build-detail { opacity: 0.45; }
+.hero-build-choice .hero-build-detail:hover,
+.hero-build-choice .hero-build-detail:focus-visible { opacity: 1; }
+.hero-build-choice .hero-build-status { margin: 8px 0 0; min-height: 1.4em; text-wrap: balance; }
+/* A part the chosen mode leaves out: listed, dimmed, and named for what it is. */
+.hero-build-part.is-later .hero-build-inspect { opacity: 0.55; }
+.hero-build-part.is-later .hero-build-check { cursor: default; }
+.hero-build-part.is-later .hero-build-check > span { border-style: dashed; opacity: 0.5; }
+.hero-build-later { padding: 2px 7px; border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent); border-radius: 999px; background: var(--color-gold-soft); color: var(--color-gold-text); font-size: 11px; }
+/* One width for a price and for the "Pre-order" tag, so a part name wraps the same way in both modes. */
+.hero-build-choice .hero-build-price { min-width: 78px; text-align: right; font-variant-numeric: tabular-nums; }
+.hero-build-choice .hero-build-total { font-variant-numeric: tabular-nums; }
+/* Laptop: the block beside the 3D hero is set in readable type and holds one
+   place: right edge, bottom anchored, the same height in both modes. */
+@media (min-width: 1024px) {
+  .hero-buy--guide:has(.hero-build-choice) { width: 400px; }
+  .hero-buy--guide .hero-build-choice .hero-choice-option { min-height: 52px; padding: 8px 12px; }
+  .hero-buy--guide .hero-build-choice .hero-choice-option strong { font-size: 14px; }
+  .hero-buy--guide .hero-build-choice .hero-choice-option small { font-size: 12px; }
+  .hero-buy--guide .hero-build-choice .hero-build-name strong { font-size: 14px; }
+  .hero-buy--guide .hero-build-choice .hero-build-name small { font-size: 12px; }
+  .hero-buy--guide .hero-build-choice .hero-build-price { min-width: 84px; font-size: 13px; }
+  .hero-buy--guide .hero-build-choice .hero-build-later { font-size: 12px; }
+  .hero-buy--guide .hero-build-choice .hero-build-add { min-height: 48px; font-size: 14px; }
+  .hero-buy--guide .hero-build-choice .hero-build-status { font-size: 12px; }
+}
+/* The gold row marks the part the 3D hero is showing. Without that scene
+   (phones, narrow windows, a product page) it would read as a choice. */
+.home-mobile-build .hero-build-choice .hero-build-part.is-active,
+.pdp-build .hero-build-choice .hero-build-part.is-active { background: none; }
+@media (max-width: 1023px) {
+  .hero-build-choice .hero-build-part.is-active { background: none; }
+}
+/* With the mode switch above it, the list gets less of a short laptop screen. */
+.hero-buy--guide .hero-build-choice .hero-build-parts { max-height: min(390px, calc(100svh - 420px)); }
+@media (max-width: 768px) {
+  .hero-build-choice .hero-build-heading { padding: 6px 2px 2px 12px; }
+}
+/* The block in its pre-order mode is up to 590 px tall (heading 44, mode
+   switch 60, list up to 390, button and status 96) and sits 36 px above the
+   bottom edge; the hero beat copy runs down to 264 px. Where the two would
+   meet, the copy goes, as it does beside the stack offer. */
+@media (max-height: 905px) and (min-width: 769px) {
+  .homepage:has(.hero-build-choice) .hp-copy { display: none; }
+}
+
+/* /preorder with buy now or pre-order on: "How ordering works". Two lanes
+   side by side, stacked on a phone; the type of the home build block. */
+.ho { display: grid; gap: var(--sp-5); }
+.ho-lanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); align-items: stretch; }
+.ho-lanes.is-single { grid-template-columns: minmax(0, 36rem); }
+@media (max-width: 720px) {
+  .ho-lanes { grid-template-columns: minmax(0, 1fr); }
+  .ho-lanes.is-single { grid-template-columns: minmax(0, 1fr); }
+}
+.ho-lane,
+.ho-pay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+}
+.ho-lane-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--color-text);
+}
+.ho-line { margin: 0; font-size: var(--fs-sm); line-height: 1.45; color: var(--color-text); }
+.ho-line.is-stock { color: var(--color-stock); }
+.ho-line.is-muted { color: var(--color-text-muted); }
+.ho-actions { display: grid; gap: var(--sp-2); margin-top: auto; padding-top: var(--sp-2); }
+.ho-actions .add-to-cart-form { display: flex; }
+.ho-actions .hero-build-add { flex: 1 1 auto; }
+.ho-actions a.hero-build-add .btn-label { justify-content: center; }
+/* The dates the campaign states, as one compact line: today marked. */
+.ho-stages {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ho-stages li { position: relative; display: grid; gap: 2px; padding-top: 16px; font-size: var(--fs-xs); line-height: 1.3; }
+.ho-stages li::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--color-border-strong);
+}
+.ho-stages li:last-child::before { right: auto; width: 10px; }
+.ho-stage-dot {
+  position: absolute;
+  top: 1px;
+  left: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--color-gold);
+  background: var(--color-bg-card);
+}
+.ho-stages li.is-now .ho-stage-dot { background: var(--color-gold); }
+.ho-stage-label { color: var(--color-text-muted); }
+.ho-stages time { color: var(--color-text); font-variant-numeric: tabular-nums; }
+.ho-pay ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: var(--fs-sm); line-height: 1.45; }
+.ho-pay .product-buy-terms-link { width: fit-content; font-size: var(--fs-sm); }
+.ho-pay li { margin: 0; }
+/* "Why pre-order?": the lead, four reason tiles, then when and the rights side by side. */
+.ho-head { display: grid; gap: var(--sp-2); }
+.ho-lead { margin: 0; max-width: 40rem; font-size: var(--fs-md, 1.0625rem); line-height: 1.5; color: var(--color-text-muted); }
+.ho-reasons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ho-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+.ho-reason strong { font-family: var(--font-display); font-size: var(--fs-md, 1.0625rem); font-weight: 600; color: var(--color-text); }
+.ho-reason span { color: var(--color-text-muted); }
+.ho-reason .product-buy-terms-link { margin-top: auto; padding-top: 4px; width: fit-content; }
+.ho-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+@media (max-width: 720px) { .ho-pair { grid-template-columns: minmax(0, 1fr); } }
+.ho-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+}
+.ho-panel.is-trust { border-color: var(--color-gold); }
+.ho-rights { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: var(--fs-sm); line-height: 1.45; color: var(--color-text); }
+.ho-rights li { margin: 0; }
+.ho-panel .product-buy-terms-link { width: fit-content; font-size: var(--fs-sm); }
+.ho-section-title { margin: var(--sp-3) 0 calc(-1 * var(--sp-2)); font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 600; color: var(--color-text); }
+.ho-lane .ho-lane-title { font-size: var(--fs-md, 1.0625rem); }
+.ho-pay-line { margin-top: calc(-1 * var(--sp-2)); }
+
+/* ============================================
+   Notice (site standard): one bordered line with an icon, at the top of
+   the content it is about. Neutral, gold (check this), red (stops the order).
+   ============================================ */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--color-text);
+}
+.notice.is-warn { border-color: var(--color-gold); }
+.notice.is-error { border-color: var(--color-error); }
+.notice-icon { flex: none; margin-top: 0.15em; color: var(--color-text-muted); }
+.notice.is-warn .notice-icon { color: var(--color-gold); }
+.notice.is-error .notice-icon { color: var(--color-error); }
+.notice-text { flex: 1 1 auto; min-width: 0; }
+.notice-text a { color: var(--color-text); text-decoration: underline; text-underline-offset: 3px; }
+.notice-close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: calc(-1 * var(--sp-3)) calc(-1 * var(--sp-3)) calc(-1 * var(--sp-3)) 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.notice-close:hover { color: var(--color-text); }

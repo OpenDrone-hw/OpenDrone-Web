@@ -28,6 +28,9 @@ export type StepBarView = {
   max: number;
   ticks: number[];
   funded: boolean;
+  /** The batch is confirmed (`CampaignState.confirmed`): it is produced
+   *  whatever its count, so there is no progress to show, only that fact. */
+  confirmed: boolean;
   label: string;
   /** `paid`: a paid batch, `max` is its cap; `target`: a funding target. */
   kind: 'paid' | 'target';
@@ -47,6 +50,7 @@ export function stepBarView(state: CampaignState, stepEnds: number[]): StepBarVi
     max,
     ticks: stepEnds.map((end) => end - offset).filter((end) => end > 0 && end < max),
     funded,
+    confirmed: !state.paidStock && Boolean(state.confirmed),
     label: `${value} / ${max}`,
     kind: state.paidStock ? 'paid' : 'target',
   };

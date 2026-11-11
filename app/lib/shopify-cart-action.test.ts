@@ -584,7 +584,7 @@ describe('Shopify cart action: paid batch limit', () => {
       request({sku: 'OPENFC-LITE-2020', qty: '10'}), ENABLED_ENV,
       {fetchCatalog: async () => paidCatalog(240), createCart: async (lines) => { created = lines; return cart(); }},
     );
-    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'}, {key: '_ship_promise', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
+    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Shipping', value: 'In stock in Belgium, ships in a few working days.'}, {key: '_ship_promise', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
   });
 
   it('writes the batch promise, not the EU stock line, for a visitor with no known country (same source as the page geo)', async () => {
@@ -781,7 +781,8 @@ describe('cart line info and split plan', () => {
     assert.equal(info['gid://shopify/CartLine/fc?cart=a'].maxQuantity, 8);
     assert.equal(info['gid://shopify/CartLine/fc2'].maxQuantity, 7);
     assert.equal(info[rxLine.id].maxQuantity, null);
-    assert.equal(info[rxLine.id].shipLabel, 'Ships by 11 Mar 2027 if the target is reached');
+    // Read from the text alone in a confirmed shop: no condition (terms 2.9).
+    assert.equal(info[rxLine.id].shipLabel, 'Ships by 11 Mar 2027');
     assert.equal(info['gid://shopify/CartLine/fc2'].shipLabel?.startsWith('Ships '), true);
     assert.deepEqual(splitPlan(c, info), {
       keep: ['gid://shopify/CartLine/fc?cart=a', 'gid://shopify/CartLine/fc2'],
@@ -861,13 +862,15 @@ describe('Shopify cart action: buyer country', () => {
     for (const other of ['GB', 'CH', 'NO', 'JP']) assert.equal(cartCountry(fromCountry({}, other)), other);
   });
 
-  it('prefers the destination the buyer picked, then the browser region', () => {
+  it('prefers the destination the buyer picked, never the browser language', () => {
     const picked = fromCountry({}, 'BE');
     picked.headers.set('Cookie', 'session=abc; od_ship_country=NL');
     assert.equal(cartCountry(picked), 'NL');
+    // No IP country: no guess from the browser language (the one resolver,
+    // app/lib/region.ts); Shopify checkout asks for the address.
     const noIp = fromCountry({}, null);
     noIp.headers.set('Accept-Language', 'de-AT,de;q=0.9');
-    assert.equal(cartCountry(noIp), 'AT');
+    assert.equal(cartCountry(noIp), undefined);
     // A closed EU country (no offer number yet) is left out like shops-only.
     assert.equal(cartCountry(fromCountry({}, 'DE')), undefined);
   });
@@ -966,7 +969,7 @@ describe('Shopify cart action: a line across a price step', () => {
       {fetchCatalog: async () => catalog, createCart: async (lines) => { created = lines; return cart(); }},
     );
     assert.equal(response.status, 303);
-    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'}, {key: '_ship_promise', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
+    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Shipping', value: 'In stock in Belgium, ships in a few working days.'}, {key: '_ship_promise', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
   });
 
   it('lets checkout through when the step moved on but the paid batch still covers the line', async () => {
@@ -1030,12 +1033,11 @@ describe('Shopify cart action: one promise for a mixed order', () => {
   const STRAP = 'gid://shopify/ProductVariant/strap';
   const FC_LINE = 'gid://shopify/CartLine/fc?cart=a';
   const RX_LINE = 'gid://shopify/CartLine/rx?cart=a';
-  const OWN_EARLY = 'ships late November 2026';
-  const OWN_LATE =
-    'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait';
+  const OWN_EARLY = 'in stock in Belgium, ships to EU addresses in a few working days';
+  const OWN_LATE = 'ships by 31 March 2027';
   const REWRITE = 'ships with the rest of this order by 31 March 2027';
   // An EU line from batch 1 stock: the site's EU line, no Preorder and no Delivery by.
-  const own = (value: string) => [{key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'}, {key: '_ship_promise', value}, {key: '_batch', value: 'OPENFC-LITE-3030:1'}];
+  const own = (value: string) => [{key: 'Shipping', value: 'In stock in Belgium, ships in a few working days.'}, {key: '_ship_promise', value}, {key: '_batch', value: 'OPENFC-LITE-3030:1'}];
 
   function base(sku: string, handle: string, id: string, preorder: boolean) {
     return {
@@ -1146,7 +1148,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
     const c = cart([fcLine({orderPromise: REWRITE}), rxLine()]);
     const info = cartLineInfo(c, EU);
     assert.equal(info[FC_LINE].group, `date:${OWN_EARLY}`);
-    assert.equal(info[FC_LINE].shipLabel, 'Ships late Nov 2026');
+    assert.equal(info[FC_LINE].shipLabel, 'In stock, ships in a few working days');
     assert.deepEqual(splitPlan(c, info), {keep: [FC_LINE], later: [RX_LINE]});
   });
 
@@ -1355,10 +1357,11 @@ describe('Shopify cart action: wholesale code', () => {
     assert.equal(ok.headers.get('Location'), '/cart');
     assert.deepEqual(sent[0], ['WS25-FPV24', 'WS25-FPV24-G2', 'WS25-FPV24-G3', 'WS25-FPV24-G4']);
     const bad = await handleShopifyCartAction(request({intent: 'discount', code: 'SUMMER10'}), ENABLED_ENV, deps);
-    assert.equal(bad.headers.get('Location'), '/cart?check=code');
+    // Back with the field open, so the retailer can correct the code.
+    assert.equal(bad.headers.get('Location'), '/cart?wholesale=1&check=code');
     assert.equal(sent.length, 1);
     const cleared = await handleShopifyCartAction(request({intent: 'discount', code: ''}), ENABLED_ENV, deps);
-    assert.equal(cleared.headers.get('Location'), '/cart');
+    assert.equal(cleared.headers.get('Location'), '/cart?wholesale=1');
     assert.deepEqual(sent[1], []);
   });
   it('returns to the cart with a notice when Shopify fails or does not take the code', async () => {
@@ -1366,11 +1369,11 @@ describe('Shopify cart action: wholesale code', () => {
     const failed = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
       ...base, setDiscountCodes: async () => { throw new Error('shopify: cartDiscountCodesUpdate failed'); },
     });
-    assert.equal(failed.headers.get('Location'), '/cart?check=code-failed');
+    assert.equal(failed.headers.get('Location'), '/cart?wholesale=1&check=code-failed');
     const refused = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
       ...base, setDiscountCodes: async (_id, codes) => codes.map((code) => ({code, applicable: false})),
     });
-    assert.equal(refused.headers.get('Location'), '/cart?check=code-not-applied');
+    assert.equal(refused.headers.get('Location'), '/cart?wholesale=1&check=code-not-applied');
     const taken = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
       ...base, setDiscountCodes: async (_id, codes) => codes.map((code, i) => ({code, applicable: i === 0})),
     });

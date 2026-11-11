@@ -17,6 +17,7 @@
  * The Admin token needs `write_products` on top of the order scopes.
  */
 
+import {batchOfferOf} from './catalog.ts';
 import {tierPrice, tierUnits, tiersFor, type CampaignConfig, type PaidUnitsOf} from './preorder-campaign.ts';
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
@@ -32,7 +33,7 @@ type TierEnv = Pick<
 export const TIER_VARIANTS_QUERY = `#graphql
   query OpenDronePreorderVariants($first: Int!, $query: String!) {
     productVariants(first: $first, query: $query) {
-      nodes { id sku price compareAtPrice product { id } }
+      nodes { id sku price compareAtPrice selectedOptions { name value } product { id } }
     }
   }
 `;
@@ -50,6 +51,7 @@ type Variant = {
   sku: string | null;
   price: string;
   compareAtPrice: string | null;
+  selectedOptions?: Array<{name: string; value: string}>;
   product: {id: string};
 };
 
@@ -151,6 +153,9 @@ export async function syncPriceTiers(
   );
   const live = new Map<string, Variant>();
   for (const node of data.productVariants.nodes) {
+    // A board's `Buy now` variant shares its SKU and stays at retail: the
+    // price step is written to the pre-order variant only.
+    if (batchOfferOf(node.selectedOptions ?? []) === 'buy_now') continue;
     if (node.sku && skus.includes(node.sku)) live.set(node.sku, node);
   }
 

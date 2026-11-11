@@ -20,7 +20,7 @@ describe('noticeFor (when the location notice shows)', () => {
     assert.equal(noticeFor({lastSeen: 'BE', current: null, announced: null}), null);
     assert.equal(nextLastSeen('BE', null), 'BE');
   });
-  it('when the ordering country changes (RegionSwitch, Ship to, ?country)', () => {
+  it('when the ordering country changes (the country picker in the header or the cart, ?country)', () => {
     assert.deepEqual(noticeFor({lastSeen: 'BE', current: 'GB', announced: null}), {country: 'GB', key: 'geo:BE>GB'});
     assert.deepEqual(noticeFor({lastSeen: 'be', current: 'de', announced: null}), {country: 'DE', key: 'geo:BE>DE'});
   });
@@ -40,7 +40,7 @@ describe('noticeFor (when the location notice shows)', () => {
 
 describe('noticeText', () => {
   it('names the country and its full line, duties note included', () => {
-    assert.equal(noticeText('BE', 'en'), 'Shipping to Belgium: In stock in Belgium, ships in a few days.');
+    assert.equal(noticeText('BE', 'en'), 'Shipping to Belgium: In stock in Belgium, ships in a few working days.');
     assert.equal(
       noticeText('GB', 'en'),
       'Shipping to United Kingdom: Pre-order, ships March 2027. Import VAT and duties: paid by you on delivery, unless collected at checkout.',
@@ -117,7 +117,7 @@ describe('wiring', () => {
     assert.match(src, /aria-hidden=\{live \? true : undefined\}/);
   });
   it('a Ship to change reads the root loader again, so geo.country moves', () => {
-    assert.match(read('../components/ShipToSelect.tsx'), /await revalidator\.revalidate\(\)/);
+    assert.match(read('../components/CountryPicker.tsx'), /await revalidator\.revalidate\(\)/);
     assert.match(read('../root.tsx'), /currentUrl\.toString\(\) === nextUrl\.toString\(\)\) return true/);
   });
   it('the notice is fixed, out of the flow, and lifted above the cart checkout bar', () => {

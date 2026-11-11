@@ -34,7 +34,7 @@ import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {DATES_SEEN_FIELD, hasMixedShipGroups, latestDeliveryBy, type CartSummary} from '~/lib/shopify-cart-action';
 import {trackEvent} from '~/lib/growth/plausible';
 import {CART_ADDED_EVENT, postCartAdd, withCountry, type CartAddedDetail} from '~/lib/cart-client';
-import {ShipToSelect} from './ShipToSelect';
+import {CountryPicker} from './CountryPicker';
 import '../styles/cart-checkout-bar.css';
 
 const CART_ACTION = '/api/shopify/cart';
@@ -401,9 +401,9 @@ export function CartAddedDialog() {
 
         <div className="cart-added-foot">
           {rootData?.appCommerce ? null : (
-            <ShipToSelect
+            <CountryPicker
+              variant="field"
               country={visitor}
-              usRate={usRate}
               className="ship-to cart-added-ship-to"
               onChanged={(reply) => {
                 if (reply.summary) setSummary(reply.summary);

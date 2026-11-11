@@ -32,6 +32,7 @@ const STATIC_PATHS = [
   '/firmware-partners',
   '/newsletter',
   '/wholesale',
+  '/markets',
 ];
 
 const LEGAL_SLUGS = [

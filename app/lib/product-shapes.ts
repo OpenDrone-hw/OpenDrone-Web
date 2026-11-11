@@ -56,6 +56,11 @@ export type ProductVariantFragment = {
   availability: CatalogAvailability;
   /** The variant's page on the shop, for the review list link. */
   shopUrl: string | null;
+  /** A board with the buy now or pre-order choice: which offer this is. */
+  offer?: 'buy_now' | 'preorder' | null;
+  /** The pre-order offer beside a buy-now board, as a variant of its own
+   *  (its price, ship promise, campaign state and hand-off link). */
+  preorderOffer?: ProductVariantFragment | null;
 };
 
 /** Card-sized product: listings, related strip, header pods, hero. */

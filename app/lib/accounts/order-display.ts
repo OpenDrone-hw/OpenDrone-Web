@@ -29,6 +29,10 @@ export function orderStatus(order: AccountOrder): OrderStatus {
   if (ful === 'FULFILLED') return {tone: 'shipped', label: 'Shipped', note: partlyRefunded};
   if (ful === 'PARTIALLY_FULFILLED') return {tone: 'shipped', label: 'Partly shipped', note: partlyRefunded};
 
+  // An order from stock on hand is no pre-order: it ships in a few working days.
+  if (order.isPreorder && order.promise?.stock) {
+    return {tone: 'processing', label: 'Processing', note: [partlyRefunded, 'Ships in a few working days.'].filter(Boolean).join(' ')};
+  }
   if (order.isPreorder) {
     const p = order.promise;
     const label = p ? `Preorder, ${p.text}` : 'Preorder';

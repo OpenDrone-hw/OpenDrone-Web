@@ -230,7 +230,7 @@ export function FcFlasher({
       <h2 id="fc-update-title" className="flash-update-title">
         Before you start
       </h2>
-      <p className="flash-note">For OpenFC-Lite. The Lite Mini file comes later.</p>
+      <p className="flash-note">For OpenFC Lite 30×30. The OpenFC Lite 20×20 file comes later.</p>
       <ol className="flash-checklist">
         <li>
           Back up your config: save <code>diff all</code> in the Betaflight CLI. Flashing resets settings.

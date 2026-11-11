@@ -108,8 +108,8 @@ override as a test shortcut.
 **A board's first production batch is paid:** flip its repository topic to
 `status-beta`. While the shop is open, `app/lib/launched-roadmap.ts` already
 shows a board with a paid batch in `content/preorders.json` as at least beta,
-so the roadmap does not wait for the flip. A funding-target board keeps its
-status until its target is reached and the supplier order is placed. Update
+so the roadmap does not wait for the flip. A board in a funding batch keeps its
+status until the supplier order is placed. Update
 the static status in `roadmap-data.ts` in a follow-up PR, after the flip is
 live.
 
@@ -119,9 +119,11 @@ five-minute reconcile write the new price to Shopify (`priceTiers` in
 Shopify is still under the step, that SKU is closed. If one stays closed,
 check `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1` and the `write_products` scope.
 
-**A funding target is reached:** place the supplier order, then set that
-batch's `ships` in `content/preorders.json`. New orders fall into the next
-batch. Customer mail about the target and the date stays a human send.
+**A funding batch's supplier order is placed:** set that batch's `ships` in
+`content/preorders.json`. With `confirmed: true` (README "Run a preorder
+campaign") the batch is produced whatever its count and the site already reads
+"Batch confirmed"; without it the order is placed once the target is reached.
+Customer mail about a moved date stays a human send.
 
 **Emergency lock:** the JSON `development` override locks that handle's lifecycle
 resolution. Either `PUBLIC_COMING_SOON` other than `0` or checkout writes

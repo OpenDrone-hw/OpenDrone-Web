@@ -1,7 +1,7 @@
 {
   "_scenario": {
     "title": "Batch 1 FC and ESC plus preorder-run receiver, Belgium",
-    "description": "EU-only batch 1 lines (late November) with a preorder-run receiver line in one order.",
+    "description": "EU-only batch 1 lines (in stock) with a preorder-run receiver line in one order.",
     "templates": [
       "order-confirmation",
       "staff-new-order",
@@ -26,7 +26,7 @@
         "title": "OpenFC Lite"
       },
       "properties": {
-        "Preorder": "ships late November 2026"
+        "Preorder": "in stock in Belgium, ships to EU addresses in a few working days"
       }
     },
     {
@@ -43,7 +43,7 @@
         "title": "OpenESC"
       },
       "properties": {
-        "Preorder": "ships late November 2026"
+        "Preorder": "in stock in Belgium, ships to EU addresses in a few working days"
       }
     },
     {
@@ -60,7 +60,7 @@
         "title": "OpenRX Lite"
       },
       "properties": {
-        "Preorder": "ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait"
+        "Preorder": "ships by 31 March 2027"
       }
     }
   ],
@@ -94,7 +94,7 @@
             "title": "OpenFC Lite"
           },
           "properties": {
-            "Preorder": "ships late November 2026"
+            "Preorder": "in stock in Belgium, ships to EU addresses in a few working days"
           }
         },
         "quantity": 1
@@ -114,7 +114,7 @@
             "title": "OpenESC"
           },
           "properties": {
-            "Preorder": "ships late November 2026"
+            "Preorder": "in stock in Belgium, ships to EU addresses in a few working days"
           }
         },
         "quantity": 1
@@ -134,7 +134,7 @@
             "title": "OpenRX Lite"
           },
           "properties": {
-            "Preorder": "ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait"
+            "Preorder": "ships by 31 March 2027"
           }
         },
         "quantity": 1

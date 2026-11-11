@@ -43,11 +43,11 @@ describe('pending Ship to (optimistic destination while a switch is in flight)',
       mock.timers.reset();
     }
   });
-  it('ShipToSelect starts it before the POST from the current root data; a failed switch reverts the select and clears it', () => {
-    const src = read('../components/ShipToSelect.tsx');
-    const set = src.indexOf('setPendingShipTo(next, rootData)');
+  it('the country picker starts it before the POST from the current root data; a failed switch clears it', () => {
+    const src = read('../components/CountryPicker.tsx');
+    const set = src.lastIndexOf('setPendingShipTo(choice.country, root)');
     assert.ok(set > 0 && set < src.indexOf('await fetch(CART_COUNTRY_ACTION'));
-    assert.match(src, /\} catch \{\s+setPendingShipTo\(null\);\s+setFailed\(true\);\s+setValue\(country \?\? ''\);/);
+    assert.match(src, /\} catch \{\s+setPendingShipTo\(null\);\s+setFailed\(true\);/);
     // Success is reconciled by the layout, not cleared in finally (no flicker back to the old country).
     assert.doesNotMatch(src, /finally \{\s+setPendingShipTo/);
     assert.match(read('../components/PageLayout.tsx'), /useEffect\(\(\) => reconcilePendingShipTo\(rootData\), \[rootData\]\)/);
@@ -64,7 +64,7 @@ describe('pending Ship to (optimistic destination while a switch is in flight)',
     // Only useShipGeo reads the root loader; every ship hook goes through it.
     assert.doesNotMatch(read('../components/ShipChip.tsx'), /useRouteLoaderData<RootLoader>\('root'\)\?\.geo/);
     assert.match(read('../components/ShipChip.tsx'), /export function useShipGeo\(\)/);
-    assert.match(read('../components/PageLayout.tsx'), /<AvailabilityBar geo=\{shipGeo \?\? geo\} \/>/);
+    assert.match(read('../components/PageLayout.tsx'), /<AvailabilityBar\s+geo=\{shipGeo \?\? geo\}/);
     const cart = read('../routes/cart.$.tsx');
     // Cart Checkout: pending includes a switch in flight anywhere (the drawer too).
     assert.match(cart, /const switching = usePendingShipTo\(\) != null;\s+const pending = inFlight > 0 \|\| revalidator\.state !== 'idle' \|\| switching;/);

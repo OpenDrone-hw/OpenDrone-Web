@@ -13,7 +13,7 @@ import {NO_FRAMING_HEADERS, NO_FRAMING_PATH} from '~/lib/csp';
 import {refreshOwnerMap} from '~/lib/owner-map-data';
 import {purgeOldPins} from '~/lib/pilot-map-data';
 import {parseCampaignConfig} from '~/lib/preorder-campaign';
-import {queryCountryCookie} from '~/lib/shipping-rates';
+import {countryLinkRedirect, queryCountryCookie} from '~/lib/shipping-rates';
 import {preorderHoldsEnabled, reconcilePreorders} from '~/lib/preorder-ops';
 import {priceTierWritesEnabled} from '~/lib/shopify-price-tier';
 import {mailIntakeReady, runMailIntake} from '~/lib/support/mail';
@@ -127,6 +127,11 @@ async function handleFetch(
     // else goes on to the site's normal 404.
     const videoLink = await handleVideoLink(request, env);
     if (videoLink) return videoLink;
+
+    // A ?country=XX page link is a region choice: store it and drop it from
+    // the URL, so it cannot outrank a later pick in the header switch.
+    const countryLink = countryLinkRedirect(request);
+    if (countryLink) return countryLink;
 
     const context = await createAppLoadContext(
       request,
