@@ -862,13 +862,15 @@ describe('Shopify cart action: buyer country', () => {
     for (const other of ['GB', 'CH', 'NO', 'JP']) assert.equal(cartCountry(fromCountry({}, other)), other);
   });
 
-  it('prefers the destination the buyer picked, then the browser region', () => {
+  it('prefers the destination the buyer picked, never the browser language', () => {
     const picked = fromCountry({}, 'BE');
     picked.headers.set('Cookie', 'session=abc; od_ship_country=NL');
     assert.equal(cartCountry(picked), 'NL');
+    // No IP country: no guess from the browser language (the one resolver,
+    // app/lib/region.ts); Shopify checkout asks for the address.
     const noIp = fromCountry({}, null);
     noIp.headers.set('Accept-Language', 'de-AT,de;q=0.9');
-    assert.equal(cartCountry(noIp), 'AT');
+    assert.equal(cartCountry(noIp), undefined);
     // A closed EU country (no offer number yet) is left out like shops-only.
     assert.equal(cartCountry(fromCountry({}, 'DE')), undefined);
   });

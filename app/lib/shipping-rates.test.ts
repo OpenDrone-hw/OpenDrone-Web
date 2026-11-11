@@ -208,12 +208,13 @@ describe('default destination', () => {
     assert.equal(geoCountryForRequest(req({'CF-IPCountry': 'RU', Cookie: 'od_ship_country=BE'})), 'RU');
   });
 
-  it('orders query, cookie, CF-IPCountry, Accept-Language', () => {
+  it('orders query, cookie, CF-IPCountry, never Accept-Language', () => {
     const all = {Cookie: 'od_ship_country=NL', 'CF-IPCountry': 'BE', 'Accept-Language': 'de-DE'};
     assert.equal(shipCountryForRequest(req(all, '?country=us')), 'US');
     assert.equal(shipCountryForRequest(req(all)), 'NL');
     assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'BE', 'Accept-Language': 'de-DE'})), 'BE');
-    assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'XX', 'Accept-Language': 'de-DE'})), 'DE');
+    // Same answer as the ship line: prices and the line never describe two countries.
+    assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'XX', 'Accept-Language': 'de-DE'})), null);
     assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'T1'})), null);
     // A blocked IP country stays visible so the page can say so.
     assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'RU'})), 'RU');

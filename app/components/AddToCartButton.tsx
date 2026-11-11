@@ -33,9 +33,11 @@ export function notSoldNote(country: string | null, usRate: number | null = null
     );
   }
   if (reason === 'shops') {
-    return usRate != null
-      ? (copyText('product-chrome.buy_shops_only_us') ?? 'EU and US consumer orders only')
-      : (copyText('product-chrome.buy_shops_only') ?? 'EU consumer orders only');
+    // A designed state, not a dead end: the launch-news signup sits under it.
+    return (copyText('product-chrome.buy_not_shipping') ?? 'Not shipping to {country} yet').replace(
+      '{country}',
+      countryName(country ?? ''),
+    );
   }
   if (reason === 'closed') {
     return (copyText('product-chrome.buy_closed') ?? 'Orders are not open for {country}').replace(

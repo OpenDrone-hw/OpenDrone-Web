@@ -905,6 +905,56 @@ html.anim-paused .board-sheet.is-active {
   padding: 0.5rem 1.1rem;
 }
 
+/* Four markets in the drawer: two columns, so a 390 px phone never clips. */
+.region-switch.mobile-menu-region {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-self: stretch;
+}
+
+.region-switch.mobile-menu-region button + button {
+  border-left: 0;
+}
+
+.region-switch.mobile-menu-region button:nth-of-type(even) {
+  border-left: 1px solid var(--color-border);
+}
+
+.region-switch.mobile-menu-region button:nth-of-type(n + 3) {
+  border-top: 1px solid var(--color-border);
+}
+
+.region-switch.mobile-menu-region .region-switch-caption,
+.region-switch.mobile-menu-region .region-other,
+.region-switch.mobile-menu-region .region-switch-failed {
+  grid-column: 1 / -1;
+  border-right: 0;
+  border-top: 1px solid var(--color-border);
+  padding: 0.5rem 0.7rem;
+}
+
+.region-switch button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.region-switch-failed {
+  display: block;
+  color: var(--color-error);
+  font-size: 12px;
+  padding: 0.35rem 0.7rem;
+}
+
+.region-menu-other {
+  border-top: 1px solid var(--color-border);
+  margin-top: 4px;
+  padding: 8px 10px 4px;
+}
+
+.region-menu-other .ship-to-select {
+  width: 100%;
+}
+
 @supports (view-transition-name: root) {
   /* Navigation View Transitions: viewTransition-enabled links cross-fade the
      page instead of swapping flat, so moving between products / sections feels

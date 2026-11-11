@@ -47,8 +47,8 @@
   "region_switch_caption": "Ship to",
   "region_switch_eu": "EU / EUR",
   "region_switch_us": "US / USD",
-  "region_switch_eu_note": "Ships to the EU, prices in euro",
-  "region_switch_us_note": "Ships to the United States, prices in dollars",
+  "region_switch_eu_note": "EU addresses. Euro, VAT included",
+  "region_switch_us_note": "United States. Dollars, duties included",
   "region_switch_failed": "Could not change the region. Try again.",
   "nav_all_products": "All products",
   "nav_all_products_mobile": "All products",
@@ -114,5 +114,10 @@
   "footer_tb_sheet": "Sheet",
   "footer_tb_date": "Date",
   "footer_detail_newsletter": "Newsletter",
-  "menu_wholesale": "Wholesale"
+  "menu_wholesale": "Wholesale",
+  "region_switch_import": "UK, CH, NO / EUR",
+  "region_switch_world": "World / EUR",
+  "region_switch_import_note": "UK, Switzerland, Norway. Euro, import VAT and duties on delivery",
+  "region_switch_world_note": "Other countries. Euro, import charges on delivery",
+  "region_switch_none": "{country}: not shipping yet"
 }

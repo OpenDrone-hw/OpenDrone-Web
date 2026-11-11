@@ -82,6 +82,8 @@ in `.dev.vars` and run `npm run dev`.
 | `npm run tokens:check` | fails when `app/styles/opendrone-tokens.css` no longer matches the hash on its first line |
 | `npm run studio:tokens`, `studio:products` | regenerate the studio's token catalogue from `@theme`; rewrite `content/products/*.json` in normal form |
 | `npm run goals:update` | move the auto-mode goals in `content/goals.json` from the shop's order totals |
+| `npm run check:reach` | read-only: Shopify markets and shipping zones against `NO_SHOPIFY_ROUTE` in `app/lib/shipping-rates.ts`; exits 1 when they differ |
+| `BASE=<url> npm run e2e:region` | drives the header region control in Chrome (pick a market, page currency, cookie, next page, a `?country` link); IP cases only against a local server |
 | `npm run us:prices` | compare the US price uplift in `content/us-sales.json` with Shopify's price list (`-- --apply` writes it; see "US prices") |
 | `npm run sync:lab-visit -- <game dir>` | copy the lab walkthrough's runtime files into `public/lab-visit/` (`-- --check <game dir>` diffs only) |
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
@@ -1130,9 +1132,18 @@ page renders as before. Open:
 | Batch | first batch with room whose `regions` include US | first with room whose `regions` include EU |
 | Cart | `buyerIdentity.countryCode` US, hidden `_ship_region: US` line attribute | unchanged |
 
-The destination is `shipCountryForRequest` (`?country`, the
-`od_ship_country` cookie, `CF-IPCountry`, `Accept-Language`) for the page, the
-cart, the line promise and the checkout gate alike (`buyerCountry`). The hold
+The destination is `resolveCountry` in `app/lib/shipping-rates.ts`, in this
+order: a blocked IP country, a `?country=XX` link, the `od_ship_country`
+cookie (the header control or the cart's Ship to), `CF-IPCountry`, else
+unknown; the browser language is never read. A page load with `?country`
+stores it in the cookie and redirects to the URL without it, so a link never
+outranks a later pick. The page, the cart, the line promise and the checkout
+gate all read it (`buyerCountry`, `geoCountryForRequest`); the root loader's
+`region` (`app/lib/region.ts`) is the typed answer components read: market
+(EU, US, UK / CH / NO, rest of world, none), currency, taxes shown, lanes and
+shipping. Countries Shopify has no market or zone for (`NO_SHOPIFY_ROUTE`,
+`npm run check:reach`) read "Not shipping to <country> yet" with the launch
+signup instead of a checkout that dead-ends. The hold
 pass tags an order `promise-mismatch` when it ships to another region than a
 line's promise was computed for, and holds and tags `us-review` every order
 shipping to the US with a line no US-serving batch carries (a line from an EU
