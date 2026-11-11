@@ -94,6 +94,16 @@
       },
       "row": 1,
       "item": "Guide"
+    },
+    {
+      "label": "Sticker",
+      "procedural": {
+        "kind": "sticker",
+        "w": 80,
+        "h": 22
+      },
+      "item": "Sticker",
+      "below": "Quick-start card"
     }
   ],
   "exclude": []
