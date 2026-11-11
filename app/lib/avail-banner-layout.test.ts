@@ -15,9 +15,9 @@ test('the availability bar is server-rendered on every page except /flash and /g
 });
 
 test('bar text: the visitor line, both lines when unknown, and a shorter phone line', () => {
-  assert.equal(geoBarText('eu', 'en', false), 'EU: In stock in Belgium, ships in a few days');
+  assert.equal(geoBarText('eu', 'en', false), 'EU: In stock in Belgium, ships in a few working days');
   assert.equal(geoBarText('eu', 'en', true), 'EU: In stock, ships in days');
-  assert.equal(geoBarText('fallback', 'en', false), 'EU: In stock in Belgium, ships in a few days · Elsewhere: Pre-order, ships March 2027');
+  assert.equal(geoBarText('fallback', 'en', false), 'EU: In stock in Belgium, ships in a few working days · Elsewhere: Pre-order, ships March 2027');
   assert.ok(geoBarText('eu', 'en', true).length < geoBarText('eu', 'en', false).length);
   const css = read('../styles/site-ui.css');
   assert.match(css, /\.avail-bar-short \{ display: none; \}/);

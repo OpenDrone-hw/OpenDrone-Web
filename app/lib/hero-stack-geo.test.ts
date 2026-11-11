@@ -24,11 +24,12 @@ test('the stack card reads its ship text from useGeoShipText, the same source as
 });
 
 test('EU visitors see the in-stock line, non-EU the pre-order line, unknown country the batch 1 promise', () => {
-  const batch1 = 'ships late November 2026';
+  const batch1 = 'in stock in Belgium, ships to EU addresses in a few working days';
   assert.ok(batchOnePromises(preorders).has(batch1), 'the boards of the stack are batch 1 stock');
-  assert.equal(stackTag(batch1, 'eu'), 'In stock in Belgium, ships in a few days.');
+  assert.ok(batchOnePromises(preorders).has('ships late November 2026'), 'and so is a line sold under the earlier wording');
+  assert.equal(stackTag(batch1, 'eu'), 'In stock in Belgium, ships in a few working days.');
   assert.equal(stackTag(batch1, 'intl'), 'Pre-order, ships March 2027.');
-  assert.equal(stackTag(batch1, 'fallback'), 'Ships late November 2026', 'unchanged from before');
+  assert.equal(stackTag(batch1, 'fallback'), 'In stock in Belgium, ships to EU addresses in a few working days', 'the promise itself, which names the EU');
 });
 
 test('a promise outside batch 1 keeps its own text in every region', () => {

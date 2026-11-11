@@ -183,7 +183,7 @@ export const BATCH_ATTRIBUTE = '_batch';
 export const PREORDER_OWN_ATTRIBUTE = '_preorder_own';
 
 /** The visible line attribute of an EU line sold from batch 1 stock in
- *  Belgium: "In stock in Belgium, ships in a few days." in place of the
+ *  Belgium: "In stock in Belgium, ships in a few working days." in place of the
  *  `Preorder` promise and its `Delivery by` date. */
 export const SHIPPING_ATTRIBUTE = 'Shipping';
 

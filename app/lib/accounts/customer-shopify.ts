@@ -31,6 +31,8 @@ import {
   configSoldUnder,
   datedShipParts,
   shortCampaignDate,
+  stockPromise,
+  STOCK_ORDER_DAY,
   type CampaignBatch,
   type CampaignConfig,
 } from '../preorder-campaign.ts';
@@ -52,10 +54,12 @@ export type OrderMoney = {amount: string; currencyCode: string};
 
 /** The ship promise an order waits for: the latest of its lines' batches. */
 export type OrderPromise = {
-  /** `target`: ships once a funding target is reached; `date`: a placed supplier order. */
+  /** `target`: a funding batch (the confirmed March 2027 batch, ships by `shipsBy`); `date`: a placed supplier order or stock. */
   kind: 'target' | 'date';
   /** Sortable day, YYYY-MM-DD; "late" or no qualifier resolves to the month end. */
   day: string;
+  /** Stock on hand: the order is no pre-order, it ships in a few working days. */
+  stock?: boolean;
   /** "ships by 31 Mar 2027" or "ships late Nov 2026". */
   text: string;
 };
@@ -154,6 +158,8 @@ export function batchPromiseOf(batch: CampaignBatch, config: Pick<CampaignConfig
   const target: OrderPromise = {kind: 'target', day: config.shipsBy, text: targetText};
   const ships = batch.ships?.trim();
   if (!ships) return target;
+  // Stock on hand ships now: before every dated promise, and no pre-order.
+  if (batch.inStock || stockPromise(ships)) return {kind: 'date', day: STOCK_ORDER_DAY, text: 'ships in a few working days', stock: true};
   const parts = datedShipParts(ships);
   const match = /\b(?:(early|mid|late)[- ])?([A-Za-z]+) (\d{4})\b/i.exec(ships);
   if (!parts || !match) return target;

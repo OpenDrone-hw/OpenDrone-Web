@@ -584,7 +584,7 @@ describe('Shopify cart action: paid batch limit', () => {
       request({sku: 'OPENFC-LITE-2020', qty: '10'}), ENABLED_ENV,
       {fetchCatalog: async () => paidCatalog(240), createCart: async (lines) => { created = lines; return cart(); }},
     );
-    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'}, {key: '_ship_promise', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
+    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Shipping', value: 'In stock in Belgium, ships in a few working days.'}, {key: '_ship_promise', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
   });
 
   it('writes the batch promise, not the EU stock line, for a visitor with no known country (same source as the page geo)', async () => {
@@ -781,7 +781,8 @@ describe('cart line info and split plan', () => {
     assert.equal(info['gid://shopify/CartLine/fc?cart=a'].maxQuantity, 8);
     assert.equal(info['gid://shopify/CartLine/fc2'].maxQuantity, 7);
     assert.equal(info[rxLine.id].maxQuantity, null);
-    assert.equal(info[rxLine.id].shipLabel, 'Ships by 11 Mar 2027 if the target is reached');
+    // Read from the text alone in a confirmed shop: no condition (terms 2.9).
+    assert.equal(info[rxLine.id].shipLabel, 'Ships by 11 Mar 2027');
     assert.equal(info['gid://shopify/CartLine/fc2'].shipLabel?.startsWith('Ships '), true);
     assert.deepEqual(splitPlan(c, info), {
       keep: ['gid://shopify/CartLine/fc?cart=a', 'gid://shopify/CartLine/fc2'],
@@ -966,7 +967,7 @@ describe('Shopify cart action: a line across a price step', () => {
       {fetchCatalog: async () => catalog, createCart: async (lines) => { created = lines; return cart(); }},
     );
     assert.equal(response.status, 303);
-    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'}, {key: '_ship_promise', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
+    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Shipping', value: 'In stock in Belgium, ships in a few working days.'}, {key: '_ship_promise', value: PAID_PROMISE}, {key: '_batch', value: 'OPENFC-LITE-2020:1'}]}]);
   });
 
   it('lets checkout through when the step moved on but the paid batch still covers the line', async () => {
@@ -1030,12 +1031,11 @@ describe('Shopify cart action: one promise for a mixed order', () => {
   const STRAP = 'gid://shopify/ProductVariant/strap';
   const FC_LINE = 'gid://shopify/CartLine/fc?cart=a';
   const RX_LINE = 'gid://shopify/CartLine/rx?cart=a';
-  const OWN_EARLY = 'ships late November 2026';
-  const OWN_LATE =
-    'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait';
+  const OWN_EARLY = 'in stock in Belgium, ships to EU addresses in a few working days';
+  const OWN_LATE = 'ships by 31 March 2027';
   const REWRITE = 'ships with the rest of this order by 31 March 2027';
   // An EU line from batch 1 stock: the site's EU line, no Preorder and no Delivery by.
-  const own = (value: string) => [{key: 'Shipping', value: 'In stock in Belgium, ships in a few days.'}, {key: '_ship_promise', value}, {key: '_batch', value: 'OPENFC-LITE-3030:1'}];
+  const own = (value: string) => [{key: 'Shipping', value: 'In stock in Belgium, ships in a few working days.'}, {key: '_ship_promise', value}, {key: '_batch', value: 'OPENFC-LITE-3030:1'}];
 
   function base(sku: string, handle: string, id: string, preorder: boolean) {
     return {
@@ -1146,7 +1146,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
     const c = cart([fcLine({orderPromise: REWRITE}), rxLine()]);
     const info = cartLineInfo(c, EU);
     assert.equal(info[FC_LINE].group, `date:${OWN_EARLY}`);
-    assert.equal(info[FC_LINE].shipLabel, 'Ships late Nov 2026');
+    assert.equal(info[FC_LINE].shipLabel, 'In stock, ships in a few working days');
     assert.deepEqual(splitPlan(c, info), {keep: [FC_LINE], later: [RX_LINE]});
   });
 

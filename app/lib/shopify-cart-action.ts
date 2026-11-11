@@ -307,9 +307,11 @@ export function lineAttributes(variant: CatalogVariant, destination: Region | bo
   // An EU line from batch 1 stock in Belgium ships now: checkout and the
   // confirmation read the site's EU line, no preorder promise or delivery
   // date. The promise stays hidden for the cart and the hold pass. Only for
-  // a known country (`euStockKnown`, `geoCountryForRequest`): the site shows
-  // a visitor with none the batch promise, so checkout does too.
-  if (region === 'EU' && euStockKnown && euStock(variant)) {
+  // a known country (`euStockKnown`, `geoCountryForRequest`) while the batch
+  // still carries a ship month: the site shows a visitor with none the batch
+  // promise, so checkout does too. Stock on hand (`inStock`) is no preorder
+  // for anyone: its line never carries a `Preorder` property.
+  if (region === 'EU' && (euStockKnown || variant.campaign?.inStock) && euStock(variant)) {
     return [
       {key: SHIPPING_ATTRIBUTE, value: GEO_AVAILABILITY_COPY.en.eu},
       {key: SHIP_PROMISE_ATTRIBUTE, value: promise},

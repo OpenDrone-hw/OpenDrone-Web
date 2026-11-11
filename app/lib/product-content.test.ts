@@ -380,11 +380,20 @@ describe('short ship promise', () => {
   const target =
     'ships about 10 weeks after its target is reached: by 11 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait';
   it('turns a funding-target promise into one short line', () => {
-    assert.deepEqual(shortShipPromise(target), {
+    assert.deepEqual(shortShipPromise(target, false), {
       kind: 'target',
       label: 'Funding target',
       text: 'ships by 11 March 2027 if reached',
     });
+  });
+  it('reads the confirmed batch, and an order sold on its target, without a condition', () => {
+    const plain = {kind: 'target', label: null, text: 'ships by 31 March 2027'};
+    assert.deepEqual(shortShipPromise('ships by 31 March 2027'), plain);
+    assert.deepEqual(
+      shortShipPromise('ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait'),
+      plain,
+    );
+    assert.equal(shortShipPromise('in stock in Belgium, ships to EU addresses in a few working days')?.kind, 'date');
   });
   it('keeps a dated promise, capitalised', () => {
     assert.deepEqual(shortShipPromise('ships early November 2026'), {

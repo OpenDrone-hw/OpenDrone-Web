@@ -1,7 +1,7 @@
 {
   "_scenario": {
     "title": "EU cart changed to Canadian address",
-    "description": "Fictional address change; retains EU November promise and flags review without extending the recorded deadline.",
+    "description": "Fictional address change; an order from before terms 2.9, it retains its EU November promise and flags review without extending the recorded deadline.",
     "templates": [
       "order-confirmation"
     ]

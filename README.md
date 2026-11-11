@@ -91,7 +91,7 @@ in `.dev.vars` and run `npm run dev`.
 | `npm run emails:chrome` / `emails:paste` | start the dedicated Shopify Chrome; dry-run or apply the templates into Shopify admin (see "Paste into Shopify admin") |
 | `npm run emails:hash` | sha256 of every pasteable `out/*.html` (`-- --json` for the paste list with notification name and subject) |
 | `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU>` | dry run: the held orders of a batch; `--apply` releases their holds (see "Fulfil a batch") |
-| `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved\|missed --sku <SKU> --new-date <text>` | dry run: renders the ship-date or missed-target email per order; `--send` sends through Resend (see "Tell buyers") |
+| `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved\|missed --sku <SKU> --new-date <text>` | dry run: renders the moved ship date or missed ship-by date email per order; `--send` sends through Resend (see "Tell buyers") |
 | `node scripts/launch-blast.mjs <handle>` | dry run of the product mail to the `notify-<handle>` Resend segment; `--create` drafts, `--send` sends |
 | `BASE=<url> node scripts/smoke.mjs` | GETs the main routes of any base URL and asserts status and content; passes with the shop open or closed (`SMOKE_AUTH=opendrone:<password>` for staging) |
 
@@ -154,9 +154,11 @@ also renders every product as coming soon, with a notify-me signup instead of
 prices.
 
 **Preorders.** `content/preorders.json` lists production batches per SKU: paid
-stock with its own ship date, or a funding target whose supplier order is
-placed once that many units are ordered. Only SKUs the policy sells as
-`preorder` are affected.
+stock (on hand in Belgium when `inStock`), or a funding batch. With
+`confirmed: true` (founder 2026-11-11, terms 2.9) every funding batch is
+produced whatever its count and ships by `shipsBy`; without it a funding batch
+is a target whose supplier order is placed once that many units are ordered.
+Only SKUs the policy sells as `preorder` are affected.
 
 | Piece | Where | Does |
 |---|---|---|
@@ -1208,7 +1210,7 @@ those tags automatically. An earlier accepted promise is not silently extended.
 
 | Source | Owns |
 |---|---|
-| `content/preorders.json` | `countFrom`, `endsOn`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `reserved`, `paid`, `ships`, `deliveryBy`, `deliveryByUS`, `deliveryByINT`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
+| `content/preorders.json` | `countFrom`, `endsOn`, `confirmed`, `afterEndsOn`, `soldUnder`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `reserved`, `paid`, `ships`, `deliveryBy`, `deliveryByUS`, `deliveryByINT`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
 | `content/registrations.json` | producer numbers and explicit `saleApproved` per EU destination |
 | `content/us-sales.json` | the US flat shipping rate in USD (`null` keeps the US closed) and `priceUpliftPct`, the US price uplift (`npm run us:prices`) |
 | Shopify | compare-at (retail) price, current price, catalog identity, orders, payments |
@@ -1219,14 +1221,47 @@ those tags automatically. An earlier accepted promise is not silently extended.
    `countFrom` to the first day whose paid orders count, the batches with
    `units`, `paid` and `ships` for ordered stock (plus `reserved` for units
    of it held back from sale), `endsOn`, `shipsBy` and `pendingShips`
-   for funding targets, and `priceTiers`. `npm test` checks that
-   `pendingShips` names `endsOn` and `shipsBy`.
+   for funding batches, and `priceTiers`. `npm test` checks that
+   `pendingShips` names `shipsBy`.
 2. In Shopify, set each campaign SKU's compare-at price to retail and its
    price to the first step. A SKU priced under its step stays closed.
 3. Set the SKU to `preorder` in `SHOPIFY_PREVIEW_POLICY_JSON` with
    `shipPromise: null`, and `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`.
 4. Open the shop (above) and check `/api/status/campaign`: every campaign SKU
    `open`, `allOpen: true`, no pending price step.
+
+**Confirmed batches.** `confirmed: true` removes the funding condition:
+`pendingShips` names `shipsBy` only ("ships by 31 March 2027"), the product
+page and /preorder read "Batch confirmed" in place of a count toward a target,
+every line of the batch ships together (one ship group) and no SKU closes for
+a missed target. `afterEndsOn` is the one value for what the funding batches
+do after `endsOn`:
+
+| `afterEndsOn` | From the day after `endsOn` |
+|---|---|
+| `closed` | ordering stops (run `scripts/close-preorder-run.mjs --apply` so Shopify stops too) |
+| `retail` (default) | ordering stays open at the retail price: `tiersFor` returns no step, the price writer sets retail |
+| `earlyBird` | ordering stays open and the price steps keep running |
+
+Changing it is a one-line edit of `content/preorders.json`. After the price
+writer has set retail (it clears the compare-at price), going back to
+`earlyBird` needs the compare-at prices set again in Shopify first.
+
+`soldUnder` lists, oldest first, what orders created before each `before`
+instant were promised (`pendingShips`, `paidShips`, `paidDeliveryBy`, and the
+dates that differed). The account page, the hold pass and the notify script
+read an order through `configSoldUnder`, so an order keeps the delivery date
+it was sold with. A promise that still names a target ("... if the target is
+reached by ...") is recognised as the same batch (`fundingPromise`) and reads
+as confirmed. The last entry's `before` is the end of the publication day of
+the current terms in Brussels: a test holds it to the version line of
+`app/content/legal/en/algemene-voorwaarden.md`, so set both on the publish day.
+
+`inStock: true` on a paid batch: its units are on hand in Belgium. Its `ships`
+names no month ("in stock in Belgium, ships to EU addresses in a few working
+days"), it has no `deliveryBy`, and its lines never carry a `Preorder`
+property (checkout and the confirmation read "Shipping: In stock in Belgium,
+ships in a few working days.").
 
 Every funding-target unit ships by the one `shipsBy` date, however early
 its target is reached. A SKU's last batch has no end when it is a funding
@@ -1252,7 +1287,9 @@ number alone does not open a destination; `saleApproved` does, after its
 evidence is reviewed. The strategy behind a campaign lives in
 the team's private knowledge base, not here.
 
-**Close the run at `endsOn`.** The storefront stops selling a funding-target
+**Close the run at `endsOn`.** Only when `afterEndsOn` is `closed`, or the
+campaign is not `confirmed` (otherwise the script reports nothing to close).
+The storefront stops selling a funding-batch
 unit after `endsOn`, but Shopify does not: an old checkout link or an
 abandoned-checkout recovery mail can still complete an order. After the end
 of `endsOn` (Europe/Brussels):
@@ -1291,18 +1328,19 @@ batch arrives:
    fulfilled there without notifying the buyer.
 
 The script reads the Shopify Admin credentials from `.env` and never prints
-them. An order with an item whose target was missed is released once that
+them. An order with an item that missed its ship-by date is released once that
 item is refunded in Shopify admin: a line with nothing left to ship no longer
 holds the order back.
 
 ## Tell buyers
 
-Terms 7bis.3 and 7bis.3bis promise an email when a ship date moves and when a
-funding target is missed. `scripts/preorder-notify.mjs` writes them per order,
+Terms 7bis.3 and 7bis.3bis promise an email when a ship date moves and when an
+item has not shipped by its ship-by date (the March 2027 batch is confirmed,
+so there is no funding target to miss). `scripts/preorder-notify.mjs` writes them per order,
 in the buyer's language (English, Dutch or French):
 
 - Ship date moved: `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved --sku <SKU> --batch <N> --new-date "<date>" --new-date-nl "<datum>" --new-date-fr "<date>"`.
-- Target missed by `endsOn`: `--kind missed --sku <SKU> --batch <N> --new-date "<new target date>"`.
+- Not shipped by `shipsBy`: `--kind missed --sku <SKU> --batch <N> --new-date "<new ship date>"`.
   The email offers a refund or to wait, and states the 30-day reply deadline
   after which the item is refunded.
 

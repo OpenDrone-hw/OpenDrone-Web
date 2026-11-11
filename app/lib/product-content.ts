@@ -27,6 +27,8 @@ import {
   type ProductStatus as RoadmapStatus,
 } from './roadmap-data.ts';
 import type {CatalogAvailability} from './product-shapes.ts';
+import {CAMPAIGN_CONFIRMED} from './campaign-file.ts';
+import {fundingPromise} from './preorder-campaign.ts';
 
 export type ChapterPin = {
   ref: string;
@@ -1026,13 +1028,24 @@ export function specSheet(
  */
 export type ShortShipPromise = {kind: 'target' | 'date'; label: string | null; text: string};
 
-const TARGET_PROMISE = /by (\d{1,2} [A-Z][a-z]+ \d{4}) if the target is reached by (\d{1,2} [A-Z][a-z]+ \d{4})/;
-
-export function shortShipPromise(promise: string | null | undefined): ShortShipPromise | null {
+/**
+ * `kind: 'target'` is a unit of a funding batch (the March 2027 batch),
+ * `date` anything with its own date or stock on hand. A confirmed campaign
+ * (`CAMPAIGN_CONFIRMED`) has no condition: its promise, and the one an order
+ * placed before the confirmation carries, both read "ships by <shipsBy>".
+ */
+export function shortShipPromise(
+  promise: string | null | undefined,
+  confirmed: boolean = CAMPAIGN_CONFIRMED,
+): ShortShipPromise | null {
   const text = promise?.trim();
   if (!text) return null;
-  const target = TARGET_PROMISE.exec(text);
-  if (target) return {kind: 'target', label: 'Funding target', text: `ships by ${target[1]} if reached`};
+  const funding = fundingPromise(text);
+  if (funding) {
+    return funding.conditional && !confirmed
+      ? {kind: 'target', label: 'Funding target', text: `ships by ${funding.latestShip} if reached`}
+      : {kind: 'target', label: null, text: `ships by ${funding.latestShip}`};
+  }
   if (/after its target/i.test(text)) return {kind: 'target', label: 'Funding target', text: 'ships after its target is reached'};
   return {kind: 'date', label: null, text: text.charAt(0).toUpperCase() + text.slice(1)};
 }

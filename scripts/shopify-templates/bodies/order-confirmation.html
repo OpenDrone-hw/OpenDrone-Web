@@ -14,8 +14,8 @@
 {% comment %}
   Preorder lines carry the ship promise as the line item property
   "Preorder" (PREORDER_ATTRIBUTE in app/lib/shopify-storefront.ts). The box
-  shows only when at least one line has it; the target sentence only when a
-  line waits for a funding target. Dates come from FACTS in
+  shows only when at least one line has it. The March 2027 batch is confirmed
+  (terms 2.9), so no sentence names a funding target. Dates come from FACTS in
   app/lib/email-shell.ts. The full rules live on /preorder and in the terms.
 {% endcomment %}
 {% comment %}
@@ -31,7 +31,7 @@
 {% if has_preorder %}
 {% assign one_promise = first_promise | replace: 'March', 'Mar' | replace: 'December', 'Dec' %}
 <od-card accent>
-  <od-t last><strong style="color: #ffb700;">Preorder, paid in full.</strong> {% if promises_differ == false %}{{ one_promise | slice: 0 | upcase | escape }}{{ one_promise | slice: 1, 1000 | escape }}.{% if first_delivery != '' and deliveries_differ == false %} Delivery by {{ first_delivery | escape }}.{% endif %}{% elsif has_target %}Your order ships as one parcel, by %%SHIPBY_S%% if the target is reached by %%CLOSE_S%%; if not, you choose a full refund or the new date.{% else %}Your order ships as one parcel; each item shows its date.{% endif %} <a href="https://opendrone.be/preorder" style="color: #ffb700;">How preorders work</a></od-t>
+  <od-t last><strong style="color: #ffb700;">Preorder, paid in full.</strong> {% if promises_differ == false %}{{ one_promise | slice: 0 | upcase | escape }}{{ one_promise | slice: 1, 1000 | escape }}.{% if first_delivery != '' and deliveries_differ == false %} Delivery by {{ first_delivery | escape }}.{% endif %}{% elsif has_target %}Your order ships as one parcel, by %%SHIPBY_S%%.{% else %}Your order ships as one parcel; each item shows its date.{% endif %} <a href="https://opendrone.be/preorder" style="color: #ffb700;">How preorders work</a></od-t>
 </od-card>
 {% endif %}
 {% if has_preorder %}

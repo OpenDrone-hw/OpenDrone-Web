@@ -40,7 +40,7 @@ describe('noticeFor (when the location notice shows)', () => {
 
 describe('noticeText', () => {
   it('names the country and its full line, duties note included', () => {
-    assert.equal(noticeText('BE', 'en'), 'Shipping to Belgium: In stock in Belgium, ships in a few days.');
+    assert.equal(noticeText('BE', 'en'), 'Shipping to Belgium: In stock in Belgium, ships in a few working days.');
     assert.equal(
       noticeText('GB', 'en'),
       'Shipping to United Kingdom: Pre-order, ships March 2027. Import VAT and duties: paid by you on delivery, unless collected at checkout.',

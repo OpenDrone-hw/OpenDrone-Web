@@ -29,11 +29,9 @@ describe('availability block', () => {
       ['From Belgium', 'EU addresses only', 'current', `${sellableUnits(REAL.skus['OPENESC-3030'].batches[0]) - 1} left`],
       ['March 2027 batch', 'EU, US and more', 'next', null],
     ]);
-    assert.equal(rows[0].detail, 'Ships late Nov 2026');
-    assert.equal(
-      rows[1].detail,
-      'Target deadline 15 Dec 2026. Ships by 31 Mar 2027 if the target is reached',
-    );
+    assert.equal(rows[0].detail, 'In stock, ships in a few working days');
+    // The March 2027 batch is confirmed: the date alone, no target or deadline.
+    assert.equal(rows[1].detail, 'Ships by 31 Mar 2027');
   });
 
   it('shows a US buyer batch 1 as not available to the US and the March batch selected', () => {
@@ -96,7 +94,16 @@ describe('availability block', () => {
       assert.equal(row.note, null);
     }
     const open = availabilityRows(state('OPENRX-LITE', 249, 'EU'), DATES, 'EU', words).find((r) => r.state === 'current')!;
-    assert.equal(open.detail, 'Target deadline 15 Dec 2026. Ships by 31 Mar 2027 if the target is reached');
+    // Confirmed: the same line before the count gets there.
+    assert.equal(open.detail, 'Ships by 31 Mar 2027');
+    // A campaign that still runs on a target names its deadline.
+    const target = {...open, shipPromise: 'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait'};
+    assert.ok(target);
+    const waiting = availabilityRows(
+      {batch: 1, targetReached: false, batches: [{batch: 1, units: 250, status: 'current', paid: false, regions: ['EU', 'US', 'NEAR', 'INT'], ordered: 3, shipPromise: target.shipPromise}]},
+      DATES, 'EU', words,
+    )[0];
+    assert.equal(waiting.detail, 'Target deadline 15 Dec 2026. Ships by 31 Mar 2027 if the target is reached');
   });
 
   it('gives every other product one row: the March batch, International preorders', () => {
@@ -170,7 +177,7 @@ describe('one name for the November batch (G1)', () => {
   it('gives the accessory the same rows and scope as the FC, with Batch 1 first, then the March batch, for a US buyer', () => {
     const eu = availabilityRows(accessory('ACC-STRAP-20X220', 'EU'), DATES, 'EU', words);
     assert.deepEqual(eu.map((r) => [r.label, r.scope, r.state]), [['From Belgium', 'EU addresses only', 'current']]);
-    assert.equal(eu[0].detail, 'Ships late Nov 2026');
+    assert.equal(eu[0].detail, 'In stock, ships in a few working days');
     for (const sku of ['ACC-STRAP-20X220', 'ACC-ANT-T', 'ACC-CAP-470UF-35V']) {
       const us = availabilityRows(accessory(sku, 'US'), DATES, 'US', words);
       // G7: the accessory has no target of its own, so it names the lead's.
@@ -178,7 +185,8 @@ describe('one name for the November batch (G1)', () => {
         ['From Belgium', 'other_region', 'Not available in the US'],
         ['Ships with the OpenFC Lite March 2027 batch', 'current', null],
       ], sku);
-      assert.match(us[1].detail, /Ships by 31 Mar 2027 if that target is reached/, sku);
+      // The March 2027 batch is confirmed: the date alone.
+      assert.equal(us[1].detail, 'Ships by 31 Mar 2027', sku);
       assert.equal(batchText(accessory(sku, 'US'), words), 'Ships with the OpenFC Lite March 2027 batch, EU, US and more', sku);
     }
   });
@@ -235,8 +243,9 @@ describe('a batch name never carries a date (G6, G8)', () => {
     assert.equal(nov.Availability, undefined);
     assert.equal(march.Availability, undefined);
     assert.equal(nov.Preorder, undefined);
-    assert.equal(nov.Shipping, 'In stock in Belgium, ships in a few days.');
-    assert.match(nov._ship_promise, /late November 2026/);
+    assert.equal(nov.Shipping, 'In stock in Belgium, ships in a few working days.');
+    assert.match(nov._ship_promise, /^in stock in Belgium/);
+    assert.equal(nov['Delivery by'], undefined);
     assert.match(march.Preorder, /31 March 2027/);
   });
 });
