@@ -1,15 +1,15 @@
 {
-  "openfc-lite/20x20": "c0272b9a250bdb07",
+  "openfc-lite/20x20": "a564aa55f87ccb48",
   "teststrap/a": "e8365d09702f0ae0",
   "openframe/5in": "fab27375963f4408",
   "openframe/3in": "a09df1d589e2e97c",
-  "openfc-lite/30x30": "8de72ef36f51d031",
-  "openesc/20x20": "2d0650afc0d1f578",
-  "openesc/30x30": "15e0bbd7070347c7",
-  "openrx/mono": "706ad8bf37ea0249",
-  "openrx/gemini": "dae744beb522a999",
-  "openrx/lite-ufl": "0d57178c89aeeb99",
-  "openrx/lite": "7c819fe91e62a8ee",
+  "openfc-lite/30x30": "bb5599d0163c704f",
+  "openesc/20x20": "506fa51f5f8c676a",
+  "openesc/30x30": "48806c8e1bb9de46",
+  "openrx/mono": "19d010550c5d48ba",
+  "openrx/gemini": "06c183bd07246dd9",
+  "openrx/lite-ufl": "398bb40589ca7452",
+  "openrx/lite": "d3c9bbf34f7215ee",
   "openmotor/1604": "81708372c4dc76e9",
   "openmotor/2306": "67988cbed2eeb45c"
 }

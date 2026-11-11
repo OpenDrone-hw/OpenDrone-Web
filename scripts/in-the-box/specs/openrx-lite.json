@@ -74,16 +74,6 @@
       "item": "Heat-shrink",
       "below": "Bind and quick-start card",
       "perRow": 2
-    },
-    {
-      "label": "Sticker",
-      "procedural": {
-        "kind": "sticker",
-        "w": 80,
-        "h": 22
-      },
-      "item": "Sticker",
-      "below": "Bind and quick-start card"
     }
   ],
   "exclude": []
