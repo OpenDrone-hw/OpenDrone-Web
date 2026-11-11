@@ -68,6 +68,8 @@ in `.dev.vars` and run `npm run dev`.
 | `npm run support:sandbox`, `support:staff` | fake Discord and Shopify for local ticket runs, and the team's side of them ("Test support locally") |
 | `npm run check:status` | fails when a static roadmap status is ahead of its repo's `status-*` topic |
 | `npm run gen:board-art` | export every PCB as layered SVG and copper rasters (needs KiCad and cwebp) |
+| `npm run gen:components` | regenerate only `public/boards/<handle>/components.json` from the PCBs |
+| `npm run gen:box-art` | render the in-the-box flat-lays into `public/boxes/` from `scripts/in-the-box/specs/` (needs Blender, cwebp and ImageMagick) |
 | `npm run gen:schematics` | render the schematic sheets from the board checkouts |
 | `npm run sync:specs` / `sync:specs:check` | mirror each board README's `## Specifications` table into `content/products/<handle>.json`, or diff |
 | `npm run specs:placeholders` | list every spec value still marked as a placeholder |
@@ -76,6 +78,11 @@ in `.dev.vars` and run `npm run dev`.
 | `npm run sync:contributors` | refresh `content/contributors.json` from GitHub |
 | `npm run studio:coverage` | which files still have copy baked into code |
 | `npm run studio:keys` | fails when code uses a copy id missing from `content/copy/` |
+| `npm run sync:testing` / `sync:testing:check` | export the published bench figures into `public/testing/`, or diff |
+| `npm run tokens:check` | fails when `app/styles/opendrone-tokens.css` no longer matches the hash on its first line |
+| `npm run studio:tokens`, `studio:products` | regenerate the studio's token catalogue from `@theme`; rewrite `content/products/*.json` in normal form |
+| `npm run goals:update` | move the auto-mode goals in `content/goals.json` from the shop's order totals |
+| `npm run us:prices` | compare the US price uplift in `content/us-sales.json` with Shopify's price list (`-- --apply` writes it; see "US prices") |
 | `npm run sync:lab-visit -- <game dir>` | copy the lab walkthrough's runtime files into `public/lab-visit/` (`-- --check <game dir>` diffs only) |
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
@@ -88,7 +95,8 @@ in `.dev.vars` and run `npm run dev`.
 | `node scripts/launch-blast.mjs <handle>` | dry run of the product mail to the `notify-<handle>` Resend segment; `--create` drafts, `--send` sends |
 | `BASE=<url> node scripts/smoke.mjs` | GETs the main routes of any base URL and asserts status and content; passes with the shop open or closed (`SMOKE_AUTH=opendrone:<password>` for staging) |
 
-The PR gate is typecheck, lint and test.
+CI on a pull request (`.github/workflows/ci.yml`) runs lint, typecheck, test, `check:registry`,
+`check:status` and a production build.
 
 ## Layout
 

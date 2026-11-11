@@ -3,11 +3,10 @@ import fs from 'node:fs';
 import {describe, it} from 'node:test';
 import type {Catalog, CatalogVariant} from './catalog.ts';
 import {applyCampaign, datedShipParts, parseCampaignConfig, shipLabelFromPromise, type Region} from './preorder-campaign.ts';
-import {shipCountryFromCookie} from './shipping-rates.ts';
+import {shipCountryFromCookie, shippingQuote} from './shipping-rates.ts';
 import {forwardedCountry, handleShopifyCartAction, withCountry, type ShopifyCartDependencies} from './shopify-cart-action.ts';
 import {handleCartCountry} from './shopify-cart-country.ts';
 import {cartReplannedFor, cartTag, planCartPage} from './cart-replan.ts';
-import {shippingQuote} from './shipping-rates.ts';
 import type {CartLineInput, CartLineUpdate, ShopifyCart, ShopifyCartLine} from './shopify-storefront.ts';
 
 const CAMPAIGN = parseCampaignConfig(
