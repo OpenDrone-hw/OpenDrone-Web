@@ -29,6 +29,8 @@ export type LedgerEvent = {
 export type Ledger = {
   version: number;
   updatedAt: string | null;
+  /** Per repo state kept by the sync; `gone` is the day a repo stopped being public. */
+  repos?: Record<string, {gone?: string} | undefined>;
   events: LedgerEvent[];
 };
 
