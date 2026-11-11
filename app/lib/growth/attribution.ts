@@ -34,6 +34,9 @@ export type Attribution = {
   source: string;
   medium?: string;
   campaign?: string;
+  /** utm_content exactly as given (case kept): the YouTube video id on
+   *  video description links. */
+  content?: string;
   /** utm_source exactly as given, when the link had one. */
   utmSource?: string;
   /** The `ref` slug (creator links), when the link had a valid one. */
@@ -58,6 +61,15 @@ function clean(value: string | null | undefined): string | undefined {
 /** A creator slug: lowercase letters, digits, `-` and `_`, 1 to 32
  *  characters, starting with a letter or digit. */
 const REF_SLUG = /^[a-z0-9][a-z0-9_-]{0,31}$/;
+
+/** utm_content: a video id or a short tag. Case is kept (YouTube ids are
+ *  case sensitive); anything else is dropped. */
+const CONTENT = /^[A-Za-z0-9._~-]{1,64}$/;
+
+export function contentValue(value: string | null | undefined): string | undefined {
+  const v = value?.trim().slice(0, 64);
+  return v && CONTENT.test(v) ? v : undefined;
+}
 
 /** The `ref` value as a creator slug, or undefined when it is not one. */
 export function refSlug(value: string | null | undefined): string | undefined {
@@ -109,11 +121,13 @@ export function captureAttribution(): void {
     const source = utmSource ?? ref;
     const medium = clean(params.get('utm_medium'));
     const campaign = clean(params.get('utm_campaign'));
+    const content = contentValue(params.get('utm_content'));
     const record: Attribution = {
-      // utm_medium or utm_campaign without a source keeps its old 'unknown'; a visit with none of the three is direct.
-      source: source ?? (medium || campaign ? 'unknown' : ''),
+      // utm_medium, utm_campaign or utm_content without a source keeps its old 'unknown'; a visit with none of them is direct.
+      source: source ?? (medium || campaign || content ? 'unknown' : ''),
       medium,
       campaign,
+      content,
       utmSource,
       ref,
       referrer: referrerHost(typeof document === 'undefined' ? '' : document.referrer, window.location.hostname),
@@ -196,6 +210,7 @@ export const ORDER_ATTRIBUTE = {
   utmSource: '_utm_source',
   medium: '_utm_medium',
   campaign: '_utm_campaign',
+  content: '_utm_content',
   referrer: '_referrer',
   landing: '_landing',
 } as const;
@@ -214,6 +229,7 @@ export function attributionFields(record: Attribution | null = getAttribution())
     utmSource,
     medium: record.medium,
     campaign: record.campaign,
+    content: record.content,
     referrer: record.referrer,
     landing: record.landing,
   };
@@ -237,9 +253,10 @@ export function cartAttributesFromForm(form: FormData): Array<{key: string; valu
   for (const key of Object.keys(ORDER_ATTRIBUTE) as AttributionKey[]) {
     const raw = form.get(`${FIELD_PREFIX}${key}`);
     if (typeof raw !== 'string') continue;
-    const value = key === 'landing' ? raw.trim() : key === 'ref' ? refSlug(raw) : clean(raw);
+    const value = key === 'landing' ? raw.trim() : key === 'ref' ? refSlug(raw) : key === 'content' ? contentValue(raw) : clean(raw);
     if (!value) continue;
-    if (key === 'landing' ? !LANDING.test(value) : key === 'referrer' ? !HOST.test(value) : !VALUE.test(value)) continue;
+    const pattern = key === 'landing' ? LANDING : key === 'content' ? CONTENT : key === 'referrer' ? HOST : VALUE;
+    if (!pattern.test(value)) continue;
     attributes.push({key: ORDER_ATTRIBUTE[key], value});
   }
   return attributes;

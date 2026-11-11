@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {attributionFields, cartAttributesFromForm, referrerHost, refSlug} from './attribution.ts';
+import {attributionFields, cartAttributesFromForm, contentValue, referrerHost, refSlug} from './attribution.ts';
 
 describe('attribution', () => {
   it('accepts creator slugs only', () => {
@@ -69,5 +69,28 @@ describe('attribution', () => {
     assert.equal(referrerHost('https://www.opendrone.be/', 'opendrone.be'), undefined);
     assert.equal(referrerHost('', 'opendrone.be'), undefined);
     assert.equal(referrerHost('not a url', 'opendrone.be'), undefined);
+  });
+  it('keeps the video id of utm_content with its case', () => {
+    assert.equal(contentValue(' dQw4w9WgXcQ '), 'dQw4w9WgXcQ');
+    assert.equal(contentValue('a b'), undefined);
+    assert.equal(contentValue('x'.repeat(65)), 'x'.repeat(64));
+    assert.equal(contentValue(null), undefined);
+  });
+
+  it('sends utm_content to the order, validated', () => {
+    assert.deepEqual(
+      attributionFields({source: 'youtube', utmSource: 'youtube', content: 'dQw4w9WgXcQ', landing: '/', ts: 1}),
+      [['attr_utmSource', 'youtube'], ['attr_content', 'dQw4w9WgXcQ'], ['attr_landing', '/']],
+    );
+    const form = new FormData();
+    form.set('attr_utmSource', 'youtube');
+    form.set('attr_content', 'dQw4w9WgXcQ');
+    assert.deepEqual(cartAttributesFromForm(form), [
+      {key: '_utm_source', value: 'youtube'},
+      {key: '_utm_content', value: 'dQw4w9WgXcQ'},
+    ]);
+    const bad = new FormData();
+    bad.set('attr_content', '<script>');
+    assert.deepEqual(cartAttributesFromForm(bad), []);
   });
 });
