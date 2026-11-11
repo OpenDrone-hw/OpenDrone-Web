@@ -71,7 +71,7 @@
         ]
       },
       "row": 1,
-      "item": "Silicone hook-up"
+      "item": "Silicone wires"
     },
     {
       "label": "Quick-start card",
@@ -82,7 +82,7 @@
         "h": 55,
         "caption": "OpenFC Lite · Quick start"
       },
-      "item": "Quick-start card"
+      "item": "Guide"
     },
     {
       "label": "Soft-mount grommets M2",
@@ -91,7 +91,7 @@
         "size": "M2"
       },
       "count": 4,
-      "item": "Silicone soft-mount",
+      "item": "Rubber mounts",
       "below": "Quick-start card",
       "perRow": 4
     }

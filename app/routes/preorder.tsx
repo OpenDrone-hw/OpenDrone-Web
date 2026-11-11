@@ -10,7 +10,7 @@ import {StepBar} from '~/components/PreorderMeter';
 import {EarlyBirdNote, RetailPrice} from '~/components/EarlyPriceCue';
 import {preorderWords} from '~/components/Availability';
 import {batchPhrase, currentBatch} from '~/lib/availability';
-import {shipWord} from '~/components/ShipChip';
+import {shipWord, useGeoInStock, useGeoShipLine} from '~/components/ShipChip';
 import {AddToCartButton} from '~/components/AddToCartButton';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {Txt} from '~/components/Txt';
@@ -176,6 +176,9 @@ export async function loader({context}: Route.LoaderArgs) {
   const latestDay = latestShipDay(CAMPAIGN);
   return {
     rows,
+    // The promise itself, so the page can read it as the visitor's region
+    // does (in the EU: in stock, as the bar and the product page say).
+    stackPromise: stackShips,
     stackMonth: shipMonth(stackShips),
     stackWhen: datedShipParts(stackShips)?.when ?? null,
     stackDay: promiseDay(stackShips),
@@ -210,6 +213,13 @@ export default function PreorderRoute() {
   const usBatchNote = 'usBatchNote' in data ? data.usBatchNote : null;
   const us = 'us' in data && data.us === true;
   const international = data.international;
+  // Batch 1 stock for a visitor whose region reads it as stock (the EU): the
+  // same line as the availability bar and the product page, not the batch's
+  // dated promise, and "Add to cart" as on the product page.
+  const stackInStock = useGeoInStock(null, data.stackPromise);
+  const stackLine = useGeoShipLine()(data.stackPromise)?.replace(/\.$/, '') ?? null;
+  const stackShort = useGeoShipLine(true)(data.stackPromise);
+  const stockNow = stackInStock && stackLine ? {line: stackLine, short: stackShort ?? stackLine} : null;
   const rootData = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
   const updates = copy('preorder.updates');
   // Entries are "YYYY-MM-DD · text", newest first, never edited: a
@@ -234,7 +244,7 @@ export default function PreorderRoute() {
         </div>
         <Link to="#questions" className="po-help-link"><Txt id="preorder.how_it_works" /> <span aria-hidden="true">↓</span></Link>
       </header>
-      <Timeline data={data} />
+      <Timeline data={data} stock={stockNow?.short ?? null} />
       <div className="po-order-notes">
         <span><Txt id={international ? 'preorder.terms_summary_international' : us ? 'preorder.terms_summary_us' : 'preorder.terms_summary'} /></span>
         <EarlyBirdNote show={!unavailable && rows.some((r) => r.early)} className="po-early-note" />
@@ -284,9 +294,9 @@ export default function PreorderRoute() {
         <section className="po-group" id="stack">
           <h2 className="po-group-title">
             <Txt id="preorder.stack_title" />
-            {stackMonth ? <span className="po-group-meta">{shipWord('ships', stackWhen ?? stackMonth)}</span> : null}
+            {stackMonth ? <span className="po-group-meta">{stockNow?.line ?? shipWord('ships', stackWhen ?? stackMonth)}</span> : null}
           </h2>
-          <Cards rows={stackRows} eta={eta} first />
+          <Cards rows={stackRows} eta={eta} first cta={stockNow ? (copyText('product-chrome.buy_cta_add') ?? 'Add to cart') : undefined} />
         </section>
       ) : null}
 
@@ -301,7 +311,9 @@ export default function PreorderRoute() {
           <Txt id="preorder.target_missed" as="p" className="po-group-line" />
           {stackMonth ? (
             <p className="po-group-line">
-              {(copyText('preorder.targets_line') ?? '').replace('{month}', stackMonth)}
+              {stockNow
+                ? (copyText('preorder.targets_line_stock') ?? '')
+                : (copyText('preorder.targets_line') ?? '').replace('{month}', stackMonth)}
             </p>
           ) : null}
           {usBatchNote?.first ? (
@@ -366,7 +378,7 @@ const dayMs = (iso: string) => Date.parse(`${iso}T00:00:00Z`);
  * targets' deadline and latest ship date, with a "Today" marker. On a
  * phone the lanes read as two rows of dates.
  */
-function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>}) {
+function Timeline({data, stock}: {data: ReturnType<typeof useLoaderData<typeof loader>>; stock: string | null}) {
   const {stackDay, stackMonth, endsDay, etaDay, ends, eta, today} = data;
   const days = [today, endsDay, etaDay, ...(stackDay ? [stackDay] : [])].map(dayMs);
   const first = new Date(Math.min(...days));
@@ -381,7 +393,10 @@ function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>
       ? {
           key: 'stack',
           label: copyText('preorder.timeline_stack') ?? 'Stack',
-          events: [{day: stackDay, date: stackMonth, what: copyText('preorder.timeline_ships') ?? 'Ships', kind: 'ship'}],
+          // In stock for this visitor: the lane says so at today, not at the batch's dated promise.
+          events: stock
+            ? [{day: today, date: stock, what: '', kind: 'stock'}]
+            : [{day: stackDay, date: stackMonth, what: copyText('preorder.timeline_ships') ?? 'Ships', kind: 'ship'}],
         }
       : null,
     {
@@ -451,19 +466,19 @@ function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>
 
 /** `first`: the section at the top of the page, whose first images are on
  *  screen at load and load at once, the first one with high priority. */
-function Cards({rows, eta, first = false}: {rows: Row[]; eta: string; first?: boolean}) {
+function Cards({rows, eta, first = false, cta}: {rows: Row[]; eta: string; first?: boolean; cta?: string}) {
   return (
     <ul className="po-cards">
       {rows.map((row, i) => (
-        <Card key={row.sku} row={row} eta={eta} eager={first && i < 4} lead={first && i === 0} />
+        <Card key={row.sku} row={row} eta={eta} eager={first && i < 4} lead={first && i === 0} cta={cta} />
       ))}
     </ul>
   );
 }
 
-function Card({row, eta, eager = false, lead = false}: {row: Row; eta: string; eager?: boolean; lead?: boolean}) {
+function Card({row, eta, eager = false, lead = false, cta: ctaOverride}: {row: Row; eta: string; eager?: boolean; lead?: boolean; cta?: string}) {
   const name = row.variant ? `${row.product} ${row.variant}` : row.product;
-  const cta = copyText('preorder.card_cta') ?? 'Pre-order';
+  const cta = ctaOverride ?? copyText('preorder.card_cta') ?? 'Pre-order';
   const currency = row.price.currencyCode;
   const bar = stepBarView(row.campaign, row.stepEnds);
   const funded = `${copyText('preorder.funded') ?? 'Pre-order target reached'}, ${shipWord('eta', shortCampaignDate(row.campaign.latestShip) ?? shipMonth(row.shipPromise) ?? eta)}`;

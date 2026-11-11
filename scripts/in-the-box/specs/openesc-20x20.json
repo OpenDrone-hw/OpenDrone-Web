@@ -94,7 +94,7 @@
         "caption": "OpenESC · Quick start"
       },
       "row": 1,
-      "item": "Quick-start card"
+      "item": "Guide"
     },
     {
       "label": "Soft-mount grommets M2",
@@ -103,7 +103,7 @@
         "size": "M2"
       },
       "count": 4,
-      "item": "Silicone soft-mount",
+      "item": "Rubber mounts",
       "below": "Quick-start card",
       "perRow": 4
     }

@@ -300,6 +300,13 @@
     transform: translateX(calc(-100% + 0.5rem));
   }
 }
+/* "In stock" sits at today, near the left end of the track: its label starts at the dot and runs right, clear of the lane label. */
+@media (min-width: 42.01em) {
+  .po-event[data-kind='stock'] {
+    justify-items: start;
+    transform: translateX(-0.5rem);
+  }
+}
 .po-event strong {
   margin-top: var(--sp-1);
   font-weight: 600;
