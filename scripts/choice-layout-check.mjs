@@ -18,7 +18,10 @@
 //   6. /preorder ("How ordering works") has nothing under the header, no
 //      overflow, the two lanes in the EU and the pre-order lane alone in the
 //      US, and the US product page shows the one-offer status row (no
-//      selectable card, no batch boxes).
+//      selectable card, no batch boxes);
+//   8. /markets has nothing under the header and no cell outside the screen;
+//   9. the open country picker (header pill, the drawer's on a phone) fits
+//      the screen with its search, list and /markets link, search focused.
 //
 // Usage: BASE=http://localhost:3101 node scripts/choice-layout-check.mjs
 // Chrome is used when Playwright has no bundled browser (CHANNEL=chrome).
@@ -207,6 +210,44 @@ for (const [width, height] of SIZES) {
   if (cut) fail(at('product page US'), 'the status row is cut');
   if (await page.locator('main ul.avail, main [data-batches]').count()) fail(at('product page US'), 'the batch boxes still show');
   await clearOfHeader(page, at('product page US'), ['h1', '[data-offer-choice]', '.product-buy']);
+
+  // 8. /markets ("Where we ship"): nothing under the header, no overflow, every
+  //    table cell inside the screen.
+  await page.goto(BASE + '/markets?country=BE', {waitUntil: 'networkidle'}).catch(() => {});
+  await page.waitForSelector('[data-markets-table]', {timeout: 15000}).catch(() => fail(at('markets'), 'no markets table'));
+  await clearOfHeader(page, at('markets'), ['h1', '.markets-lead', '[data-markets-table]']);
+  const marketsWide = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  if (marketsWide > 0) fail(at('markets'), `page is ${marketsWide} px wider than the screen`);
+  const outside = await page.evaluate(() => [...document.querySelectorAll('[data-markets-table] th, [data-markets-table] td')]
+    .filter((el) => { const r = el.getBoundingClientRect(); return r.width && (r.left < 0 || r.right > innerWidth + 1); }).map((el) => el.textContent));
+  if (outside.length) fail(at('markets'), `cells outside the screen: ${outside.slice(0, 3).join(' | ')}`);
+
+  // 9. The open country picker: the header pill on a laptop, the drawer's on a
+  //    phone. The panel, its search field, the list and the /markets link sit
+  //    inside the screen; the page does not get wider.
+  if (phone) {
+    await page.locator('.site-header button[aria-label="Menu"]:visible').first().click();
+    await page.waitForTimeout(500);
+    await page.locator('.mobile-menu-region .country-picker-field').click();
+  } else {
+    await page.locator('.site-header .country-picker-trigger:visible').click();
+  }
+  await page.waitForTimeout(400);
+  const panel = await page.evaluate(() => {
+    const el = [...document.querySelectorAll('.country-picker-panel')].find((p) => p.getBoundingClientRect().width > 0);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const inside = (q) => { const c = el.querySelector(q)?.getBoundingClientRect(); return Boolean(c && c.width && c.left >= 0 && c.right <= innerWidth + 1 && c.top >= 0 && c.bottom <= innerHeight + 1); };
+    return {left: r.left, right: r.right, bottom: r.bottom, search: inside('.country-picker-search'), list: inside('.country-picker-list'), help: inside('.country-picker-help'), wide: document.documentElement.scrollWidth - innerWidth, focus: document.activeElement?.className ?? ''};
+  });
+  if (!panel) fail(at('country picker'), 'the picker did not open');
+  else {
+    if (panel.left < 0 || panel.right > width + 1) fail(at('country picker'), `panel ${Math.round(panel.left)}..${Math.round(panel.right)} outside the ${width} px screen`);
+    if (panel.bottom > height + 1) fail(at('country picker'), `panel bottom ${Math.round(panel.bottom)} below the ${height} px screen`);
+    for (const part of ['search', 'list', 'help']) if (!panel[part]) fail(at('country picker'), `${part} not fully on screen`);
+    if (panel.wide > 0) fail(at('country picker'), `page is ${panel.wide} px wider with the picker open`);
+    if (!panel.focus.includes('country-picker-search')) fail(at('country picker'), 'the search field does not take focus on open');
+  }
   await context.close();
 }
 await browser.close();
@@ -216,4 +257,4 @@ if (failures.length) {
   console.error(`\n${failures.length} layout failure(s)`);
   process.exit(1);
 }
-process.stdout.write(`choice layout: ${SIZES.length} sizes, no page content under the header at scroll zero, no shift between modes or sizes, ordering page and US product page checked\n`);
+process.stdout.write(`choice layout: ${SIZES.length} sizes, no page content under the header at scroll zero, no shift between modes or sizes, ordering page, US product page, /markets and the open country picker checked\n`);

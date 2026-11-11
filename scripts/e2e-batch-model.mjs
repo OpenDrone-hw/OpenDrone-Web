@@ -462,8 +462,8 @@ for (const country of ['BE', 'GB', 'US', null]) {
         if (!response || response.status() >= 400) throw new Error(`${path}: HTTP ${response?.status()}`);
         if (path === '/preorder' && !new URL(page.url()).pathname.startsWith('/products')) throw new Error('/preorder did not redirect');
         const text = await visibleText(page);
-        // The footer's "Early bird role on Discord" stays (a perk for earlier buyers; a product decision).
-        const hit = text.match(/pre-?order|March 2027|31 Mar|\bbatch\b|early bird(?! role)/i);
+        // No pre-order perk either: the footer's "Early bird role on Discord" is gone (founder 2026-11-11).
+        const hit = text.match(/pre-?order|March 2027|31 Mar|\bbatch\b|early bird/i);
         if (hit) throw new Error(`${path}: reads "${hit[0]}"`);
         if (currencies(text).length > 1) throw new Error(`${path}: two currencies`);
       }
@@ -474,10 +474,8 @@ for (const country of ['BE', 'GB', 'US', null]) {
       const posted = page.waitForResponse((r) => r.url().includes('/api/shopify/cart') && r.request().method() === 'POST');
       await add.click();
       const answer = await posted;
-      if (answer.status() === 409 && /EU addresses only/.test(await answer.text())) {
-        // Open product decision (go-live kit): once nothing is pre-order, does stock ship outside the EU?
-        throw Object.assign(new Error('page offers Add to cart, server refuses outside the EU (stock is EU only)'), {decision: true});
-      }
+      // Batch 2 ships worldwide: once nothing is pre-order, stock goes in the cart from every country (founder 2026-11-11).
+      if (answer.status() >= 400) throw new Error(`add refused: ${answer.status()} ${(await answer.text()).slice(0, 120)}`);
       await page.goto(ORDINARY_BASE + '/cart', {waitUntil: 'load'});
       if (!(await page.locator('main button:has-text("Checkout")').count())) throw new Error('no checkout in the cart');
     } finally {
