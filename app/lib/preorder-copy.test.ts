@@ -42,3 +42,16 @@ describe('/preorder channel copy', () => {
     }
   });
 });
+
+describe('batch 1 stock on /preorder', () => {
+  const route = readFileSync(new URL('../routes/preorder.tsx', import.meta.url), 'utf8');
+  it('reads as stock for a visitor whose region gets it as stock, like the bar and the product page', () => {
+    assert.match(route, /useGeoInStock\(null, data\.stackPromise\)/);
+    assert.match(route, /stockNow\?\.line \?\? shipWord\('ships', stackWhen \?\? stackMonth\)/);
+  });
+  it('has a parcel line without a ship month for that visitor', () => {
+    assert.match(copy.targets_line_stock, /^One order ships in one parcel, when its last item is ready\./);
+    assert.doesNotMatch(copy.targets_line_stock, /\{month\}/);
+    assert.ok(copy.targets_line.startsWith('One order ships in one parcel, when its last item is ready.'));
+  });
+});

@@ -14,6 +14,7 @@
   "stack_title": "FC and ESC from Belgium, EU only",
   "targets_title": "Preorders",
   "targets_line": "One order ships in one parcel, when its last item is ready. Want the FC and ESC in {month}? Order them separately.",
+  "targets_line_stock": "One order ships in one parcel, when its last item is ready. Want the FC and ESC now? Order them separately.",
   "card_cta": "Pre-order",
   "funded": "Pre-order target reached",
   "tracker_empty": "No pre-orders open.",
