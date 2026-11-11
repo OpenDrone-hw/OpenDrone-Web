@@ -54,7 +54,7 @@ import {cartQuoteCountry, countryName, geoCountryForRequest, isInternationalQuot
 import {internationalShippingFrom} from '~/lib/international-shipping';
 import '../styles/cart-checkout-bar.css';
 import {usSalesRate} from '~/lib/us-sales';
-import {ShipToSelect} from '~/components/ShipToSelect';
+import {CountryPicker} from '~/components/CountryPicker';
 import {usePendingShipTo} from '~/lib/pending-ship-to';
 import {cartReplannedFor, planCartPage} from '~/lib/cart-replan';
 import {paysEuVat} from '~/lib/visitor-country';
@@ -722,9 +722,9 @@ function PopulatedCart({
           </ul>
         </div>
         <div className="cart-summary-page" aria-busy={pending || undefined}>
-          <ShipToSelect
+          <CountryPicker
+            variant="field"
             country={country}
-            usRate={usRate}
             className="ship-to cart-ship-to"
             onBusy={(busy) => onPending(busy ? 1 : -1)}
           />

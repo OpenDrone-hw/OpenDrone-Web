@@ -27,6 +27,8 @@ import {CAMPAIGN} from '~/lib/catalog-client';
 import {toCards} from '~/lib/catalog';
 import {buyerCountry, geoCountryForRequest, isIsoCountry} from '~/lib/shipping-rates';
 import {resolveRegion} from '~/lib/region';
+import {DEALER_SESSION_KEY} from '~/lib/wholesale-codes';
+import {isInternationalRegion} from '~/lib/preorder-campaign';
 import {usSalesRate} from '~/lib/us-sales';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
 import {appCommerceEnabled, readCart} from '~/lib/commerce/app-api';
@@ -269,6 +271,9 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
     // landed): an ordinary shop, so the bar and /preorder name no batch. An
     // empty catalog (a failed read) is never read as "everything in stock".
     ordinaryShop: batchChoiceOn(context.env) && catalog.products.length > 0 && !catalogHasPreorders(catalog),
+    // A retailer (applied wholesale code in the session) outside the EU and
+    // the US: offered batch 1 stock by courier (founder 2026-11-11).
+    wholesaleExport: Boolean(context.session.get(DEALER_SESSION_KEY)) && isInternationalRegion(context.catalog.region),
     testBanner: context.env.TEST_BANNER?.trim() || null,
     // The app prices the cart and takes the destination at its own cart page: no Ship to select in the drawer.
     appCommerce: appMode,

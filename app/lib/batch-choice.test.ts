@@ -674,3 +674,138 @@ describe('the day batch 2 lands: every product in stock, no pre-order left', () 
     assert.doesNotMatch(JSON.stringify({catalog, resolved}), /March 2027|31 Mar|2027-03|Pre-order/);
   });
 });
+
+/** Founder decisions of 2026-11-11 (PR #821 "Product decisions"). */
+describe('decisions 2026-11-11: where stock ships, and who buys it outside the EU', () => {
+  /** Batch 2 has landed: every board in stock, nothing pre-order (the ordinary shop). */
+  const ordinary = (): Catalog => {
+    const c = live();
+    return {
+      ...c,
+      products: c.products.map((p) => ({
+        ...p,
+        variants: p.variants.map((v) => ({...v, merchandise_id: v.offer === 'buy_now' ? v.merchandise_id : v.merchandise_id, offer: undefined, preorder_offer: undefined, buy_now: undefined, availability: 'in_stock' as const, ship_promise: null, campaign: null})),
+      })),
+    };
+  };
+  /** Pre-orders still open, and one item (the 1604 motor) sold from stock. */
+  const mixed = (): Catalog => {
+    const c = live();
+    return {
+      ...c,
+      products: c.products.map((p) => ({
+        ...p,
+        variants: p.variants.map((v) => (v.sku === 'OPENMOTOR-1604' ? {...v, availability: 'in_stock' as const, ship_promise: null, campaign: null} : v)),
+      })),
+    };
+  };
+
+  it('fixtures: the ordinary shop holds no pre-order, the mixed one still does', () => {
+    assert.equal(catalogHasPreorders(ordinary()), false);
+    assert.equal(catalogHasPreorders(mixed()), true);
+  });
+
+  it('decision 1: once batch 2 has landed, an in-stock item goes in the cart from every country Incutec ships to', async () => {
+    for (const country of ['BE', 'GB', 'CH', 'US', 'CA', 'AU']) {
+      const created: CartLineInput[][] = [];
+      const response = await run({sku: FC, qty: '1', country}, {
+        usRate: 9.95,
+        fetchCatalog: async () => ordinary(),
+        getCartId: () => undefined,
+        setCartId: () => undefined,
+        createCart: async (lines) => { created.push(lines); return cart([]); },
+      });
+      assert.ok(response.status < 400, `${country}: ${response.status} ${await response.clone().text()}`);
+      assert.equal(created.length, 1, country);
+    }
+  });
+
+  it('decision 1: while pre-orders exist, stock outside the EU is still refused at add, and checkout says so', async () => {
+    const response = await run({sku: 'OPENMOTOR-1604', qty: '1', country: 'GB'}, {fetchCatalog: async () => mixed(), getCartId: () => undefined});
+    assert.equal(response.status, 409);
+    assert.match(await response.text(), /EU addresses only/);
+    const motor = cart([motorLine(3)]);
+    assert.equal(Object.values(cartLineInfo(motor, mixed()))[0].euOnly, true);
+    assert.equal(Object.values(cartLineInfo(motor, ordinary()))[0].euOnly, false);
+  });
+
+  describe('wholesale exports: Buy now outside the EU only with an applied wholesale code', () => {
+    const EXPRESS_CHECKOUT = 'https://checkout.opendrone.be/checkouts/cn/export';
+    const buy = (country: string, codes: Array<{code: string; applicable: boolean}> | undefined) => {
+      const made: CartLineInput[][] = [];
+      const applied: Array<[string, string[]]> = [];
+      const catalogs: Array<[string | undefined, boolean | undefined]> = [];
+      const response = run({intent: EXPRESS_INTENT, return: '/products/openfc-lite', sku: FC, qty: '2', country}, {
+        usRate: 9.95,
+        getCartId: () => 'cart-a',
+        getCart: async () => ({...cart([preorderLine()]), discountCodes: codes}),
+        setDiscountCodes: async (id, list) => { applied.push([id, list]); return list.map((code) => ({code, applicable: true})); },
+        fetchCatalog: async (region, _country, exportStock) => {
+          catalogs.push([region, exportStock]);
+          return applyCampaign(map(true), CONFIG, {}, NOW, region ?? 'EU', Boolean(exportStock));
+        },
+        createCart: async (lines) => {
+          made.push(lines);
+          return {...cart(lines.map((l, i) => line(10 + i, {merchandiseId: l.merchandiseId, quantity: l.quantity}))), id: 'cart-export', checkoutUrl: EXPRESS_CHECKOUT};
+        },
+      });
+      return {response, made, applied, catalogs};
+    };
+
+    it('a consumer outside the EU is refused, with or without a code that does not apply', async () => {
+      for (const codes of [undefined, [], [{code: 'WS25-FPV24', applicable: false}], [{code: 'SUMMER10', applicable: true}]]) {
+        for (const country of ['GB', 'CH', 'CA']) {
+          const {response, made} = buy(country, codes);
+          assert.match((await response).headers.get('Location') ?? '', /buy=eu-only$/, `${country} ${JSON.stringify(codes)}`);
+          assert.deepEqual(made, []);
+        }
+      }
+    });
+
+    it('a retailer outside the EU with an applied wholesale code buys from stock, the codes go on the express cart', async () => {
+      for (const country of ['GB', 'CH', 'CA', 'AU']) {
+        const {response, made, applied, catalogs} = buy(country, [{code: 'WS25-FPV24', applicable: true}, {code: 'WS25-FPV24-G2', applicable: true}]);
+        assert.equal((await response).headers.get('Location'), EXPRESS_CHECKOUT, country);
+        assert.deepEqual(made[0].map((l) => [l.merchandiseId, l.quantity]), [[CHOICE_IDS[FC].buyNow, 2]], country);
+        assert.deepEqual(applied, [['cart-export', ['WS25-FPV24', 'WS25-FPV24-G2', 'WS25-FPV24-G3', 'WS25-FPV24-G4']]], country);
+        assert.equal(catalogs[0][1], true, 'the catalog read keeps the stock offer for the export');
+      }
+    });
+
+    it('the US is left out (its stock goes through the US partner)', async () => {
+      const {response, made} = buy('US', [{code: 'WS25-FPV24', applicable: true}]);
+      assert.match((await response).headers.get('Location') ?? '', /buy=eu-only$/);
+      assert.deepEqual(made, []);
+    });
+
+    it('the catalog offers Buy now outside the EU only to a dealer', () => {
+      assert.equal(bySku(applyCampaign(map(true), CONFIG, {}, NOW, 'NEAR'), FC)!.variant.offer, 'preorder');
+      const dealer = bySku(applyCampaign(map(true), CONFIG, {}, NOW, 'NEAR', true), FC)!.variant;
+      assert.equal(dealer.offer, 'buy_now');
+      assert.equal(dealer.merchandise_id, CHOICE_IDS[FC].buyNow);
+      assert.ok(dealer.preorder_offer, 'the pre-order stays beside it');
+    });
+
+    it('applying a code remembers the dealer in the session; clearing forgets it', async () => {
+      const seen: Array<string | null> = [];
+      const deps = {setDealer: (code: string | null) => { seen.push(code); }, setDiscountCodes: async (_id: string, list: string[]) => list.map((code) => ({code, applicable: true}))};
+      await run({intent: 'discount', code: 'ws25-fpv24'}, deps);
+      await run({intent: 'discount', code: ''}, deps);
+      assert.deepEqual(seen, ['WS25-FPV24', null]);
+    });
+  });
+
+  it('decision 2: a visitor with no known country gets one quiet line that opens the picker (source guard)', () => {
+    const page = fs.readFileSync(new URL('../routes/products.$handle.tsx', import.meta.url), 'utf8');
+    assert.match(page, /rootData\.region\.country == null && !\(rootData as \{ordinaryShop\?: boolean\}\)\.ordinaryShop \? <ChooseCountryLine \/>/);
+    const picker = fs.readFileSync(new URL('../components/CountryPicker.tsx', import.meta.url), 'utf8');
+    assert.match(picker, /'In the EU\?'/);
+    assert.match(picker, /'Choose your country to buy in stock'/);
+    assert.match(picker, /dispatchEvent\(new Event\(OPEN_COUNTRY_PICKER_EVENT\)\)/);
+  });
+
+  it('decision 3: the footer drops "Early bird role on Discord" in the ordinary shop (source guard)', () => {
+    const footer = fs.readFileSync(new URL('../components/Footer.tsx', import.meta.url), 'utf8');
+    assert.match(footer, /const shopLinks = batchChoice && !root\?\.ordinaryShop \? \[\.\.\.baseLinks, \{to: '\/early-bird'/);
+  });
+});

@@ -53,6 +53,7 @@ const SOCIAL_LINKS: Array<{href: string; copy: string}> = [
 const HELP_LINKS: Array<{to: string; copy: string}> = [
   {to: '/support', copy: 'nav_support'},
   {to: '/shipping', copy: 'nav_shipping'},
+  {to: '/markets', copy: 'nav_markets'},
   {to: '/herroepingsrecht', copy: 'nav_returns'},
   {to: '/warranty', copy: 'nav_warranty'},
   {to: '/support/find', copy: 'nav_find_ticket'},
@@ -345,7 +346,8 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
   const batchChoice = Boolean(root?.batchChoice);
   // An ordinary shop (nothing is pre-order): no Preorders link, /preorder redirects anyway.
   const baseLinks = root?.ordinaryShop ? SHOP_LINKS.filter((link) => link.to !== '/preorder') : SHOP_LINKS;
-  const shopLinks = batchChoice ? [...baseLinks, {to: '/early-bird', copy: 'nav_early_bird'}] : baseLinks;
+  // The early bird role is a pre-order perk: gone in the ordinary shop (founder 2026-11-11).
+  const shopLinks = batchChoice && !root?.ordinaryShop ? [...baseLinks, {to: '/early-bird', copy: 'nav_early_bird'}] : baseLinks;
   // Reference designators run across the whole parts list, J1 to Jn.
   let refNo = 0;
   const nextRef = () => ++refNo;

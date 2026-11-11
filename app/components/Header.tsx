@@ -6,7 +6,7 @@ import {AnimatePresence} from 'motion/react';
 import {MOBILE_DRAWER_ID, useAside} from '~/components/Aside';
 import {LangToggle} from '~/components/LangToggle';
 import {useHeaderPopover} from '~/components/header-popover';
-import {RegionSwitch} from '~/components/RegionSwitch';
+import {CountryPicker} from '~/components/CountryPicker';
 import {SiteWordmark} from '~/components/SiteWordmark';
 import {IncutecWordmark} from '~/components/IncutecWordmark';
 import {Pod} from '~/components/Pod';
@@ -889,7 +889,7 @@ function HeaderCtas({
           currency controls inside the drawer instead. */}
       <div className="site-header-utils">
         <LangToggle className="header-lang-toggle" />
-        <RegionSwitch variant="menu" className="header-region-switch" />
+        <CountryPicker className="header-region-switch" />
         {/* The community: desktop only here, the phone drawer lists it. */}
         <DiscordLink
           placement="header"

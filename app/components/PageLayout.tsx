@@ -6,7 +6,7 @@ import {Aside} from '~/components/Aside';
 import {Footer} from '~/components/Footer';
 import {Header, HeaderMenu, type HeaderFamilyProduct} from '~/components/Header';
 import {LangToggle} from '~/components/LangToggle';
-import {RegionSwitch} from '~/components/RegionSwitch';
+import {CountryPicker} from '~/components/CountryPicker';
 import {RouteProgress} from '~/components/RouteProgress';
 import {RouteAnnouncer} from '~/components/RouteAnnouncer';
 import {Txt} from '~/components/Txt';
@@ -105,10 +105,10 @@ export function PageLayout({
 function MobileMenuAside({accountUrl}: {accountUrl: string | null}) {
   return (
     <Aside type="mobile" heading={<Txt id="chrome.aside_menu_heading" />}>
-      {/* Region switch: hidden from the phone top bar (a 320px row), rendered
-          here at full tap size, first so it never scrolls out of the drawer.
-          Nothing while US sales are closed. */}
-      <RegionSwitch className="mobile-menu-region" />
+      {/* The country picker: hidden from the phone top bar (a 320px row),
+          rendered here at full tap size, first so it never scrolls out of
+          the drawer. The same control as the header pill and the cart. */}
+      <CountryPicker variant="field" className="ship-to mobile-menu-region" />
       <HeaderMenu viewport="mobile" accountUrl={accountUrl} />
       {/* Language switch lives in the drawer on phones - it's hidden from the
           top bar there to keep the header row inside a 320px viewport.

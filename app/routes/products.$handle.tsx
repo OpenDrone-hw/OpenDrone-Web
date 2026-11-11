@@ -1,3 +1,4 @@
+import {ChooseCountryLine} from '~/components/CountryPicker';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {ChatFpvWidget} from '~/components/ChatFpvWidget';
 import {ChatFpvInlineLink} from '~/components/ChatFpvEntry';
@@ -2086,7 +2087,8 @@ function ProductPage() {
               {content.priceUnit}
             </span>
           ) : null}
-          {vatNote ? <span className="product-buy-vat">{vatNote}</span> : null}
+          {/* The tax wording links to /markets, which says what each market's price includes. */}
+          {vatNote ? <Link prefetch="intent" to="/markets" className="product-buy-vat product-buy-vat-link">{vatNote}</Link> : null}
           {/* With the two offer cards, the pre-order card states the saving. */}
           {offerChoice || soloPreorder ? null : <RetailPrice retail={earlyPrice?.retail} />}
         </span>
@@ -2231,7 +2233,9 @@ function ProductPage() {
           <p className="product-buy-ship offer-status" data-offer-status>
             <span>
               {offerChoice && offerMode === 'buy_now'
-                ? say('product-chrome.offer_status_buy_now', 'In stock in Belgium, ships in days, EU only')
+                ? (rootData as {wholesaleExport?: boolean} | undefined)?.wholesaleExport
+                  ? say('product-chrome.offer_status_buy_now_wholesale', 'In stock in Belgium, wholesale order, ships by courier, import charges on delivery')
+                  : say('product-chrome.offer_status_buy_now', 'In stock in Belgium, ships in days, EU only')
                 : say('product-chrome.offer_status_preorder', 'Ships by {date}, worldwide', {
                     date: (offerChoice ? offerChoice.preorder.campaign?.latestShip : campaign?.latestShip) ?? '',
                   })}
@@ -2266,6 +2270,8 @@ function ProductPage() {
         </p>
       )}
       {notDirect ? null : usNotice}
+      {/* No known country: pre-order only, and one quiet way to say where (founder 2026-11-11). */}
+      {choiceOn && !isBundle && !notDirect && rootData?.region && rootData.region.country == null && !(rootData as {ordinaryShop?: boolean}).ordinaryShop ? <ChooseCountryLine /> : null}
       {notDirect || !dutiesNote ? null : <p className="product-buy-ship">{dutiesNote}</p>}
       {preorder && !isBundle && !notDirect && !geoInStock && !offerChoice && !choiceOn ? (
         <p className="product-buy-ship">

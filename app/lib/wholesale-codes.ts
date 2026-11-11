@@ -8,6 +8,11 @@
  * step a product is on. Plain TypeScript, no imports.
  */
 
+/** The session key that holds a retailer's applied main code (set by the
+ *  cart's code field). It only shows the wholesale offers; the express
+ *  checkout checks the cart's own applied code again before it sells. */
+export const DEALER_SESSION_KEY = 'wholesaleDealer';
+
 /** Most price groups a retailer can have at once. */
 export const WHOLESALE_GROUPS = 4;
 

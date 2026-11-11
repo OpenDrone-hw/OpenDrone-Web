@@ -7,6 +7,7 @@ import {
 } from '~/lib/shopify-cart-action';
 import {appCommerceEnabled} from '~/lib/commerce/app-api';
 import {handleAppCartAction, handleAppCartLoader} from '~/lib/commerce/app-cart';
+import {DEALER_SESSION_KEY} from '~/lib/wholesale-codes';
 import type {Route} from './+types/api.shopify.cart';
 
 export const CART_KEY = 'shopifyCartId';
@@ -19,7 +20,8 @@ export async function action({request, context}: Route.ActionArgs) {
     // The campaign-aware catalog for this request's destination: the same
     // ship promise and price the page showed, and campaign SKUs closed when
     // paid counts cannot be verified.
-    fetchCatalog: (region, country) => (region ? context.catalog.fresh.forRegion(region, country) : context.catalog.fresh.forBuyer()),
+    fetchCatalog: (region, country, exportStock) => (region ? context.catalog.fresh.forRegion(region, country, exportStock) : context.catalog.fresh.forBuyer()),
+    setDealer: (code) => (code ? context.session.set(DEALER_SESSION_KEY, code) : context.session.unset(DEALER_SESSION_KEY)),
     setCountry: (id, code) => setCartCountry(context.env, id, code),
     // The visitor's country goes on the cart, so checkout opens in that
     // market (shipping rate, VAT treatment) instead of the primary one.

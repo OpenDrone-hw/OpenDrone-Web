@@ -6,7 +6,7 @@ import {requestedLines} from './shopify-cart-input.ts';
 import {destinationForRequest, geoCountryForRequest, isInternationalQuote, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
-import {wholesaleCartPath, wholesaleCodes, wholesaleMainCode} from './wholesale-codes.ts';
+import {cartWholesaleCode, wholesaleCartPath, wholesaleCodes, wholesaleMainCode} from './wholesale-codes.ts';
 import {cartAttributesFromForm, ORDER_ATTRIBUTE} from './growth/attribution.ts';
 import {internationalShippingFrom} from './international-shipping.ts';
 import {GEO_AVAILABILITY_COPY, hasBatchOne} from './geo-availability.ts';
@@ -45,7 +45,10 @@ export type ShopifyCartDependencies = {
   setCountry?: (cartId: string, countryCode: string) => Promise<void>;
   /** The catalog for the destination's region (`US` while it is the open US
    *  destination, `INT` for another permitted non-EU destination): its ship promises and market prices. */
-  fetchCatalog: (region?: Region, country?: string) => Promise<Catalog>;
+  fetchCatalog: (region?: Region, country?: string, exportStock?: boolean) => Promise<Catalog>;
+  /** Remember (or forget, null) the retailer's applied main code in the
+   *  session (`DEALER_SESSION_KEY`): the pages then show the wholesale offers. */
+  setDealer?: (code: string | null) => void;
   /** A new cart; `countryCode` is the visitor's country when the shop
    *  ships there, so checkout opens in that country's market. */
   createCart: (lines: CartLineInput[], countryCode?: string) => Promise<ShopifyCart>;
@@ -350,6 +353,17 @@ export function usSellable(variant: CatalogVariant): boolean {
   return variant.availability === 'preorder' && Boolean(variant.campaign);
 }
 
+/**
+ * True when this line can only ship to an EU address: an in-stock item while
+ * batch 1 stock is still sold as "Buy now" next to pre-orders. Once batch 2
+ * has landed and nothing is pre-order (`catalogHasPreorders` false, the
+ * ordinary shop), stock ships to every country Incutec ships to
+ * (founder 2026-11-11).
+ */
+export function euOnlyStock(variant: CatalogVariant, catalog: Pick<Catalog, 'products'>): boolean {
+  return !usSellable(variant) && catalogHasPreorders(catalog);
+}
+
 /** How many times an add is retried when Shopify dropped lines from it. */
 const ADD_RETRIES = 2;
 
@@ -571,7 +585,7 @@ export function rederiveLines(
       unavailable = true;
       continue;
     }
-    if (region !== 'EU' && !usSellable(variant)) {
+    if (region !== 'EU' && euOnlyStock(variant, catalog)) {
       euOnly = true;
       continue;
     }
@@ -728,8 +742,10 @@ export function expressLines(
   region: Region,
   globalComingSoon: boolean,
   euStockKnown = true,
+  /** A verified wholesale export (`exportWholesaleCodes`): outside the EU allowed. */
+  dealer = false,
 ): {lines: CartLineInput[]} | {refused: ExpressRefusal} {
-  if (region !== 'EU') return {refused: EXPRESS_REFUSED.region};
+  if (region !== 'EU' && !(dealer && isInternationalRegion(region))) return {refused: EXPRESS_REFUSED.region};
   const lines: CartLineInput[] = [];
   for (const {sku, quantity} of requested) {
     const match = bySku(catalog, sku)?.variant;
@@ -737,10 +753,26 @@ export function expressLines(
     if (!variant?.merchandise_id || !isBuyNowOnly(variant)) return {refused: EXPRESS_REFUSED.stock};
     const left = paidBatchLeft(variant);
     if (left === null || quantity > left) return {refused: EXPRESS_REFUSED.stock};
-    const attributes = lineAttributes(variant, 'EU', euStockKnown);
+    const attributes = lineAttributes(variant, dealer ? region : 'EU', euStockKnown);
     lines.push(attributes ? {merchandiseId: variant.merchandise_id, quantity, attributes} : {merchandiseId: variant.merchandise_id, quantity});
   }
   return lines.length ? {lines} : {refused: EXPRESS_REFUSED.stock};
+}
+
+/**
+ * The wholesale codes of a retailer buying stock for outside the EU, or null
+ * for anyone else: the session cart must carry a wholesale main code that
+ * Shopify applies. The US is left out (its stock goes through the US partner).
+ */
+export async function exportWholesaleCodes(
+  region: Region,
+  cartId: string | undefined,
+  dependencies: Pick<ShopifyCartDependencies, 'getCart' | 'setDiscountCodes'>,
+): Promise<string[] | null> {
+  if (!isInternationalRegion(region) || !cartId || !dependencies.getCart || !dependencies.setDiscountCodes) return null;
+  const cart = await dependencies.getCart(cartId);
+  const code = cartWholesaleCode(cart?.discountCodes);
+  return code?.applicable ? wholesaleCodes(code.code.toUpperCase()) : null;
 }
 
 /** The page an express purchase returns to: a same-site path, else home. */
@@ -855,6 +887,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         return redirect(wholesaleCartPath(CART_CHECK.codeNotApplied));
       }
       // Applied or cleared: the field shows with the applied code, or not at all.
+      dependencies.setDealer?.(main);
       return redirect(main ? '/cart' : wholesaleCartPath());
     }
 
@@ -917,14 +950,21 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
 
     if (intent === EXPRESS_INTENT) {
       // Buy now: straight to a checkout that holds these in-stock lines only.
-      if (!destination || destination.kind !== 'direct' || region !== 'EU') {
+      if (!destination || destination.kind !== 'direct') {
         return redirect(expressReturn(form, EXPRESS_REFUSED.region));
       }
+      // Consumers: EU addresses only. A retailer outside the EU (and the US)
+      // whose session cart carries an applied wholesale code buys from the
+      // same stock, shipped by courier (founder 2026-11-11).
+      const dealerCodes = region === 'EU' ? null : await exportWholesaleCodes(region, existingId, dependencies);
+      if (region !== 'EU' && !dealerCodes) return redirect(expressReturn(form, EXPRESS_REFUSED.region));
       const requested = requestedLines(form);
-      const catalog = await dependencies.fetchCatalog(region, destination.country);
-      const plan = expressLines(catalog, requested, region, globalComingSoon, euStockKnown);
+      const catalog = await dependencies.fetchCatalog(region, destination.country, Boolean(dealerCodes));
+      const plan = expressLines(catalog, requested, region, globalComingSoon, euStockKnown, Boolean(dealerCodes));
       if ('refused' in plan) return redirect(expressReturn(form, plan.refused));
       const express = await dependencies.createCart(plan.lines, cartCountryFor(destination.country, dependencies.registrations, usRate));
+      // The retailer's price: the same codes on the express cart.
+      if (dealerCodes) await dependencies.setDiscountCodes!(express.id, dealerCodes);
       // Shopify's own deny gate: a line it could not fill comes back short.
       if (shortfall(express, plan.lines, new Map()).length) return redirect(expressReturn(form, EXPRESS_REFUSED.stock));
       await recordAttribution(form, express, dependencies);
@@ -1042,7 +1082,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       if (!variant.merchandise_id) throw fail('Product is unavailable.', 409);
       // Only while pre-orders exist is the cart the pre-order lane.
       if (isBuyNowOnly(variant) && catalogHasPreorders(catalog)) throw fail(BUY_NOW_NOT_IN_CART, 409);
-      if (region !== 'EU' && !usSellable(variant)) throw fail(region === 'US' ? US_EU_ONLY_MESSAGE : 'This item ships from stock in Belgium to EU addresses only. International orders use the preorder batch.', 409);
+      if (region !== 'EU' && euOnlyStock(variant, catalog)) throw fail(region === 'US' ? US_EU_ONLY_MESSAGE : 'This item ships from stock in Belgium to EU addresses only. International orders use the preorder batch.', 409);
       const attributes = lineAttributes(variant, region, euStockKnown);
       return attributes
         ? {merchandiseId: variant.merchandise_id, quantity, attributes}
@@ -1270,7 +1310,7 @@ export function cartLineInfo(
           ? {units: campaign.target, ordered: campaign.targetOrdered}
           : null,
       shipLabel: shipLabelFromPromise(line.shipPromise, 'short'),
-      euOnly: variant ? !usSellable(variant) : false,
+      euOnly: variant && catalog ? euOnlyStock(variant, catalog) : false,
       ships: !group.startsWith('date:')
         ? 'preorder'
         : stockPromise(line.shipPromise) || (variant?.availability === 'in_stock' && !line.shipPromise)

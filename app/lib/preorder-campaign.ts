@@ -1147,6 +1147,10 @@ export function applyCampaign(
   units: Record<string, PaidUnitsOf> | null,
   now: Date = new Date(),
   region: Region = 'EU',
+  /** A wholesale buyer outside the EU (an applied wholesale code): batch 1
+   *  stock is offered to them too, shipped by courier, import charges theirs
+   *  (founder 2026-11-11). Consumers outside the EU never get it. */
+  dealer = false,
 ): Catalog {
   const confirmed = Boolean(config.confirmed);
   // A confirmed batch never closes for a missed target: after `endsOn` it
@@ -1223,8 +1227,11 @@ export function applyCampaign(
           const preorder = open(march)
             ? {merchandise_id: variant.merchandise_id, price: variant.price, compare_price: variant.compare_price, ship_promise: march.shipPromise, campaign: date(march)}
             : null;
-          const stock = stateFor(false);
-          const stocked = region === 'EU' && buyNow.available && stock.paidStock && (stock.paidLeft ?? 0) > 0;
+          const exportStock = dealer && region !== 'EU';
+          const stock = exportStock
+            ? campaignState(entry.batches, units[variant.sku] ?? 0, config.pendingShips, tiers, variant.compare_price, 'EU', false)
+            : stateFor(false);
+          const stocked = (region === 'EU' || exportStock) && buyNow.available && stock.paidStock && (stock.paidLeft ?? 0) > 0;
           if (stocked) {
             return {
               ...entryVariant,

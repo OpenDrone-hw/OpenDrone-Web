@@ -233,16 +233,52 @@ export const GEO_STOCK_COPY: Record<Locale, Record<KnownGeoRegion, {long: string
   },
 };
 
-/** The bar's one line: "EU: In stock in Belgium, ships in a few working days" (the visitor's region), or both
- *  regions joined with " · " when the country is unknown. `short` is the phone line. Upper-cased by CSS.
- *  `ordinary`: nothing is pre-order any more, so no line names a batch or its month. */
+/** The pre-order batch's ship-by day; a test checks it against
+ *  `content/preorders.json` (`shipsBy`). */
+export const PREORDER_SHIPS_BY = '2027-03-31';
+
+/** "31 March 2027" (long) or "31 Mar 2027" (short) in a locale. */
+export function shipByDate(locale: Locale, style: 'long' | 'short' = 'long'): string {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : locale, {day: 'numeric', month: style, year: 'numeric', timeZone: 'UTC'})
+    .format(new Date(`${PREORDER_SHIPS_BY}T12:00:00Z`))
+    .replace('.', '');
+}
+
+/** The bar's lines: the visitor's availability, nothing about markets or
+ *  taxes (those are on /markets). Long for laptops, short for phones. */
+const BAR: Record<Locale, {stock: [string, string]; preorder: (style: 'long' | 'short') => string; anywhere: [string, string]}> = {
+  en: {
+    stock: ['In stock in Belgium, ships in days', 'In stock, ships in days'],
+    preorder: (style) => `Pre-order, ships by ${shipByDate('en', style)}`,
+    anywhere: ['In stock, ships worldwide from Belgium', 'In stock, ships worldwide'],
+  },
+  nl: {
+    stock: ['Op voorraad in België, binnen enkele dagen verzonden', 'Op voorraad, binnen dagen verzonden'],
+    preorder: (style) => (style === 'long' ? `Pre-order, verzending uiterlijk ${shipByDate('nl')}` : `Pre-order, uiterlijk ${shipByDate('nl', 'short')}`),
+    anywhere: ['Op voorraad, wereldwijd verzonden vanuit België', 'Op voorraad, wereldwijd verzonden'],
+  },
+  fr: {
+    stock: ['En stock en Belgique, expédié sous quelques jours', 'En stock, expédié sous quelques jours'],
+    preorder: (style) => (style === 'long' ? `Précommande, expédition au plus tard le ${shipByDate('fr')}` : `Précommande, au plus tard ${shipByDate('fr', 'short')}`),
+    anywhere: ['En stock, expédié partout depuis la Belgique', 'En stock, expédié partout'],
+  },
+};
+
+/**
+ * The bar's one line for the visitor's region: "In stock in Belgium, ships
+ * in days" (EU), "Pre-order, ships by 31 March 2027" (everywhere else,
+ * and a visitor with no known country, who can only pre-order), "Not
+ * shipping to the US yet" (US while closed). `ordinary`: nothing is
+ * pre-order any more, stock ships everywhere. A country the shop cannot sell
+ * to reads the buy box's own words instead (PageLayout `note`). `short` is
+ * the phone line. Upper-cased by CSS.
+ */
 export function geoBarText(region: GeoAvailabilityRegion, locale: Locale, short: boolean, ordinary = false): string {
-  return geoBannerLines(region, locale)
-    .map((l) => {
-      const text = ordinary ? GEO_STOCK_COPY[locale][l.region][short ? 'short' : 'long'] : short ? GEO_BAR_SHORT[locale][l.region] : l.text;
-      return `${l.label}: ${text.replace(/\.$/, '')}`;
-    })
-    .join(' · ');
+  const at = short ? 1 : 0;
+  const words = BAR[locale];
+  if (region === 'us') return (short ? GEO_BAR_SHORT[locale].us : GEO_AVAILABILITY_COPY[locale].us).replace(/\.$/, '');
+  if (region === 'eu') return words.stock[at];
+  return ordinary ? words.anywhere[at] : words.preorder(short ? 'short' : 'long');
 }
 
 /** localStorage key of a dismissed banner; bump it when the lines change. */
