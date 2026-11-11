@@ -20,6 +20,8 @@
  * With the campaign `config`, a unit of an order that also holds a line not
  * shipping with paid stock carries `march` (`shipsOnlyWithPaid`): it skips
  * paid batches, so paid stock is consumed only by orders that ship with it.
+ * So does an order with a board bought as a pre-order (`preorderChoiceLine`,
+ * the line's recorded `variantTitle`): each variant counts as what it sold.
  *
  * The Admin token needs `read_orders`, and `read_all_orders` once a campaign
  * runs longer than 60 days: without it Shopify only returns the last 60
@@ -37,7 +39,7 @@
  * guessing.
  */
 
-import {grandfatheredPaidLine, lineAllocationRegion, regionOf, shipsOnlyWithPaid, type CampaignConfig, type UnitRuns} from './preorder-campaign.ts';
+import {grandfatheredPaidLine, lineAllocationRegion, preorderChoiceLine, regionOf, shipsOnlyWithPaid, type CampaignConfig, type UnitRuns} from './preorder-campaign.ts';
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
 const FRESH_MS = 60_000;
@@ -75,12 +77,13 @@ export const PAID_ORDERS_QUERY = `#graphql
       pageInfo { hasNextPage endCursor }
       nodes {
         test
+        createdAt
         cancelledAt
         displayFinancialStatus
         shippingAddress { countryCodeV2 }
         lineItems(first: ${LINE_ITEMS_PAGE}) {
           pageInfo { hasNextPage }
-          nodes { sku currentQuantity customAttributes { key value } }
+          nodes { sku variantTitle currentQuantity customAttributes { key value } }
         }
       }
     }
@@ -97,12 +100,13 @@ type OrdersPage = {
     pageInfo: {hasNextPage: boolean; endCursor: string | null};
     nodes: Array<{
       test: boolean;
+      createdAt?: string | null;
       cancelledAt: string | null;
       displayFinancialStatus: string;
       shippingAddress?: {countryCodeV2: string | null} | null;
       lineItems: {
         pageInfo: {hasNextPage: boolean};
-        nodes: Array<{sku: string | null; currentQuantity: number; customAttributes?: Array<{key: string; value: string | null}> | null}>;
+        nodes: Array<{sku: string | null; variantTitle?: string | null; currentQuantity: number; customAttributes?: Array<{key: string; value: string | null}> | null}>;
       };
     }>;
   };
@@ -154,7 +158,7 @@ export async function fetchPaidUnits(
   countFrom: string,
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
-  config?: Pick<CampaignConfig, 'skus' | 'shipsWith'>,
+  config?: Pick<CampaignConfig, 'skus' | 'shipsWith' | 'choiceFrom'>,
 ): Promise<Record<string, number>> {
   return sumRuns(await fetchPaidUnitRuns(env, countFrom, skus, fetcher, config));
 }
@@ -166,7 +170,7 @@ export async function fetchPaidUnitRuns(
   countFrom: string,
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
-  config?: Pick<CampaignConfig, 'skus' | 'shipsWith'>,
+  config?: Pick<CampaignConfig, 'skus' | 'shipsWith' | 'choiceFrom'>,
 ): Promise<Record<string, UnitRuns>> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(countFrom)) {
     throw new Error('shopify orders: countFrom must be YYYY-MM-DD');
@@ -214,7 +218,7 @@ export async function fetchPaidUnitRuns(
         throw new Error(`shopify orders: an order exceeds ${LINE_ITEMS_PAGE} lines`);
       }
       const region = regionOf(order.shippingAddress?.countryCodeV2);
-      const lines = order.lineItems.nodes.map((l) => ({sku: l.sku, quantity: l.currentQuantity}));
+      const lines = order.lineItems.nodes.map((l) => ({sku: l.sku, quantity: l.currentQuantity, preorder: config ? preorderChoiceLine(config, l, order.createdAt) : false}));
       const march = config ? !shipsOnlyWithPaid(config, lines, stockUsed) : false;
       if (config && !march) {
         for (const l of lines) {
@@ -253,7 +257,7 @@ export async function paidUnits(
   countFrom: string,
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
-  config?: Pick<CampaignConfig, 'skus' | 'shipsWith'>,
+  config?: Pick<CampaignConfig, 'skus' | 'shipsWith' | 'choiceFrom'>,
 ): Promise<Record<string, number>> {
   return sumRuns(await paidUnitRuns(env, countFrom, skus, fetcher, Date.now, config));
 }
@@ -266,7 +270,7 @@ export async function paidUnitRuns(
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
   now: () => number = Date.now,
-  config?: Pick<CampaignConfig, 'skus' | 'shipsWith'>,
+  config?: Pick<CampaignConfig, 'skus' | 'shipsWith' | 'choiceFrom'>,
 ): Promise<Record<string, UnitRuns>> {
   // The key names the rule, so a result counted before it never serves a read that applies it.
   const key = `${env.SHOPIFY_STORE_DOMAIN ?? ''}|${countFrom}|${[...skus].sort().join(',')}|${config ? 'b1only' : 'plain'}`;

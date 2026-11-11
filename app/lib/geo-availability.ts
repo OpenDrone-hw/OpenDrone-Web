@@ -63,24 +63,36 @@ export function stockRegion(region: GeoAvailabilityRegion | null | undefined): b
   return region === 'eu';
 }
 
+/** First day of the pre-order batch's ship month; a test checks it against
+ *  `content/preorders.json` (`shipsBy`). Every month in the lines below is
+ *  read from it, so no line names a batch month of its own. */
+export const INTL_AVAILABILITY_STARTS = '2027-03-01';
+
+/** The pre-order batch's month in a locale: "March 2027", "maart 2027"; short: "Mar 2027", "mrt 2027". */
+export function shipMonth(locale: Locale, style: 'long' | 'short' = 'long'): string {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : locale, {month: style, year: 'numeric', timeZone: 'UTC'})
+    .format(new Date(`${INTL_AVAILABILITY_STARTS}T12:00:00Z`))
+    .replace('.', '');
+}
+
 /** The line a visitor reads instead of the batch 1 promise, per locale. */
 export const GEO_AVAILABILITY_COPY: Record<Locale, Record<KnownGeoRegion, string>> = {
   en: {
     eu: 'In stock in Belgium, ships in a few working days.',
-    import: 'Pre-order, ships March 2027.',
-    intl: 'Pre-order, ships March 2027.',
+    import: `Pre-order, ships ${shipMonth('en')}.`,
+    intl: `Pre-order, ships ${shipMonth('en')}.`,
     us: 'Not shipping to the US yet.',
   },
   nl: {
     eu: 'Op voorraad in België, wordt binnen enkele werkdagen verzonden.',
-    import: 'Pre-order, verzending in maart 2027.',
-    intl: 'Pre-order, verzending in maart 2027.',
+    import: `Pre-order, verzending in ${shipMonth('nl')}.`,
+    intl: `Pre-order, verzending in ${shipMonth('nl')}.`,
     us: 'Nog geen verzending naar de VS.',
   },
   fr: {
     eu: 'En stock en Belgique, expédié sous quelques jours ouvrables.',
-    import: 'Précommande, expédition en mars 2027.',
-    intl: 'Précommande, expédition en mars 2027.',
+    import: `Précommande, expédition en ${shipMonth('fr')}.`,
+    intl: `Précommande, expédition en ${shipMonth('fr')}.`,
     us: 'Pas encore de livraison aux États-Unis.',
   },
 };
@@ -115,8 +127,6 @@ export type GeoOfferAvailability = {
   availabilityStarts?: string;
 };
 
-/** First day of the March 2027 promise; a test checks it against `content/preorders.json`. */
-export const INTL_AVAILABILITY_STARTS = '2027-03-01';
 
 /**
  * Where an Offer is not sold: the US while US sales are on hold (no US rate),
@@ -193,9 +203,9 @@ export const GEO_BANNER_COPY: Record<Locale, Record<KnownGeoRegion, string> & {t
 
 /** The shorter line per region for the bar on phones (one line, no wrap). */
 export const GEO_BAR_SHORT: Record<Locale, Record<KnownGeoRegion, string>> = {
-  en: {eu: 'In stock, ships in days', import: 'Mar 2027 + duties', intl: 'Pre-order, Mar 2027', us: 'Not shipping to the US yet'},
-  nl: {eu: 'Op voorraad, binnen dagen verzonden', import: 'mrt 2027 + rechten', intl: 'Pre-order, verzending mrt 2027', us: 'Nog geen verzending naar de VS'},
-  fr: {eu: 'En stock, expédié sous quelques jours', import: 'mars 2027 + droits', intl: 'Précommande, mars 2027', us: 'Pas encore de livraison aux É.-U.'},
+  en: {eu: 'In stock, ships in days', import: `${shipMonth('en', 'short')} + duties`, intl: `Pre-order, ${shipMonth('en', 'short')}`, us: 'Not shipping to the US yet'},
+  nl: {eu: 'Op voorraad, binnen dagen verzonden', import: `${shipMonth('nl', 'short')} + rechten`, intl: `Pre-order, verzending ${shipMonth('nl', 'short')}`, us: 'Nog geen verzending naar de VS'},
+  fr: {eu: 'En stock, expédié sous quelques jours', import: `${shipMonth('fr')} + droits`, intl: `Précommande, ${shipMonth('fr')}`, us: 'Pas encore de livraison aux É.-U.'},
 };
 
 /** The bar's one line: "EU: In stock in Belgium, ships in a few working days" (the visitor's region), or both

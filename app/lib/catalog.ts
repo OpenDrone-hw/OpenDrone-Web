@@ -48,7 +48,127 @@ export type CatalogVariant = {
   merchandise_id?: string;
   /** Preorder campaign state, set by `applyCampaign` for campaign SKUs. */
   campaign?: CampaignState | null;
+  /** The board's second Shopify variant (`Batch` = `Buy now`): batch 1 stock
+   *  at the retail price. Set by `mapShopifyCatalog` only while `BATCH_CHOICE`
+   *  is on; `applyCampaign` turns it into the primary offer when it can ship. */
+  buy_now?: BuyNowVariant;
+  /** Which offer this entry sells. `buy_now`: the fields above are the
+   *  ships-now offer and `preorder_offer` holds the other one. `preorder`: a
+   *  board whose buy-now offer is not open to this buyer, or the view
+   *  `preorderView` returns. Absent on every SKU without the choice. */
+  offer?: BatchOffer;
+  /** The pre-order side of a board whose primary offer is buy now. */
+  preorder_offer?: PreorderOffer;
 };
+
+/** The two values of the Shopify `Batch` option. */
+export const BATCH_OPTION = 'Batch';
+export const BATCH_BUY_NOW = 'Buy now';
+export const BATCH_PREORDER = 'Pre-order';
+export type BatchOffer = 'buy_now' | 'preorder';
+
+export type BuyNowVariant = {
+  merchandise_id: string;
+  price: number;
+  /** Shopify's own deny gate: false once its tracked stock is zero. */
+  available: boolean;
+};
+
+export type PreorderOffer = {
+  merchandise_id?: string;
+  price: number;
+  compare_price: number | null;
+  ship_promise: string | null;
+  campaign: CampaignState | null;
+};
+
+/** Which offer a Shopify variant title or option list names: "20×20 / Buy
+ *  now" is `buy_now`. Null without a `Batch` value. */
+export function batchOfferOf(titleOrOptions: string | ReadonlyArray<{name: string; value: string}> | null | undefined): BatchOffer | null {
+  const values = typeof titleOrOptions === 'string'
+    ? titleOrOptions.split(' / ').map((part) => part.trim())
+    : (titleOrOptions ?? []).filter((o) => o.name === BATCH_OPTION).map((o) => o.value);
+  if (values.includes(BATCH_BUY_NOW)) return 'buy_now';
+  if (values.includes(BATCH_PREORDER)) return 'preorder';
+  return null;
+}
+
+/** A variant title without its `Batch` value: "20×20 / Buy now" is "20×20". */
+export function titleWithoutBatch(title: string): string {
+  const parts = title.split(' / ').filter((part) => part !== BATCH_BUY_NOW && part !== BATCH_PREORDER);
+  return parts.join(' / ') || title;
+}
+
+/** What pre-ordering saves against buying now, or null when it saves
+ *  nothing: a board already at retail costs the same either way, and the
+ *  page then states no saving at all. */
+export function offerSaving(buyNowPrice: number, preorderPrice: number): number | null {
+  const saving = Math.round((buyNowPrice - preorderPrice) * 100) / 100;
+  return Number.isFinite(saving) && saving > 0 ? saving : null;
+}
+
+/** The pre-order offer of a board as a variant of its own, so every reader
+ *  of a `CatalogVariant` (cart lines, attributes, limits) works on it. */
+export function preorderView(variant: CatalogVariant): CatalogVariant | null {
+  const offer = variant.preorder_offer;
+  if (!offer) return null;
+  const {preorder_offer: _drop, buy_now: _buy, ...rest} = variant;
+  return {
+    ...rest,
+    ...offer,
+    availability: 'preorder',
+    offer: 'preorder',
+    cart_add_url: `${variant.cart_add_url}&offer=preorder`,
+  };
+}
+
+/**
+ * What a variant can be bought as, read only from the catalog (Shopify
+ * variants and policy) and the campaign file (content/preorders.json): zero,
+ * one or two offers. `in_stock` ships now (batch 1 today, every product once
+ * a batch has landed); `preorder` ships with its batch's date. The page shows
+ * two offers as two cards, one as a status row, none as sold out.
+ */
+export type VariantOffer =
+  | {kind: 'in_stock'; price: number; left: number | null}
+  | {kind: 'preorder'; price: number; shipPromise: string | null};
+
+export function variantOffers(variant: CatalogVariant): VariantOffer[] {
+  const left = (v: CatalogVariant) => (v.campaign?.paidStock ? Math.max(0, v.campaign.paidLeft ?? v.campaign.batchUnits - v.campaign.batchOrdered) : null);
+  if (variant.offer === 'buy_now') {
+    const out: VariantOffer[] = [{kind: 'in_stock', price: variant.price, left: left(variant)}];
+    if (variant.preorder_offer) out.push({kind: 'preorder', price: variant.preorder_offer.price, shipPromise: variant.preorder_offer.ship_promise});
+    return out;
+  }
+  if (variant.availability === 'preorder') return [{kind: 'preorder', price: variant.price, shipPromise: variant.ship_promise}];
+  if (variant.availability === 'in_stock') return [{kind: 'in_stock', price: variant.price, left: left(variant)}];
+  return [];
+}
+
+/**
+ * True while any product can still be pre-ordered. Then the cart is the
+ * pre-order lane and in-stock boards go straight to checkout; once nothing
+ * is pre-order (a batch has landed and the campaign file lists no SKU) the
+ * site is an ordinary shop and in-stock items use the cart.
+ */
+export function catalogHasPreorders(catalog: Pick<Catalog, 'products'>): boolean {
+  return catalog.products.some((product) => product.variants.some((variant) => variantOffers(variant).some((offer) => offer.kind === 'preorder')));
+}
+
+/** The offer a Shopify variant id sells: the primary entry, or the
+ *  pre-order view of a board whose primary offer is buy now. */
+export function variantByMerchandise(
+  catalog: Catalog,
+  merchandiseId: string,
+): {product: CatalogProduct; variant: CatalogVariant} | null {
+  for (const product of catalog.products) {
+    for (const variant of product.variants) {
+      if (variant.merchandise_id === merchandiseId) return {product, variant};
+      if (variant.preorder_offer?.merchandise_id === merchandiseId) return {product, variant: preorderView(variant)!};
+    }
+  }
+  return null;
+}
 
 export type CatalogProduct = {
   handle: string;
@@ -274,6 +394,8 @@ function mapVariant(
     campaign: variant.campaign ?? null,
     availability: variant.availability,
     shopUrl: variant.url || product.url || null,
+    ...(variant.offer ? {offer: variant.offer} : {}),
+    ...(variant.preorder_offer ? {preorderOffer: mapVariant(catalog, product, preorderView(variant)!)} : {}),
   };
 }
 

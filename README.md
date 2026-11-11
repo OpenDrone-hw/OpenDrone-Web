@@ -251,7 +251,11 @@ off, `WHOLESALE_PERCENT` in `scripts/wholesale_lib.py`) whatever preorder price
 step a product is on. Retail is the Shopify compare-at price. The retailer
 types one personal code, `WS<rate>-<NAME>` (for example `WS25-FPV24`), in the
 cart's "Wholesale code" field (`intent=discount` in
-`app/lib/shopify-cart-action.ts`). The cart sends that code with its price-group
+`app/lib/shopify-cart-action.ts`). With `BATCH_CHOICE` on, that field shows
+only to a retailer: after a visit to `/wholesale` or through any link with the
+`wholesale` parameter (`/cart?wholesale=1`, the link the approval mail gives),
+remembered for the session, or when the cart already carries a code
+(`wholesaleFieldShown` in `app/lib/wholesale-codes.ts`). The cart sends that code with its price-group
 companions `-G2` to `-G4` (`app/lib/wholesale-codes.ts`) through
 `cartDiscountCodesUpdate`. Each is a customer-limited Shopify percentage code
 scoped to the variants of one price group, because Shopify takes a percentage
@@ -1313,6 +1317,31 @@ of `endsOn` (Europe/Brussels):
 2. With the founder's go, run it again with `--apply`: it sets those
    variants' inventory policy to DENY. It refuses `--apply` before `endsOn`
    has ended and writes nothing else.
+
+## Buy now or pre-order
+
+Off in every environment (`BATCH_CHOICE = "0"` in `wrangler*.toml`). Off, the site reads and sells exactly as it does without this section.
+
+On (`BATCH_CHOICE = "1"`), each of the four boards (OpenFC Lite and OpenESC, 20x20 and 30x30) sells two ways:
+
+| Offer | Shopify variant | Price | Ships | Where | Limit |
+| --- | --- | --- | --- | --- | --- |
+| Buy now | `<Model> / Buy now` | retail | in a few working days from Belgium | EU only | units left in batch 1 (`paidLeft`), and Shopify denies the sale at zero stock |
+| Pre-order | `<Model> / Pre-order` (the variant the board always had) | the pre-order price | with the March batch | every region | none |
+
+Both variants carry the board's one SKU string, under a Shopify option named `Batch`. `mapShopifyCatalog` folds the pair into one catalog entry and still throws on any other duplicate, unpaired or unknown SKU. `applyCampaign` makes Buy now the entry's offer for an EU buyer while stock is left (with the pre-order beside it as `preorder_offer`); for everyone else the board is a pre-order from the March batch.
+
+| Surface | What shows |
+| --- | --- |
+| Board product page | two cards, one button named after the chosen card; the saving is stated only where pre-ordering is cheaper |
+| Home and product page build block | one block per drone size: "Buy now" is the FC and ESC stack, "Pre-order" the full build with every line added as a pre-order (`offer=preorder`) |
+| Cart | each line says "Ships now" or "Pre-order, <month>" |
+
+The cart rule (`batchChoiceConflict` in `app/lib/shopify-cart-action.ts`): a Buy now board together with a March item cannot be checked out. The cart offers "Keep everything in one order" (intent `keep-together`: each board line moves to its Pre-order variant, so Shopify charges the pre-order price) or "Check out the in-stock items first" (the March lines are set aside). Shopify binds the price to the variant, so no cart edit gets a ships-now board at the pre-order price.
+
+Counting: from `choiceFrom` in `content/preorders.json` on, an order line whose recorded variant title names `Pre-order` is a March unit and makes its whole order a March order (`preorderChoiceLine`); `Buy now` lines and every earlier order take batch 1 as before. The hold pass writes the same `batch:<sku>:<n>` tags, so the shipping tool needs no change. The price-step writer skips `Buy now` variants.
+
+Turning it on, in this order: this code live with the flag off; the `Buy now` variants created in Shopify; then one PR that sets `BATCH_CHOICE = "1"` in `wrangler.production.toml` and `choiceFrom` (the UTC instant of that deploy) in `content/preorders.json`. `app/lib/batch-choice.test.ts` fails if one is set without the other. It changes prices shown: founder's go.
 
 ## Fulfil a batch
 

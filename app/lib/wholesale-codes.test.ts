@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it, test} from 'node:test';
-import {cartWholesaleCode, wholesaleCodes, wholesaleMainCode} from './wholesale-codes.ts';
+import {cartWholesaleCode, wholesaleCartPath, wholesaleCodes, wholesaleFieldShown, wholesaleMainCode, wholesaleVisit} from './wholesale-codes.ts';
 
 test('a wholesale code is normalised and expands to its price groups', () => {
   assert.equal(wholesaleMainCode(' ws25-fpv24 '), 'WS25-FPV24');
@@ -22,5 +22,28 @@ describe('cartWholesaleCode', () => {
     assert.deepEqual(cartWholesaleCode(codes), {code: 'WS25-DRONEFACTORY', applicable: true});
     assert.equal(cartWholesaleCode([{code: 'WS25-X1-G3', applicable: true}]), null);
     assert.equal(cartWholesaleCode(undefined), null);
+  });
+});
+
+describe('the cart shows the wholesale code field to retailers only', () => {
+  const u = (path: string) => new URL(path, 'https://opendrone.be');
+  it('only a URL with the wholesale parameter asks for the field; a visit to /wholesale is not remembered', () => {
+    assert.equal(wholesaleVisit(u('/cart?wholesale=1')), true);
+    assert.equal(wholesaleVisit(u('/products/openfc-lite?wholesale')), true);
+    assert.equal(wholesaleVisit(u('/wholesale')), false);
+    assert.equal(wholesaleVisit(u('/cart')), false);
+    assert.equal(wholesaleVisit(u('/products?q=wholesale')), false);
+  });
+  it('a code apply returns to the cart with the field open', () => {
+    assert.equal(wholesaleCartPath(), '/cart?wholesale=1');
+    assert.equal(wholesaleCartPath('code'), '/cart?wholesale=1&check=code');
+  });
+  it('choice on: hidden for a normal visitor, shown for a retailer visit or an applied code', () => {
+    assert.equal(wholesaleFieldShown({choice: true, visited: false, applied: false}), false);
+    assert.equal(wholesaleFieldShown({choice: true, visited: true, applied: false}), true);
+    assert.equal(wholesaleFieldShown({choice: true, visited: false, applied: true}), true);
+  });
+  it('choice off: shown as before', () => {
+    assert.equal(wholesaleFieldShown({choice: false, visited: false, applied: false}), true);
   });
 });

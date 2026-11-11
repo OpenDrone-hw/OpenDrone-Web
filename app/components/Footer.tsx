@@ -1,3 +1,4 @@
+import {useRouteLoaderData} from 'react-router';
 import {NavLink} from '~/components/nav';
 import {
   DISCORD_INVITE_URL,
@@ -339,6 +340,9 @@ const BUILD_DATE = typeof __BUILD_DATE__ === 'string' ? __BUILD_DATE__ : '';
 
 export function Footer({company, turnstileSiteKey}: FooterProps) {
   const legalLocale = useLegalLocale();
+  // Buy now or pre-order on: the early bird Discord role moves here from /preorder.
+  const batchChoice = Boolean((useRouteLoaderData('root') as {batchChoice?: boolean} | undefined)?.batchChoice);
+  const shopLinks = batchChoice ? [...SHOP_LINKS, {to: '/early-bird', copy: 'nav_early_bird'}] : SHOP_LINKS;
   // Reference designators run across the whole parts list, J1 to Jn.
   let refNo = 0;
   const nextRef = () => ++refNo;
@@ -400,13 +404,13 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
               <div className="footer-parts-grid">
                 <FooterGroup id="chrome.heading_shop" open>
                   <nav aria-label={copyText('chrome.heading_shop') ?? 'Shop'} className="flex flex-col gap-1.5 md:gap-0">
-                    {SHOP_LINKS.map((link) => (
+                    {shopLinks.map((link) => (
                       <FooterNavLink
                         key={link.to}
                         to={link.to}
                         refNo={nextRef()}
                       >
-                        <Txt id={`chrome.${link.copy}`} />
+                        <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                       </FooterNavLink>
                     ))}
                   </nav>
@@ -420,7 +424,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                         to={legalHref(link.to, legalLocale)}
                         refNo={nextRef()}
                       >
-                        <Txt id={`chrome.${link.copy}`} />
+                        <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                       </FooterNavLink>
                     ))}
                   </nav>
@@ -445,7 +449,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                         className="footer-link text-xs text-[var(--color-text-muted)] transition-colors flex items-center min-h-[36px] md:min-h-[24px]"
                       >
                         <RefTag n={nextRef()} />
-                        <Txt id={`chrome.${link.copy}`} />
+                        <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                       </a>
                     ))}
                   </nav>
@@ -459,7 +463,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                         to={link.to}
                         refNo={nextRef()}
                       >
-                        <Txt id={`chrome.${link.copy}`} />
+                        <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                       </FooterNavLink>
                     ))}
                   </nav>
@@ -474,7 +478,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                           to={legalHref(link.to, legalLocale)}
                           refNo={nextRef()}
                         >
-                          <Txt id={`chrome.${link.copy}`} />
+                          <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                         </FooterNavLink>
                       ))}
                     </nav>

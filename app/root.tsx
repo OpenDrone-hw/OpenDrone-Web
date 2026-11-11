@@ -1,3 +1,4 @@
+import {batchChoiceOn} from '~/lib/shopify-storefront';
 import {useEffect} from 'react';
 import {useNonce} from '~/lib/csp';
 import {
@@ -168,7 +169,6 @@ export async function loader(args: Route.LoaderArgs) {
   ]);
 
   const company = getCompanyIdentity(env as unknown as Record<string, string | undefined>);
-
   // Derive locale from the URL path so /nl/* actually renders <html lang="nl">.
   // Hydrogen's storefront.i18n is pinned to EN/US in app/lib/context.ts and
   // doesn't follow the URL; using it would force every page to en_US.
@@ -212,6 +212,8 @@ export async function loader(args: Route.LoaderArgs) {
     // and listings (display vocabulary; buyability is the map above).
     roadmapStatuses: roadmapStatusMap(statusFlags),
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
+    // Buy now or pre-order (BATCH_CHOICE): the footer's early bird link and /preorder's two lanes.
+    batchChoice: batchChoiceOn(env),
     // Picks the buy module's price note (VAT vs duties) and whether a buy
     // button shows. It is the destination the cart and checkout read
     // (`shipCountryForRequest`: ?country, the picked
