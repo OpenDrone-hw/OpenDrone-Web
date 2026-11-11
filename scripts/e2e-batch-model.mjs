@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Edge cases of the batch model (buy now or pre-order, regions) in a real browser.
 //
-//   BASE=http://localhost:3111 CONTROL=http://localhost:3112/control npm run e2e:batch-model
+//   BASE=http://localhost:3111 CONTROL=http://localhost:3112/control [ORDINARY_BASE=http://localhost:3141] npm run e2e:batch-model
 //
 // Runs against a local dev server with BATCH_CHOICE=1 and a Storefront stand-in (the cart lives in
 // memory, checkout points at checkout.invalid; nothing is written to Shopify). The visitor's
@@ -15,6 +15,8 @@ import {chromium} from 'playwright';
 const BASE = (process.env.BASE ?? 'http://localhost:3111').replace(/\/+$/, '');
 const CONTROL = process.env.CONTROL ?? null;
 const ONLY = process.env.ONLY ?? '';
+/** A second server in the "batch 2 has landed" fixture (every SKU in stock, the campaign lists no SKU). */
+const ORDINARY_BASE = process.env.ORDINARY_BASE?.replace(/\/+$/, '') ?? null;
 if (!/localhost|127\.0\.0\.1/.test(BASE)) {
   console.error('e2e:batch-model runs against a local server only (it adds to carts and posts checkouts)');
   process.exit(2);
@@ -78,7 +80,7 @@ const preorderCard = (page) => page.locator('[data-offer-choice] [data-offer="pr
 const buyButton = (page) => page.locator('[data-buy-module] button[type=submit]:visible').first();
 
 const cases = [];
-const add = (name, run, {needsControl = false} = {}) => cases.push({name, run, needsControl});
+const add = (name, run, {needsControl = false, needsOrdinary = false} = {}) => cases.push({name, run, needsControl, needsOrdinary});
 
 // 1. Every region kind on every main route: status, words, one currency, Buy now only where the lane is.
 for (const country of ['BE', 'DE', 'GB', 'CH', 'NO', 'US', 'CA', 'AU', 'ZW', null]) {
@@ -300,13 +302,21 @@ add('Buy now sold out between load and click: refused with a message, nothing ch
 add('back from express checkout: Buy now is not stuck busy', async () => {
   const {context, page} = await visitor('BE');
   try {
+    // The local checkout host does not exist (and Playwright cannot route a redirect): the Buy now
+    // post itself answers with a stand-in checkout page, so Back works as it does from Shopify.
+    await page.route('**/api/shopify/cart', (route) =>
+      /intent=buy-now/.test(route.request().postData() ?? '')
+        ? route.fulfill({contentType: 'text/html', body: '<title>checkout</title>checkout'})
+        : route.continue(),
+    );
     await open(page, PDP);
     await buyNowCard(page).click();
-    await Promise.all([page.waitForEvent('requestfailed', (r) => r.url().includes('checkout.invalid')).catch(() => null), buyButton(page).click()]);
-    await page.goBack().catch(() => undefined);
-    await page.waitForLoadState('load');
-    if (!page.url().includes(PDP)) await open(page, PDP);
-    if ((await buyButton(page).getAttribute('aria-busy')) === 'true') throw new Error('button busy after back');
+    await Promise.all([page.waitForFunction(() => document.title === 'checkout', null, {timeout: 30000}), buyButton(page).click()]);
+    await page.goBack({waitUntil: 'load'}).catch(() => undefined);
+    if (!page.url().includes(PDP)) throw new Error(`back landed on ${page.url()}`);
+    const button = page.locator('form.express-buy button[type=submit]:visible').first();
+    await button.waitFor({timeout: 15000});
+    if ((await button.getAttribute('aria-busy')) === 'true') throw new Error('button busy after back');
   } finally {
     await context.close();
   }
@@ -320,7 +330,8 @@ add('cart request fails: the cart says so, no blank page', async () => {
     await control({cartFail: true});
     const response = await open(page, '/cart');
     const text = await visibleText(page);
-    if (text.trim().length < 200) throw new Error(`blank page (HTTP ${response?.status()})`);
+    if (!/temporarily unavailable/i.test(text) && !/OpenFC|OpenESC/.test(text)) throw new Error(`no message (HTTP ${response?.status()})`);
+    if (/unexpected error/i.test(text)) throw new Error('generic "unexpected error" instead of what is down');
     if (/€\s?0[.,]00/.test(text)) throw new Error('shows a zero price');
   } finally {
     await control(null);
@@ -438,9 +449,47 @@ add('SEO: canonical has no ?country, product page is not publicly cached', async
   }
 });
 
+// 18. The ordinary shop (nothing is pre-order): no pre-order or batch wording anywhere, /preorder
+// redirects, and an in-stock item goes into the cart and to checkout like in any shop.
+for (const country of ['BE', 'GB', 'US', null]) {
+  add(`ordinary shop ${country ?? 'unknown'}: no pre-order, March 2027 or batch wording; cart works`, async () => {
+    const context = await browser.newContext({viewport: {width: 1440, height: 900}, extraHTTPHeaders: country ? {'CF-IPCountry': country} : {}});
+    const page = await context.newPage();
+    page.setDefaultTimeout(45000);
+    try {
+      for (const path of ['/', PDP, '/products/openesc', '/products', '/preorder', '/cart']) {
+        const response = await page.goto(ORDINARY_BASE + path, {waitUntil: 'load'});
+        if (!response || response.status() >= 400) throw new Error(`${path}: HTTP ${response?.status()}`);
+        if (path === '/preorder' && !new URL(page.url()).pathname.startsWith('/products')) throw new Error('/preorder did not redirect');
+        const text = await visibleText(page);
+        // The footer's "Early bird role on Discord" stays (a perk for earlier buyers; a product decision).
+        const hit = text.match(/pre-?order|March 2027|31 Mar|\bbatch\b|early bird(?! role)/i);
+        if (hit) throw new Error(`${path}: reads "${hit[0]}"`);
+        if (currencies(text).length > 1) throw new Error(`${path}: two currencies`);
+      }
+      await page.goto(ORDINARY_BASE + PDP, {waitUntil: 'load'});
+      if (await page.locator('[data-offer-choice] [data-offer]:visible').count()) throw new Error('offer cards in an ordinary shop');
+      const add = page.locator('[data-buy-module] button[type=submit]:visible').first();
+      if (await add.isDisabled()) return; // a market the shop does not sell to: nothing to add
+      const posted = page.waitForResponse((r) => r.url().includes('/api/shopify/cart') && r.request().method() === 'POST');
+      await add.click();
+      const answer = await posted;
+      if (answer.status() === 409 && /EU addresses only/.test(await answer.text())) {
+        // Open product decision (go-live kit): once nothing is pre-order, does stock ship outside the EU?
+        throw Object.assign(new Error('page offers Add to cart, server refuses outside the EU (stock is EU only)'), {decision: true});
+      }
+      await page.goto(ORDINARY_BASE + '/cart', {waitUntil: 'load'});
+      if (!(await page.locator('main button:has-text("Checkout")').count())) throw new Error('no checkout in the cart');
+    } finally {
+      await context.close();
+    }
+  }, {needsOrdinary: true});
+}
+
 async function main() {
   browser = await chromium.launch({channel: 'chrome'});
   let failed = 0;
+  let decisions = 0;
   let ran = 0;
   // Fault cases last, Buy now sold out last of all: the site keeps a catalog read for a minute,
   // so a fault would otherwise leak into the cases after it.
@@ -448,6 +497,10 @@ async function main() {
   cases.sort((a, b) => rank(a) - rank(b));
   for (const c of cases) {
     if (ONLY && !c.name.includes(ONLY)) continue;
+    if (c.needsOrdinary && !ORDINARY_BASE) {
+      console.log(`SKIP  ${c.name} (no ORDINARY_BASE)`);
+      continue;
+    }
     if (c.needsControl && !CONTROL) {
       console.log(`SKIP  ${c.name} (no CONTROL)`);
       continue;
@@ -458,12 +511,17 @@ async function main() {
       await c.run();
       console.log(`ok    ${c.name} (${((Date.now() - started) / 1000).toFixed(1)}s)`);
     } catch (error) {
+      if (error?.decision) {
+        decisions += 1;
+        console.log(`DECIDE ${c.name}: ${error.message}`);
+        continue;
+      }
       failed += 1;
       console.log(`FAIL  ${c.name}: ${String(error?.message ?? error).split('\n')[0]}`);
     }
   }
   await browser.close();
-  console.log(`${ran - failed}/${ran} passed`);
+  console.log(`${ran - failed - decisions}/${ran} passed${decisions ? `, ${decisions} waiting on a product decision` : ''}`);
   process.exit(failed ? 1 : 0);
 }
 

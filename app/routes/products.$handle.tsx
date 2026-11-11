@@ -1971,7 +1971,8 @@ function ProductPage() {
   const preorderLane = Boolean(soloPreorder) || Boolean(offerChoice && offerMode === 'preorder');
   const lane = preorderLane ? 'preorder' : 'buy_now';
   const partner = build && (offerChoice || soloPreorder) ? partnerBoard(build, pickedVariant?.sku, lane) : null;
-  const addonShown = Boolean(!notDirect && build && (offerChoice || soloPreorder || !isBundle));
+  // Only with Buy now or pre-order on: with the flag off the page is the one it was before.
+  const addonShown = Boolean(choiceOn && !notDirect && build && (offerChoice || soloPreorder || !isBundle));
   const preorderStack = Boolean(preorderLane && withStack && partner);
   // A partner board in either lane: the total slot beside the button is kept for both.
   const partnerEver = Boolean(build && (offerChoice || soloPreorder) && (partnerBoard(build, pickedVariant?.sku, 'buy_now') || partnerBoard(build, pickedVariant?.sku, 'preorder')));

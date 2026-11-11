@@ -341,8 +341,11 @@ const BUILD_DATE = typeof __BUILD_DATE__ === 'string' ? __BUILD_DATE__ : '';
 export function Footer({company, turnstileSiteKey}: FooterProps) {
   const legalLocale = useLegalLocale();
   // Buy now or pre-order on: the early bird Discord role moves here from /preorder.
-  const batchChoice = Boolean((useRouteLoaderData('root') as {batchChoice?: boolean} | undefined)?.batchChoice);
-  const shopLinks = batchChoice ? [...SHOP_LINKS, {to: '/early-bird', copy: 'nav_early_bird'}] : SHOP_LINKS;
+  const root = useRouteLoaderData('root') as {batchChoice?: boolean; ordinaryShop?: boolean} | undefined;
+  const batchChoice = Boolean(root?.batchChoice);
+  // An ordinary shop (nothing is pre-order): no Preorders link, /preorder redirects anyway.
+  const baseLinks = root?.ordinaryShop ? SHOP_LINKS.filter((link) => link.to !== '/preorder') : SHOP_LINKS;
+  const shopLinks = batchChoice ? [...baseLinks, {to: '/early-bird', copy: 'nav_early_bird'}] : baseLinks;
   // Reference designators run across the whole parts list, J1 to Jn.
   let refNo = 0;
   const nextRef = () => ++refNo;

@@ -56,6 +56,8 @@ export function HeroBuildChoice({
   const sellable = (handle: string) => isPurchasableStatus(status(handle));
   // Global PUBLIC_COMING_SOON gate; fail closed when root data is missing.
   const comingSoon = useRouteLoaderData<RootLoader>('root')?.comingSoon ?? true;
+  // Nothing is pre-order any more (a batch has landed): the build is bought, not pre-ordered.
+  const ordinary = Boolean(useRouteLoaderData<RootLoader>('root')?.ordinaryShop);
   const selection = heroBuildSelection(shown, selected, sellable, comingSoon);
   const name = useId();
   const stack = stackOffer(build);
@@ -71,7 +73,9 @@ export function HeroBuildChoice({
   const shipBy = shortCampaignDate(latestShipDate(CAMPAIGN));
   const statusLine = !selection.available
     ? null
-    : mode === 'buy_now'
+    : ordinary
+      ? say('choice_status_in_stock', 'In stock in Belgium')
+      : mode === 'buy_now'
       ? say('choice_status_buy_now', 'In stock in Belgium, ships in days, EU only')
       : shipBy ? say('build_ship_target', 'Ships by {date}', {date: shipBy}) : null;
   // The pre-order build's total with every part in it, for its option.
@@ -253,7 +257,7 @@ export function HeroBuildChoice({
                 revenue={lineTotal !== null && selection.currency ? {amount: lineTotal, currency: selection.currency} : null}
               >
                 <ShoppingBag size={16} aria-hidden="true" />
-                {say('choice_add_preorder', 'Pre-order the full build')}
+                {ordinary ? say('choice_add_in_stock', 'Add the full build to cart') : say('choice_add_preorder', 'Pre-order the full build')}
                 {lineTotal !== null && selection.currency ? (
                   <span className="hero-build-total">{formatPrice(lineTotal.toFixed(2), selection.currency)}</span>
                 ) : null}

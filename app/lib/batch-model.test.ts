@@ -107,3 +107,23 @@ describe('batch model: failures read as what they are', () => {
     assert.match(root, /errorStatus === 503 && errorMessage \?/);
   });
 });
+
+describe('batch model: flag off is the page it was', () => {
+  it('the add-on slot (partner tick row, full build link) needs BATCH_CHOICE (source guard)', () => {
+    const page = fs.readFileSync(new URL('../routes/products.$handle.tsx', import.meta.url), 'utf8');
+    assert.match(page, /const addonShown = Boolean\(choiceOn && /);
+  });
+});
+
+describe('batch model: ordinary shop chrome (source guards; the browser suite renders it)', () => {
+  const read = (rel: string) => fs.readFileSync(new URL(rel, import.meta.url), 'utf8');
+  it('header, footer and the home build block drop pre-order words once nothing is pre-order', () => {
+    assert.match(read('../components/Header.tsx'), /filter\(\(item\) => !\(ordinaryShop && item\.url === '\/preorder'\)\)/);
+    assert.match(read('../components/Footer.tsx'), /root\?\.ordinaryShop \? SHOP_LINKS\.filter\(\(link\) => link\.to !== '\/preorder'\)/);
+    const hero = read('../components/HeroBuildChoice.tsx');
+    assert.match(hero, /ordinary \? say\('choice_add_in_stock'/);
+    assert.match(hero, /ordinary\s+\? say\('choice_status_in_stock'/);
+    assert.match(read('../routes/preorder.tsx'), /!catalogHasPreorders\(catalog\)\) throw redirect\('\/products', 302\)/);
+    assert.match(read('../root.tsx'), /ordinaryShop: batchChoiceOn\(context\.env\) && catalog\.products\.length > 0 && !catalogHasPreorders\(catalog\)/);
+  });
+});

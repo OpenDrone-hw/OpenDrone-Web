@@ -551,6 +551,8 @@ export function HeaderMenu({
 }) {
   const {close} = useAside();
   const isMobile = viewport === 'mobile';
+  // An ordinary shop (nothing is pre-order): no Preorders item; /preorder redirects anyway.
+  const ordinaryShop = Boolean((useRouteLoaderData('root') as {ordinaryShop?: boolean} | undefined)?.ordinaryShop);
 
   return (
     <nav
@@ -635,7 +637,7 @@ export function HeaderMenu({
           </NavLink>
         </>
       )}
-      {HEADER_MENU.items.map((item) => {
+      {HEADER_MENU.items.filter((item) => !(ordinaryShop && item.url === '/preorder')).map((item) => {
         if (!item.url) return null;
         const url = item.url;
         // Desktop already exposes these destinations in its category bar,
