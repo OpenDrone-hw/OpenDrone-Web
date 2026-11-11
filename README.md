@@ -87,7 +87,7 @@ in `.dev.vars` and run `npm run dev`.
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
 | `npm run emails:preview` | local gallery of every customer and internal email, per scenario, at desktop and 375 px width; reloads on save (see "Preview emails") |
-| `npm run emails:build` | the same gallery as one self-contained file in the workspace `.review/emails/index.html` (`--out <path>` elsewhere), plus one file per mail in `cards/` |
+| `npm run emails:build` | the same gallery as one self-contained file as `index.html` in the git-ignored `.review/emails` folder of the workspace, created by the build (`--out <path>` elsewhere), plus one file per mail in `cards/` |
 | `npm run emails:chrome` / `emails:paste` | start the dedicated Shopify Chrome; dry-run or apply the templates into Shopify admin (see "Paste into Shopify admin") |
 | `npm run emails:hash` | sha256 of every pasteable `out/*.html` (`-- --json` for the paste list with notification name and subject) |
 | `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU>` | dry run: the held orders of a batch; `--apply` releases their holds (see "Fulfil a batch") |
@@ -163,7 +163,7 @@ placed once that many units are ordered. Only SKUs the policy sells as
 | Paid counts | `app/lib/shopify-orders.ts` | counts paid Shopify orders per SKU since `countFrom`, cached one minute per isolate; if unreadable, campaign SKUs close |
 | Batch and promise | `app/lib/preorder-campaign.ts` | derives the batch, the meter and the ship promise (ship date only, never a delivery date) |
 | Cart line | `app/lib/shopify-cart-action.ts` | every preorder line carries its promise as a `Preorder` attribute, so checkout and the confirmation state it |
-| Price steps | `app/lib/shopify-price-tier.ts` | `priceTiers` steps the price off the compare-at (retail) price as the EU step bar fills ("Run a preorder campaign"); written to Shopify only when `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`; a SKU Shopify prices under its step closes |
+| Price steps | `app/lib/shopify-price-tier.ts` | `priceTiers` steps the price off the compare-at (retail) price as the EU step bar fills ("Run a preorder campaign"); sale prices are owned by Shopify and the step is written there only when `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`; a SKU Shopify prices under its step closes |
 | Holds and tags | `app/lib/preorder-fulfilment.ts` | holds each open fulfillment order (handle `opendrone-preorder`) and tags the order `preorder` and `batch:<SKU>:<N>`; a tagged order is never held again |
 | Accessories | `shipsWith` in `content/preorders.json` | spares ride a campaign SKU at a flat price, pinned to a dated batch or following the lead's next unit; they do not count toward the lead |
 | Health | `/api/status/campaign` | anonymous: `allOpen` and the status code only; with `Authorization: Bearer <CAMPAIGN_STATUS_TOKEN>` (Worker secret): per campaign SKU: open or closed, paid counts, pending price steps, hold health (unheld paid orders, overfull batches; reused for a minute per isolate), last job runs; `503` when a campaign SKU is closed or `holdsOk` is false |
@@ -773,7 +773,7 @@ A paid preorder placed before the run closes (`endsOn` in
 `content/preorders.json`, end of day in Brussels) unlocks the `Early Bird`
 role and the private `#early-birds` channel on the OpenDrone Discord, for one
 Discord account per order. `app/lib/early-bird.ts` decides and proves;
-the Discord bot Worker (OpenDrone-hw/discord, `bot/README.md` "Early Bird")
+the Discord bot Worker (OpenDrone-hw/discord, the README in its bot folder, section "Early Bird")
 runs the Discord authorization, records the claim and gives the role.
 
 | Way in | Proof | Route |
@@ -990,7 +990,7 @@ step; `git diff` is the changelog.
 | Tab | Edits | Files |
 |---|---|---|
 | Words | page and product copy | `content/copy/*.json`, `content/products/*.json` |
-| Chapters | product page sections: order, titles, on or off | `content/chapters.json` (created on first save) |
+| Chapters | product page sections: order, titles, on or off | `chapters.json` in `content/`, read by `app/lib/chapters.ts` (created on first save) |
 | Design | design tokens | `content/theme.json` |
 | Media | browse images and where each is used | read-only, `public/` |
 | Docs | legal pages in en, nl, fr; learn articles | `app/content/legal/**`, `app/content/learn/*.md` |
@@ -1234,7 +1234,7 @@ target: once its `units` are ordered, every later unit ships with it, with
 no new target and no cap. A reached funding target: place the supplier
 order, then set that batch's `ships`. An accessory with `stock` sells that
 many units with its dated `batch`, then ships with the lead's `after`
-batch; set `stock` from InvenTree stock on hand. The storefront keeps dispatch promises separate from arrival deadlines.
+batch; set `stock` from the on-hand stock read in InvenTree at the time of the change. The storefront keeps dispatch promises separate from arrival deadlines.
 `deliveryBy`, `deliveryByUS` and `deliveryByINT` supply the visible `Delivery by`
 checkout property, cart and confirmation, and order the lines of a combined cart. A batch with `regions` (`["EU", "INT"]` for paid stock in Belgium) takes
 only units shipping there: each paid unit takes the first batch with room

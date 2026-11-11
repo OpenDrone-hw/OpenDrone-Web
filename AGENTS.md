@@ -8,8 +8,9 @@ Validate: `npm run typecheck && npm run lint && npm test` (add `npm run build` w
 
 - Public repository: no supplier names, costs, personal data, private strategy or regulatory research.
 - A merge to `main` deploys production (`.github/workflows/cloudflare-production.yml`).
-- Storefront gates in `wrangler.production.toml` (`PUBLIC_COMING_SOON`, `SHOPIFY_CHECKOUT_WRITE_ENABLED`) and `SUPPORT_EMAIL_NOTIFY_ENABLED` / `SUPPORT_MAIL_INTAKE_ENABLED` change only with the founder's go.
-- Prices, tax, shipping and inventory policy change only with the founder's go; `npm run us:prices --apply` writes to Shopify.
+- Storefront gates in `wrangler.production.toml` (`PUBLIC_COMING_SOON`, `SHOPIFY_CHECKOUT_WRITE_ENABLED`) and `SUPPORT_EMAIL_NOTIFY_ENABLED` / `SUPPORT_MAIL_INTAKE_ENABLED` change only with the founder's go (root FACTS.md, "Founder's go").
+- Prices, tax, shipping and inventory policy: founder's go, root FACTS.md; `npm run us:prices --apply` writes to Shopify.
+- Box contents are owned by the InvenTree kit BOM; `inTheBox` in content/products is a copy and is checked against it before a publish.
 - Legal text in `app/content/legal/` is copied unchanged from `operations/documents/storefront-legal/` in one PR; never a legal draft or review PR here.
 - Public appearance of opendrone.be does not change unless the task says so; use only real product photos and renders.
 - `public/testing/` and `public/lab-visit/` change only through `npm run sync:testing` and `npm run sync:lab-visit`.
