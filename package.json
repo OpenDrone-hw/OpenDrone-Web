@@ -61,7 +61,7 @@
   },
   "prettier": "@shopify/prettier-config",
   "dependencies": {
-    "@formkit/auto-animate": "^0.10.0",
+    "@formkit/auto-animate": "^0.10.2",
     "@react-three/fiber": "^9.8.2",
     "@react-three/postprocessing": "^3.2.2",
     "@tailwindcss/vite": "^4.3.4",
