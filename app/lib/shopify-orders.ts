@@ -17,6 +17,12 @@
  * (`regionOf`: EU, US or INT), in order: `paidUnitRuns` returns those runs, for
  * batches that serve one region only. `paidUnits` sums them per SKU.
  *
+ * With the campaign `config`, a unit of an order that also holds a line not
+ * shipping with paid stock carries `march` (`shipsOnlyWithPaid`): it skips
+ * paid batches, so paid stock is consumed only by orders that ship with it.
+ * So does an order with a board bought as a pre-order (`preorderChoiceLine`,
+ * the line's recorded `variantTitle`): each variant counts as what it sold.
+ *
  * The Admin token needs `read_orders`, and `read_all_orders` once a campaign
  * runs longer than 60 days: without it Shopify only returns the last 60
  * days of orders and the counts would fall.
@@ -33,7 +39,7 @@
  * guessing.
  */
 
-import {regionOf, type UnitRuns} from './preorder-campaign.ts';
+import {grandfatheredPaidLine, lineAllocationRegion, preorderChoiceLine, regionOf, shipsOnlyWithPaid, type CampaignConfig, type UnitRuns} from './preorder-campaign.ts';
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
 const FRESH_MS = 60_000;
@@ -44,7 +50,22 @@ const STALE_MS = 15 * 60_000;
 /** After a failed read, this isolate does not ask the Admin API again for this long. */
 const FAILURE_COOLDOWN_MS = 30_000;
 const SHARED_CACHE_URL = 'https://paid-units.opendrone.internal/v1';
-const PAGE_SIZE = 250;
+export const ORDERS_PAGE_SIZE = 250;
+const PAGE_SIZE = ORDERS_PAGE_SIZE;
+/**
+ * Line items per order in PAID_ORDERS_QUERY. Orders have a handful of lines
+ * (a full build is under ten); an order with more fails the count loudly.
+ * Reading `customAttributes` (grandfatheredPaidLine) adds an object per line,
+ * so the page is 50, not 250: by Shopify's documented formula (a connection
+ * costs 2 + first × its node cost, an object 1, a scalar 0) the query costs
+ *   before: 2 + 250 × (1 order + 1 address + 2 + 250 × 1 line)       = 63,502
+ *   now:    2 + 250 × (1 order + 1 address + 2 + 50 × (1 line + 1 attrs)) = 26,002
+ * That formula overstates what Shopify enforces (the 63,502 query ran in
+ * production under the 1,000-point single-query cap), so the guarantee is
+ * relative: the new query never costs more than the one that ran. The test
+ * pins both page sizes and this inequality.
+ */
+export const LINE_ITEMS_PAGE = 50;
 const MAX_PAGES = 40;
 const THROTTLE_RETRIES = 2;
 const THROTTLE_WAIT_MS = 500;
@@ -56,12 +77,13 @@ export const PAID_ORDERS_QUERY = `#graphql
       pageInfo { hasNextPage endCursor }
       nodes {
         test
+        createdAt
         cancelledAt
         displayFinancialStatus
         shippingAddress { countryCodeV2 }
-        lineItems(first: 250) {
+        lineItems(first: ${LINE_ITEMS_PAGE}) {
           pageInfo { hasNextPage }
-          nodes { sku currentQuantity }
+          nodes { sku variantTitle currentQuantity customAttributes { key value } }
         }
       }
     }
@@ -78,12 +100,13 @@ type OrdersPage = {
     pageInfo: {hasNextPage: boolean; endCursor: string | null};
     nodes: Array<{
       test: boolean;
+      createdAt?: string | null;
       cancelledAt: string | null;
       displayFinancialStatus: string;
       shippingAddress?: {countryCodeV2: string | null} | null;
       lineItems: {
         pageInfo: {hasNextPage: boolean};
-        nodes: Array<{sku: string | null; currentQuantity: number}>;
+        nodes: Array<{sku: string | null; variantTitle?: string | null; currentQuantity: number; customAttributes?: Array<{key: string; value: string | null}> | null}>;
       };
     }>;
   };
@@ -135,8 +158,9 @@ export async function fetchPaidUnits(
   countFrom: string,
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
+  config?: Pick<CampaignConfig, 'skus' | 'shipsWith' | 'choiceFrom'>,
 ): Promise<Record<string, number>> {
-  return sumRuns(await fetchPaidUnitRuns(env, countFrom, skus, fetcher));
+  return sumRuns(await fetchPaidUnitRuns(env, countFrom, skus, fetcher, config));
 }
 
 /** Paid units for `skus` since `countFrom`, oldest order first, as runs of
@@ -146,12 +170,15 @@ export async function fetchPaidUnitRuns(
   countFrom: string,
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
+  config?: Pick<CampaignConfig, 'skus' | 'shipsWith' | 'choiceFrom'>,
 ): Promise<Record<string, UnitRuns>> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(countFrom)) {
     throw new Error('shopify orders: countFrom must be YYYY-MM-DD');
   }
   const {url, token} = adminEndpoint(env);
   const units: Record<string, UnitRuns> = {};
+  /** Units each stocked SKU has taken from stock, by orders shipping with it. */
+  const stockUsed: Record<string, number> = {};
   let after: string | null = null;
   for (let page = 0; page < MAX_PAGES; page += 1) {
     let result: {data?: OrdersPage; errors?: unknown[]} = {};
@@ -188,19 +215,33 @@ export async function fetchPaidUnitRuns(
         continue;
       }
       if (order.lineItems.pageInfo.hasNextPage) {
-        throw new Error('shopify orders: an order exceeds 250 lines');
+        throw new Error(`shopify orders: an order exceeds ${LINE_ITEMS_PAGE} lines`);
       }
       const region = regionOf(order.shippingAddress?.countryCodeV2);
+      const lines = order.lineItems.nodes.map((l) => ({sku: l.sku, quantity: l.currentQuantity, preorder: config ? preorderChoiceLine(config, l, order.createdAt) : false}));
+      const march = config ? !shipsOnlyWithPaid(config, lines, stockUsed) : false;
+      if (config && !march) {
+        for (const l of lines) {
+          const sku = l.sku?.trim();
+          if (sku && config.shipsWith?.[sku]?.stock !== undefined && l.quantity > 0) {
+            stockUsed[sku] = (stockUsed[sku] ?? 0) + l.quantity;
+          }
+        }
+      }
       for (const line of order.lineItems.nodes) {
         const sku = line.sku?.trim();
         if (!sku || !skus.has(sku)) continue;
         if (!Number.isSafeInteger(line.currentQuantity) || line.currentQuantity < 0) {
           throw new Error('shopify orders: invalid line quantity');
         }
+        // A non-EU line sold batch 1 before it became EU only keeps it (`grandfatheredPaidLine`).
+        const unitRegion = config
+          ? lineAllocationRegion(region, grandfatheredPaidLine(config, {sku, attributes: line.customAttributes}))
+          : region;
         const runs = (units[sku] ??= []);
         const last = runs[runs.length - 1];
-        if (last && last.region === region) last.units += line.currentQuantity;
-        else runs.push({region, units: line.currentQuantity});
+        if (last && last.region === unitRegion && Boolean(last.march) === march) last.units += line.currentQuantity;
+        else runs.push(march ? {region: unitRegion, units: line.currentQuantity, march} : {region: unitRegion, units: line.currentQuantity});
       }
     }
     if (!result.data.orders.pageInfo.hasNextPage) return units;
@@ -216,8 +257,9 @@ export async function paidUnits(
   countFrom: string,
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
+  config?: Pick<CampaignConfig, 'skus' | 'shipsWith' | 'choiceFrom'>,
 ): Promise<Record<string, number>> {
-  return sumRuns(await paidUnitRuns(env, countFrom, skus, fetcher));
+  return sumRuns(await paidUnitRuns(env, countFrom, skus, fetcher, Date.now, config));
 }
 
 /** {@link fetchPaidUnitRuns}, memoized per isolate and per location for a
@@ -228,8 +270,10 @@ export async function paidUnitRuns(
   skus: ReadonlySet<string>,
   fetcher: typeof fetch = fetch,
   now: () => number = Date.now,
+  config?: Pick<CampaignConfig, 'skus' | 'shipsWith' | 'choiceFrom'>,
 ): Promise<Record<string, UnitRuns>> {
-  const key = `${env.SHOPIFY_STORE_DOMAIN ?? ''}|${countFrom}|${[...skus].sort().join(',')}`;
+  // The key names the rule, so a result counted before it never serves a read that applies it.
+  const key = `${env.SHOPIFY_STORE_DOMAIN ?? ''}|${countFrom}|${[...skus].sort().join(',')}|${config ? 'b1only' : 'plain'}`;
   const cached = memo.get(key);
   if (cached && now() - cached.fetchedAt < FRESH_MS) return cached.units;
   const shared = await readShared(key);
@@ -247,7 +291,7 @@ export async function paidUnitRuns(
     throw new Error('shopify orders: Admin API read failed recently, waiting before the next try');
   }
   try {
-    const units = await fetchPaidUnitRuns(env, countFrom, skus, fetcher);
+    const units = await fetchPaidUnitRuns(env, countFrom, skus, fetcher, config);
     const entry = {units, fetchedAt: now()};
     memo.set(key, entry);
     failedAt.delete(key);

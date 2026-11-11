@@ -12,10 +12,13 @@ import {
   lineDisplayName,
   variantDisplayName,
 } from '~/lib/product-content';
-import {ShipChip, parcelPromise, soonerMonth} from './ShipChip';
+import {usePendingShipTo} from '~/lib/pending-ship-to';
+import {ShipChip, parcelPromise, soonerMonth, useGeoDutiesNote, useGeoParcel} from './ShipChip';
+import {CompatAlert} from '~/components/commerce/CompatAlert';
+import {compatForLines, compatLocale} from '~/lib/cart-compat';
 import {LineShipChip, heldBy, parcelDelay} from './ParcelChip';
 import {paysEuVat} from '~/lib/visitor-country';
-import {countryName, notSoldDirect, offersPickup, shippingQuote} from '~/lib/shipping-rates';
+import {cartQuoteCountry, countryName, notSoldDirect, offersPickup, shippingQuote} from '~/lib/shipping-rates';
 import {
   buildSuggestionSpecs,
   extraSuggestionSpecs,
@@ -31,7 +34,7 @@ import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {DATES_SEEN_FIELD, hasMixedShipGroups, latestDeliveryBy, type CartSummary} from '~/lib/shopify-cart-action';
 import {trackEvent} from '~/lib/growth/plausible';
 import {CART_ADDED_EVENT, postCartAdd, withCountry, type CartAddedDetail} from '~/lib/cart-client';
-import {ShipToSelect} from './ShipToSelect';
+import {CountryPicker} from './CountryPicker';
 import '../styles/cart-checkout-bar.css';
 
 const CART_ACTION = '/api/shopify/cart';
@@ -50,6 +53,8 @@ function t(key: string, fallback: string, vars: Record<string, string> = {}): st
  */
 export function CartAddedDialog() {
   const rootData = useRouteLoaderData<RootLoader>('root');
+  // A Ship to switch in flight: the drawer follows the picked country at once (lib/pending-ship-to.ts).
+  const pendingShipTo = usePendingShipTo();
   const revalidator = useRevalidator();
   const {pathname} = useLocation();
   const [detail, setDetail] = useState<CartAddedDetail | null>(null);
@@ -125,7 +130,14 @@ export function CartAddedDialog() {
 
   // A navigation (View cart, a product link) closes the drawer.
   useEffect(() => setDetail(null), [pathname]);
+  // Same rules as the cart: early bird prices stay on stock lines, but the
+  // note drops "preorder" unless a line is a pre-order for this visitor; the
+  // parcel's date and the duties note follow the region.
+  const geoParcel = useGeoParcel();
+  const preorderSkus = new Set(geoParcel.preorderSkus(summary?.lines ?? []));
   const anyEarly = useAnyEarlySku(summary?.lines.map((l) => l.sku) ?? []);
+  const stockEarly = useAnyEarlySku(summary?.lines.filter((l) => !preorderSkus.has(l.sku)).map((l) => l.sku) ?? []);
+  const dutiesNote = useGeoDutiesNote();
 
   if (!detail || !summary) return null;
 
@@ -142,7 +154,11 @@ export function CartAddedDialog() {
   const subtotal = summary.subtotal ?? null;
   // Same rule as the buy module and the cart: "incl. VAT" only where EU VAT
   // applies.
-  const visitor = rootData?.visitorCountry ?? null;
+  // `visitor` is what the drawer shows (a Ship to switch in flight applied);
+  // `confirmed` is what every request sends. A blocked IP country stays.
+  const confirmed = rootData?.visitorCountry ?? null;
+  const visitor = cartQuoteCountry(pendingShipTo ?? confirmed, confirmed, rootData?.usShippingRate ?? null);
+  const switching = pendingShipTo != null;
   const vatIncluded = paysEuVat(visitor);
   // The same destination availability gate as the product and cart.
   const usRate = rootData?.usShippingRate ?? null;
@@ -161,7 +177,7 @@ export function CartAddedDialog() {
       : null;
   const cartPromises = summary.lines.map((l) => l.shipPromise);
   const orderPromise = parcelPromise(cartPromises) ?? cartPromises.find(Boolean) ?? null;
-  const orderDeliveryBy = latestDeliveryBy(summary.lines);
+  const orderDeliveryBy = latestDeliveryBy(geoParcel.deliveryLines(summary.lines));
 
   // The parts that complete the build, judged on the cart as it was when
   // the drawer opened, so a part added from here stays listed as "Added".
@@ -192,14 +208,14 @@ export function CartAddedDialog() {
     .slice(0, 3);
 
   const addPart = async (part: BuildSuggestion) => {
-    if (!beginCartAdd()) return;
+    if (switching || !beginCartAdd()) return;
     setBusy(part.sku);
     setFailed(null);
     try {
       setSummary(
         await postCartAdd(
           CART_ACTION,
-          withCountry([['sku', part.sku], ['qty', String(part.quantity)]], visitor),
+          withCountry([['sku', part.sku], ['qty', String(part.quantity)]], confirmed),
         ),
       );
       trackEvent('Recommendation Add', {
@@ -222,11 +238,11 @@ export function CartAddedDialog() {
   // Parts already in the cart (added from here, say) leave the bundle.
   const bundle = suggestions.filter((p) => !summary.lines.some((l) => l.sku === p.sku));
   const addBundle = async () => {
-    if (!bundle.length || !beginCartAdd()) return;
+    if (switching || !bundle.length || !beginCartAdd()) return;
     setBusy('bundle');
     setFailed(null);
     try {
-      setSummary(await postCartAdd(CART_ACTION, withCountry(bundleFields(bundle), visitor)));
+      setSummary(await postCartAdd(CART_ACTION, withCountry(bundleFields(bundle), confirmed)));
       trackEvent('Recommendation Add', {
         props: {
           product: bundle.map((p) => p.handle).join(','),
@@ -352,7 +368,7 @@ export function CartAddedDialog() {
                     <button
                       type="button"
                       className="cart-added-add"
-                      disabled={inCart || busy !== null}
+                      disabled={inCart || busy !== null || switching}
                       aria-busy={busy === part.sku || undefined}
                       onClick={() => void addPart(part)}
                     >
@@ -378,16 +394,16 @@ export function CartAddedDialog() {
           parts={bundle}
           label={buildLabel}
           cartPromises={cartPromises}
-          busy={busy === 'bundle'}
+          busy={busy === 'bundle' || switching}
           failed={failed === 'bundle'}
           onAdd={() => void addBundle()}
         />
 
         <div className="cart-added-foot">
           {rootData?.appCommerce ? null : (
-            <ShipToSelect
+            <CountryPicker
+              variant="field"
               country={visitor}
-              usRate={usRate}
               className="ship-to cart-added-ship-to"
               onChanged={(reply) => {
                 if (reply.summary) setSummary(reply.summary);
@@ -406,7 +422,9 @@ export function CartAddedDialog() {
               </span>
             </p>
           ) : null}
-          {subtotal ? <EarlyBirdNote show={anyEarly} className="cart-added-parcel" /> : null}
+          {/* The cart's parts warning, as on /cart: advisory, never blocks checkout. */}
+          <CompatAlert alert={compatForLines(summary.lines, visitor, compatLocale((rootData?.locale ?? 'en_US').split('_')[0]))} />
+          {subtotal ? <EarlyBirdNote show={anyEarly} stock={stockEarly} className="cart-added-parcel" /> : null}
           {shippingRate ? (
             <p className="cart-added-subtotal">
               <span>{t('shipping_row', 'Shipping to {country}', {country: countryName(visitor ?? '')})}</span>
@@ -430,6 +448,7 @@ export function CartAddedDialog() {
               </span>
             </div>
           ) : null}
+          {dutiesNote ? <p className="cart-added-parcel">{dutiesNote}</p> : null}
           {shippingRate && offersPickup(visitor) ? (
             <p className="cart-added-parcel">{t('pickup_note', 'Or pick up free at our Leuven office: choose Pickup at checkout.')}</p>
           ) : null}
@@ -437,7 +456,11 @@ export function CartAddedDialog() {
             <p className="cart-added-parcel">{t('us_price_note', 'Duties included')}</p>
           ) : null}
           {quote?.kind === 'direct' && quote.zone === 'international' ? (
-            <p className="cart-added-parcel">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p>
+            <p className="cart-added-parcel">
+              {dutiesNote
+                ? t('international_note_near', 'Shipping is confirmed at checkout.')
+                : t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}
+            </p>
           ) : null}
           {mixed ? (
             <p className="cart-added-parcel" role="note">{t('parcel_note', 'Your order ships in one parcel, when its last item is ready.')}</p>
@@ -486,7 +509,7 @@ export function CartAddedDialog() {
             onSubmit={() => trackCheckoutClick(subtotal, 'dialog')}
           >
             <input type="hidden" name="intent" value="checkout" />
-            {visitor ? <input type="hidden" name="country" value={visitor} /> : null}
+            {confirmed ? <input type="hidden" name="country" value={confirmed} /> : null}
             {/* The drawer shows the one-parcel line, so checkout may go on. */}
             {mixed ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
             <div className="cart-bar-sum">
@@ -498,7 +521,12 @@ export function CartAddedDialog() {
               ) : null}
               <ShipChip promise={orderPromise} ifFunded className="cart-bar-ship" />
             </div>
-            <button type="submit" className="cart-added-checkout cart-bar-checkout">
+            <button
+              type="submit"
+              className="cart-added-checkout cart-bar-checkout"
+              disabled={switching}
+              aria-busy={switching || undefined}
+            >
               {copyText('cart.checkout_cta') ?? 'Checkout'}
             </button>
           </form>

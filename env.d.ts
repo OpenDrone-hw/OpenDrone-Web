@@ -192,6 +192,8 @@ declare global {
     // (app/lib/us-sales.ts). Anything else keeps the US on retailer
     // enquiries. Production and staging set it in their wrangler [vars].
     PUBLIC_US_SALES?: string;
+    /** "1" offers buy now beside pre-order on the boards (wrangler*.toml). */
+    BATCH_CHOICE?: string;
 
     PUBLIC_COMPANY_NAME?: string;
     PUBLIC_COMPANY_ADDRESS?: string;
@@ -226,6 +228,10 @@ declare global {
     SUPPORT_CRM_API?: string;
     SUPPORT_COMMUNITY_ROUTE?: string;
     SUPPORT_FILES?: R2Bucket;
+    // Staging bench firmware (app/lib/flasher/staging-serve.ts). Declared ONLY
+    // in wrangler.bench.toml (a local R2 bucket), never in wrangler.toml or
+    // wrangler.production.toml.
+    FIRMWARE_STAGING?: R2Bucket;
     SUPPORT_STAFF_API_TOKEN?: string;
     // Bearer token for the full body of GET /api/status/campaign (paid counts, price sync, holds); without it the
     // route answers only allOpen and the status code. Worker secret.

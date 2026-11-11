@@ -42,8 +42,18 @@ SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
 PUBLIC_COMING_SOON = "0"
 # US consumer preorders (README "Open or close the shop"): "1" opens the US
 # to campaign preorders once content/us-sales.json sets the US rate; changing
-# it needs the founder's go.
+# it needs the founder's go. "0" from 2026-11-03 (US sales on hold); "1" again
+# per the founder on 2026-11-05 and 2026-11-11: the US buys the March 2027
+# batch, Belgian stock (batch 1) stays EU only (`paidRegions` in
+# content/preorders.json). Closed, the US reads "Not shipping to the US yet."
 PUBLIC_US_SALES = "1"
+# Buy now or pre-order on the four boards (README "Buy now or pre-order"):
+# "1" reads each board's `Buy now` Shopify variant and offers batch 1 stock at
+# retail beside the March pre-order. It changes prices shown, so it needs the
+# founder's go, and it goes to "1" only after the `Buy now` variants exist in
+# Shopify and `choiceFrom` is set in content/preorders.json. Any other value
+# is off: the site reads as it did before the variants existed.
+BATCH_CHOICE = "1"
 # Wholesale applications: mailed to the company inbox, reply-to the applicant.
 TRADE_MAIL_ENABLED = "1"
 # Newsletter welcome sender (src app/lib/growth/welcome-email.ts). opendrone.be is a

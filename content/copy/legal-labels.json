@@ -209,15 +209,23 @@
   },
   "shipping_glance": {
     "en": {
-      "title": "Ship dates",
+      "title": "At a glance",
       "rows": [
         [
           "Consumer orders",
-          "International preorders; paid stock ships everywhere except the US"
+          "Stock ships to the EU only; outside the EU, March 2027 preorders (import VAT and duties paid on delivery; US: duties included in the price)"
         ],
         [
           "Pickup",
           "Free at our Leuven office, by appointment"
+        ],
+        [
+          "Shipping cost",
+          "EU: flat rate per order, VAT included, from €8.50 (Belgium), table below. Outside the EU and US: shipping shown before payment; import charges may be due on delivery"
+        ],
+        [
+          "United States",
+          "Duties included in the price; flat USD 9.95 per order"
         ],
         [
           "Preorders",
@@ -230,15 +238,23 @@
       ]
     },
     "nl": {
-      "title": "Verzenddata",
+      "title": "In het kort",
       "rows": [
         [
           "Consumenten",
-          "Internationale pre-orders; betaalde voorraad is alleen voor de EU"
+          "Voorraad alleen naar de EU; buiten de EU pre-orders voor maart 2027 (invoer-btw en rechten bij levering; VS: rechten inbegrepen in de prijs)"
         ],
         [
           "Afhalen",
           "Gratis op ons kantoor in Leuven, op afspraak"
+        ],
+        [
+          "Verzendkosten",
+          "EU: vast tarief per bestelling, incl. btw, vanaf € 8,50 (België), tabel hieronder. Buiten de EU en de VS: verzendkosten getoond vóór betaling; invoerkosten mogelijk bij levering"
+        ],
+        [
+          "Verenigde Staten",
+          "Invoerrechten inbegrepen in de prijs; vast tarief van USD 9,95 per bestelling"
         ],
         [
           "Pre-orders",
@@ -251,15 +267,23 @@
       ]
     },
     "fr": {
-      "title": "Dates d'expédition",
+      "title": "En bref",
       "rows": [
         [
           "Consommateurs",
-          "Précommandes internationales ; stock payé réservé à l’UE"
+          "Stock expédié uniquement dans l’UE ; hors UE, précommandes pour mars 2027 (TVA à l’importation et droits à la livraison ; États-Unis : droits inclus dans le prix)"
         ],
         [
           "Retrait",
           "Gratuit à notre bureau de Louvain, sur rendez-vous"
+        ],
+        [
+          "Frais de port",
+          "UE : tarif fixe par commande, TVA comprise, à partir de 8,50 € (Belgique), tableau ci-dessous. Hors UE et États-Unis : frais de port affichés avant paiement ; frais d’importation possibles à la livraison"
+        ],
+        [
+          "États-Unis",
+          "Droits d’importation inclus dans le prix ; tarif fixe de 9,95 USD par commande"
         ],
         [
           "Précommandes",

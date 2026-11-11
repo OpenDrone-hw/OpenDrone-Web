@@ -29,7 +29,6 @@ export class SceneErrorBoundary extends Component<Props, {crashed: boolean}> {
   }
 
   componentDidCatch(error: unknown) {
-    // eslint-disable-next-line no-console
     console.error('[3D] scene subtree crashed - falling back to no-3D:', error);
     this.props.onError?.();
   }

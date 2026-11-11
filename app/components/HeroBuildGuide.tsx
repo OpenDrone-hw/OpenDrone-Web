@@ -29,7 +29,7 @@ import {
   parseCampaignConfig,
   shortCampaignDate,
 } from '~/lib/preorder-campaign';
-import {parcelPromise, shipChipText} from '~/components/ShipChip';
+import {parcelPromise, shipChipText, useGeoShipLine} from '~/components/ShipChip';
 import preorders from '../../content/preorders.json';
 
 const CAMPAIGN = parseCampaignConfig(preorders);
@@ -43,10 +43,12 @@ const CAMPAIGN = parseCampaignConfig(preorders);
 function buildShipNote(
   mix: 'mixed' | 'target' | 'date' | 'none',
   promises: Array<string | null>,
+  geoText: (promise: string | null) => string | null,
 ): string | null {
   if (mix === 'none') return null;
   const promise = parcelPromise(promises);
-  if (mix === 'date') return shipChipText(promise)?.text ?? null;
+  // A batch 1 date reads the visitor's line, as the bar and buy box do.
+  if (mix === 'date') return geoText(promise) ?? shipChipText(promise)?.text ?? null;
   const date = shortCampaignDate(latestShipDate(CAMPAIGN));
   if (!date) return null;
   return (copyText('home.build_ship_target') ?? 'Ships by {date}').replace('{date}', date);
@@ -70,8 +72,9 @@ export function HeroBuildGuide({
   const comingSoon =
     useRouteLoaderData<RootLoader>('root')?.comingSoon ?? true;
   const selection = heroBuildSelection(build, selected, sellable, comingSoon);
+  const geoLine = useGeoShipLine();
   const shipNote = selection.available
-    ? buildShipNote(selection.shipMix, selection.parts.map((part) => part.shipPromise))
+    ? buildShipNote(selection.shipMix, selection.parts.map((part) => part.shipPromise), geoLine)
     : null;
   return (
     <section
@@ -86,6 +89,8 @@ export function HeroBuildGuide({
           <Txt id="home.build_help" />
         </InfoHint>
       </div>
+      {/* The one-line answer to "is this a drone?", visible without opening the info hint (words from build_help). */}
+      <Txt id="home.build_note" as="p" className="hero-build-ship" />
       <ul
         className="hero-build-parts"
         onWheel={(event) => event.stopPropagation()}

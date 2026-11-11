@@ -1,6 +1,6 @@
 import {useLocation, useNavigate, useNavigation} from 'react-router';
-import {useEffect, useId, useState} from 'react';
-import {motion, useReducedMotion} from 'motion/react';
+import {useEffect, useState} from 'react';
+import {ChoiceLadder, type ChoiceLadderItem} from '~/components/ChoiceLadder';
 import type {MappedProductOptions} from '~/lib/product-shapes';
 import {shopSize, type VariantContent} from '~/lib/product-content';
 import {copyText} from '~/lib/copy';
@@ -27,6 +27,7 @@ export function VariantLadder({
   activeValue,
   onSelect,
   showPrices = false,
+  offer,
 }: {
   axis: string;
   variants: Record<string, VariantContent>;
@@ -36,10 +37,10 @@ export function VariantLadder({
   /** Print each version's price on its button. Off while the product is
    *  not for sale, so a locked page never shows a price. */
   showPrices?: boolean;
+  /** The chosen offer of a board with the buy now or pre-order choice. */
+  offer?: 'buy_now' | 'preorder';
 }) {
   const navigate = useNavigate();
-  const groupId = useId();
-  const reducedMotion = useReducedMotion();
   // The tier card previews instantly via onSelect, but price/stock/cart wiring
   // arrive with the server navigation. Mark the clicked tier busy until the
   // navigation settles so a slow connection reads as syncing, not as a broken
@@ -70,99 +71,58 @@ export function VariantLadder({
   const tabValue = tiers.find((tier) => !tier.disabled && norm(tier.value) === norm(activeValue))?.value
     ?? tiers.find((tier) => !tier.disabled)?.value;
 
+  const items: ChoiceLadderItem[] = tiers.map(({value, content, optionValue, disabled}) => {
+    const comingSoon = Boolean(content.comingSoon);
+    // Sold-out only when the catalog actually has the variant and
+    // marks it unavailable. Pre-setup (no matching option) stays
+    // selectable for preview.
+    const soldOut = Boolean(optionValue && optionValue.exists && !optionValue.available);
+    // Each version's own price on its button, as FPV shops show it on
+    // the option: the buyer compares without clicking through.
+    // Buy now or pre-order: the button shows the price of the chosen offer.
+    const first = optionValue?.firstSelectableVariant;
+    const shownVariant = offer === 'preorder' && first?.preorderOffer ? first.preorderOffer : first;
+    const price =
+      showPrices && !comingSoon && shownVariant
+        ? formatPrice(
+            shownVariant.price.amount,
+            shownVariant.price.currencyCode,
+          )
+        : '';
+    return {
+      key: value,
+      name: shopSize(content.label ?? value),
+      selected: norm(value) === norm(activeValue),
+      disabled,
+      tone: comingSoon ? 'comingsoon' : soldOut ? 'soldout' : undefined,
+      flag: comingSoon
+        ? copyText('product-chrome.ladder_flag_coming_soon')
+        : soldOut
+          ? copyText('product-chrome.ladder_flag_sold_out')
+          : undefined,
+      price,
+      pending: pendingValue === value,
+    };
+  });
+
   return (
-    <div
-      className="variant-ladder"
-      role="radiogroup"
-      tabIndex={-1}
-      aria-label={`${axis} ${copyText('product-chrome.ladder_aria_suffix') ?? ''}`}
-      onKeyDown={(event) => {
-        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
-        const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
-        const current = buttons.indexOf(event.target as HTMLButtonElement);
-        if (current < 0) return;
-        event.preventDefault();
-        const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
-        const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (current + direction + buttons.length) % buttons.length;
-        buttons[next].focus();
-        buttons[next].click();
+    <ChoiceLadder
+      ariaLabel={`${axis} ${copyText('product-chrome.ladder_aria_suffix') ?? ''}`}
+      items={items}
+      tabbableKey={tabValue}
+      onSelect={(value) => {
+        const tier = tiers.find((t) => t.value === value);
+        if (!tier || tier.content.comingSoon) return;
+        onSelect(value);
+        const optionValue = tier.optionValue;
+        if (optionValue?.variantUriQuery && !optionValue.selected) {
+          setPendingValue(value);
+          void navigate(`?${optionValue.variantUriQuery}`, {
+            replace: true,
+            preventScrollReset: true,
+          });
+        }
       }}
-    >
-      <div className="variant-ladder-track">
-        {tiers.map(({value, content, optionValue, disabled}) => {
-          const selected = norm(value) === norm(activeValue);
-          // Coming-soon: a designed model with no purchasable variant yet.
-          // Editorial only: greyed and non-selectable whatever the catalog says.
-          const comingSoon = Boolean(content.comingSoon);
-          // Sold-out only when the catalog actually has the variant and
-          // marks it unavailable. Pre-setup (no matching option) stays
-          // selectable for preview.
-          const soldOut = Boolean(
-            optionValue && optionValue.exists && !optionValue.available,
-          );
-          // Each version's own price on its button, as FPV shops show it on
-          // the option: the buyer compares without clicking through.
-          const tierPrice =
-            showPrices && !comingSoon && optionValue?.firstSelectableVariant
-              ? formatPrice(
-                  optionValue.firstSelectableVariant.price.amount,
-                  optionValue.firstSelectableVariant.price.currencyCode,
-                )
-              : '';
-          const pending = pendingValue === value;
-          return (
-            <motion.button
-              type="button"
-              key={value}
-              role="radio"
-              aria-checked={selected}
-              aria-disabled={disabled}
-              disabled={disabled}
-              tabIndex={value === tabValue ? 0 : -1}
-              whileTap={disabled || reducedMotion ? undefined : {scale: 0.98}}
-              aria-busy={pending || undefined}
-              className={`variant-tier${selected ? ' is-selected' : ''}${
-                comingSoon ? ' is-comingsoon' : soldOut ? ' is-soldout' : ''
-              }${pending ? ' is-pending' : ''}`}
-              onClick={() => {
-                if (comingSoon) return;
-                onSelect(value);
-                if (optionValue?.variantUriQuery && !optionValue.selected) {
-                  setPendingValue(value);
-                  void navigate(`?${optionValue.variantUriQuery}`, {
-                    replace: true,
-                    preventScrollReset: true,
-                  });
-                }
-              }}
-            >
-              {selected ? (
-                <motion.span
-                  className="variant-tier-glow"
-                  layoutId={`${groupId}-selection`}
-                  transition={reducedMotion ? {duration: 0} : {type: 'spring', stiffness: 500, damping: 38}}
-                  aria-hidden="true"
-                />
-              ) : null}
-              <span className="variant-tier-head">
-                <span className="variant-tier-name">{shopSize(content.label ?? value)}</span>
-                {comingSoon ? (
-                  <span className="variant-tier-flag">
-                    {copyText('product-chrome.ladder_flag_coming_soon')}
-                  </span>
-                ) : soldOut ? (
-                  <span className="variant-tier-flag">
-                    {copyText('product-chrome.ladder_flag_sold_out')}
-                  </span>
-                ) : null}
-              </span>
-              {tierPrice ? (
-                <span className="variant-tier-price">{tierPrice}</span>
-              ) : null}
-            </motion.button>
-          );
-        })}
-      </div>
-    </div>
+    />
   );
 }

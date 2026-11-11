@@ -125,6 +125,10 @@
   --color-error: #f87171;
   --color-border: #24242a;
   --color-border-strong: #34343c;
+  /* Form field edges (WCAG 1.4.11, 3:1). Alias of --color-text-dim: 5.73:1 on
+     --color-bg, 5.43:1 on --color-bg-card, 5.12:1 on --color-bg-elevated.
+     Closest existing palette shade that passes; do not use for dividers. */
+  --color-field-border: var(--color-text-dim);
 
   /* Text/icon color that sits ON the gold accent (filled buttons, badges,
      active toggles). Dark ink: gold reads best with it. */
@@ -462,10 +466,11 @@ body {
   background: var(--color-text-muted);
 }
 
-/* Links */
+/* Links. No `text-decoration: none` here: the layered reset (reset.css,
+   reset-input) removes the underline, so Tailwind's `underline` utility can
+   put it back. Unlayered, this rule beat the utility (axe link-in-text-block). */
 a {
   color: var(--color-text);
-  text-decoration: none;
 }
 a:hover {
   color: var(--color-gold-text);
@@ -796,87 +801,147 @@ html.anim-paused .board-sheet.is-active {
   }
 }
 
-/* Region switch (EUR | USD): the lang-toggle pill, one side pressed. Sits in
-   the header on desktop; on phones the drawer carries the full-size copy. */
-.region-switch {
-  display: inline-flex;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  overflow: hidden;
+/* Country picker (CountryPicker.tsx): the header pill "BE · EUR", and the
+   labelled "Ship to" field of the cart, the added-to-cart dialog and the
+   phone drawer. Both open the same panel: a search field, one country list
+   with the current country ticked, one link to /markets. */
+.country-picker {
+  position: relative;
 }
-
-.region-switch button {
-  background: transparent;
-  color: var(--color-text-muted);
-  border: 0;
-  padding: 0.4rem 0.85rem;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease;
+.country-picker--field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
 }
-
-.region-switch button + button {
-  border-left: 1px solid var(--color-border);
-}
-
-.region-switch button:hover:not([aria-pressed="true"]) {
-  color: var(--color-text);
-}
-
-.region-switch button[aria-pressed="true"] {
-  background: var(--color-gold-fill);
-  color: var(--color-on-accent);
-  cursor: default;
-}
-
-.region-switch button:focus-visible {
-  outline: 2px solid var(--color-gold-fill);
-  outline-offset: -2px;
-}
-
-.region-switch[aria-busy="true"] {
-  opacity: 0.7;
-}
-
-.region-switch-caption {
+.country-picker-field {
   display: inline-flex;
   align-items: center;
-  padding: 0 0.7rem;
-  border-right: 1px solid var(--color-border);
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex: 1 1 12rem;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0.55rem 0.75rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--r-sm);
+  color: var(--color-text);
+  font-family: var(--font-sans, inherit);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.country-picker-field:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-field-border));
+}
+.country-picker-field:focus-visible {
+  outline: 2px solid var(--color-gold-fill);
+  outline-offset: 2px;
+}
+.country-picker-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.country-picker[aria-busy='true'] .country-picker-field,
+.country-picker[aria-busy='true'] .country-picker-trigger {
+  opacity: 0.6;
+  cursor: progress;
+}
+.country-picker .country-picker-panel {
+  background: var(--color-bg-card);
+  width: min(20rem, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  gap: 0.3rem;
+  padding: 0.4rem;
+}
+.country-picker--field .country-picker-panel {
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: auto;
+}
+.country-picker-search {
+  width: 100%;
+  min-height: 36px;
+  padding: 0.45rem 0.65rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--r-sm);
+  color: var(--color-text);
+  font-family: var(--font-sans, inherit);
+  font-size: 16px; /* 16 px: iOS does not zoom into the field */
+}
+.country-picker-search:focus-visible {
+  outline: 2px solid var(--color-gold-fill);
+  outline-offset: 0;
+}
+.country-picker-list {
+  max-height: min(19rem, 50vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.country-picker-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.country-picker-group {
+  display: block;
+  padding: 0.55rem 0.6rem 0.2rem;
   color: var(--color-text-muted);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
 }
-
-.region-menu-choice {
-  display: grid;
-  gap: 2px;
-  text-align: left;
-}
-
-.region-menu-choice small {
+.country-picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 36px;
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--r-sm);
   color: var(--color-text-muted);
-  font-size: 11px;
-  letter-spacing: 0;
-  text-transform: none;
-  white-space: nowrap;
+  font-size: var(--fs-sm);
+  cursor: pointer;
 }
-
-.region-switch.mobile-menu-region {
+.country-picker-option[data-active='true'] {
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+}
+.country-picker-option[aria-selected='true'] {
+  color: var(--color-text);
+}
+.country-picker-empty {
+  padding: 0.6rem;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+.country-picker-help {
+  display: block;
+  padding: 0.5rem 0.6rem 0.35rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.country-picker-help:hover {
+  color: var(--color-text);
+}
+.country-picker-failed {
+  flex-basis: 100%;
+  display: block;
+  font-size: 12px;
+}
+.country-picker.mobile-menu-region {
   margin: 0 0 0.75rem;
-  align-self: flex-start;
-  /* The drawer body is a shrinking flex column: never squash the pill. */
   flex-shrink: 0;
-}
-
-.region-switch.mobile-menu-region button {
-  min-height: 40px;
-  padding: 0.5rem 1.1rem;
 }
 
 @supports (view-transition-name: root) {
@@ -1115,9 +1180,6 @@ html.anim-paused .board-sheet.is-active {
 .header-more-panel .site-header-link.is-active {
   color: var(--color-text);
 }
-.region-menu[aria-busy='true'] {
-  opacity: 0.7;
-}
 /* A dropdown open under the pill sits above the pinned buy rail (z 60). */
 .site-header:has(.header-popover[data-open]) {
   z-index: 70;
@@ -1199,7 +1261,7 @@ html.anim-paused .board-sheet.is-active {
     padding-left: 0;
   }
   .site-header-actions .header-region-switch.header-popover-trigger,
-  .site-header-actions .region-menu .header-popover-trigger {
+  .site-header-actions .country-picker .header-popover-trigger {
     padding: 0 0.5rem;
     gap: 0.3rem;
     letter-spacing: 0.04em;
@@ -1682,7 +1744,7 @@ html:root .site-header-categories .site-header-cat-group a:not(:hover):not(.acti
   background: var(--color-bg);
   border-radius: var(--r-xs);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-muted);
   letter-spacing: 0.02em;
 }
@@ -2371,7 +2433,7 @@ button.reset {
 
 .predictive-search input {
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-field-border);
   border-radius: var(--r-xs);
   color: var(--color-text);
   padding: 0.5rem 1rem;
@@ -2525,6 +2587,12 @@ button.reset {
 
 .rich-content a {
   color: var(--color-gold-text-hover);
+}
+/* A button-styled link inside guide prose keeps the button's own text colour (it was gold on gold). */
+.rich-content a.btn-primary,
+.rich-content a.btn-primary:hover {
+  color: var(--color-on-accent);
+  text-decoration: none;
 }
 
 .rich-content h2,
@@ -2759,7 +2827,7 @@ button.reset {
 
 .product-facts dt {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
@@ -2910,7 +2978,8 @@ button.reset {
   align-items: center;
   gap: 0.5rem;
   padding: 0.35rem 0.5rem;
-  background: rgba(13, 13, 16, 0.7);
+  /* Sits over arbitrary photos: near-opaque so the counter stays >= 4.5:1 on light renders. */
+  background: rgba(13, 13, 16, 0.88);
   border: 1px solid var(--color-border);
   border-radius: var(--r-pill);
   backdrop-filter: blur(6px);
@@ -2934,10 +3003,10 @@ button.reset {
 
 .product-gallery-counter {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   padding: 0 0.25rem;
 }
 
@@ -3151,7 +3220,7 @@ button.reset {
 .collection-sort select {
   appearance: none;
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-field-border);
   color: var(--color-text);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -3166,7 +3235,7 @@ button.reset {
 }
 
 .collection-sort select:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-field-border));
 }
 
 .collection-sort select:focus-visible {
@@ -3938,7 +4007,8 @@ button.reset {
   transform: translateY(1px);
 }
 
-.btn-primary:disabled {
+.btn-primary:disabled,
+.btn-primary[aria-disabled='true'] {
   opacity: 0.45;
   cursor: not-allowed;
   box-shadow: none;
@@ -4009,6 +4079,16 @@ button.reset {
 .btn-secondary:hover {
   border-color: var(--color-text-muted);
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+/* A disabled secondary button must look disabled (it looked clickable, /flash 2026-11-02). */
+.btn-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-secondary:disabled:hover {
+  border-color: var(--color-border-strong);
+  background: transparent;
 }
 
 /* Stock indicator: green dot + label, replaces the awkward chip. */
@@ -4863,7 +4943,7 @@ button.reset {
 .chapter-subhead {
   margin: 1.75rem 0 0.75rem;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -5463,12 +5543,12 @@ section.chapter[data-centered] .chapter-body-col {
   border-top: 1px solid var(--color-border);
   opacity: 1;
   transform: translateY(0);
-  /* Skip layout+paint for chapters that are far offscreen - the PDP is a very
-     long page and browsers otherwise render every chapter on load. The
-     intrinsic-size placeholder keeps the scrollbar stable; the scroll-reveal
-     IO fires as normal once a chapter approaches the viewport. */
-  content-visibility: auto;
-  contain-intrinsic-size: auto 640px;
+  /* No content-visibility: auto here. Its fixed intrinsic-size placeholder
+     (640px) never matched a chapter's real height (280-1500px), so the
+     first render of a chapter near the viewport moved everything under it:
+     the related strip, the safety block and the footer jumped up to ~290px
+     (CLS 0.19 on /products/openesc, 2026-11-02). Every chapter is laid out
+     on load instead. */
 }
 /* Reading measure: chapter paragraphs never run the full rail. The
    whitespace right of the text is deliberate - it is what directs the eye
@@ -5476,16 +5556,6 @@ section.chapter[data-centered] .chapter-body-col {
    blocks (schematic, teardown, tables, card grids) are untouched. */
 .chapter p {
   max-width: 68ch;
-}
-
-/* content-visibility's paint containment clips descendants at the chapter's
-   box - but the teardown board art bleeds past its media column into the page
-   margin, and the frame-viewer backdrop over-bleeds into the neighbouring
-   sections. Those chapters give up the skip-render optimisation so the bleed
-   stays visible. */
-.chapter:has(.board-art),
-.chapter[data-backdrop] {
-  content-visibility: visible;
 }
 
 @media (min-width: 880px) {
@@ -5596,7 +5666,7 @@ section.chapter[data-centered] .chapter-body-col {
   border: 1px solid color-mix(in srgb, var(--color-gold) 40%, transparent);
   border-radius: var(--r-pill);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
@@ -6081,6 +6151,9 @@ section.chapter[data-centered] .chapter-body-col {
 .board-folder-rail:focus-visible,
 .schematic-rail:focus-visible {
   border-color: color-mix(in srgb, var(--color-gold) 45%, transparent);
+  /* The base rule sets outline: none; keyboard focus needs a real ring (2.4.7). */
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 .board-folder-rail-head,
 .schematic-rail-head {
@@ -6406,7 +6479,7 @@ section.chapter[data-centered] .chapter-body-col {
   justify-content: space-between;
   margin-top: 0.7rem;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
@@ -6435,7 +6508,7 @@ section.chapter[data-centered] .chapter-body-col {
 }
 .board-art-fallback {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-dim);
 }
 @media (max-width: 879px) {
@@ -6619,7 +6692,7 @@ section.chapter[data-centered] .chapter-body-col {
 .teardown-pin-cost {
   flex: none;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   padding: 0.1rem 0.45rem;
   border-radius: var(--r-pill);
@@ -6632,6 +6705,27 @@ section.chapter[data-centered] .chapter-body-col {
    gold accent bar wipes in on the left for a bit of life. */
 .teardown-pin-hoverable {
   cursor: pointer;
+}
+/* The row's keyboard stop is a button filling the <li>; it carries the padding
+   so the whole row stays clickable, and shows its own ring (inset, so the
+   row's overflow never clips it). */
+.teardown-pins li.teardown-pin-hoverable {
+  padding: 0;
+}
+.teardown-pin-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem 0.55rem 0.95rem;
+  cursor: pointer;
+}
+.teardown-pin-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 .teardown-pin-hoverable::before {
   content: '';
@@ -6646,7 +6740,7 @@ section.chapter[data-centered] .chapter-body-col {
   transition: transform 0.14s ease;
 }
 .teardown-pin-hoverable:hover,
-.teardown-pin-hoverable:focus-visible {
+.teardown-pin-hoverable:has(.teardown-pin-btn:focus-visible) {
   background: color-mix(in srgb, var(--color-gold) 13%, transparent);
   /* extend the tint 1px upward to fill where the divider above used to sit (the
      :has rule below turns it transparent), so the whole row reads as one gold
@@ -6689,7 +6783,7 @@ section.chapter[data-centered] .chapter-body-col {
 }
 .teardown-io-chip {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   padding: 0.2rem 0.55rem;
   border-radius: var(--r-pill);
@@ -6712,11 +6806,11 @@ section.chapter[data-centered] .chapter-body-col {
   outline-offset: 2px;
 }
 .teardown-pin-hoverable:hover .teardown-pin-part,
-.teardown-pin-hoverable:focus-visible .teardown-pin-part {
+.teardown-pin-hoverable:has(.teardown-pin-btn:focus-visible) .teardown-pin-part {
   color: var(--color-gold-text);
 }
 .teardown-pin-hoverable:hover::before,
-.teardown-pin-hoverable:focus-visible::before {
+.teardown-pin-hoverable:has(.teardown-pin-btn:focus-visible)::before {
   transform: scaleY(1);
 }
 
@@ -6820,7 +6914,11 @@ section.chapter[data-centered] .chapter-body-col {
   justify-content: center;
   /* 16:9 bubble - uniform across the resource row. */
   aspect-ratio: 16 / 9;
-  overflow: hidden;
+  /* Not overflow:hidden: that removed the automatic minimum height, so the
+     fixed ratio clipped the text under WCAG 1.4.12 text spacing. Visible lets
+     the card grow with its content; long tokens wrap instead. */
+  overflow: visible;
+  overflow-wrap: anywhere;
   padding: 1.15rem 1.35rem;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
@@ -7101,7 +7199,7 @@ section.chapter[data-centered] .chapter-body-col {
   flex-wrap: wrap;
   gap: 0.6rem;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -7166,7 +7264,7 @@ section.chapter[data-centered] .chapter-body-col {
   padding-bottom: var(--sp-2);
   border-bottom: 2px solid var(--color-gold);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
@@ -7195,7 +7293,7 @@ section.chapter[data-centered] .chapter-body-col {
 
 .provenance-row-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text);
@@ -7716,7 +7814,7 @@ a.what-chain-chip:hover {
 
 .spec-table dt {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -7872,7 +7970,7 @@ a.what-chain-chip:hover {
 }
 .board-art-skeleton-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -7968,7 +8066,7 @@ a.what-chain-chip:hover {
   }
   .board-deck-hint {
     margin-left: auto;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.04em;
     /* muted (not dim) so the gesture cue stays legible on bright light-mode
        displays; it's the primary "how to explore" affordance now. */
@@ -8111,6 +8209,12 @@ a.what-chain-chip:hover {
     display: block;
   }
   .specs-parts .teardown-pins li {
+    padding: 0.4rem 0.6rem 0.4rem 0.75rem;
+  }
+  .specs-parts .teardown-pins li.teardown-pin-hoverable {
+    padding: 0;
+  }
+  .specs-parts .teardown-pin-btn {
     padding: 0.4rem 0.6rem 0.4rem 0.75rem;
   }
   .specs-parts .teardown-pin-part {
@@ -8962,7 +9066,7 @@ a.what-chain-chip:hover {
 .account-form input:not([type="checkbox"]) {
   width: 100%;
   background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-field-border);
   border-radius: var(--r-md);
   color: var(--color-text);
   padding: 0.8rem 0.95rem;
@@ -9890,19 +9994,21 @@ a.what-chain-chip:hover {
 
 /* Wide tables (rate tables, processor lists) scroll inside their own box
    on a phone instead of widening the page. */
-.legal-body table {
-  width: 100%;
+.legal-body .table-scroll {
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  border-collapse: collapse;
   margin: 1rem 0;
-  font-size: 0.9rem;
 }
-@media (max-width: 47.99em) {
-  .legal-body table {
-    display: block;
-  }
+.legal-body .table-scroll:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.legal-body table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
 }
 
 .legal-body th,
@@ -10178,6 +10284,38 @@ a.what-chain-chip:hover {
   color: var(--color-gold-text);
   text-decoration-color: currentColor;
 }
+
+/* Inline links inside running text (WCAG 1.4.1 / axe link-in-text-block): the
+   link colour is only ~2.2:1 against the muted body text, so a non-colour cue
+   is required. Class-less links in text blocks inside <main>, plus the legal
+   and guide prose, are underlined. Button-styled and card links carry a class
+   and are untouched. Zero specificity (:where), so any contextual
+   text-decoration: none (learn cards, the series rail, breadcrumbs, cart
+   product names, guide and doc index lists) still wins; never in a nav. */
+:where(main :is(p, li, dd, td, blockquote, figcaption) a:not([class]):not(nav a), .legal-body a) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+/* New-tab notice (WCAG 3.2.5 advisory / A-15): every target=_blank link gets a
+   visually hidden suffix, one rule for the shared copy renderer, the legal
+   content and all hand-written links. Links whose own ::after draws something
+   (the open-source card watermarks, the trust chip tap area) are excluded and
+   carry an sr-only span instead (products.$handle.tsx). */
+a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
+  content: ' (opens in a new tab)';
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  user-select: none;
+}
+:lang(nl) a[target='_blank']:not(.open-source-card, .trust-chip-link)::after { content: ' (opent in een nieuw tabblad)'; }
+:lang(fr) a[target='_blank']:not(.open-source-card, .trust-chip-link)::after { content: " (s'ouvre dans un nouvel onglet)"; }
 
 /* Partner logos as margin art: a currentColor mask so brand marks take the
    same dim tint as the hand-drawn emblems in either theme. */
@@ -10658,10 +10796,11 @@ a.what-chain-chip:hover {
   color: var(--color-text);
 }
 
+/* --color-text-muted #9a9a9a on --color-bg #0d0d10 = 6.90:1 (text-dim would be 5.73:1). */
 .series-rail-num {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.1em;
-  color: color-mix(in srgb, var(--color-text-muted) 55%, transparent);
+  color: var(--color-text-muted);
 }
 
 .series-rail-title {
@@ -11926,10 +12065,6 @@ a.what-chain-chip:hover {
   margin: 0.3rem 0 0;
 }
 
-/* Anchor lands below the fixed header, not underneath it. */
-#reviews {
-  scroll-margin-top: 96px;
-}
 
 .review-list {
   list-style: none;
@@ -12047,6 +12182,16 @@ a.what-chain-chip:hover {
   outline-offset: 2px;
 }
 
+/* /testing: a full-bleed iframe on a light page. Dark inset ring, because the
+   gold focus token is ~1.5:1 on #FBFBFA. */
+.testing-main:focus {
+  outline: none;
+}
+.testing-frame:focus-visible {
+  outline: 3px solid #0d0d10;
+  outline-offset: -3px;
+}
+
 /* =========================================================
    od-* primitives. Token aliases below map the od-* names onto the
    project's existing variables; no new tokens are introduced.
@@ -12057,7 +12202,9 @@ a.what-chain-chip:hover {
   --od-bg-2: var(--color-bg-card);
   --od-ink: var(--color-text);
   --od-ink-dim: var(--color-text-muted);
-  --od-ink-faint: #4a4d44;
+  /* 5.6:1 on --color-bg (was #4a4d44, 2.25:1, failing WCAG 1.4.3 for the
+     newsletter index/post meta text). */
+  --od-ink-faint: var(--color-text-dim);
   --od-line: #2a2e26;
   --od-line-strong: #3a3f33;
   --od-pcb-gold: var(--color-gold);
@@ -12285,7 +12432,7 @@ a.what-chain-chip:hover {
   width: 100%;
   background: var(--od-bg);
   color: var(--od-ink);
-  border: 1.5px solid var(--od-line-strong);
+  border: 1.5px solid var(--color-field-border);
   border-radius: var(--r-xs);
   padding: 10px 12px;
   font-family: var(--font-mono);
@@ -13665,6 +13812,13 @@ a.what-chain-chip:hover {
     font-size: 14px;
     letter-spacing: 0.04em;
   }
+  /* Same ring as the global :focus-visible baseline (the input reset above
+     removes the outline; the pill's gold border alone was not a focus ring). */
+  .site-mobile-nav-search input:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--r-pill);
+  }
   .site-mobile-nav-search input::placeholder {
     color: var(--color-text-muted);
   }
@@ -13814,7 +13968,7 @@ a.what-chain-chip:hover {
   font-size: clamp(2rem, 5vw, 3rem);
   letter-spacing: 0.06em;
   line-height: 1;
-  color: color-mix(in srgb, var(--color-text) 22%, transparent);
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
   margin: 0 0 var(--sp-4);
 }
 .tl-events {
@@ -13826,9 +13980,10 @@ a.what-chain-chip:hover {
 }
 .tl-event {
   position: relative;
-  opacity: 0.35;
+  /* No opacity fade: 0.35 dropped the date and detail text to 1.7:1. The pad
+     and trace already mark passed events. */
   transform: translateY(6px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition: transform 0.4s ease;
 }
 .tl-event.is-passed {
   opacity: 1;
@@ -14084,7 +14239,6 @@ a.what-chain-chip:hover {
 
 .learn-section {
   margin-top: 2.5rem;
-  scroll-margin-top: 5rem;
 }
 .learn-section h2 {
   font-family: var(--font-display);
@@ -15269,8 +15423,15 @@ button[data-waiting] {
     width: calc(100% - 2rem);
   }
 }
-.cart-line-quantity .cart-sheet-stepper button:disabled {
+.cart-line-quantity .cart-sheet-stepper button:disabled,
+.cart-line-quantity .cart-sheet-stepper button[aria-disabled='true'] {
   opacity: 0.4;
+  border-color: var(--color-border-strong);
+  cursor: not-allowed;
+}
+.cart-line-quantity--sheet .cart-sheet-stepper button[aria-disabled='true']:hover {
+  background: transparent;
+  color: var(--color-text-muted);
   border-color: var(--color-border-strong);
 }
 body:has(main.cart) footer .footer-note--newsletter {
@@ -15287,13 +15448,6 @@ body:has(main.cart) footer .footer-note--newsletter {
   .product-hero-copy .variant-ladder .variant-ladder-track {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .product-hero-copy .variant-ladder .variant-tier {
-    scroll-margin-top: calc(var(--header-height) + 1rem);
-  }
-}
-.product-buy,
-.variant-tier {
-  scroll-margin-top: calc(var(--header-height) + 1rem);
 }
 
 /* OSHWA chip: the mark is an <img>, so its currentColor paths render
@@ -15730,7 +15884,10 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
 @media (min-width: 960px) {
   .buy-rail.is-pinned {
     position: fixed;
-    top: calc(var(--header-height) + 1.1rem);
+    /* Below the floating header, which itself starts under the test banner
+       and the availability bar: without their heights the pill sat on the
+       header's lower edge whenever a bar was shown. */
+    top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px) + var(--header-height) + 1.1rem);
     right: max(var(--rail-gutter, 1rem), calc((100vw - 1240px) / 2));
     left: auto;
     flex-direction: row;
@@ -15758,7 +15915,9 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
     gap: 0.35rem;
     padding: 0.45rem max(0.8rem, env(safe-area-inset-left))
       max(0.45rem, calc(env(safe-area-inset-bottom) * 0.5)) max(0.8rem, env(safe-area-inset-right));
-    background: var(--pod-bg-strong, var(--color-bg-elevated));
+    /* Opaque: the strip covers page content, and a translucent one let the
+       text and buttons under it read through. */
+    background: var(--color-bg-elevated);
     border-top: 1px solid var(--pod-border, var(--color-border));
     animation: buy-rail-rise 0.2s ease;
   }
@@ -17000,7 +17159,7 @@ html.hero-header-in .homepage-layout .site-header {
 }
 .spec-table dt {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -17008,7 +17167,7 @@ html.hero-header-in .homepage-layout .site-header {
 }
 .board-art-skeleton-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -17024,9 +17183,6 @@ html.hero-header-in .homepage-layout .site-header {
   .board-art.is-swap-ready, .board-art.is-swap-ready .board-folder-rail {
     transition: none;
   }
-}
-.chapter[id] {
-  scroll-margin-top: calc(var(--header-height) + 1.5rem);
 }
 .spec-table > div {
   flex-wrap: wrap;
@@ -17067,6 +17223,10 @@ html.hero-header-in .homepage-layout .site-header {
   color: var(--color-text);
 }
 .spec-table dd a {
+  /* 24px minimum target (WCAG 2.5.8) */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   color: var(--color-gold-text);
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -17339,6 +17499,15 @@ html.hero-header-in .homepage-layout .site-header {
 .related-card-media {
   background: #ece9e3;
 }
+/* Imageless tiles sit on that light photo backdrop, where the dark-theme dim
+   ink was 2.79:1 (1.76:1 with the ghost's opacity). #55555b on #ece9e3 is
+   6.11:1 (WCAG 1.4.3). */
+.product-card-media.is-empty .ghost-tile,
+.product-card-media.is-empty .product-card-media-ghost,
+.related-card-media.is-empty .product-card-media-ghost {
+  color: #55555b;
+  opacity: 1;
+}
 
 /* =========================================================
    Support tickets: /support, /support/t/<ref>, /support/find
@@ -17464,7 +17633,7 @@ html.hero-header-in .homepage-layout .site-header {
 .sp-topic-hint {font-size: 13px; color: var(--color-text-muted); line-height: 1.4;}
 
 /* Fields */
-.sp-details {display: grid; gap: 1.1rem; scroll-margin-top: 6.5rem;}
+.sp-details {display: grid; gap: 1.1rem;}
 .sp-details > .sp-step {margin-bottom: 0;}
 .sp-row {display: grid; gap: 1.1rem;}
 @media (min-width: 640px) {
@@ -17484,7 +17653,7 @@ html.hero-header-in .homepage-layout .site-header {
   width: 100%;
   margin: 0;
   padding: 0.65rem 0.75rem;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-field-border);
   border-radius: var(--r-xs);
   background: var(--color-bg);
   color: var(--color-text);
@@ -17696,7 +17865,7 @@ html.hero-header-in .homepage-layout .site-header {
   flex: 1 1 auto;
   min-width: 0;
   padding: 0.5rem 0.6rem;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-field-border);
   border-radius: var(--r-xs);
   background: var(--color-bg);
   color: var(--color-text-muted);
@@ -17834,7 +18003,6 @@ html.hero-header-in .homepage-layout .site-header {
   padding: 1rem 1.1rem;
   list-style: none;
   cursor: pointer;
-  scroll-margin-top: calc(var(--header-height) + 1rem);
 }
 .sp-tile-ask > summary::-webkit-details-marker {display: none;}
 .sp-tile-ask[open] {grid-column: 1 / -1;}
@@ -17998,29 +18166,6 @@ html.hero-header-in .homepage-layout .site-header {
   text-transform: uppercase;
   letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
-}
-.ship-to-select {
-  appearance: none;
-  flex: 1 1 12rem;
-  min-width: 0;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
-  font-family: var(--font-sans, inherit);
-  font-size: var(--fs-sm);
-  padding: 0.55rem 2rem 0.55rem 0.75rem;
-  border-radius: var(--r-sm);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  cursor: pointer;
-}
-.ship-to-select:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-border));
-}
-.ship-to-select:disabled {
-  opacity: 0.6;
-  cursor: progress;
 }
 .ship-to .cart-line-error {
   flex-basis: 100%;
@@ -18244,7 +18389,6 @@ select,
 textarea,
 summary,
 [tabindex]:not([tabindex='-1']) {
-  scroll-margin-top: calc(var(--header-height) + 1.5rem);
   scroll-margin-bottom: 6rem;
 }
 
@@ -18330,7 +18474,7 @@ summary,
 .build-chapter-bring-label {
   margin: 0 0 0.75rem;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-gold-text);
@@ -18381,6 +18525,14 @@ summary,
 }
 .pdp-build .hero-build-guide {
   animation: none;
+  /* The card is a <section>: without this it takes the page's section
+     padding and shows an empty band above its title and under its button. */
+  padding: 0;
+}
+/* The chapter's own intro and the "You also need" list beside the card say
+   it already; a third copy inside the card only crowds it. */
+.pdp-build .hero-build-guide > .hero-build-ship {
+  display: none;
 }
 
 .home-community-owners {
@@ -18800,4 +18952,353 @@ summary,
   .account-hub-order-top .account-hub-btn {
     width: 100%;
   }
+}
+
+/* /flash step cards, hint, options and the staging notice. Unlayered on
+   purpose: the global `section { padding: 1rem 0 }` and the h2/p resets are
+   unlayered too and beat Tailwind's padding and margin utilities. Card padding follows
+   the spacing scale: 16px on phones, 24/32px from tablet up. Locked steps
+   collapse to their header. `.flash-ladder` only widens the shared
+   variant-ladder on /flash; the PDP never sets it. */
+.flash-staging-notice {
+  margin: var(--sp-4) 0 var(--sp-6);
+}
+.flash-staging-notice p + p {
+  margin-top: var(--sp-1);
+}
+.flash-step {
+  margin-top: var(--sp-4);
+  padding: var(--sp-4);
+}
+.flash-step > h2 {
+  margin: 0;
+}
+.flash-step.is-locked {
+  padding-block: var(--sp-3);
+}
+@media (min-width: 768px) {
+  .flash-step {
+    padding: var(--sp-5) var(--sp-6);
+  }
+  .flash-step.is-locked {
+    padding-block: var(--sp-4);
+  }
+}
+.flash-step-hint {
+  margin: 0 0 var(--sp-4);
+}
+.flash-ladder .variant-ladder-track {
+  gap: var(--sp-3);
+}
+.flash-ladder .variant-tier {
+  justify-content: center;
+  min-height: 4.5rem;
+  padding: var(--sp-4) var(--sp-5);
+}
+
+/* /flash readability (2026-11-02, "quite unreadable"). Unlayered like the rest of .flash-*: the global
+   reset's `code { background: #ddd }` and the p/li resets beat utilities. Wider column, site body size,
+   brighter secondary text, dark code chips, visible secondary-button states. */
+.flash-column {
+  max-width: 780px;
+}
+.flash-page {
+  --color-text-muted: color-mix(in srgb, var(--color-text) 78%, transparent);
+}
+.flash-page :where(.flash-step) :where(p, li, dd, dt, label, summary, legend) {
+  font-size: 16px;
+  line-height: 1.55;
+}
+.flash-page .flash-step :is(p, li, dd, label, summary).text-\[15px\],
+.flash-page .flash-step :is(p, li, dd, label, summary).text-\[14px\] {
+  font-size: 16px;
+}
+/* Also the firmware guides (.guide-page): same dark chip, so `diff all` and the targets read on the dark theme. */
+.flash-page code,
+.guide-page code {
+  background: color-mix(in srgb, var(--color-text) 10%, var(--color-bg-card));
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 1px 6px;
+}
+/* A code block keeps its own box: no chip inside it. */
+.guide-page pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+}
+.flash-page .btn-secondary {
+  width: auto;
+  border: 1px solid var(--color-border-strong);
+}
+.flash-page .btn-secondary:hover:not(:disabled) {
+  border-color: var(--color-text);
+}
+.flash-page :is(.btn-secondary, .btn-primary):focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+.flash-page .btn-primary {
+  width: auto;
+  white-space: nowrap;
+}
+.flash-page input[type='file'] {
+  font-size: 15px;
+  color: var(--color-text);
+}
+.flash-page input[type='file']::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.flash-page input[type='file']::file-selector-button:hover {
+  border-color: var(--color-text);
+}
+.flash-filename {
+  display: block;
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* /flash one-button FC flow (F). Unlayered like the other .flash-* rules. */
+.flash-lede {
+  margin: var(--sp-2) 0 0;
+  font-size: 16px;
+}
+.flash-update {
+  margin-top: var(--sp-5);
+  padding: var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+}
+@media (min-width: 768px) {
+  .flash-update {
+    padding: var(--sp-5) var(--sp-6);
+  }
+}
+.flash-update-title {
+  margin: 0 0 var(--sp-2);
+  font-size: 18px;
+}
+/* Pre-flash checklist: numbered, in the guide callout look (accent rail, soft gold surface, as InfoCallout). */
+.flash-checklist {
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) calc(var(--sp-3) + 1.25rem);
+  list-style: decimal;
+  border: 1px solid var(--color-border);
+  border-left: 2px solid var(--color-accent);
+  border-radius: var(--r-md);
+  background: var(--color-gold-soft);
+  font-size: 16px;
+  line-height: 1.4;
+}
+/* Tight items: item 3 (computer only) stays above the fold at 390x844. */
+.flash-checklist li {
+  margin: 0 0 4px;
+}
+.flash-note,
+.flash-stage {
+  margin: var(--sp-3) 0 0;
+  font-size: 16px;
+}
+.flash-stage {
+  font-weight: 600;
+}
+.flash-fail {
+  margin: var(--sp-3) 0 0;
+  padding: var(--sp-3);
+  border: 1px solid var(--color-error);
+  border-radius: var(--r-md);
+  font-size: 16px;
+}
+.flash-fail p {
+  margin: 0;
+}
+.flash-more {
+  margin-top: var(--sp-4);
+  font-size: 16px;
+}
+.flash-more > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.flash-more p {
+  margin: 0;
+}
+
+/* "In the EU? Choose your country to buy in stock": a link-styled button. */
+.choose-country-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* The price line's tax wording links to /markets, styled as the plain note. */
+a.product-buy-vat-link {
+  text-decoration: none;
+}
+a.product-buy-vat-link:hover,
+a.product-buy-vat-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* /markets ("Where we ship"): one table, phone first. On a phone each market
+   is a block of label / value pairs (the column heading from data-label);
+   from 900 px it is a plain table. One type scale: --fs-sm body, --fs-xs labels. */
+.markets-inner {
+  max-width: 64rem;
+}
+.markets-header {
+  margin-bottom: var(--sp-6, 1.5rem);
+}
+.markets-lead {
+  margin: 0.75rem 0 0;
+  max-width: 36rem;
+  color: var(--color-text-muted);
+  font-size: var(--fs-base);
+  line-height: 1.6;
+}
+.markets-table-scroll {
+  max-width: 100%;
+}
+.markets-table-scroll:focus-visible {
+  outline: 2px solid var(--color-gold-fill);
+  outline-offset: 4px;
+}
+.markets-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+.markets-table thead {
+  display: none;
+}
+.markets-table tr {
+  display: grid;
+  grid-template-columns: minmax(7rem, 38%) 1fr;
+  gap: 0.15rem 0.75rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--color-border);
+}
+.markets-table tr[data-current='true'] {
+  border-top-color: var(--color-gold);
+}
+.markets-table th[scope='row'] {
+  grid-column: 1 / -1;
+  margin-bottom: 0.25rem;
+  color: var(--color-text);
+  font-weight: 500;
+  text-align: left;
+}
+.markets-table td {
+  display: contents;
+  color: var(--color-text);
+}
+.markets-table td::before {
+  content: attr(data-label);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  padding-top: 0.15rem;
+}
+.markets-you {
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--color-gold);
+  border-radius: var(--r-pill);
+  color: var(--color-gold);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  vertical-align: 0.1em;
+}
+@media (min-width: 900px) {
+  .markets-table thead {
+    display: table-header-group;
+  }
+  .markets-table tr {
+    display: table-row;
+    padding: 0;
+  }
+  .markets-table th,
+  .markets-table td {
+    display: table-cell;
+    padding: 0.75rem 1rem 0.75rem 0;
+    border-top: 1px solid var(--color-border);
+    text-align: left;
+    vertical-align: top;
+  }
+  .markets-table tr[data-current='true'] > * {
+    border-top-color: var(--color-gold);
+  }
+  .markets-table thead th {
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    letter-spacing: var(--ls-label);
+    text-transform: uppercase;
+    border-top: 0;
+  }
+  .markets-table td::before {
+    content: none;
+  }
+  .markets-table th[scope='row'] {
+    margin: 0;
+    width: 22%;
+  }
+}
+.markets-notes {
+  margin: var(--sp-6, 1.5rem) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+  max-width: 44rem;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+.markets-notes a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.markets-notify {
+  margin-top: 2rem;
+  max-width: 28rem;
+}
+/* One line, then the launch-list form: no newsletter eyebrow or lede here. */
+.markets-notify-form > div > p:first-child,
+.markets-notify-form > div > h3 + p {
+  display: none;
+}
+.markets-notify-form h3 {
+  font-family: inherit;
+  font-size: var(--fs-base);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  margin-bottom: 0.5rem;
 }

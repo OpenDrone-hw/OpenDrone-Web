@@ -29,6 +29,14 @@ const EU_FIRST: CampaignBatch[] = [
 ];
 
 describe('US sales gate', () => {
+  it('sells the March 2027 batch to the US in production: PUBLIC_US_SALES is "1" (founder 2026-11-05, 2026-11-11)', () => {
+    const toml = fs.readFileSync(new URL('../../wrangler.production.toml', import.meta.url), 'utf8');
+    const gate = /^PUBLIC_US_SALES = "([^"]*)"/m.exec(toml)?.[1];
+    assert.equal(gate, '1');
+    assert.equal(usSalesRate({PUBLIC_US_SALES: gate}), US_SALES.rate);
+    assert.equal(usSalesRate({PUBLIC_US_SALES: '0'}), null);
+  });
+
   it('opens only with the gate "1" and a committed rate', () => {
     assert.equal(US_SALES.rate, 9.95);
     assert.equal(usSalesRate({PUBLIC_US_SALES: '1'}), 9.95);
@@ -61,9 +69,32 @@ describe('batch regions', () => {
     assert.ok(parseCampaignConfig({...base, skus: {A: {batches: EU_FIRST}}}));
   });
 
-  it('marks the four paid batch-1 entries EU and international, never the US, in the committed file', () => {
-    const euOnly = Object.entries(REAL.skus).filter(([, e]) => e.batches.some((b) => b.regions?.join() === 'EU,INT'));
-    assert.deepEqual(euOnly.map(([sku]) => sku).sort(), ['OPENESC-2020', 'OPENESC-3030', 'OPENFC-LITE-2020', 'OPENFC-LITE-3030']);
+  it('marks the four paid batch-1 entries EU only via paidRegions, never NEAR, INT or the US, in the committed file', () => {
+    const raw = JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')) as {
+      paidRegions: unknown; skus: Record<string, {batches: Array<{paid?: boolean; regions?: unknown}>}>;
+    };
+    // One entry decides where Belgian paid stock ships (founder 2026-11-03); the batches carry no regions of their own.
+    assert.deepEqual(raw.paidRegions, ['EU']);
+    for (const entry of Object.values(raw.skus)) {
+      for (const batch of entry.batches) if (batch.paid) assert.equal(batch.regions, undefined);
+    }
+    const paid = Object.entries(REAL.skus).filter(([, e]) => e.batches.some((b) => b.regions?.join() === 'EU'));
+    assert.deepEqual(paid.map(([sku]) => sku).sort(), ['OPENESC-2020', 'OPENESC-3030', 'OPENFC-LITE-2020', 'OPENFC-LITE-3030']);
+  });
+
+  it('fills paid batches from paidRegions, keeps a paid batch\'s own regions and rejects an unknown paid region', () => {
+    const base = {countFrom: '2026-09-25', endsOn: '2026-12-15', shipsBy: '2027-03-31', priceTiers: TIERS, pendingShips: PENDING};
+    const batches = () => [{units: 10, paid: true, ships: 'x'}, {units: 10}];
+    const filled = parseCampaignConfig({...base, paidRegions: ['EU', 'NEAR'], skus: {A: {batches: batches()}}});
+    assert.deepEqual(filled.skus.A.batches[0].regions, ['EU', 'NEAR']);
+    assert.equal(filled.skus.A.batches[1].regions, undefined);
+    const own = parseCampaignConfig({...base, paidRegions: ['EU', 'NEAR'], skus: {A: {batches: [{units: 10, paid: true, ships: 'x', regions: ['EU']}, {units: 10}]}}});
+    assert.deepEqual(own.skus.A.batches[0].regions, ['EU']);
+    // Without paidRegions a paid batch serves every region, as before.
+    assert.equal(parseCampaignConfig({...base, skus: {A: {batches: batches()}}}).skus.A.batches[0].regions, undefined);
+    for (const paidRegions of [['UK'], [], 'EU']) {
+      assert.throws(() => parseCampaignConfig({...base, paidRegions, skus: {A: {batches: batches()}}}), /paidRegions/);
+    }
   });
 
   it('gives a US buyer batch 2 and its March promise while batch 1 still has units', () => {
@@ -100,18 +131,20 @@ describe('batch regions', () => {
     const eu = ['OPENFC-LITE-2020', 'OPENFC-LITE-3030', 'OPENESC-2020', 'OPENESC-3030'];
     for (const sku of eu) {
       const batches = REAL.skus[sku].batches;
-      assert.deepEqual(batches[0].regions, ['EU', 'INT'], `${sku} batch 1 serves the EU and international, not the US`);
+      assert.deepEqual(batches[0].regions, ['EU'], `${sku} batch 1 serves the EU only, not NEAR, INT or the US`);
       assert.equal(batches[0].paid, true);
-      assert.equal(batches[0].ships, 'ships early November 2026');
+      assert.equal(batches[0].ships, 'in stock in Belgium, ships to EU addresses in a few working days');
       for (const ordered of [0, 1, 249, 250, 400]) {
         const us = campaignState(batches, [{region: 'US', units: ordered}], REAL.pendingShips, [], null, 'US');
         assert.notEqual(us.batch, 1, `${sku}: a US unit never lands in batch 1 (${ordered} US units ordered)`);
         assert.equal(us.paidStock, false);
-        assert.ok(!/November 2026/.test(us.shipPromise), 'a US promise never names the early-November batch');
+        assert.ok(!/November 2026/.test(us.shipPromise), 'a US promise never names the batch-1 date');
       }
-      // US units do not use up batch-1 stock; international units do.
+      // Only EU units use up batch-1 stock; US, INT and NEAR units fill the March batch.
       assert.deepEqual(batchFill(batches, [{region: 'US', units: 100}]), [0, 100]);
-      assert.deepEqual(batchFill(batches, [{region: 'INT', units: 100}]), [100, 0]);
+      assert.deepEqual(batchFill(batches, [{region: 'INT', units: 100}]), [0, 100]);
+      assert.deepEqual(batchFill(batches, [{region: 'NEAR', units: 100}]), [0, 100]);
+      assert.deepEqual(batchFill(batches, [{region: 'EU', units: 100}]), [100, 0]);
       // The last batch of every SKU serves the US, so the US can always buy the run.
       assert.equal(batches[batches.length - 1].regions, undefined);
     }
@@ -160,7 +193,7 @@ describe('US market prices', () => {
     const usd = catalogOf([variant({sku: 'OPENESC-2020', price: 53, compare_price: 66.3, currency: 'USD'})], 'USD');
     const eu = applyCampaign(eur, REAL, {'OPENESC-2020': 12}, OPEN, 'EU').products[0].variants[0];
     assert.equal(eu.currency, 'EUR');
-    assert.match(eu.ship_promise ?? '', /November 2026/);
+    assert.match(eu.ship_promise ?? '', /^in stock in Belgium/);
     const us = withMarketPrices(applyCampaign(eur, REAL, {'OPENESC-2020': 12}, OPEN, 'US'), usd);
     const v = us.products[0].variants[0];
     assert.equal(us.currency, 'USD');

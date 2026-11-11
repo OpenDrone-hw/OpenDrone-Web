@@ -15,9 +15,11 @@ import {HeroDroneStage} from '~/components/HeroDroneStage';
 import type {HeroLoadState} from '~/components/HeroDroneScene';
 import {HeroWordmark} from '~/components/HeroWordmark';
 import {HeroSizeSlider} from '~/components/HeroSizeSlider';
-import {DEFAULT_HERO_SIZE} from '~/lib/hero-airframes';
+import {DEFAULT_HERO_SIZE, buildSizeFromSearch} from '~/lib/hero-airframes';
 import {HeroBuildGuide} from '~/components/HeroBuildGuide';
+import {HeroBuildChoice} from '~/components/HeroBuildChoice';
 import {HeroStackOffer} from '~/components/HeroStackOffer';
+import {batchChoiceOn} from '~/lib/shopify-storefront';
 import {resolveHeroBuilds, type HeroBuild} from '~/lib/hero-build';
 import {parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
@@ -67,13 +69,12 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // scroll-lock) for a frame before matchMedia corrects it client-side.
   const ua = request.headers.get('user-agent') || '';
   const isMobileHint =
+    request.headers.get('sec-ch-ua-mobile') === '?1' ||
     /Mobi|Android|iPhone|iPod|Windows Phone|BlackBerry/i.test(ua);
 
-  // Flagship line for the mobile showcase. Deferred, not awaited: desktop
-  // never renders these cards, and on mobile they sit below the hero - so
-  // streaming them keeps TTFB off the catalog fetch entirely (it is worker
-  // -cached anyway). Catch resolves to [] so a catalog hiccup just drops
-  // the cards instead of blanking the page.
+  // Flagship line for the mobile showcase and the hero build card, from one
+  // catalog read (awaited below). Catch resolves to [] so a catalog hiccup
+  // just drops the cards instead of blanking the page.
   const home: Promise<{
     featured: HomeProduct[];
     heroBuilds: HeroBuild[];
@@ -97,29 +98,25 @@ export async function loader({request, context}: Route.LoaderArgs) {
         // OpenStack is intentionally NOT here - it's just the FC + ESC bundled,
         // surfaced as a note on the showcase, not as a separate flagship slot.
         featured: [d.fc, d.esc, d.rx, d.motor, d.frame].filter(keep),
-        heroBuilds: resolveHeroBuilds(BUILDS, catalog),
+        heroBuilds: resolveHeroBuilds(BUILDS, catalog, batchChoiceOn(context.env)),
       };
     })
     .catch(() => ({featured: [], heroBuilds: []}));
 
-  // The build card sits on a phone's first screen, so a phone gets it
-  // resolved in the shell (same awaited query as `featured` below).
-  const heroBuilds = isMobileHint
-    ? await home.then((h) => h.heroBuilds)
-    : home.then((h) => h.heroBuilds);
-  // On a phone the featured cards are the first thing under the hero and the
-  // section's arrival used to shift everything below it (CLS 0.22) and delay
-  // the LCP image until the deferred chunk streamed in. The query is
-  // CacheLong, so awaiting it costs a few ms of TTFB at the edge and puts the
-  // cards, and the first card's image, in the initial HTML. Desktop keeps the
-  // deferred promise: it never renders these cards.
-  const featured = isMobileHint
-    ? await home.then((h) => h.featured)
-    : home.then((h) => h.featured);
-
-  // Live Discord size for the phone layout's community section: streamed, never awaited,
-  // cached an hour, null (numbers hidden) when Discord does not answer.
+  // Resolved in the shell for every visitor, not just a phone UA. On a phone
+  // the build card and the featured cards sit on the first screens, and a
+  // streamed chunk shifted the ledger below them (CLS 0.22). The UA is only a
+  // hint: a narrow window whose UA does not say "mobile" (iPadOS Safari sends a
+  // Mac UA, a narrowed desktop window, "request desktop site") gets the
+  // desktop SSR tree, matchMedia swaps to MobileHome on the client, and a
+  // still-pending promise then streamed in and shifted the ledger (CLS 0.28).
+  // The catalog read is memoised per isolate for a minute (catalog-memo.ts), so
+  // awaiting it usually costs little TTFB; a cold isolate pays one read.
+  // Live Discord size for the community section: started first so it runs in
+  // parallel, streamed and never awaited, cached an hour, null (numbers
+  // hidden) when Discord does not answer.
   const discord = fetchDiscordCounts();
+  const {heroBuilds, featured} = await home;
 
   // The stack card is for buyers of the EU's paid batch only.
   const stackOffer = context.catalog.region === 'EU';
@@ -195,6 +192,11 @@ function DesktopHome({
   const changeHeroSize = useCallback((next: string) => {
     setHeroSize(next);
     setActivePart(null);
+  }, []);
+  // "See the full 3-inch build" from a product page: open on that size.
+  useEffect(() => {
+    const asked = buildSizeFromSearch(window.location.search);
+    if (asked) setHeroSize(asked);
   }, []);
   const inspectPart = useRef<((id: string) => void) | null>(null);
   const [canInspect, setCanInspect] = useState(false);
@@ -599,7 +601,7 @@ function DesktopHome({
                 onClick={() => setSplashSettled(true)}
               >
                 <Txt id="home.skip_to_catalog" />
-                <svg
+                <svg aria-hidden="true" focusable="false"
                   width="14"
                   height="14"
                   viewBox="0 0 24 24"
@@ -626,13 +628,14 @@ function DesktopHome({
             style={{opacity: splashSettled ? 1 : 0}}
             aria-label="GitHub"
           >
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
             </svg>
           </a>
 
           <div
             ref={buyRef}
+            id="build"
             className={`hero-buy hero-buy--guide${splashSettled ? ' is-visible' : ''}`}
             inert={!splashSettled}
             style={{opacity: splashSettled ? 1 : 0}}
@@ -641,7 +644,7 @@ function DesktopHome({
               <Await resolve={heroBuilds}>
                 {(builds) => {
                   const build = builds.find(item => item.size === heroSize);
-                  return build ? <><HeroStackOffer key={`${build.id}-stack`} build={build} show={stackOffer} /><HeroBuildGuide key={build.id} build={build} onInspect={canInspect ? id => inspectPart.current?.(id) : undefined} activePart={activePart} /></> : <Link to="/products" className="hero-build-loading"><Txt id="home.build_browse" fallback="Browse parts" /></Link>;
+                  return build ? build.choice ? <HeroBuildChoice key={build.id} build={build} onInspect={canInspect ? id => inspectPart.current?.(id) : undefined} activePart={activePart} /> : <><HeroStackOffer key={`${build.id}-stack`} build={build} show={stackOffer} /><HeroBuildGuide key={build.id} build={build} onInspect={canInspect ? id => inspectPart.current?.(id) : undefined} activePart={activePart} /></> : <Link to="/products" className="hero-build-loading"><Txt id="home.build_browse" fallback="Browse parts" /></Link>;
                 }}
               </Await>
             </Suspense>

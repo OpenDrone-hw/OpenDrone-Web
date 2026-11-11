@@ -29,8 +29,16 @@ SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
 PUBLIC_COMING_SOON = "0"
 # US consumer preorders (README "Open or close the shop"): "1" opens the US
 # to campaign preorders once content/us-sales.json sets the US rate; changing
-# it needs the founder's go.
-PUBLIC_US_SALES = "0"
+# it needs the founder's go. Same value as production, so a preview shows
+# what a US visitor will read.
+PUBLIC_US_SALES = "1"
+# Buy now or pre-order on the four boards (README "Buy now or pre-order"):
+# "1" reads each board's `Buy now` Shopify variant and offers batch 1 stock at
+# retail beside the March pre-order. It changes prices shown, so it needs the
+# founder's go, and it goes to "1" only after the `Buy now` variants exist in
+# Shopify and `choiceFrom` is set in content/preorders.json. Any other value
+# is off: the site reads as it did before the variants existed.
+BATCH_CHOICE = "0"
 # ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
 # /support Ask box and the product/preorder widget. "1" turns each on.
 # CHATFPV_KEY is a Worker secret.

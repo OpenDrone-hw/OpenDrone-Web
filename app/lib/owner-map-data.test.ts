@@ -65,7 +65,7 @@ describe('ownerMapFixture', () => {
 describe('loadOwnerMap', () => {
   it('serves the fixture, suppressed, when the flag is set', async () => {
     const snapshot = await loadOwnerMap({OWNER_MAP_FIXTURE: '1'}, NOW);
-    assert.ok(snapshot && snapshot.regions.DE === 4);
+    assert.ok(snapshot && snapshot.regions.DE === 2);
   });
 
   it('is null without a database, and never invents numbers', async () => {
@@ -82,7 +82,7 @@ describe('refreshOwnerMap', () => {
     const env: OwnerMapEnv = {...credentials, SUPPORT_DB: db};
     assert.equal(await refreshOwnerMap(env, NOW, shopify(nodes).fetcher), 'written');
     const snapshot = await loadOwnerMap(env, NOW);
-    assert.deepEqual(snapshot?.regions, {BE: 1});
+    assert.deepEqual(snapshot?.regions, {BE: 2});
     assert.equal(snapshot?.generatedAt, NOW);
     assert.ok(rows().every((r) => r.region.startsWith('_') || /^[A-Z]{2}(-[A-Z]+)?$/.test(r.region)));
     assert.ok(!JSON.stringify(rows()).includes('c1'));
@@ -131,7 +131,7 @@ describe('refreshOwnerMap', () => {
     const env: OwnerMapEnv = {SUPPORT_DB: db, COMMERCE_SOURCE: 'app', APP_API_URL: 'https://app.example'};
     assert.equal(await refreshOwnerMap(env, NOW, fetcher), 'written');
     assert.deepEqual(urls, ['https://app.example/api/ops/storefront.owner_counts']);
-    assert.deepEqual((await loadOwnerMap(env, NOW))?.regions, {BE: 1, NL: 0});
+    assert.deepEqual((await loadOwnerMap(env, NOW))?.regions, {BE: 2, NL: 0});
     const refusing = (async () => new Response(JSON.stringify({ok: false, error: {code: 'not_enabled', detail: 'off'}}), {status: 200, headers: {'content-type': 'application/json'}})) as typeof fetch;
     await assert.rejects(refreshOwnerMap(env, NOW + SNAPSHOT_MAX_AGE_MS, refusing));
     assert.ok(rows().some((r) => r.region === 'BE'));

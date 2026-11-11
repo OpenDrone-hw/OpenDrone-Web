@@ -3,9 +3,10 @@ import fs from 'node:fs';
 import {describe, it} from 'node:test';
 import type {Catalog, CatalogVariant} from './catalog.ts';
 import {applyCampaign, datedShipParts, parseCampaignConfig, shipLabelFromPromise, type Region} from './preorder-campaign.ts';
-import {shipCountryFromCookie} from './shipping-rates.ts';
+import {shipCountryFromCookie, shippingQuote} from './shipping-rates.ts';
 import {forwardedCountry, handleShopifyCartAction, withCountry, type ShopifyCartDependencies} from './shopify-cart-action.ts';
 import {handleCartCountry} from './shopify-cart-country.ts';
+import {cartReplannedFor, cartTag, planCartPage} from './cart-replan.ts';
 import type {CartLineInput, CartLineUpdate, ShopifyCart, ShopifyCartLine} from './shopify-storefront.ts';
 
 const CAMPAIGN = parseCampaignConfig(
@@ -17,7 +18,7 @@ const REGISTRATIONS = {BE: {saleApproved: true}, DE: {saleApproved: true}};
 const CHECKOUT = 'https://checkout.opendrone.be/checkouts/cn/ok';
 const FC = 'gid://shopify/ProductVariant/OPENFC-LITE-2020';
 const RX = 'gid://shopify/ProductVariant/OPENRX-LITE';
-const EU_PROMISE = 'ships early November 2026';
+const EU_PROMISE = 'in stock in Belgium, ships to EU addresses in a few working days';
 
 function variant(sku: string, extra: Partial<CatalogVariant> = {}): CatalogVariant {
   return {
@@ -43,12 +44,13 @@ function catalogFor(region: Region): Catalog {
 }
 
 function cartLine(id: string, merchandiseId: string, sku: string, attributes: Array<{key: string; value: string}>): ShopifyCartLine {
-  const promise = attributes.find((a) => a.key === 'Preorder')?.value ?? null;
+  const promise = attributes.find((a) => a.key === 'Preorder')?.value ?? attributes.find((a) => a.key === '_ship_promise')?.value ?? null;
+  const euStock = attributes.some((a) => a.key === '_ship_promise');
   const region = attributes.find((a) => a.key === '_ship_region')?.value;
   const deliveryBy = attributes.find((a) => a.key === 'Delivery by')?.value;
   return {
     id, merchandiseId, quantity: 1, title: sku, variantTitle: sku, handle: 'openfc-lite', sku, image: null,
-    selectedOptions: [], shipPromise: promise, ...(deliveryBy ? {deliveryBy} : {}), ...(region ? {shipRegion: region} : {}),
+    selectedOptions: [], shipPromise: promise, ...(deliveryBy ? {deliveryBy} : {}), ...(region ? {shipRegion: region} : {}), ...(euStock ? {euStock} : {}),
     total: {amount: '31.2', currencyCode: 'EUR'},
   };
 }
@@ -77,9 +79,10 @@ function shopify(country: string | null, lines: ShopifyCartLine[]) {
           if (l.id !== update.id) return l;
           const attrs = update.attributes ?? [];
           const region = attrs.find((a) => a.key === '_ship_region')?.value;
-          const {shipRegion: _drop, deliveryBy: _dropDate, ...rest} = l;
+          const {shipRegion: _drop, deliveryBy: _dropDate, euStock: _dropStock, ...rest} = l;
           const deliveryBy = attrs.find((a) => a.key === 'Delivery by')?.value;
-          return {...rest, shipPromise: attrs.find((a) => a.key === 'Preorder')?.value ?? null, ...(deliveryBy ? {deliveryBy} : {}), ...(region ? {shipRegion: region} : {})};
+          const euStock = attrs.some((a) => a.key === '_ship_promise');
+          return {...rest, shipPromise: attrs.find((a) => a.key === 'Preorder')?.value ?? attrs.find((a) => a.key === '_ship_promise')?.value ?? null, ...(deliveryBy ? {deliveryBy} : {}), ...(region ? {shipRegion: region} : {}), ...(euStock ? {euStock} : {})};
         });
       }
       return view();
@@ -87,7 +90,8 @@ function shopify(country: string | null, lines: ShopifyCartLine[]) {
   };
 }
 
-const euLine = () => cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [{key: 'Preorder', value: EU_PROMISE}, {key:'Delivery by',value:'30 November 2026'}]);
+// An EU batch 1 line: "In stock in Belgium" at checkout, the promise hidden.
+const euLine = () => cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [{key: 'Shipping', value: 'In stock in Belgium, ships in a few working days.'}, {key: '_ship_promise', value: EU_PROMISE}]);
 
 function switchRequest(country: string): Request {
   return new Request('https://opendrone.be/api/shopify/cart-country', {
@@ -308,10 +312,12 @@ describe('add to cart forwards the resolved country', () => {
 });
 
 describe('one ship line everywhere', () => {
-  it('names the month qualifier and delivery date of the BE FC/ESC promise', () => {
-    assert.deepEqual(datedShipParts(EU_PROMISE), {when: 'early Nov 2026'});
-    assert.equal(shipLabelFromPromise(EU_PROMISE, 'short'), 'Ships early Nov 2026');
-    assert.equal(shipLabelFromPromise('ships early November 2026', 'short'), 'Ships early Nov 2026');
+  it('names the month qualifier of a dated promise, and keeps the words of stock on hand', () => {
+    assert.equal(datedShipParts(EU_PROMISE), null);
+    assert.equal(shipLabelFromPromise(EU_PROMISE, 'short'), 'In stock, ships in a few working days');
+    assert.equal(shipLabelFromPromise(EU_PROMISE, 'long'), 'In stock in Belgium, ships to EU addresses in a few working days.');
+    assert.deepEqual(datedShipParts('ships late November 2026'), {when: 'late Nov 2026'});
+    assert.equal(shipLabelFromPromise('ships late November 2026', 'short'), 'Ships late Nov 2026');
     assert.equal(shipLabelFromPromise('ships October 2026', 'short'), 'Ships Oct 2026');
     assert.equal(datedShipParts('ships once funded'), null);
   });
@@ -367,7 +373,7 @@ describe('blocked visitors, half-applied switches, checkout country', () => {
   it('honours the country a checkout form forwards over the request cookie', async () => {
     const fake = shopify('US', [
       cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [
-        {key: 'Preorder', value: 'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait'},
+        {key: 'Preorder', value: 'ships by 31 March 2027'},
         {key:'Delivery by',value:'30 April 2027'},
         {key: '_ship_region', value: 'US'},
       ]),
@@ -380,8 +386,8 @@ describe('blocked visitors, half-applied switches, checkout country', () => {
 
 
 describe('international cart country switches', () => {
-  it('moves FC and an in-stock line EU to international and back, with real destination handoffs and refreshed promises', async () => {
-    for (const [country,currency] of [['CA','CAD'],['AU','AUD'],['GB','GBP'],['CH','CHF'],['NO','EUR']]) {
+  it('moves FC and an in-stock line EU to INT and back: batch 1 FC stock no longer serves INT, both lines take the March batch', async () => {
+    for (const [country,currency] of [['CA','CAD'],['AU','AUD'],['JP','EUR']]) {
       const rx=cartLine('gid://shopify/CartLine/2',RX,'OPENRX-LITE',[]);
       const fake=shopify('BE',[euLine(),rx]);
       const requested:Array<[Region,string|undefined]>=[];
@@ -392,36 +398,89 @@ describe('international cart country switches', () => {
       assert.equal(summary.summary.subtotal.currencyCode,currency);
       assert.equal(fake.state.country,country);
       assert.ok(fake.state.lines.every(line=>line.shipRegion==='INT'));
-      // Batch 1 FC stock now serves international addresses: it keeps its November promise and
-      // names no delivery date (batch 1 has no deliveryByINT). The preorder line takes the March batch.
-      assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
-      assert.ok(!fake.state.lines[0].deliveryBy);
-      assert.equal(fake.state.lines[1].deliveryBy,'30 April 2027');
-      assert.match(fake.state.lines[1].shipPromise??'',/31 March 2027/);
+      // INT buyers take the March funding batch only (founder 2026-11-03), with the international arrival date.
+      for (const line of fake.state.lines) {
+        assert.match(line.shipPromise??'',/31 March 2027/,String(line.sku));
+        assert.equal(line.deliveryBy,'30 April 2027',String(line.sku));
+      }
       await handleCartCountry(switchRequest('BE'),ENV,dependencies);
       assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
-      assert.equal(fake.state.lines[0].deliveryBy,'30 November 2026');
+      // Back in the EU it is Belgian stock again: no delivery date.
+      assert.ok(!fake.state.lines[0].deliveryBy);
+      assert.equal(fake.state.lines[0].euStock,true);
       assert.equal(fake.state.lines[1].shipPromise,null);
       assert.ok(fake.state.lines.every(line=>line.shipRegion===undefined));
     }
   });
 
-  it('keeps the batch 1 stock promise for an international checkout and re-checks the cart once', async () => {
+  it('moves FC and an in-stock line EU to NEAR (GB, CH, NO) and back: both lines take the March batch, with the duties notice', async () => {
+    for (const [country,currency] of [['GB','GBP'],['CH','CHF'],['NO','EUR']]) {
+      const rx=cartLine('gid://shopify/CartLine/2',RX,'OPENRX-LITE',[]);
+      const fake=shopify('BE',[euLine(),rx]);
+      const requested:Array<[Region,string|undefined]>=[];
+      const written:CartLineUpdate[]=[];
+      const dependencies={
+        ...switcher(fake),
+        fetchCatalog:async(region:Region,destination?:string)=>{requested.push([region,destination]);return catalogFor(region);},
+        updateCartLines:async(id:string,updates:CartLineUpdate[])=>{written.push(...updates);return fake.updateCartLines(id,updates);},
+      };
+      const result=await handleCartCountry(switchRequest(country),ENV,dependencies);
+      const summary=(await result.json()) as {summary:{subtotal:{currencyCode:string}}};
+      assert.deepEqual(requested,[['NEAR',country]]);
+      assert.equal(summary.summary.subtotal.currencyCode,currency);
+      assert.equal(fake.state.country,country);
+      assert.ok(fake.state.lines.every(line=>line.shipRegion==='NEAR'));
+      // Batch 1 is EU only: NEAR takes the March batch with the international arrival date, like INT.
+      for (const line of fake.state.lines) {
+        assert.match(line.shipPromise??'',/31 March 2027/,String(line.sku));
+        assert.equal(line.deliveryBy,'30 April 2027',String(line.sku));
+      }
+      assert.ok(written.length>0);
+      for (const update of written) {
+        assert.equal(update.attributes?.find(a=>a.key==='Import VAT and duties')?.value,'Paid by you on delivery, unless collected at checkout',update.id);
+      }
+      written.length=0;
+      await handleCartCountry(switchRequest('BE'),ENV,dependencies);
+      assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
+      // Back in the EU the FC is batch 1 stock again: no delivery date (hotfix a9b758b).
+      assert.equal(fake.state.lines[0].deliveryBy,undefined);
+      assert.equal(fake.state.lines[1].shipPromise,null);
+      assert.ok(fake.state.lines.every(line=>line.shipRegion===undefined));
+      assert.ok(written.every(update=>!update.attributes?.some(a=>a.key==='Import VAT and duties')));
+    }
+  });
+
+  it('moves batch 1 FC stock to the March batch for an INT checkout and re-checks the cart once', async () => {
     const fake=shopify('BE',[euLine()]);
     const regions:Region[]=[];
     const first=await handleShopifyCartAction(checkoutRequest('CA'),ENV,actionDeps(fake,regions));
     assert.equal(first.headers.get('Location'),'/cart?check=market');
     assert.equal(fake.state.country,'CA');
     assert.equal(fake.state.lines[0].shipRegion,'INT');
-    assert.equal(fake.state.lines[0].shipPromise,EU_PROMISE);
+    assert.match(fake.state.lines[0].shipPromise??'',/31 March 2027/);
+    assert.equal(fake.state.lines[0].deliveryBy,'30 April 2027');
     const second=await handleShopifyCartAction(checkoutRequest('CA'),ENV,actionDeps(fake,regions));
     assert.equal(second.headers.get('Location'),CHECKOUT);
     assert.deepEqual(regions,['INT','INT']);
   });
+
+  it('moves batch 1 FC stock to the March batch for a NEAR checkout and re-checks the cart once', async () => {
+    const fake=shopify('BE',[euLine()]);
+    const regions:Region[]=[];
+    const first=await handleShopifyCartAction(checkoutRequest('GB'),ENV,actionDeps(fake,regions));
+    assert.equal(first.headers.get('Location'),'/cart?check=market');
+    assert.equal(fake.state.country,'GB');
+    assert.equal(fake.state.lines[0].shipRegion,'NEAR');
+    assert.match(fake.state.lines[0].shipPromise??'',/31 March 2027/);
+    assert.equal(fake.state.lines[0].deliveryBy,'30 April 2027');
+    const second=await handleShopifyCartAction(checkoutRequest('GB'),ENV,actionDeps(fake,regions));
+    assert.equal(second.headers.get('Location'),CHECKOUT);
+    assert.deepEqual(regions,['NEAR','NEAR']);
+  });
 });
 
 
-it('an international product add reprices the existing EU cart and refreshes its paid-stock promise', async () => {
+it('an INT product add reprices the existing EU cart and moves its paid-stock line to the March batch', async () => {
   const fake=shopify('BE',[euLine()]);
   const req=new Request('https://opendrone.be/api/shopify/cart',{
     method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Origin:'https://opendrone.be','CF-IPCountry':'BE'},
@@ -438,7 +497,147 @@ it('an international product add reprices the existing EU cart and refreshes its
   assert.equal(summary.subtotal.currencyCode,'CAD');
   assert.equal(fake.state.country,'CA');
   assert.equal(summary.lines.length,2);
-  assert.equal(summary.lines[0].shipPromise,EU_PROMISE);
+  // INT takes the March batch only: the batch 1 FC line is refreshed to the March promise.
+  assert.match(summary.lines[0].shipPromise,/31 March 2027/);
   assert.match(summary.lines[1].shipPromise,/31 March 2027/);
   assert.ok(fake.state.lines.every(line=>line.shipRegion==='INT'));
+});
+
+it('a NEAR product add reprices the existing EU cart and moves its paid-stock line to the March batch', async () => {
+  const fake=shopify('BE',[euLine()]);
+  const req=new Request('https://opendrone.be/api/shopify/cart',{
+    method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Origin:'https://opendrone.be','CF-IPCountry':'BE'},
+    body:new URLSearchParams({sku:'OPENRX-LITE',qty:'1',country:'GB',response:'summary'}),
+  });
+  const result=await handleShopifyCartAction(req,ENV,{
+    ...actionDeps(fake),
+    addCartLines:async(_id,lines)=>{
+      for(const line of lines) fake.state.lines.push(cartLine('added',line.merchandiseId,'OPENRX-LITE',line.attributes??[]));
+      return fake.getCart();
+    },
+  });
+  const summary=(await result.json()) as {subtotal:{currencyCode:string};lines:Array<{shipPromise:string}>};
+  assert.equal(summary.subtotal.currencyCode,'GBP');
+  assert.equal(fake.state.country,'GB');
+  assert.equal(summary.lines.length,2);
+  assert.match(summary.lines[0].shipPromise,/31 March 2027/);
+  assert.match(summary.lines[1].shipPromise,/31 March 2027/);
+  assert.ok(fake.state.lines.every(line=>line.shipRegion==='NEAR'));
+});
+
+describe('the cart loader right after a Ship to switch (cart-replan.ts)', () => {
+  const setCookies = (res: Response) => (res.headers.getSetCookie?.() ?? [res.headers.get('Set-Cookie') ?? '']).join('\n');
+  it('the switch leaves the marker for the country it re-planned the cart for', async () => {
+    const res = await handleCartCountry(switchRequest('BE'), ENV, switcher(shopify('US', [euLine()])));
+    const cookies = setCookies(res);
+    assert.match(cookies, /od_ship_country=BE;/);
+    // Bound to the cart it re-planned: country + a tag of the cart id.
+    assert.ok(cookies.includes(`od_cart_replanned=BE.${cartTag('gid://shopify/Cart/a')}; Path=/; Max-Age=15; HttpOnly; SameSite=Lax; Secure`), cookies);
+  });
+  it('drops Secure on http', async () => {
+    const req = new Request('http://localhost:8799/api/shopify/cart-country', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded', Origin: 'http://localhost:8799'},
+      body: new URLSearchParams({country: 'BE'}),
+    });
+    const cookies = setCookies(await handleCartCountry(req, ENV, switcher(shopify('US', [euLine()]))));
+    assert.match(cookies, /od_cart_replanned=BE\.[0-9a-f]{8}; Path=\/; Max-Age=15; HttpOnly; SameSite=Lax(?!; Secure)/);
+  });
+  it('no marker when the cart is gone after the switch (summary null)', async () => {
+    const fake = shopify('US', [euLine()]);
+    let reads = 0;
+    // The first read (the previous country) finds the cart; the re-price read finds none.
+    const res = await handleCartCountry(switchRequest('BE'), ENV, {...switcher(fake), getCart: async () => (reads++ === 0 ? fake.getCart() : null)});
+    assert.equal(res.status, 200);
+    assert.doesNotMatch(setCookies(res), /od_cart_replanned/);
+  });
+  it('no marker for a country not sold direct, or without a cart', async () => {
+    const shops = await handleCartCountry(switchRequest('FR'), ENV, switcher(shopify('BE', [euLine()])));
+    assert.doesNotMatch(setCookies(shops), /od_cart_replanned/);
+    const empty = await handleCartCountry(switchRequest('BE'), ENV, {...switcher(shopify('US', [euLine()])), getCartId: () => undefined});
+    assert.doesNotMatch(setCookies(empty), /od_cart_replanned/);
+  });
+  it('re-plans on the switch catalog, never reading Shopify again, with the same result as a fresh read', async () => {
+    const fake = shopify('US', [euLine()]);
+    const res = await handleCartCountry(switchRequest('BE'), ENV, switcher(fake));
+    const marker = cartReplannedFor(setCookies(res).split('\n').find((c) => c.startsWith('od_cart_replanned'))!.split(';')[0]);
+    assert.deepEqual(marker, {country: 'BE', cart: cartTag('gid://shopify/Cart/a')});
+    const cart = (await fake.getCart())!;
+    let freshReads = 0;
+    let recentReads = 0;
+    const deps = {
+      fresh: async (region: Region) => { freshReads += 1; return catalogFor(region); },
+      recent: async (region: Region) => { recentReads += 1; return catalogFor(region); },
+      setCountry: fake.setCountry, getCart: fake.getCart, updateCartLines: fake.updateCartLines,
+      fetchPaymentMethods: async () => ['visa'],
+    };
+    const quote = shippingQuote('BE', REGISTRATIONS, 12);
+    const reused = await planCartPage(cart, quote, ENV, marker, deps);
+    assert.equal(reused.reused, true);
+    assert.equal(freshReads, 0);
+    assert.equal(recentReads, 1);
+    const fresh = await planCartPage(cart, quote, ENV, null, deps);
+    assert.equal(fresh.reused, false);
+    assert.equal(freshReads, 1);
+    // Same lines, same promises, no change to report, nothing written.
+    assert.deepEqual(reused.cart, fresh.cart);
+    assert.equal(reused.change, fresh.change);
+    assert.deepEqual(reused.payments, ['visa']);
+  });
+  it('still rewrites a stale promise on the reused catalog (replanCart is unchanged)', async () => {
+    // The cart says BE but a line still carries the US promise: the re-plan writes it back.
+    const fake = shopify('US', [euLine()]);
+    await handleCartCountry(switchRequest('US'), ENV, switcher(fake));
+    fake.state.country = 'BE';
+    const cart = (await fake.getCart())!;
+    const plan = await planCartPage(cart, shippingQuote('BE', REGISTRATIONS, 12), ENV, {country: 'BE', cart: cartTag(cart.id)}, {
+      fresh: async () => { throw new Error('no fresh read expected'); },
+      recent: async (region: Region) => catalogFor(region),
+      setCountry: fake.setCountry, getCart: fake.getCart, updateCartLines: fake.updateCartLines,
+      fetchPaymentMethods: async () => [],
+    });
+    assert.equal(plan.reused, true);
+    assert.equal(plan.cart.lines[0].shipPromise, EU_PROMISE);
+    assert.equal(fake.state.lines[0].shipRegion, undefined);
+  });
+});
+
+describe('switch marker binding (cart-replan.ts reuseSwitchCatalog)', () => {
+  const plan = async (cart: ShopifyCart, destination: string, marker: {country: string; cart: string} | null) => {
+    let fresh = 0;
+    let recent = 0;
+    const out = await planCartPage(cart, shippingQuote(destination, REGISTRATIONS, 12), ENV, marker, {
+      fresh: async (region: Region) => { fresh += 1; return catalogFor(region); },
+      recent: async (region: Region) => { recent += 1; return catalogFor(region); },
+      fetchPaymentMethods: async () => [],
+    });
+    return {fresh, recent, reused: out.reused};
+  };
+  it('marker A, cart B, page destination C: fresh', async () => {
+    const cart = (await shopify('DE', [euLine()]).getCart())!;
+    assert.deepEqual(await plan(cart, 'BE', {country: 'US', cart: cartTag(cart.id)}), {fresh: 1, recent: 0, reused: false});
+  });
+  it('a marker for another cart id: fresh', async () => {
+    const cart = (await shopify('BE', [euLine()]).getCart())!;
+    assert.deepEqual(await plan(cart, 'BE', {country: 'BE', cart: cartTag('gid://shopify/Cart/other')}), {fresh: 1, recent: 0, reused: false});
+    assert.deepEqual(await plan(cart, 'BE', {country: 'BE', cart: cartTag(cart.id)}), {fresh: 0, recent: 1, reused: true});
+  });
+  it('A -> B -> A within 15 s: each loader reuses only for the switch that set its marker', async () => {
+    const fake = shopify('BE', [euLine()]);
+    const marker = async (country: string) => {
+      const res = await handleCartCountry(switchRequest(country), ENV, switcher(fake));
+      const all = (res.headers.getSetCookie?.() ?? [res.headers.get('Set-Cookie') ?? '']).join('; ');
+      return cartReplannedFor(all.split('; ').find((c) => c.startsWith('od_cart_replanned=')) ?? null);
+    };
+    const toUs = await marker('US');
+    assert.equal(toUs?.country, 'US');
+    assert.equal((await plan((await fake.getCart())!, 'US', toUs)).reused, true);
+    const toBe = await marker('BE');
+    assert.equal(toBe?.country, 'BE');
+    // The newer marker is BE: a loader still planning US (a late request) reads fresh.
+    assert.equal((await plan((await fake.getCart())!, 'US', toBe)).reused, false);
+    assert.equal((await plan((await fake.getCart())!, 'BE', toBe)).reused, true);
+    // The stale US marker no longer matches the cart's country.
+    assert.equal((await plan((await fake.getCart())!, 'BE', toUs)).reused, false);
+  });
 });

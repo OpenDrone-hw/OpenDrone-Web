@@ -1,4 +1,4 @@
-import {Suspense, useState, type CSSProperties} from 'react';
+import {Suspense, useEffect, useState, type CSSProperties} from 'react';
 import {Await, Link} from 'react-router';
 import type {ProductCardFragment as CollectionItemFragment} from '~/lib/product-shapes';
 import {HeroWordmark} from '~/components/HeroWordmark';
@@ -12,9 +12,10 @@ import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {assetUrl} from '~/lib/asset-url';
 import {HeroBuildGuide} from '~/components/HeroBuildGuide';
+import {HeroBuildChoice} from '~/components/HeroBuildChoice';
 import {HeroStackOffer} from '~/components/HeroStackOffer';
 import type {HeroBuild} from '~/lib/hero-build';
-import {HERO_AIRFRAMES, DEFAULT_HERO_SIZE, airframeLabel} from '~/lib/hero-airframes';
+import {HERO_AIRFRAMES, DEFAULT_HERO_SIZE, airframeLabel, buildSizeFromSearch} from '~/lib/hero-airframes';
 import {CommunitySection} from '~/components/Discord';
 import type {DiscordCounts} from '~/lib/discord-community';
 
@@ -84,11 +85,18 @@ export function MobileHome({
   discord: Promise<DiscordCounts | null>;
 }) {
   const [buildSize, setBuildSize] = useState(DEFAULT_HERO_SIZE);
+  // "See the full 3-inch build" from a product page: open on that size.
+  useEffect(() => {
+    const asked = buildSizeFromSearch(window.location.search);
+    if (asked) setBuildSize(asked);
+  }, []);
   // Staggered CSS entrance (transform only, so the hero is visible before JS).
   const rise = (i: number) => ({style: {'--rise-i': i} as CSSProperties});
   const buildCard = (builds: HeroBuild[]) => {
     const build = builds.find((item) => item.size === buildSize);
-    return build ? (
+    return build?.choice ? (
+      <HeroBuildChoice key={build.id} build={build} />
+    ) : build ? (
       <>
         <HeroStackOffer key={`${build.id}-stack`} build={build} show={stackOffer} />
         <HeroBuildGuide key={build.id} build={build} />
@@ -170,6 +178,7 @@ export function MobileHome({
           </Link>
         </div>
       </section>
+
 
       <section
         className="home-mobile-build"
@@ -261,7 +270,7 @@ export function MobileHome({
         className="home-mobile-browse"
       >
         <Txt id="home.m_browse" />
-        <svg
+        <svg aria-hidden="true" focusable="false"
           width="16"
           height="16"
           viewBox="0 0 24 24"

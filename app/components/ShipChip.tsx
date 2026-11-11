@@ -1,4 +1,18 @@
+import {useRouteLoaderData} from 'react-router';
 import {copyText} from '~/lib/copy';
+import {
+  GEO_BAR_SHORT,
+  batchOnePromises,
+  geoDeliveryLines,
+  geoDutiesNote,
+  geoInStock,
+  geoPreorderLine,
+  geoAvailabilityRegion,
+  geoShipText,
+} from '~/lib/geo-availability';
+import {usePendingShipTo, withPendingShipTo} from '~/lib/pending-ship-to';
+import {shippingQuote} from '~/lib/shipping-rates';
+import type {RootLoader} from '~/root';
 import {shipMonth, shortShipPromise} from '~/lib/product-content';
 import {
   campaignDate,
@@ -7,27 +21,116 @@ import {
   parseCampaignConfig,
   promiseBatchMonth,
   shortCampaignDate,
+  stockPromise,
+  STOCK_SHORT,
   type CampaignState,
 } from '~/lib/preorder-campaign';
 import preorders from '../../content/preorders.json';
 
 const CAMPAIGN = parseCampaignConfig(preorders);
+const BATCH_ONE = batchOnePromises(preorders);
+
+/**
+ * The root loader's `geo` with an in-flight Ship to switch applied
+ * (lib/pending-ship-to.ts): every ship line, the bar and the cart follow the
+ * picked country at once instead of after the loaders return.
+ */
+export function useShipGeo() {
+  const root = useRouteLoaderData<RootLoader>('root');
+  // A blocked IP country stays there (cartQuoteCountry): no pending country is shown.
+  const ipBlocked = shippingQuote(root?.visitorCountry ?? null)?.kind === 'blocked';
+  const usOpen = root?.usShippingRate != null;
+  return withPendingShipTo(root?.geo, usePendingShipTo(), (country) => geoAvailabilityRegion(country, usOpen), ipBlocked);
+}
+
+/**
+ * The visitor's line in place of a batch 1 promise ("In stock in Belgium,
+ * ships in a few working days." in the EU, "Pre-order, ships March 2027." elsewhere),
+ * or null to show the promise itself: another batch, or no known country
+ * (app/lib/geo-availability.ts).
+ */
+export function useGeoShipText(promise: string | null | undefined): string | null {
+  const geo = useShipGeo();
+  return geo && promise && BATCH_ONE.has(promise) ? geoShipText(geo.region, geo.locale) : null;
+}
+
+/**
+ * {@link useGeoShipText} as a function of the promise, for a caller that
+ * picks the promise after its hooks ran: `geoLine(promise)`. With `short`,
+ * the bar's phone line ("In stock, ships in days"), for chips.
+ */
+export function useGeoShipLine(short = false): (promise: string | null | undefined) => string | null {
+  const geo = useShipGeo();
+  return (promise) => {
+    if (!geo || !promise || !BATCH_ONE.has(promise) || geo.region === 'fallback') return null;
+    return short ? GEO_BAR_SHORT[geo.locale][geo.region] : geoShipText(geo.region, geo.locale);
+  };
+}
+
+/**
+ * The duties note of the visitor's region ("Import VAT and duties are paid by
+ * you on delivery." for UK, CH, NO), or null. Same source as the bar.
+ */
+export function useGeoDutiesNote(): string | null {
+  const geo = useShipGeo();
+  return geo ? geoDutiesNote(geo.region, geo.locale) : null;
+}
+
+/**
+ * True when the visitor's next unit of this SKU is batch 1 stock and their
+ * region reads it as in stock (the EU line): the buy button says "Add to
+ * cart", not "Pre-order", and the pre-order terms link drops. Same source as
+ * the bar and `useGeoShipText` (root loader `geo`), so the SSR and the
+ * hydrated page agree.
+ */
+export function useGeoInStock(
+  campaign: Pick<CampaignState, 'paidStock' | 'shipPromise'> | null | undefined,
+  promise?: string | null,
+): boolean {
+  const geo = useShipGeo();
+  // A variant without campaign state (a catalog that applies no campaign)
+  // that carries the batch 1 promise is batch 1 stock: the same promise the
+  // ship line reads as "In stock in Belgium", so the button agrees with it.
+  return geoInStock(geo?.region, campaign ?? (promise ? {paidStock: true, shipPromise: promise} : null), BATCH_ONE);
+}
+
+/**
+ * The parcel of a cart, read for the visitor's region (root loader `geo`):
+ * - `deliveryLines(lines)`: the lines whose "Delivery by" date counts
+ *   (`latestDeliveryBy`): not batch 1 stock in a stock region (it ships in a
+ *   few days), none for the US (on hold); other lines keep their own date;
+ * - `preorderSkus(lines)`: the SKUs of the lines that are pre-orders for this
+ *   visitor, for "Early bird preorder prices." (not batch 1 stock read as stock).
+ */
+export function useGeoParcel(): {
+  deliveryLines: <T extends {shipPromise?: string | null}>(lines: readonly T[]) => T[];
+  preorderSkus: (lines: ReadonlyArray<{shipPromise?: string | null; sku?: string | null}>) => Array<string | null | undefined>;
+} {
+  const region = useShipGeo()?.region ?? null;
+  return {
+    deliveryLines: (lines) => geoDeliveryLines(lines, region, BATCH_ONE),
+    preorderSkus: (lines) => lines.filter((l) => geoPreorderLine(l.shipPromise, region, BATCH_ONE)).map((l) => l.sku),
+  };
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * A dated promise as the one short line every surface shows: "Ships early Nov
- * 2026" for "ships early November 2026" (PDP, /products, cart, dialog). It
+ * A dated promise as the one short line every surface shows: "Ships late Nov
+ * 2026" for "ships late November 2026" (PDP, /products, cart, dialog). It
  * drops words of the checkout line text, never the month or its qualifier.
  * Null when the promise names no month and year.
  */
 export function datedShipText(promise: string | null | undefined): string | null {
+  // Stock on hand names no month: its short line.
+  if (stockPromise(promise)) return copyText('preorder.ship_stock') ?? STOCK_SHORT;
   const parts = datedShipParts(promise);
   if (!parts) return null;
   return shipWord('ships', parts.when);
 }
 
 /**
- * The ship chip text for a line: "Ships early Nov 2026" for a dated batch,
+ * The ship chip text for a line: "Ships late Nov 2026" for a dated batch,
  * "Ships by 31 Mar 2027" for a funding target, "Ships by 31 Mar 2027 if the target is reached" with
  * `ifFunded` while the target is not met.
  */
@@ -43,7 +146,8 @@ export function shipChipText(
   } else {
     const eta = shortCampaignDate(latestShipDate(CAMPAIGN));
     if (eta) {
-      text = ifFunded
+      // A confirmed batch has no condition, whatever the caller knows of its count.
+      text = ifFunded && !CAMPAIGN.confirmed
         ? (copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if the target is reached').replace('{date}', eta)
         : shipWord('eta', eta);
     }
@@ -100,17 +204,18 @@ export function ShipChip({
   ifFunded?: boolean;
 }) {
   const chip = shipChipText(promise, ifFunded);
+  const geoText = useGeoShipText(promise);
   if (!chip) return null;
   return (
     <small className={`ship-chip ${className}`} data-kind={chip.kind}>
-      {chip.text}
+      {(chip.kind === 'date' && geoText) || chip.text}
     </small>
   );
 }
 
 /**
  * The ship words every surface uses, from `content/copy/preorder.json`:
- * `Ships early Nov 2026` for a dated batch, `Ships by 31 Mar 2027` for a funding
+ * `Ships late Nov 2026` for a dated batch, `Ships by 31 Mar 2027` for a funding
  * target, `Deadline 15 Dec 2026` for its deadline. Dates come in short.
  */
 export function shipWord(kind: 'ships' | 'eta' | 'deadline', date: string): string {
@@ -123,7 +228,7 @@ export function shipWord(kind: 'ships' | 'eta' | 'deadline', date: string): stri
 }
 
 /**
- * The ship line under a Pre-order button. A dated batch reads "Ships early
+ * The ship line under a Pre-order button. A dated batch reads "Ships late
  * Nov 2026"; a funding target "Deadline 15 Dec 2026. Ships by 31 Mar 2027 if
  * funded", and "Ships by 31 Mar 2027" once it is funded.
  */
@@ -147,7 +252,7 @@ export function shipLine(
       : (copyText('preorder.ships_with') ?? 'Ships with the {lead} batch');
     return `${head.replace('{lead}', lead)}. ${text}`;
   };
-  if (campaign?.targetReached) return {kind: 'target', text: withLead(shipWord('eta', eta))};
+  if (campaign?.targetReached || CAMPAIGN.confirmed) return {kind: 'target', text: withLead(shipWord('eta', eta))};
   const deadline =
     shortCampaignDate(campaign?.deadline ?? campaignDate(CAMPAIGN.endsOn)) ?? CAMPAIGN.endsOn;
   const ifFunded = (
@@ -178,13 +283,14 @@ export function ShipLine({
   className?: string;
 }) {
   const line = shipLine(campaign, promise);
+  const geoText = useGeoShipText(campaign?.shipPromise ?? promise);
   if (!line) return null;
   // An accessory whose date is another product's funding target says so, so a
   // buyer of props does not wonder why a flight controller sets the date.
-  const lead = line.kind === 'target' && !campaign?.targetReached ? leadProduct(campaign?.shipsWith) : null;
+  const lead = line.kind === 'target' && !campaign?.targetReached && !CAMPAIGN.confirmed ? leadProduct(campaign?.shipsWith) : null;
   const shipLineEl = (
     <p className={`ship-line ${className}`.trim()} data-kind={line.kind}>
-      {line.text}
+      {(line.kind === 'date' && geoText) || line.text}
     </p>
   );
   if (!lead) return shipLineEl;

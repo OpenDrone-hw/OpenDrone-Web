@@ -34,7 +34,7 @@ For deliveries to the United States, Incutec BV sells directly to consumers for 
 - **Sales tax:** Collected where required by law and disclosed before payment
 - **Shipping:** Flat USD 9.95 per order
 - **Ships from:** Incutec or its fulfilment partner
-- **Ship date:** By 31 March 2027, if the funding target is reached by 15 December 2026
+- **Ship date:** By 31 March 2027 (the March 2027 batch is confirmed)
 
 The ship date stated on the product page and in your order confirmation is the one that applies to your order. Refunds, shipping delays and the right to cancel for US deliveries follow [Article 7ter of the terms](/en/algemene-voorwaarden#art-7ter).
 
@@ -44,15 +44,15 @@ Consumer preorder checkout is available for the destinations offered at checkout
 
 Unless expressly collected before payment, the recipient pays import duties, import VAT or GST, customs-clearance charges and carrier administration fees. These charges are additional to the product price and shipping charge and depend on the destination, consignment and carrier. The same tax liability must not be paid twice; contact Incutec BV with any duplicate assessment for correction or refund.
 
-For the funded March 2027 batch, goods ship by 31 March 2027 and are delivered by 30 April 2027 if the funding target is reached by its deadline. The offer before payment and your order confirmation record the batch and the deadlines for your order. Delivery requires compliance with applicable product and import rules. If Incutec BV cannot lawfully deliver an item, it refunds all amounts paid for it; if the whole order is cancelled, the shipping charge is refunded too. Mandatory local consumer protections remain applicable. See [Article 7quater of the terms](/en/algemene-voorwaarden#art-7quater).
+The March 2027 batch is confirmed: goods ship by 31 March 2027 and are delivered by 30 April 2027. The offer before payment and your order confirmation record the batch and the deadlines for your order. Delivery requires compliance with applicable product and import rules. If Incutec BV cannot lawfully deliver an item, it refunds all amounts paid for it; if the whole order is cancelled, the shipping charge is refunded too. Mandatory local consumer protections remain applicable. See [Article 7quater of the terms](/en/algemene-voorwaarden#art-7quater).
 
 Retailers can [request a bulk quote](/wholesale). No overseas retailer availability is promised.
 
 ### Pre-orders
 
-Preorders are paid in full. The product offer and order confirmation identify the batch, the funding conditions and the ship-by date. The campaign dates are shown on [/preorder](/preorder). Dispatch is not delivery: delivery means receipt of the goods by you. Paid Batch 1 orders are delivered in the EU by 30 November 2026. If the funding target for the March 2027 batch is reached by its deadline, that batch is delivered by 15 April 2027 in the EU and by 30 April 2027 in the United States and other destinations outside the EU. The delivery deadline stated before payment and in your order confirmation applies to your order (Article 7bis.2 of the terms).
+Preorders are paid in full. The product offer and order confirmation identify the batch and the ship-by date. The batch dates are shown on [/preorder](/preorder). Dispatch is not delivery: delivery means receipt of the goods by you. Batch 1 stock is held in Belgium and is dispatched to EU addresses within a few working days of the order; an order for which a delivery date of 30 November 2026 was stated before payment keeps that date. The March 2027 batch is confirmed and does not depend on a funding target: it ships by 31 March 2027 and is delivered by 15 April 2027 in the EU and by 30 April 2027 in the United States and other destinations outside the EU. The delivery deadline stated before payment and in your order confirmation applies to your order (Article 7bis.2 of the terms).
 
-Cancellation, missed targets, changes to ship dates, refunds and mixed-batch orders follow [Article 7bis of the terms](/en/algemene-voorwaarden#art-7bis). You may withdraw before delivery and retain the statutory withdrawal rights after receipt. Use the [online withdrawal form](/en/herroepingsrecht#withdraw). For deliveries to the United States, Article 7ter applies in addition. For other destinations outside the EU, Article 7quater applies in addition.
+Cancellation, changes to ship dates, refunds and mixed-batch orders follow [Article 7bis of the terms](/en/algemene-voorwaarden#art-7bis). You may withdraw before delivery and retain the statutory withdrawal rights after receipt. Use the [online withdrawal form](/en/herroepingsrecht#withdraw). For deliveries to the United States, Article 7ter applies in addition. For other destinations outside the EU, Article 7quater applies in addition.
 
 ### Delivery time for items in stock
 

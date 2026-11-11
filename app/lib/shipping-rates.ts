@@ -8,6 +8,7 @@
 
 import {EU_COUNTRY_CODES} from './eu-countries.ts';
 import {REGISTRATIONS, euSaleOpen, type RegistrationsFile} from './registrations.ts';
+import {COUNTRY_NAMES_EN} from './country-names.ts';
 
 /** Countries Incutec does not ship to. */
 export const BLOCKED_COUNTRIES: ReadonlySet<string> = new Set(['RU', 'BY', 'IR', 'KP', 'SY', 'CU']);
@@ -67,7 +68,7 @@ export function shippingQuote(
   const code = isoCode(country);
   if (!code) return null;
   if (BLOCKED_COUNTRIES.has(code)) return {country: code, kind: 'blocked'};
-  if (UNINHABITED_TERRITORIES.has(code)) return {country: code, kind: 'shops'};
+  if (UNINHABITED_TERRITORIES.has(code) || NO_SHOPIFY_ROUTE.has(code)) return {country: code, kind: 'shops'};
   const zone = SHIPPING_ZONES.find((z) => z.countries.includes(code));
   if (!zone) {
     if (code === 'US' && usRate != null) {
@@ -137,11 +138,25 @@ export const UNINHABITED_TERRITORIES: ReadonlySet<string> = new Set([
   'AQ', 'BV', 'HM', 'GS', 'TF', 'UM', 'IO',
 ]);
 
+/**
+ * Destinations Shopify cannot sell to: in no Shopify market and no shipping
+ * zone (Admin API, markets and the General delivery profile, read
+ * 2026-11-11). A checkout to them dead-ends at the address step, so the site
+ * treats them as not shipped to yet ("Not shipping to <country> yet" and the
+ * launch-news signup) and the picker leaves them out. Re-check with
+ * `npm run check:reach`; when Shopify adds a market or zone for one, remove
+ * it here in the same PR.
+ */
+export const NO_SHOPIFY_ROUTE: ReadonlySet<string> = new Set([
+  'AS', 'AX', 'BQ', 'CC', 'CX', 'EH', 'FM', 'GU', 'IM', 'IQ', 'MF', 'MH', 'MP', 'NF', 'PM', 'PN', 'PR', 'PS',
+  'PW', 'SJ', 'TJ', 'TK', 'VI', 'WF', 'ZW',
+]);
+
 /** Every country the destination picker lists: supported destinations minus
- *  `BLOCKED_COUNTRIES` and `UNINHABITED_TERRITORIES`. Checkout availability
+ *  `BLOCKED_COUNTRIES`, `UNINHABITED_TERRITORIES` and `NO_SHOPIFY_ROUTE`. Checkout availability
  *  is decided separately by `shippingQuote`. */
 export const SHIP_COUNTRY_CODES: readonly string[] = DESTINATION_COUNTRIES.filter(
-  (code) => !BLOCKED_COUNTRIES.has(code) && !UNINHABITED_TERRITORIES.has(code),
+  (code) => !BLOCKED_COUNTRIES.has(code) && !UNINHABITED_TERRITORIES.has(code) && !NO_SHOPIFY_ROUTE.has(code),
 );
 
 /** The destinations most orders go to, listed first in the picker, in
@@ -156,8 +171,11 @@ const optionsByLocale = new Map<string, Array<{code: string; name: string}>>();
 export function shipCountryOptions(locale = 'en'): Array<{code: string; name: string}> {
   let options = optionsByLocale.get(locale);
   if (!options) {
+    // A plain comparison on accent-stripped names, not localeCompare: the
+    // order must be the same in the Worker and in the browser (hydration).
+    const key = (name: string) => name.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
     options = SHIP_COUNTRY_CODES.map((code) => ({code, name: countryName(code, locale)})).sort((a, b) =>
-      a.name.localeCompare(b.name, locale),
+      key(a.name) < key(b.name) ? -1 : key(a.name) > key(b.name) ? 1 : 0,
     );
     optionsByLocale.set(locale, options);
   }
@@ -189,8 +207,13 @@ export function shipCountryPicker(
   };
 }
 
-/** The English country name for a code, falling back to the code. */
+/**
+ * The English country name for a code, falling back to the code. English
+ * names come from a fixed table (COUNTRY_NAMES_EN), never from Intl at render:
+ * the Worker's and the browser's ICU disagree on some names (React #418).
+ */
 export function countryName(code: string, locale = 'en'): string {
+  if (locale === 'en' && Object.hasOwn(COUNTRY_NAMES_EN, code)) return COUNTRY_NAMES_EN[code];
   try {
     return new Intl.DisplayNames([locale], {type: 'region'}).of(code) ?? code;
   } catch {
@@ -278,42 +301,95 @@ export function destinationForRequest(request: Request, forwarded: string | null
   return blockedIpCountry(request) ?? forwarded ?? shipCountryForRequest(request);
 }
 
+/** Where the resolved country came from, in precedence order. */
+export type CountrySource = 'blocked-ip' | 'link' | 'choice' | 'geo' | 'default';
+
 /**
- * The destination the shop quotes by default for this request, in order:
- * a `?country=XX` query (to check a page as seen from another country), the
- * buyer's own pick in the `od_ship_country` cookie, Cloudflare's
- * `CF-IPCountry`, then the region in `Accept-Language`. Null when none of
- * them names a country. A blocked or shops-only country from the IP or the
- * browser is returned as is, so the page can say so.
+ * The one precedence every surface reads (`app/lib/region.ts` builds the
+ * typed region on top of it):
+ *
+ * 1. `blocked-ip`: a visitor whose IP is in `BLOCKED_COUNTRIES` stays there;
+ *    no cookie or link moves them to a country sold direct.
+ * 2. `link`: a `?country=XX` query. On a page load the Worker turns it into
+ *    the choice cookie and redirects to the URL without it
+ *    (`countryLinkRedirect`), so it never outlives the landing and can never
+ *    override a later pick in the header (the cause of the "cannot choose
+ *    US / USD" fault: the query outranked the cookie on every revalidation).
+ * 3. `choice`: the buyer's pick in the `od_ship_country` cookie (header
+ *    switch, cart Ship to).
+ * 4. `geo`: Cloudflare's `CF-IPCountry`.
+ * 5. `default`: null. The browser language is never read: it says nothing
+ *    about where a parcel goes, and reading it made prices and the ship line
+ *    disagree for a visitor with no known IP country.
  */
-export function shipCountryForRequest(request: Request): string | null {
-  // A visitor whose IP is in a blocked country stays there: no cookie or
-  // `?country` moves them to a country sold direct.
+export function resolveCountry(request: Request): {country: string | null; source: CountrySource} {
   const blocked = blockedIpCountry(request);
-  if (blocked) return blocked;
-  const override = isoCode(new URL(request.url).searchParams.get('country'));
-  if (override) return override;
+  if (blocked) return {country: blocked, source: 'blocked-ip'};
+  const link = isoCode(new URL(request.url).searchParams.get('country'));
+  if (link) return {country: link, source: 'link'};
   const picked = shipCountryFromCookie(request.headers.get('Cookie'));
-  if (picked) return picked;
+  if (picked) return {country: picked, source: 'choice'};
   const ip = isoCode(request.headers.get('CF-IPCountry'));
-  if (ip) return ip;
-  return countryFromAcceptLanguage(request.headers.get('Accept-Language'));
+  if (ip) return {country: ip, source: 'geo'};
+  return {country: null, source: 'default'};
 }
+
+/** The destination the shop quotes for this request (`resolveCountry`). */
+export function shipCountryForRequest(request: Request): string | null {
+  return resolveCountry(request).country;
+}
+
+/** True for a React Router data request (`/path.data`), a revalidation. */
+function isDataRequest(url: URL): boolean {
+  return url.pathname.endsWith('.data');
+}
+
+/** Paths whose `country` query is a form field, not a region link. */
+const COUNTRY_FIELD_PATH = /^\/(api|shop|account)(\/|$)/;
 
 /**
  * The cookie an explicit `?country=XX` link sets, so the choice survives the
- * next page the way the region switch does: a visitor who lands via
- * `?country=US` browses, adds and checks out in the United States, not in
- * their IP country. Null without the parameter, for a code the picker does
- * not list, for a blocked IP country (no link moves it), and when the cookie
- * already holds that country.
+ * next page the way the region switch does. Null without the parameter, for
+ * a code the picker does not list, for a blocked IP country (no link moves
+ * it), when the cookie already holds that country, and for a data request:
+ * a revalidation of a page that still carries the link must never write the
+ * cookie back over a pick made since.
  */
 export function queryCountryCookie(request: Request): string | null {
   if (blockedIpCountry(request)) return null;
   const url = new URL(request.url);
+  if (isDataRequest(url) || COUNTRY_FIELD_PATH.test(url.pathname)) return null;
   const code = isoCode(url.searchParams.get('country'));
   if (!code || shipCountryFromCookie(request.headers.get('Cookie')) === code) return null;
   return shipCountryCookie(code, url.protocol === 'https:');
+}
+
+/**
+ * A page load with `?country=XX` (GET, not a data request, not a form
+ * route): a 302 to the same URL without the parameter that stores the
+ * choice in the cookie. The link then acts once, as a choice, and the URL
+ * the visitor keeps, shares or has indexed is region-free. Null when there
+ * is nothing to redirect.
+ */
+export function countryLinkRedirect(request: Request): Response | null {
+  if (request.method !== 'GET') return null;
+  const url = new URL(request.url);
+  if (!url.searchParams.has('country') || isDataRequest(url) || COUNTRY_FIELD_PATH.test(url.pathname)) return null;
+  if (/\.[a-z0-9]+$/i.test(url.pathname)) return null;
+  const cookie = queryCountryCookie(request);
+  url.searchParams.delete('country');
+  const headers = new Headers({Location: url.pathname + url.search + url.hash, 'Cache-Control': 'no-store'});
+  if (cookie) headers.append('Set-Cookie', cookie);
+  return new Response(null, {status: 302, headers});
+}
+
+/**
+ * The country the batch 1 ship line follows (app/lib/geo-availability.ts):
+ * the same `resolveCountry` answer as prices and the cart, so the ship line
+ * and the price can never describe two different countries.
+ */
+export function geoCountryForRequest(request: Request): string | null {
+  return resolveCountry(request).country;
 }
 
 /**

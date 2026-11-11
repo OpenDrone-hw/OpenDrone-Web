@@ -9,6 +9,8 @@
 
 import {
   datedShipParts,
+  fundingPromise,
+  stockPromise,
   promiseBatchMonth,
   shortCampaignDate,
   type CampaignState,
@@ -40,6 +42,9 @@ export type TargetDates = {deadline: string; eta: string};
 function scopeOf(regions: Batch['regions'], words: Words): string {
   if (regions.length === 1 && regions[0] === 'EU') return words('scope_eu', 'EU only');
   if (regions.length === 1 && regions[0] === 'US') return words('scope_us', 'US only');
+  if (regions.includes('EU') && regions.includes('NEAR') && !regions.includes('INT') && !regions.includes('US')) {
+    return words('scope_eu_near', 'EU, UK, Switzerland and Norway');
+  }
   if (regions.includes('INT') && !regions.includes('US')) return words('scope_eu_international', 'EU and international, not the US');
   if (regions.includes('INT')) return words('scope_international', 'International preorders');
   return words('scope_both', 'EU and US');
@@ -108,13 +113,16 @@ export function batchText(
 }
 
 function detailOf(b: Batch, dates: TargetDates, reached: boolean, words: Words, lead: string | null): string {
-  const waits = /\bif the target is reached\b/.test(b.shipPromise);
-  if (!waits) {
+  const funding = fundingPromise(b.shipPromise);
+  if (!funding) {
+    // Stock on hand names no month: one short line, the scope says where.
+    if (stockPromise(b.shipPromise)) return words('ship_stock', 'In stock, ships in a few working days');
     const parts = datedShipParts(b.shipPromise);
     return parts ? words('ship_ships', 'Ships {date}', {date: parts.when}) : b.shipPromise;
   }
   const eta = words('ship_eta', 'Ships by {date}', {date: dates.eta});
-  if (reached) return eta;
+  // A confirmed batch (its promise names no target) or a reached target: the date alone.
+  if (reached || !funding.conditional) return eta;
   return `${words('ship_deadline', 'Deadline {date}', {date: dates.deadline})}. ${
     lead
       ? words('ship_eta_if_lead_funded', 'Ships by {date} if that target is reached', {date: dates.eta})
@@ -136,8 +144,8 @@ export function availabilityRows(
   const rows = campaign.batches.map((b) => {
     let note: string | null = null;
     if (b.status === 'other_region') {
-      note = region === 'INT'
-        ? words('not_in_international', 'EU stock only')
+      note = region === 'INT' || region === 'NEAR'
+        ? words('not_in_international', 'Not available in your country')
         : words('not_in_region', 'Not available in the {region}', {region: region === 'US' ? 'US' : 'EU'});
     } else if (b.status === 'sold_out') {
       note = words('batch_sold_out', 'Sold out');

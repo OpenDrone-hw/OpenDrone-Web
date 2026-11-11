@@ -1,10 +1,12 @@
 import type {Route} from './+types/[sitemap.xml]';
 import {archivePosts} from '~/lib/posts';
+import {guidePaths} from '~/lib/guides';
 
 /**
  * One sitemap for the whole site: the static routes plus a
  * `/products/<handle>` line per catalog product and a `/newsletter/<handle>`
- * line per published newsletter post.
+ * line per published newsletter post, plus the /guides index and every
+ * firmware guide page from `app/lib/guides.ts`.
  *
  * It used to be a Hydrogen sitemap index over Shopify-hosted resources
  * with paginated child sitemaps. The site is a few dozen URLs, and a
@@ -30,6 +32,7 @@ const STATIC_PATHS = [
   '/firmware-partners',
   '/newsletter',
   '/wholesale',
+  '/markets',
 ];
 
 const LEGAL_SLUGS = [
@@ -63,6 +66,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
     ...STATIC_PATHS,
     ...productPaths,
     ...postPaths,
+    ...guidePaths(),
     ...LOCALES.flatMap((l) => LEGAL_SLUGS.map((s) => `/${l}/${s}`)),
   ];
 

@@ -1,6 +1,8 @@
 import {useLocation, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useState} from 'react';
 import {AddToCartButton} from './AddToCartButton';
+import {ExpressBuy} from './ExpressBuy';
+import {useGeoInStock} from './ShipChip';
 import {useComingSoon, useProductStatus} from '~/lib/coming-soon';
 import {copyFill, copyText} from '~/lib/copy';
 import {formatPrice} from '~/lib/catalog';
@@ -26,7 +28,21 @@ export function ProductForm({
   maxQuantityNote,
   onQuantityChange,
   showLineTotal = false,
+  express,
+  buyAside,
+  addUrl,
+  addLabel,
 }: {
+  /** The button's label with `addUrl` ("Pre-order the stack"). */
+  addLabel?: string;
+  /** Overrides the add link only (not a bundle): this part and the build
+   *  parts ticked beside it, in one add. */
+  addUrl?: string;
+  /** A small slot beside the buy button (the stack total). */
+  buyAside?: React.ReactNode;
+  /** The Buy now lane: the button goes straight to a checkout of these
+   *  in-stock lines (times the quantity) instead of adding to the cart. */
+  express?: {lines: ReadonlyArray<{sku: string; quantity: number}>; label: string} | null;
   productOptions: MappedProductOptions[];
   selectedVariant: ProductVariantFragment | null;
   /** Option names already handled elsewhere (e.g. the comparison ladder
@@ -80,10 +96,16 @@ export function ProductForm({
   // Pre-order products take the order now and ship later, so the CTA says
   // so; the bundle CTA is the caller's label and is unchanged.
   const productStatus = useProductStatus(selectedVariant?.product?.handle);
+  // Batch 1 stock reads as stock where the bar says "in stock" (the EU): the
+  // buyer adds it to the cart, they do not pre-order it.
+  const geoInStock = useGeoInStock(selectedVariant?.campaign, selectedVariant?.shipPromise);
+  // A board with the buy now or pre-order choice: the button names the choice.
   const ctaLabelAvailable =
-    productStatus === 'preorder'
-      ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
-      : (copyText('product-chrome.buy_cta_add') ?? 'Add to cart');
+    selectedVariant?.offer === 'buy_now' && selectedVariant.preorderOffer
+      ? (copyText('product-chrome.buy_cta_buy_now') ?? 'Buy now')
+      : selectedVariant?.offer === 'preorder' || (productStatus === 'preorder' && !geoInStock)
+        ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
+        : (copyText('product-chrome.buy_cta_add') ?? 'Add to cart');
   const ctaLabelSoldOut = copyText('product-chrome.buy_stock_out') ?? 'Sold out';
   const hidden = new Set(
     (hideOptionNames ?? []).map((n) => n.trim().toLowerCase()),
@@ -94,7 +116,7 @@ export function ProductForm({
   const qty = Math.max(1, Math.min(maxQuantity, Math.round(quantity ?? 1)));
   // The single-line hand-off carries `qty`; the bundle link keeps its own
   // per-line counts.
-  const href = buyUrl ?? withQuantity(selectedVariant?.cartAddUrl ?? '', qty);
+  const href = buyUrl ?? addUrl ?? withQuantity(selectedVariant?.cartAddUrl ?? '', qty);
   const disabled =
     soon ||
     !href ||
@@ -237,6 +259,11 @@ export function ProductForm({
           </button>
         </div>
       ) : null}
+      {express ? (
+        <ExpressBuy lines={express.lines} quantity={qty} product={selectedVariant?.product?.handle} disabled={disabled}>
+          {express.label}
+        </ExpressBuy>
+      ) : (
       <AddToCartButton
         href={href}
         disabled={disabled}
@@ -250,9 +277,11 @@ export function ProductForm({
         {isBundle
           ? (buyCtaLabel ?? copyText('product-chrome.buy_cta_add') ?? 'Add to cart')
           : selectedVariant?.availableForSale
-            ? (lineTotalLabel ?? ctaLabelAvailable)
+            ? (addLabel ?? lineTotalLabel ?? ctaLabelAvailable)
             : ctaLabelSoldOut}
       </AddToCartButton>
+      )}
+      {buyAside}
       {onQuantityChange && !isBundle && maxQuantityNote && qty >= maxQuantity ? (
         <p className="product-qty-note" role="status">
           {maxQuantityNote}

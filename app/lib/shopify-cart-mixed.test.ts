@@ -61,6 +61,7 @@ const RAW: Catalog = {
 const CATALOGS: Record<Region, Catalog> = {
   EU: applyCampaign(RAW, CONFIG, {}, NOW, 'EU'),
   US: applyCampaign(RAW, CONFIG, {}, NOW, 'US'),
+  NEAR: applyCampaign(RAW, CONFIG, {}, NOW, 'NEAR'),
   INT: applyCampaign(RAW, CONFIG, {}, NOW, 'INT'),
 };
 
@@ -81,8 +82,9 @@ function fakeShop() {
       sku,
       image: null,
       selectedOptions: [],
-      shipPromise: attr(input, 'Preorder'),
+      shipPromise: attr(input, 'Preorder') ?? attr(input, '_ship_promise'),
       deliveryBy: attr(input, 'Delivery by'),
+      ...(attr(input, '_ship_promise') ? {euStock: true} : {}),
       shipRegion: attr(input, '_ship_region'),
       batch: attr(input, '_batch'),
       total: {amount: '80.00', currencyCode: 'EUR'},
@@ -156,9 +158,10 @@ async function dialogCheckout(country: string, skus: string[]) {
 
 describe('mixed order: the drawer uses checkout\'s grouping', () => {
   const cases: Array<{name: string; country: string; skus: string[]; mixed: boolean}> = [
-    {name: 'US FC + RX (two funding targets, same date text)', country: 'US', skus: ['OPENFC-LITE-2020', 'OPENRX-LITE'], mixed: true},
-    {name: 'US FC + frame', country: 'US', skus: ['OPENFC-LITE-2020', 'OPENFRAME-5'], mixed: true},
-    {name: 'EU frame + motors + RX', country: 'BE', skus: ['OPENFRAME-5', 'OPENMOTOR-2306', 'OPENRX-LITE'], mixed: true},
+    // The March 2027 batch is confirmed: its lines ship together, whatever the product.
+    {name: 'US FC + RX (one confirmed batch)', country: 'US', skus: ['OPENFC-LITE-2020', 'OPENRX-LITE'], mixed: false},
+    {name: 'US FC + frame', country: 'US', skus: ['OPENFC-LITE-2020', 'OPENFRAME-5'], mixed: false},
+    {name: 'EU frame + motors + RX', country: 'BE', skus: ['OPENFRAME-5', 'OPENMOTOR-2306', 'OPENRX-LITE'], mixed: false},
     {name: 'EU batch-1 FC + March RX', country: 'BE', skus: ['OPENFC-LITE-2020', 'OPENRX-LITE'], mixed: true},
     {name: 'EU one funding target', country: 'BE', skus: ['OPENRX-LITE'], mixed: false},
   ];
@@ -186,12 +189,12 @@ describe('mixed order: the drawer uses checkout\'s grouping', () => {
     assert.equal(hasMixedShipGroups([{shipPromise: promise}, {shipPromise: 'ships early November 2026'}]), true);
   });
 
-  it('still sends a drawer checkout without the field back to the cart for a mixed US cart', async () => {
+  it('still sends a drawer checkout without the field back to the cart for a mixed EU cart (stock and the March batch)', async () => {
     const shop = fakeShop();
     for (const sku of ['OPENFC-LITE-2020', 'OPENRX-LITE']) {
-      await handleShopifyCartAction(post([['sku', sku], ['qty', '1'], ['response', 'summary']], 'US'), ENV, shop.deps);
+      await handleShopifyCartAction(post([['sku', sku], ['qty', '1'], ['response', 'summary']], 'BE'), ENV, shop.deps);
     }
-    const response = await handleShopifyCartAction(post([['intent', 'checkout']], 'US'), ENV, shop.deps);
+    const response = await handleShopifyCartAction(post([['intent', 'checkout']], 'BE'), ENV, shop.deps);
     assert.equal(response.headers.get('Location'), '/cart?check=mixed-dates');
   });
 });

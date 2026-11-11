@@ -2,11 +2,18 @@ import {createContext, useCallback, useContext, useEffect, useRef, useState} fro
 import {Form, Link, redirect, useLoaderData, useRevalidator, useRouteLoaderData} from 'react-router';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import type {Route} from './+types/cart.$';
-import {fetchPaymentMethods, getCart, updateCartLines, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
+import {compatForLines, compatLocale} from '~/lib/cart-compat';
+import {readLocaleCookie} from '~/lib/i18n';
+import {CompatAlert} from '~/components/commerce/CompatAlert';
+import {batchChoiceOn, fetchPaymentMethods, getCart, updateCartLines, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
 import {
   CART_CHECK,
   DATES_SEEN_FIELD,
+  batchChoiceConflict,
+  buyNowToPreorder,
+  cartCurrencyMisses,
   cartLineInfo,
+  sellsBuyNow,
   checkoutOpen,
   hasMixedShipDates,
   loadSessionCart,
@@ -34,21 +41,26 @@ import {
 } from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
 import {isPurchasableStatus, lineDisplayName, setSize, shortShipPromise, variantDisplayName} from '~/lib/product-content';
+import {latestShipDate, parseCampaignConfig, shipLabelFromPromise} from '~/lib/preorder-campaign';
+import preordersJson from '../../content/preorders.json';
 import {Txt} from '~/components/Txt';
-import {ShipChip, parcelPromise, soonerMonth} from '~/components/ShipChip';
+import {ShipChip, parcelPromise, soonerMonth, useGeoDutiesNote, useGeoParcel} from '~/components/ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from '~/components/ParcelChip';
 import {trackEvent} from '~/lib/growth/plausible';
 import {BuildBundle, bundleFields} from '~/components/BuildBundle';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {cartQuoteCountry, countryName, isInternationalQuote, offersPickup, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
+import {cartQuoteCountry, countryName, geoCountryForRequest, isInternationalQuote, offersPickup, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
 import {internationalShippingFrom} from '~/lib/international-shipping';
 import '../styles/cart-checkout-bar.css';
 import {usSalesRate} from '~/lib/us-sales';
-import {ShipToSelect} from '~/components/ShipToSelect';
+import {CountryPicker} from '~/components/CountryPicker';
+import {usePendingShipTo} from '~/lib/pending-ship-to';
+import {cartReplannedFor, planCartPage} from '~/lib/cart-replan';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
-import {cartWholesaleCode} from '~/lib/wholesale-codes';
+import {cartWholesaleCode, wholesaleFieldShown, wholesaleVisit} from '~/lib/wholesale-codes';
+import {Notice} from '~/components/Notice';
 import type {RootLoader} from '~/root';
 import {
   CartAddError,
@@ -131,33 +143,55 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   // how many paid-batch units are left. The cart still renders without it.
   let info: Record<string, CartLineInfo> = {};
   let replanned: string | null = null;
+  let payments: string[] = [];
+  let movedToPreorder: 'stock-region' | 'elsewhere' | null = null;
+  let notPriced: {currency: string; lines: string[]} | null = null;
   const country = shipCountryForRequest(request);
   if (cart?.lines.length) {
-    let catalog = null;
-    try {
-      const plan = await replanCart(cart, shippingQuote(country, undefined, usSalesRate(context.env)), context.env, {
-        fetchCatalog: (region, destination) => context.catalog.fresh.forRegion(region, destination),
-        setCountry: (id, code) => setCartCountry(context.env, id, code),
-        getCart: (id) => getCart(context.env, id),
-        updateCartLines: (id, lines) => updateCartLines(context.env, id, lines),
-      });
-      cart = plan.cart;
-      catalog = plan.catalog;
-      replanned = replanCheck(plan.change);
-    } catch (error) {
-      console.error('[shopify-cart] cart replan failed', error instanceof Error ? error.message : 'unknown error');
+    // Re-plan and read the payment methods together. Right after a Ship to
+    // switch (its marker cookie names this country and the cart carries it)
+    // the re-plan reuses the catalog that switch just read instead of a
+    // second Shopify read (lib/cart-replan.ts).
+    const destination = shippingQuote(country, undefined, usSalesRate(context.env));
+    const planDependencies = {
+      fresh: (region: Parameters<typeof context.catalog.fresh.forRegion>[0], to?: string) => context.catalog.fresh.forRegion(region, to),
+      recent: (region: Parameters<typeof context.catalog.recent.forRegion>[0], to?: string) => context.catalog.recent.forRegion(region, to),
+      setCountry: (id: string, code: string) => setCartCountry(context.env, id, code),
+      getCart: (id: string) => getCart(context.env, id),
+      updateCartLines: (id: string, lines: Parameters<typeof updateCartLines>[2]) => updateCartLines(context.env, id, lines),
+      fetchPaymentMethods: () => fetchPaymentMethods(context.env),
+      // EU stock wording only for a country the page's `geo` knows too.
+      euStockKnown: geoCountryForRequest(request) != null,
+      logError: (message: string, error?: unknown) => console.error(`[shopify-cart] ${message}`, error instanceof Error ? error.message : 'unknown error'),
+    };
+    let plan = await planCartPage(cart, destination, context.env, cartReplannedFor(request.headers.get('Cookie')), planDependencies);
+    // A cart from before the two lanes: its in-stock boards move to the
+    // pre-order variant of the same board, then the cart is planned again
+    // (ship promise, batch) for that variant.
+    const moves = batchChoiceOn(context.env) && plan.catalog ? buyNowToPreorder(plan.cart, plan.catalog) : [];
+    if (moves.length && plan.catalog) {
+      try {
+        const sellsNow = sellsBuyNow(plan.catalog);
+        const updated = await updateCartLines(context.env, plan.cart.id, moves);
+        plan = await planCartPage(updated, destination, context.env, null, planDependencies);
+        movedToPreorder = sellsNow ? 'stock-region' : 'elsewhere';
+      } catch (error) {
+        console.error('[shopify-cart] moving in-stock boards to pre-order failed', error instanceof Error ? error.message : 'unknown error');
+      }
     }
-    info = cartLineInfo(cart, catalog);
+    cart = plan.cart;
+    replanned = replanCheck(plan.change);
+    payments = plan.payments;
+    info = cartLineInfo(cart, plan.catalog);
+    // One currency, the destination's: a line Shopify could not price in it
+    // is named at the top of the cart.
+    if (plan.catalog) {
+      const currency = plan.catalog.currency;
+      notPriced = {currency, lines: cartCurrencyMisses(cart, currency).map((line) => lineDisplayName(line.handle, line.title, line.variantTitle))};
+      if (!notPriced.lines.length) notPriced = null;
+    }
   }
   const check = new URL(request.url).searchParams.get('check') ?? replanned;
-  let payments: string[] = [];
-  if (cart?.lines.length) {
-    try {
-      payments = await fetchPaymentMethods(context.env);
-    } catch (error) {
-      console.error('[shopify-cart] payment settings read failed', error instanceof Error ? error.message : 'unknown error');
-    }
-  }
   // International shipping is priced by Shopify from weight-based rates:
   // the same rate read from Shopify, for this cart, or null to keep
   // "calculated at checkout" (`international-shipping.ts`).
@@ -165,7 +199,18 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   const shippingFrom = cart?.lines.length && quote && isInternationalQuote(quote)
     ? {country: quote.country, price: await internationalShippingFrom(context.env, quote.country, cart)}
     : null;
-  return {cart, info, check, payments, country, shippingFrom};
+  // Parts that do not work together: a warning in the visitor's language, never a block.
+  const compat = compatForLines(cart?.lines ?? [], country, compatLocale(readLocaleCookie(request.headers.get('Cookie'))));
+  // Buy now or pre-order is on: every line says which it is.
+  const choice = batchChoiceOn(context.env);
+  // The "Wholesale code" field: only for a retailer's visit while the choice is on.
+  const wholesaleField = wholesaleFieldShown({
+    choice,
+    // Only this URL: nothing remembered from an earlier /wholesale visit.
+    visited: wholesaleVisit(new URL(request.url)),
+    applied: Boolean(cartWholesaleCode(cart?.discountCodes)),
+  });
+  return {cart, info, check, payments, country, shippingFrom, compat, choice, wholesaleField, movedToPreorder, notPriced};
 }
 
 type Removed = SplitItem[];
@@ -183,6 +228,7 @@ const CHECK_NOTICES: Record<CartCheck, () => string> = {
   [CART_CHECK.price]: () => t('check_price', 'A price changed. Check the total below.'),
   [CART_CHECK.priceAndDate]: () => t('check_price_and_date', 'A price and a ship date changed. Check the dates and the total below.'),
   [CART_CHECK.mixedDates]: () => t('parcel_note', 'Your order ships in one parcel, when its last item is ready.'),
+  [CART_CHECK.batchChoice]: () => t('check_batch_choice', 'An in-stock board could not be moved to pre-order. Remove it here, or buy it from its product page.'),
   [CART_CHECK.usEuOnly]: () => t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.'),
   [CART_CHECK.market]: () => t('check_market', "Your cart moved to your delivery country's prices. Check the total below."),
 };
@@ -193,7 +239,7 @@ function checkNotice(check: string | null): string | null {
 }
 
 export default function CartPage() {
-  const {cart, info, check, payments, country, shippingFrom} = useLoaderData<typeof loader>();
+  const {cart, info, check, payments, country, shippingFrom, compat, choice, wholesaleField, movedToPreorder, notPriced} = useLoaderData<typeof loader>();
   const rootData = useRouteLoaderData<RootLoader>('root');
   // Lines moved out for a second order: kept in this browser so the list
   // survives a reload and the trip through checkout.
@@ -205,30 +251,63 @@ export default function CartPage() {
     setRemoved(items);
     storeSplitItems(items);
   };
-  const notice = checkNotice(check);
+  // The move to pre-order says it once; the checkout's old refusal is not repeated.
+  const notice = movedToPreorder && check === CART_CHECK.batchChoice ? null : checkNotice(check);
+  const [announcement, setAnnouncement] = useState('');
+  // A Ship to switch in flight: the destination gate (Checkout, the shops and
+  // blocked notes) follows the picked country at once; Checkout stays
+  // disabled until the loaders return it (lib/pending-ship-to.ts).
+  const pendingShipTo = usePendingShipTo();
   return (
+    <AnnounceContext.Provider value={setAnnouncement}>
     <div className="cart page-shell">
       <header className="page-header">
-        <h1 className="page-title"><Txt id="cart.title" /></h1>
+        <h1 className="page-title" id={CART_HEADING_ID} tabIndex={-1}><Txt id="cart.title" /></h1>
       </header>
-      {notice ? <p className="cart-alert" role="alert">{notice}</p> : null}
+      <div className="sr-only" role="status">{announcement}</div>
+      {/* Every cart message: at the top, in the site's notice. */}
+      {movedToPreorder ? (
+        <Notice dismissible>
+          {movedToPreorder === 'stock-region' ? (
+            <>
+              {t('moved_to_preorder', 'Your in-stock boards were moved to pre-order so everything ships together.')}{' '}
+              {t('moved_to_preorder_now', 'Want them now? Buy them from the product page.')}
+            </>
+          ) : (
+            t('moved_to_preorder_short', 'Your in-stock boards were moved to pre-order.')
+          )}
+        </Notice>
+      ) : null}
+      {notPriced ? (
+        <Notice tone="error">
+          {t('not_priced', '{items}: not sold in {currency} for this delivery country, so it cannot be priced here. Remove it, or choose another delivery country.', {
+            items: notPriced.lines.join(', '),
+            currency: notPriced.currency,
+          })}
+        </Notice>
+      ) : null}
+      {notice ? <Notice tone="warn">{notice}</Notice> : null}
       {removed.length ? (
         <SplitReminder items={removed} cartHasLines={Boolean(cart?.lines.length)} onChange={updateRemoved} />
       ) : null}
+      {cart?.lines.length ? <CompatAlert alert={compat} /> : null}
       {cart?.lines.length ? (
         <PopulatedCart
           cart={cart}
+          choice={choice}
+          wholesaleField={wholesaleField}
           info={info}
           payments={payments}
-          country={cartQuoteCountry(country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
+          country={cartQuoteCountry(pendingShipTo ?? country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
           usRate={rootData?.usShippingRate ?? null}
           shippingFrom={shippingFrom}
           onSplit={(items) => updateRemoved([...removed.filter((r) => !items.some((i) => i.id === r.id)), ...items])}
         />
       ) : (
-        <EmptyCart />
+        <div role="status"><EmptyCart /></div>
       )}
     </div>
+    </AnnounceContext.Provider>
   );
 }
 
@@ -459,7 +538,9 @@ function CartSuggestions({cart, group}: {cart: ShopifyCart; group: 'build' | 'ex
 function ParcelPanel({lines}: {lines: ShopifyCartLine[]}) {
   const promises = lines.map((l) => l.shipPromise);
   const promise = parcelPromise(promises) ?? promises.find(Boolean) ?? null;
-  const deliveryBy = latestDeliveryBy(lines);
+  // In a stock region batch 1 ships in a few working days: no late-November date;
+  // the US (on hold) gets none (`geoDeliveryLines`).
+  const deliveryBy = latestDeliveryBy(useGeoParcel().deliveryLines(lines));
   if (!promise && !deliveryBy) return null;
   const mixed = new Set(promises.map((p) => p ?? '')).size > 1;
   return (
@@ -483,11 +564,11 @@ function ParcelPanel({lines}: {lines: ShopifyCartLine[]}) {
           </ul>
         ) : null}
         <p>
-          {/* A funding-target parcel states its own promise (`pendingShips`:
-              the ship-by date, the target deadline, refund or wait). */}
+          {/* A parcel of the March batch states its promise in full, read as
+              the confirmed batch even on a line that still names a target. */}
           {shortShipPromise(promise)?.kind === 'target' && promise
-            ? `${promise.charAt(0).toUpperCase()}${promise.slice(1)}.`
-            : t('parcel_rule', 'Preorders ship when their funding target is reached. If a target is missed, you choose a refund or to keep waiting.')}{' '}
+            ? shipLabelFromPromise(promise, 'long')
+            : t('parcel_rule', 'Pre-orders ship with their batch. Cancel any time before delivery for a full refund.')}{' '}
           <Link prefetch="intent" to="/preorder">{copyText('product-chrome.buy_terms_link') ?? 'Pre-order terms'}</Link>
         </p>
       </div>
@@ -512,6 +593,23 @@ function lineName(line: ShopifyCartLine): string {
  *  checkout waits until Shopify has confirmed them. */
 const PendingContext = createContext<(delta: number) => void>(() => {});
 
+/** Polite announcements that outlive the control that caused them (a
+ *  removed line unmounts). */
+const AnnounceContext = createContext<(message: string) => void>(() => {});
+const CART_HEADING_ID = 'cart-heading';
+
+/** After a line is removed its row is gone and focus fell to <body>: move it
+ *  to the next (else previous) row's Remove button, else the cart heading.
+ *  Only from <body>: focus the buyer has already moved elsewhere stays put. */
+function focusAfterRemove(sibling: Element | null) {
+  const active = document.activeElement;
+  if (active && active !== document.body) return;
+  const target =
+    sibling?.querySelector<HTMLElement>('.cart-line-remove') ??
+    document.getElementById(CART_HEADING_ID);
+  target?.focus();
+}
+
 function PopulatedCart({
   cart,
   info,
@@ -520,7 +618,13 @@ function PopulatedCart({
   usRate,
   shippingFrom,
   onSplit,
+  choice = false,
+  wholesaleField = true,
 }: {
+  /** Buy now or pre-order is on: the cart holds pre-orders only. */
+  choice?: boolean;
+  /** Show the "Wholesale code" field (`wholesaleFieldShown`). */
+  wholesaleField?: boolean;
   cart: ShopifyCart;
   info: Record<string, CartLineInfo>;
   payments: string[];
@@ -537,8 +641,24 @@ function PopulatedCart({
   const revalidator = useRevalidator();
   const [inFlight, setInFlight] = useState(0);
   const onPending = useCallback((delta: number) => setInFlight((n) => Math.max(0, n + delta)), []);
-  const pending = inFlight > 0 || revalidator.state !== 'idle';
-  const anyEarly = useAnyEarlySku(cart.lines.map((line) => line.sku));
+  // A Ship to switch in flight anywhere (here or in the drawer) also holds Checkout.
+  const switching = usePendingShipTo() != null;
+  const pending = inFlight > 0 || revalidator.state !== 'idle' || switching;
+  // Early bird prices stay on stock lines, but the note drops "preorder"
+  // unless a line is a pre-order for this visitor (not batch 1 stock in a
+  // stock region).
+  const preorderSkus = new Set(useGeoParcel().preorderSkus(cart.lines));
+  const anyEarlySku = useAnyEarlySku(cart.lines.map((line) => line.sku));
+  // Buy now or pre-order: the line's own price says whether it is early bird
+  // (a board's SKU sells at retail as Buy now and early bird as Pre-order),
+  // and every cart line is a pre-order.
+  const stockEarly = useAnyEarlySku(cart.lines.filter((line) => !preorderSkus.has(line.sku)).map((line) => line.sku)) && !choice;
+  const anyEarly = choice ? cart.lines.some((line) => info[line.id]?.early) : anyEarlySku;
+  // Pre-order lane: the cart holds pre-orders, and with any March line the
+  // whole order ships together by the batch's date. Said once, at the top.
+  const together = choice && cart.lines.some((line) => info[line.id]?.ships === 'preorder');
+  // UK, CH, NO: "Import VAT and duties: paid by you on delivery, unless collected at checkout."
+  const dutiesNote = useGeoDutiesNote();
   const wholesale = cartWholesaleCode(cart.discountCodes);
 
   // One parcel per order: when lines ship at different times, the early
@@ -569,6 +689,8 @@ function PopulatedCart({
   // A non-EU destination cannot take a line that ships to the EU only: the
   // buyer removes it or picks an EU country.
   const euOnlyForUs = (usBuyer || international) && cart.lines.some((line) => info[line.id]?.euOnly);
+  // A Buy now board with a March item: one of the two actions comes first.
+  const choiceOpen = batchChoiceConflict(cart, info);
   const blocked = pending || overLimit || euOnlyForUs;
   const checkoutRef = useRef<HTMLButtonElement>(null);
   const pendingStyle = pending ? {opacity: 0.5} : undefined;
@@ -577,6 +699,17 @@ function PopulatedCart({
     <PendingContext.Provider value={onPending}>
       <section className="cart-main">
         <div className="cart-details">
+          {euOnlyForUs ? (
+            <Notice tone="error">
+              {t('check_non_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.')}
+            </Notice>
+          ) : null}
+          {choiceOpen ? <Notice tone="warn">{CHECK_NOTICES[CART_CHECK.batchChoice]()}</Notice> : null}
+          {together ? (
+            <p className="cart-together" data-cart-together>
+              {t('together', 'Everything in this cart ships together by {date}.', {date: SHIP_BY})}
+            </p>
+          ) : null}
           <div className="cart-sheet-head" aria-hidden="true">
             <Txt id="cart.sheet_head_item" className="cart-sheet-head-item" />
             <Txt id="cart.sheet_head_qty" className="cart-sheet-head-qty" />
@@ -589,9 +722,9 @@ function PopulatedCart({
           </ul>
         </div>
         <div className="cart-summary-page" aria-busy={pending || undefined}>
-          <ShipToSelect
+          <CountryPicker
+            variant="field"
             country={country}
-            usRate={usRate}
             className="ship-to cart-ship-to"
             onBusy={(busy) => onPending(busy ? 1 : -1)}
           />
@@ -618,13 +751,9 @@ function PopulatedCart({
               </div>
             ) : null}
           </dl>
-          <EarlyBirdNote show={anyEarly} className="cart-summary-note" />
-          {usBuyer ? (
-            <p className="cart-summary-note">
-              {cart.subtotal.currencyCode === 'USD'
-                ? t('us_price_note', 'Duties included')
-                : t('us_reprice', 'This cart was priced for the EU. Checkout moves it to US prices and ship dates first.')}
-            </p>
+          <EarlyBirdNote show={anyEarly} stock={stockEarly} className="cart-summary-note" />
+          {usBuyer && cart.subtotal.currencyCode === 'USD' ? (
+            <p className="cart-summary-note">{t('us_price_note', 'Duties included')}</p>
           ) : null}
           {shippingRate && offersPickup(country) ? (
             <p className="cart-summary-note">{t('pickup_note', 'Or pick up free at our Leuven office: choose Pickup at checkout.')}</p>
@@ -632,10 +761,17 @@ function PopulatedCart({
           {shippingRate || internationalFrom ? null : (
             <p className="cart-summary-note">{t('shipping_at_checkout', 'Shipping calculated at checkout')}</p>
           )}
-          {international ? <p className="cart-summary-note">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p> : null}
+          {dutiesNote ? <p className="cart-summary-note">{dutiesNote}</p> : null}
+          {international ? (
+            <p className="cart-summary-note">
+              {dutiesNote
+                ? t('international_note_near', 'Shipping is confirmed at checkout.')
+                : t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}
+            </p>
+          ) : null}
           {/* One parcel, one date: said once here, not under every line. */}
           <ParcelPanel lines={cart.lines} />
-          {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}
+          {mixed && !together ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}
           {/* The cheap add-ons sit next to Checkout, where the buyer decides. */}
           {shipBlocked || throughShops || closed ? null : <CartSuggestions cart={cart} group="extras" />}
           {shipBlocked ? (
@@ -670,22 +806,22 @@ function PopulatedCart({
               </p>
               <button type="submit" className="mt-1 text-[13px] underline underline-offset-4">{t('wholesale_code_remove', 'Remove code')}</button>
             </Form>
-            ) : (
+            ) : wholesaleField ? (
             <Form method="post" action="/api/shopify/cart" className="cart-code">
               <input type="hidden" name="intent" value="discount" />
               <label className="block text-[13px] text-[var(--color-text-muted)]">
                 {t('wholesale_code', 'Wholesale code')}
-                <input name="code" maxLength={24} autoComplete="off" spellCheck={false} placeholder="WS25-NAME" className="mt-1 block w-full rounded-[var(--r-xs)] border border-[var(--color-border)] bg-transparent px-3 py-2 text-[16px] uppercase text-[var(--color-text)]" />
+                <input name="code" maxLength={24} autoComplete="off" spellCheck={false} placeholder="WS25-NAME" className="mt-1 block w-full rounded-[var(--r-xs)] border border-[var(--color-field-border)] bg-transparent px-3 py-2 text-[16px] uppercase text-[var(--color-text)]" />
               </label>
               <button type="submit" className="mt-2 text-[13px] underline underline-offset-4">{t('wholesale_code_apply', 'Apply code')}</button>
             </Form>
-            )}
+            ) : null}
             <Form
               id={CHECKOUT_FORM_ID}
               method="post"
               action="/api/shopify/cart"
               onSubmit={(event) => {
-                if (blocked) {
+                if (blocked || choiceOpen) {
                   event.preventDefault();
                   return;
                 }
@@ -694,14 +830,9 @@ function PopulatedCart({
             >
               <input type="hidden" name="intent" value="checkout" />
               {country ? <input type="hidden" name="country" value={country} /> : null}
-              {euOnlyForUs ? (
-                <p className="cart-alert" role="alert">
-                  {t('check_non_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.')}
-                </p>
-              ) : null}
               {/* This page shows the one-parcel line, so checkout may go on. */}
               {mixed ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
-              <button ref={checkoutRef} className="cart-checkout-cta" type="submit" disabled={blocked} aria-disabled={blocked || undefined}>
+              <button ref={checkoutRef} className="cart-checkout-cta" type="submit" disabled={blocked || choiceOpen} aria-disabled={blocked || choiceOpen || undefined}>
                 {pending ? t('checkout_updating', 'Updating cart…') : <Txt id="cart.checkout_cta" />}
               </button>
             </Form>
@@ -718,7 +849,7 @@ function PopulatedCart({
           subtotal={formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}
           vatIncluded={vatIncluded}
           promise={parcelPromise(cart.lines.map((l) => l.shipPromise))}
-          blocked={blocked}
+          blocked={blocked || choiceOpen}
           pending={pending}
         />
       )}
@@ -727,6 +858,9 @@ function PopulatedCart({
 }
 
 const CHECKOUT_FORM_ID = 'cart-checkout';
+
+/** The one ship-by date of the March batch, "31 March 2027". */
+const SHIP_BY = latestShipDate(parseCampaignConfig(preordersJson));
 
 /**
  * The phone's checkout bar: subtotal, the parcel's ship date and Checkout,
@@ -951,6 +1085,8 @@ function CartLine({
 function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; max: number}) {
   const revalidator = useRevalidator();
   const onPending = useContext(PendingContext);
+  const announce = useContext(AnnounceContext);
+  const neighbourRef = useRef<Element | null>(null);
   const [quantity, setQuantity] = useState(line.quantity);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -975,6 +1111,8 @@ function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; m
   };
 
   const send = async (fields: Array<[string, string]>) => {
+    const removing = fields.some(([key, value]) => key === 'intent' && value === 'remove');
+    let failed = false;
     setBusy(true);
     setError(null);
     try {
@@ -986,6 +1124,7 @@ function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; m
           ? caught.message
           : (copyText('cart.line_update_failed') ?? 'Could not update. Try again.'),
       );
+      failed = true;
       setQuantity(line.quantity);
     } finally {
       pending.current = false;
@@ -994,6 +1133,10 @@ function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; m
         await revalidator.revalidate();
       } finally {
         onPending(-1);
+      }
+      if (removing && !failed) {
+        announce(t('line_removed', 'Removed {name}', {name}));
+        focusAfterRemove(neighbourRef.current);
       }
     }
   };
@@ -1024,6 +1167,9 @@ function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; m
   const remove = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     window.clearTimeout(timer.current);
+    // The row unmounts and is gone after the reload: keep the neighbour.
+    const row = event.currentTarget.closest('li');
+    neighbourRef.current = row?.nextElementSibling ?? row?.previousElementSibling ?? null;
     begin();
     void send([['intent', 'remove'], ['lineId', line.id]]);
   };
@@ -1031,9 +1177,10 @@ function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; m
   return (
     <div className="cart-line-quantity cart-line-quantity--sheet" aria-busy={busy || undefined}>
       <div className="cart-sheet-stepper">
-        <LineForm line={line} quantity={quantity - 1} disabled={quantity <= 1} onSubmit={(e) => step(e, quantity - 1)} label={copyText('cart.line_decrease_aria') ?? 'Decrease quantity'}>−</LineForm>
-        <span className="cart-sheet-qty-value" aria-live="polite">{quantity}</span>
-        <LineForm line={line} quantity={quantity + 1} disabled={quantity >= max} onSubmit={(e) => step(e, quantity + 1)} label={copyText('cart.line_increase_aria') ?? 'Increase quantity'}>+</LineForm>
+        <LineForm line={line} quantity={Math.max(1, quantity - 1)} disabled={quantity <= 1} onSubmit={(e) => step(e, quantity - 1)} label={copyText('cart.line_decrease_aria') ?? 'Decrease quantity'}>−</LineForm>
+        <span className="cart-sheet-qty-value" aria-hidden="true">{quantity}</span>
+        <span className="sr-only" role="status">{t('line_qty_announce', 'Quantity {count}, {name}', {count: quantity, name})}</span>
+        <LineForm line={line} quantity={Math.min(max, quantity + 1)} disabled={quantity >= max} onSubmit={(e) => step(e, quantity + 1)} label={copyText('cart.line_increase_aria') ?? 'Increase quantity'}>+</LineForm>
       </div>
       <Form method="post" action="/api/shopify/cart" onSubmit={remove}>
         <input type="hidden" name="intent" value="remove" />
@@ -1072,7 +1219,8 @@ function LineForm({line, quantity, disabled, label, onSubmit, children}: {line: 
       <input type="hidden" name="intent" value="update" />
       <input type="hidden" name="lineId" value={line.id} />
       <input type="hidden" name="quantity" value={quantity} />
-      <button type="submit" disabled={disabled} aria-label={label}>{children}</button>
+      {/* At the limit it stays focusable (aria-disabled) but is not a submit button: no JavaScript, no post. */}
+      <button type={disabled ? 'button' : 'submit'} aria-disabled={disabled || undefined} aria-label={label}>{children}</button>
     </Form>
   );
 }

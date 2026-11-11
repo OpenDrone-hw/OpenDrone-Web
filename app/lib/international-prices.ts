@@ -16,7 +16,20 @@ export function withInternationalPrices(catalog: Catalog, market: Catalog | null
     products: catalog.products.map((product) => ({
       ...product,
       variants: product.variants.map((variant): CatalogVariant => {
-        const price = prices.get(variant.sku);
+        const twin = prices.get(variant.sku);
+        // A Buy now entry (a wholesale buyer outside the EU) takes the
+        // market's price of its own Buy now variant; its pre-order offer
+        // takes the market's pre-order price.
+        if (variant.offer === 'buy_now') {
+          const stockPrice = twin?.buy_now?.price;
+          if (!twin || twin.currency !== market?.currency || stockPrice == null) return closed(variant);
+          const offer = variant.preorder_offer;
+          return {
+            ...variant, price: stockPrice, compare_price: null, currency: twin.currency,
+            ...(offer ? {preorder_offer: {...offer, price: twin.price, compare_price: twin.compare_price}} : {}),
+          };
+        }
+        const price = twin;
         if (!price || price.currency !== market?.currency) return closed(variant);
         const values = {price: price.price, compare_price: price.compare_price, currency: price.currency};
         if (price.availability === 'sold_out') return {...closed(variant), ...values};

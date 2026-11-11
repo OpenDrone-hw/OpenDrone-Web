@@ -7,11 +7,13 @@ import {purgeExpired} from '~/lib/accounts/sessions';
 import {handleAppMedia} from '~/lib/commerce/app-media';
 import {handleVideoLink} from '~/lib/commerce/video-links';
 import {createAppLoadContext} from '~/lib/context';
+import {handleStagingFirmware} from '~/lib/flasher/staging-serve';
+import {stagingChallenge, stagingCredentialsOk} from '~/lib/staging-auth';
 import {NO_FRAMING_HEADERS, NO_FRAMING_PATH} from '~/lib/csp';
 import {refreshOwnerMap} from '~/lib/owner-map-data';
 import {purgeOldPins} from '~/lib/pilot-map-data';
 import {parseCampaignConfig} from '~/lib/preorder-campaign';
-import {queryCountryCookie} from '~/lib/shipping-rates';
+import {countryLinkRedirect, queryCountryCookie} from '~/lib/shipping-rates';
 import {preorderHoldsEnabled, reconcilePreorders} from '~/lib/preorder-ops';
 import {priceTierWritesEnabled} from '~/lib/shopify-price-tier';
 import {mailIntakeReady, runMailIntake} from '~/lib/support/mail';
@@ -37,23 +39,9 @@ function stagingGate(request: Request, env: Env): Response | null {
   }
   const password = env.STAGING_PASSWORD?.trim();
   if (!password) return null;
-  const header = request.headers.get('Authorization') ?? '';
-  if (header.startsWith('Basic ')) {
-    try {
-      const [user, given] = atob(header.slice(6)).split(':');
-      if (user === 'opendrone' && given === password) return null;
-    } catch {
-      // Malformed header: fall through and ask again.
-    }
-  }
-  return new Response('Staging', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="OpenDrone staging", charset="UTF-8"',
-      'Cache-Control': 'no-store',
-      'X-Robots-Tag': 'noindex, nofollow',
-    },
-  });
+  // Shared with the staging firmware route (app/lib/staging-auth.ts); a malformed header asks again.
+  if (stagingCredentialsOk(request.headers.get('Authorization'), password)) return null;
+  return stagingChallenge();
 }
 
 /**
@@ -95,6 +83,15 @@ async function handleFetch(
   executionContext: ExecutionContext,
 ): Promise<Response> {
   try {
+    // Staging bench firmware (app/lib/flasher/staging-serve.ts): only in a
+    // VITE_FLASH_STAGING_GATES=1 build (dead code in production), only with the
+    // FIRMWARE_STAGING binding of wrangler.bench.toml and STAGING_PASSWORD set,
+    // and always behind the staging basic auth. `vite dev` answers 404 first (vite.config.ts).
+    if (import.meta.env.VITE_FLASH_STAGING_GATES === '1') {
+      const firmware = await handleStagingFirmware(request, {password: env.STAGING_PASSWORD, store: env.FIRMWARE_STAGING});
+      if (firmware) return firmware;
+    }
+
     // www.opendrone.be is a Cloudflare custom domain too (both point at
     // this Worker); redirect it to the apex so it never serves a mirror.
     const gate = stagingGate(request, env);
@@ -130,6 +127,11 @@ async function handleFetch(
     // else goes on to the site's normal 404.
     const videoLink = await handleVideoLink(request, env);
     if (videoLink) return videoLink;
+
+    // A ?country=XX page link is a region choice: store it and drop it from
+    // the URL, so it cannot outrank a later pick in the header switch.
+    const countryLink = countryLinkRedirect(request);
+    if (countryLink) return countryLink;
 
     const context = await createAppLoadContext(
       request,

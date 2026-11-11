@@ -13,6 +13,7 @@ import {
   countryName,
   shipCountryCookie,
   shipCountryForRequest,
+  geoCountryForRequest,
   shipCountryFromCookie,
   shipCountryOptions,
   shipCountryPicker,
@@ -194,12 +195,26 @@ describe('default destination', () => {
     assert.equal(shipCountryFromCookie(undefined), null);
   });
 
-  it('orders query, cookie, CF-IPCountry, Accept-Language', () => {
+  it('geo country (the ship line): query, cookie, CF-IPCountry, never Accept-Language', () => {
+    const all = {Cookie: 'od_ship_country=NL', 'CF-IPCountry': 'US', 'Accept-Language': 'de-DE'};
+    assert.equal(geoCountryForRequest(req(all, '?country=gb')), 'GB');
+    // The picked destination wins over the IP: the line follows where they order.
+    assert.equal(geoCountryForRequest(req(all)), 'NL');
+    assert.equal(geoCountryForRequest(req({'CF-IPCountry': 'BE', 'Accept-Language': 'de-DE'})), 'BE');
+    // No known country: no guess from the browser language (fallback region).
+    assert.equal(geoCountryForRequest(req({'CF-IPCountry': 'XX', 'Accept-Language': 'de-DE'})), null);
+    assert.equal(geoCountryForRequest(req({'CF-IPCountry': 'T1'})), null);
+    // A blocked IP country stays, whatever the cookie says.
+    assert.equal(geoCountryForRequest(req({'CF-IPCountry': 'RU', Cookie: 'od_ship_country=BE'})), 'RU');
+  });
+
+  it('orders query, cookie, CF-IPCountry, never Accept-Language', () => {
     const all = {Cookie: 'od_ship_country=NL', 'CF-IPCountry': 'BE', 'Accept-Language': 'de-DE'};
     assert.equal(shipCountryForRequest(req(all, '?country=us')), 'US');
     assert.equal(shipCountryForRequest(req(all)), 'NL');
     assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'BE', 'Accept-Language': 'de-DE'})), 'BE');
-    assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'XX', 'Accept-Language': 'de-DE'})), 'DE');
+    // Same answer as the ship line: prices and the line never describe two countries.
+    assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'XX', 'Accept-Language': 'de-DE'})), null);
     assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'T1'})), null);
     // A blocked IP country stays visible so the page can say so.
     assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'RU'})), 'RU');

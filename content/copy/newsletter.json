@@ -77,5 +77,15 @@
   "unsub_done": "Done. If this address was on any OpenDrone list, it is now unsubscribed.",
   "unsub_method_not_allowed": "Method not allowed.",
   "unsub_rate_limited": "Too many requests. Try again in a few minutes.",
-  "unsub_invalid_email": "Enter a valid email address."
+  "unsub_invalid_email": "Enter a valid email address.",
+  "action_confirm_sent": "Almost there. Check your inbox and confirm your address to join the list.",
+  "confirm_meta_title": "Confirm your subscription",
+  "confirm_done": "You're in. We'll email you when there is something worth reading.",
+  "confirm_already": "This address is already confirmed. Nothing more to do.",
+  "confirm_invalid": "This confirm link is old or not valid. Sign up again on the newsletter page and we will send a new one.",
+  "confirm_eyebrow": "Newsletter",
+  "confirm_title": "Confirm your subscription",
+  "confirm_lede": "One click and you are on the list.",
+  "confirm_busy": "Confirming",
+  "confirm_submit": "Confirm"
 }

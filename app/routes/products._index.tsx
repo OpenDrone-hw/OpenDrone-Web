@@ -11,7 +11,7 @@ import {EarlyBirdNote, anyEarlyPrice} from '~/components/EarlyPriceCue';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {toCards} from '~/lib/catalog';
 import {CAMPAIGN} from '~/lib/catalog-client';
-import {campaignSkus, datedShipParts} from '~/lib/preorder-campaign';
+import {campaignSkus} from '~/lib/preorder-campaign';
 import {FAMILIES} from '~/lib/families';
 import {buildOf, parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
@@ -25,7 +25,7 @@ import {
   shipMonth,
   variantDisplayName,
 } from '~/lib/product-content';
-import {shipWord} from '~/components/ShipChip';
+import {datedShipText, useGeoShipLine} from '~/components/ShipChip';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {Txt} from '~/components/Txt';
 import {copyText, editAttrs} from '~/lib/copy';
@@ -99,7 +99,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // search term filters the same cards.
   const catalog = await context.catalog.forBuyer();
   // The one fixed ship date of the campaign, the stack's paid batch, for
-  // the "Ships early Nov 2026" filter chip.
+  // the "Ships late Nov 2026" filter chip.
   // A non-EU buyer has no paid stock batch: no
   // chip, as /preorder drops the stack lane.
   const stackShips =
@@ -356,8 +356,10 @@ function searchTextFor(p: ProductCardFragment, value = ''): string {
 
 export default function ProductsIndex() {
   const {products, stackShips: campaignShips} = useLoaderData<typeof loader>();
-  // A closed shop offers no ship date, so no "Ships early Nov 2026" filter either.
+  // A closed shop offers no ship date, so no "Ships late Nov 2026" filter either.
   const stackShips = useRouteLoaderData<RootLoader>('root')?.shopOpen ? campaignShips : null;
+  // The batch 1 chip reads the visitor's short line, as the bar does on phones.
+  const geoChip = useGeoShipLine(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [gridRef, animateGrid] = useAutoAnimate<HTMLDivElement>({
@@ -794,12 +796,12 @@ export default function ProductsIndex() {
                   aria-pressed={activeShips === 'paid'}
                   onClick={() => setParam('ships', activeShips === 'paid' ? null : 'paid')}
                 >
-                  {datedShipParts(stackShips)
-                    ? shipWord('ships', datedShipParts(stackShips)?.when ?? '')
-                    : (copyText('collections-all.chip_paid') ?? 'Ships {ships}').replace(
-                        '{ships}',
-                        stackShips.replace(/^ships\s+/i, ''),
-                      )}
+                  {geoChip(stackShips) ??
+                    datedShipText(stackShips) ??
+                    (copyText('collections-all.chip_paid') ?? 'Ships {ships}').replace(
+                      '{ships}',
+                      stackShips.replace(/^ships\s+/i, ''),
+                    )}
                 </button>
               ) : null}
             </div>

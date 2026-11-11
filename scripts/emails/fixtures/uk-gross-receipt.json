@@ -38,8 +38,9 @@
         "title": "OpenFC Lite"
       },
       "properties": {
-        "Preorder": "ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait",
-        "_ship_region": "INT",
+        "Preorder": "ships by 31 March 2027",
+        "_ship_region": "NEAR",
+        "Import VAT and duties": "Paid by you on delivery, unless collected at checkout",
         "Delivery by": "30 April 2027"
       }
     }

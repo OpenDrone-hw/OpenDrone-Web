@@ -1,9 +1,12 @@
+import {batchChoiceOn} from '~/lib/shopify-storefront';
+import {catalogHasPreorders} from '~/lib/catalog';
 import {useEffect} from 'react';
 import {useNonce} from '~/lib/csp';
 import {
   Outlet,
   useRouteError,
   isRouteErrorResponse,
+  type HeadersFunction,
   type ShouldRevalidateFunction,
   Links,
   Meta,
@@ -22,7 +25,10 @@ import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {launchedStatusFlags} from '~/lib/launched-roadmap';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {toCards} from '~/lib/catalog';
-import {buyerCountry} from '~/lib/shipping-rates';
+import {buyerCountry, geoCountryForRequest, isIsoCountry} from '~/lib/shipping-rates';
+import {resolveRegion} from '~/lib/region';
+import {DEALER_SESSION_KEY} from '~/lib/wholesale-codes';
+import {isInternationalRegion} from '~/lib/preorder-campaign';
 import {usSalesRate} from '~/lib/us-sales';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
 import {appCommerceEnabled, readCart} from '~/lib/commerce/app-api';
@@ -37,7 +43,8 @@ import {SignalLost} from './components/SignalLost';
 import {Txt} from './components/Txt';
 import {copyText} from '~/lib/copy';
 import {getCompanyIdentity} from '~/lib/company';
-import {localeFromPathname, seoLocaleTag} from '~/lib/i18n';
+import {getLocaleFromRequest, localeFromPathname, seoLocaleTag} from '~/lib/i18n';
+import {GEO_BANNER_DISMISSED_KEY, geoAvailabilityRegion} from '~/lib/geo-availability';
 import {buildOrgJsonLd, buildSeoMeta} from '~/lib/seo';
 import {themeOverrideCss} from '~/lib/theme-overrides';
 import {installViewTransitionGuard} from '~/lib/view-transition';
@@ -72,6 +79,19 @@ export const meta: Route.MetaFunction = ({error}) => {
 };
 
 /**
+ * Every page can show the batch 1 line for the visitor's CF-IPCountry
+ * (app/lib/geo-availability.ts) besides prices and buy gates for the ship-to
+ * cookie, so no shared cache may store a page. Cloudflare ignores `Vary` on
+ * HTML, so `private` is what keeps the edge from serving one country's copy
+ * and JSON-LD to another; `Vary` tells any other cache in between. A route
+ * with its own `headers` export (the cart's `no-store`) replaces this one.
+ */
+export const headers: HeadersFunction = () => ({
+  'Cache-Control': 'private, no-cache',
+  Vary: 'CF-IPCountry, Cookie, Accept-Language',
+});
+
+/**
  * This is important to avoid re-fetching root queries on sub-navigations
  */
 export const shouldRevalidate: ShouldRevalidateFunction = ({
@@ -84,6 +104,9 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
   // revalidate when manually revalidating via useRevalidator
   if (currentUrl.toString() === nextUrl.toString()) return true;
+
+  // A ?country=XX link changes the visitor country and the batch 1 line.
+  if (currentUrl.searchParams.get('country') !== nextUrl.searchParams.get('country')) return true;
 
   // Defaulting to no revalidation for root loader data to improve performance.
   // When using this feature, you risk your UI getting out of sync with your server.
@@ -149,7 +172,6 @@ export async function loader(args: Route.LoaderArgs) {
   ]);
 
   const company = getCompanyIdentity(env as unknown as Record<string, string | undefined>);
-
   // Derive locale from the URL path so /nl/* actually renders <html lang="nl">.
   // Hydrogen's storefront.i18n is pinned to EN/US in app/lib/context.ts and
   // doesn't follow the URL; using it would force every page to en_US.
@@ -193,11 +215,32 @@ export async function loader(args: Route.LoaderArgs) {
     // and listings (display vocabulary; buyability is the map above).
     roadmapStatuses: roadmapStatusMap(statusFlags),
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
+    // Buy now or pre-order (BATCH_CHOICE): the footer's early bird link and /preorder's two lanes.
+    batchChoice: batchChoiceOn(env),
     // Picks the buy module's price note (VAT vs duties) and whether a buy
     // button shows. It is the destination the cart and checkout read
     // (`shipCountryForRequest`: ?country, the picked
     // destination, the IP, the browser), so every surface agrees.
     visitorCountry: buyerCountry(args.request, usRate),
+    // The visitor's region (app/lib/region.ts): country, market, currency,
+    // taxes shown, lanes and shipping, from the one resolver every other
+    // field here also reads. Components read this, never the request.
+    region: resolveRegion(args.request, usRate != null),
+    // The IP country alone, so the region control can offer "World" to a
+    // visitor whose IP is outside the EU after they picked another market.
+    ipCountry: (() => {
+      const ip = args.request.headers.get('CF-IPCountry')?.trim().toUpperCase() ?? null;
+      return ip && isIsoCountry(ip) ? ip : null;
+    })(),
+    // The batch 1 ship line by where the visitor orders to
+    // (app/lib/geo-availability.ts, `geoCountryForRequest`: ?country, the
+    // picked destination, else CF-IPCountry): the country, its region and
+    // the language its line is written in. The bar, buy box, cards and cart
+    // read it, and LocationNotice tells the visitor when it changes.
+    geo: (() => {
+      const country = geoCountryForRequest(args.request);
+      return {country, region: geoAvailabilityRegion(country, usRate != null), locale: urlLocale ?? getLocaleFromRequest(args.request)};
+    })(),
     // Present only while US sales are open: the flat US rate in USD.
     ...(usRate != null ? {usShippingRate: usRate} : {}),
     // Plausible counts the production site only: staging, previews and
@@ -224,6 +267,13 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
 
   return {
     commerceHandoff: commerceHandoff(catalog, hasCart),
+    // Buy now or pre-order on and nothing is pre-order any more (a batch has
+    // landed): an ordinary shop, so the bar and /preorder name no batch. An
+    // empty catalog (a failed read) is never read as "everything in stock".
+    ordinaryShop: batchChoiceOn(context.env) && catalog.products.length > 0 && !catalogHasPreorders(catalog),
+    // A retailer (applied wholesale code in the session) outside the EU and
+    // the US: offered batch 1 stock by courier (founder 2026-11-11).
+    wholesaleExport: Boolean(context.session.get(DEALER_SESSION_KEY)) && isInternationalRegion(context.catalog.region),
     testBanner: context.env.TEST_BANNER?.trim() || null,
     // The app prices the cart and takes the destination at its own cart page: no Ship to select in the drawer.
     appCommerce: appMode,
@@ -345,6 +395,17 @@ export function Layout({children}: {children?: React.ReactNode}) {
               "(function(){var r=document.documentElement,last=0,jank=0,total=0,bad=0,good=0,lite=false;var JANK=34,WIN=90,BAD=0.4,GOOD=0.15;function tick(ts){var paused=r.classList.contains('anim-paused');if(!document.hidden&&document.hasFocus()&&!paused){if(last){var d=ts-last;total++;if(d>JANK)jank++;}last=ts;if(total>=WIN){var f=jank/total;jank=0;total=0;if(f>BAD){good=0;if(++bad>=2&&!lite){lite=true;r.classList.add('perf-lite');}}else if(f<GOOD){bad=0;if(++good>=2&&lite){lite=false;r.classList.remove('perf-lite');}}else{bad=0;good=0;}}}else{last=0;jank=0;total=0;}requestAnimationFrame(tick);}requestAnimationFrame(tick);})();",
           }}
         />
+        {/* A visitor who dismissed the availability card (AvailabilityBanner)
+            never sees it flash in before hydration: a style node, as above,
+            since hydration wipes markers off <html>. Harmless when the shop
+            is closed and no card renders. */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem(${JSON.stringify(GEO_BANNER_DISMISSED_KEY)})==='1'){var s=document.createElement('style');s.textContent='.avail-bar{display:none!important}:root{--avail-bar-h:0px!important}';document.head.appendChild(s)}}catch(e){}`,
+          }}
+        />
         <link rel="stylesheet" href={resetStyles}></link>
         <link rel="stylesheet" href={appStyles}></link>
         <link rel="stylesheet" href={siteUiStyles}></link>
@@ -397,7 +458,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
       </head>
       <body className="bg-[var(--color-bg)] text-[var(--color-text)] min-h-screen flex flex-col">
         {data?.testBanner ? (
-          <p className="test-banner" role="status">
+          <p className="top-strip test-banner" role="status">
             {data.testBanner}
           </p>
         ) : null}
@@ -480,8 +541,16 @@ export function ErrorBoundary() {
     <div className="route-error page-shell">
       <p className="route-error-status">{errorStatus}</p>
       <Txt id="not-found.error_title" as="h1" className="route-error-title" />
-      <Txt id="not-found.error_body" as="p" className="route-error-body" />
-      {errorMessage ? (
+      {/* A service that is down for a moment (a failed cart or catalog read) says so in its own
+          words, never "an unexpected error". */}
+      {errorStatus === 503 && errorMessage ? (
+        <p className="route-error-body" role="alert">
+          {errorMessage} {copyText('not-found.error_retry') ?? 'Try again in a minute. Nothing you added was lost.'}
+        </p>
+      ) : (
+        <Txt id="not-found.error_body" as="p" className="route-error-body" />
+      )}
+      {errorMessage && errorStatus !== 503 ? (
         <details className="route-error-details">
           <summary>
             <Txt id="not-found.error_details" />

@@ -119,15 +119,14 @@ describe('placePin', () => {
 });
 
 describe('pilotView: server-side visibility', () => {
-  it('shows names and cells to an owner and only the total to everyone else', async () => {
+  it('shows names and cells to an owner and nothing to everyone else', async () => {
     const d = await db();
     await placePin(d, {gid: GID, owner: true, link: link(), form: {lat: 52.5, lon: 13.4, ...ok}}, NOW);
     await placePin(d, {gid: OTHER, owner: true, link: {gid: OTHER, discordId: '80351110224678999', name: 'jonas'}, form: {lat: 50.8, lon: 4.3, ...ok}}, NOW);
     const anonymous = await pilotView(d, false);
-    assert.deepEqual(anonymous, {total: 2});
+    assert.deepEqual(anonymous, {});
     assert.doesNotMatch(JSON.stringify(anonymous), /mira|jonas|8035111|cells/);
     const owner = await pilotView(d, true);
-    assert.equal(owner.total, 2);
     assert.equal(owner.cells?.length, 2);
     assert.deepEqual(owner.cells?.flatMap((c) => c.pilots.map((p) => p.name)).sort(), ['jonas', 'mira_fpv']);
   });

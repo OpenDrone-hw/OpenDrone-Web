@@ -26,14 +26,28 @@ export default function TestingRoute() {
     setSrc(EXPLORER + (window.location.hash || ''));
   }, []);
   return (
-    <main style={{position: 'fixed', inset: 0, background: '#FBFBFA'}}>
-      {src ? (
-        <iframe
-          title="Incutec testing explorer"
-          src={src}
-          style={{border: 0, width: '100%', height: '100%', display: 'block'}}
-        />
-      ) : null}
-    </main>
+    <>
+      <a className="skip-link" href="#main-content">
+        {copyText('chrome.skip_link') ?? 'Skip to main content'}
+      </a>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="testing-main"
+        style={{position: 'fixed', inset: 0, background: '#FBFBFA'}}
+      >
+        <h1 className="sr-only">
+          {copyText('testing.meta_title') ?? 'Testing'}
+        </h1>
+        {src ? (
+          <iframe
+            className="testing-frame"
+            title="Incutec testing explorer"
+            src={src}
+            style={{border: 0, width: '100%', height: '100%', display: 'block'}}
+          />
+        ) : null}
+      </main>
+    </>
   );
 }

@@ -61,7 +61,7 @@
           "white"
         ]
       },
-      "item": "Silicone hook-up",
+      "item": "Silicone wires",
       "row": 1
     },
     {
@@ -73,7 +73,7 @@
         "caption": "OpenRX · Bind and quick start"
       },
       "row": 1,
-      "item": "Bind and quick-start card"
+      "item": "Guide"
     },
     {
       "label": "Dual-band antenna",
@@ -96,6 +96,16 @@
       "item": "Heat-shrink",
       "below": "Bind and quick-start card",
       "perRow": 2
+    },
+    {
+      "label": "Sticker",
+      "procedural": {
+        "kind": "sticker",
+        "w": 80,
+        "h": 22
+      },
+      "item": "Sticker",
+      "below": "Bind and quick-start card"
     }
   ],
   "exclude": [

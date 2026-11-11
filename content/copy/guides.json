@@ -1,0 +1,41 @@
+{
+  "$route": "/guides",
+  "$title": "Firmware guides",
+  "meta_title": "Firmware guides",
+  "meta_description": "Step-by-step guides for beginners: update Betaflight on an OpenFC flight controller, read AM32 on an OpenESC, check it worked, and recover.",
+  "eyebrow": "Guides",
+  "title": "Firmware guides",
+  "lead": "Step-by-step guides for updating the firmware on your OpenDrone boards, written for a first-timer. Where a step is not available yet, the guide says so. Every step says what you should see, and every page ends with what to do if it does not work.",
+  "flash_cta": "Open the firmware page",
+  "flash_cta_note": "The firmware page gives you the checked Betaflight file for your flight controller to drag onto the board: OpenFC Lite 30×30 now, OpenFC Lite 20×20 once it is released. ESC install is coming after bench verification.",
+  "flash_cta_note_direct": "In Chrome or Edge, the firmware page installs Betaflight with one button: Update firmware. OpenFC Lite 30×30 for now, OpenFC Lite 20×20 later. Copying the file onto the board is the fallback.",
+  "safety_heading": "Before you start, every time",
+  "safety_points": [
+    "Take the propellers off.",
+    "Flight controller over USB: keep the flight battery unplugged.",
+    "ESC: plug the battery in only at the step that asks for it, and unplug it when you are done. Flashing an ESC from our page is not available yet.",
+    "Never unplug anything, close the tab or let the computer sleep while firmware is being written."
+  ],
+  "browser_heading": "What you need",
+  "browser_points": [
+    "Drag-and-drop update of the flight controller: any browser, on Windows, macOS or Linux.",
+    "The Betaflight app and reading ESCs: Chrome or Edge on a computer.",
+    "A USB-C cable that carries data, not a charge-only cable."
+  ],
+  "family_steps_label": "Steps",
+  "back_link": "All guides",
+  "step_label": "Step {n} of {total}",
+  "callout_safety": "Safety",
+  "callout_note": "Note",
+  "you_need_heading": "You need",
+  "steps_heading": "Steps",
+  "see_label": "You should see:",
+  "trouble_heading": "If it doesn't work",
+  "prev_label": "Previous step",
+  "next_label": "Next step",
+  "steps_nav_aria": "Guide steps",
+  "pager_aria": "Previous and next step",
+  "done_label": "All guides",
+  "flash_link": "Go to the firmware page",
+  "flasher_heading": "Update firmware"
+}

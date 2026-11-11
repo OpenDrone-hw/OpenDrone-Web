@@ -22,25 +22,89 @@
  */
 
 import type {Catalog, CatalogVariant} from './catalog.ts';
-import {EU_COUNTRY_CODES} from './eu-countries.ts';
+import {CAMPAIGN_CONFIRMED} from './campaign-file.ts';
+import {EU_COUNTRY_CODES, IMPORT_COUNTRY_CODES} from './eu-countries.ts';
 
-/** Allocation regions: EU member states, the US, or other international
- *  destinations. Missing country information retains the historical EU default. */
-export type Region = 'EU' | 'US' | 'INT';
+/** Allocation regions: EU member states, the US, NEAR (UK, Switzerland,
+ *  Norway: `IMPORT_COUNTRY_CODES`, the March batch with import VAT and duties
+ *  paid on delivery; its own region so it can get a stock pool later), or
+ *  other international destinations. Missing country information retains the
+ *  historical EU default. */
+export type Region = 'EU' | 'US' | 'NEAR' | 'INT';
 
-export const REGIONS: readonly Region[] = ['EU', 'US', 'INT'];
+export const REGIONS: readonly Region[] = ['EU', 'US', 'NEAR', 'INT'];
 
 /** The region of a shipping country (ISO 3166-1 alpha-2). */
 export function regionOf(country: string | null | undefined): Region {
   const code = country?.trim().toUpperCase();
   if (code === 'US') return 'US';
+  if (code && IMPORT_COUNTRY_CODES.includes(code)) return 'NEAR';
   return code && /^[A-Z]{2}$/.test(code) && !EU_COUNTRY_CODES.includes(code) ? 'INT' : 'EU';
+}
+
+/** The region of a destination served through Shopify's international market: NEAR for GB, CH, NO, else INT. */
+export function internationalRegion(country: string | null | undefined): Region {
+  return regionOf(country) === 'NEAR' ? 'NEAR' : 'INT';
+}
+
+/** A paid line's recorded attributes, as the cart writes them (shopify-storefront.ts):
+ *  `_batch` "SKU:N", `_ship_region` (absent: EU), the promise in `Preorder` or `_ship_promise`. */
+export type RecordedLine = {
+  sku?: string | null;
+  attributes?: ReadonlyArray<{key: string; value?: string | null}> | null;
+};
+
+const attr = (line: RecordedLine, key: string) => line.attributes?.find((a) => a.key === key)?.value?.trim() || null;
+
+/**
+ * True for a line sold to a non-EU destination (recorded `_ship_region` INT
+ * or NEAR) with a paid batch: its `_batch` names a paid batch, or (a line
+ * from before `_batch`) its promise is a paid batch's `ships`. Before
+ * 2026-11-03 paid batch 1 served the EU and every other non-US destination
+ * together (GB, CH and NO were INT), so such a line was sold batch 1 stock and
+ * keeps it: it fills the batches as an EU unit (`lineAllocationRegion`).
+ * New non-EU carts never record a paid batch (`paidRegions` ["EU"]), and an
+ * EU line shipped abroad records no non-EU region, so neither is kept.
+ * Read from the order itself, so it does not depend on when a deploy happens.
+ */
+export function grandfatheredPaidLine(config: Pick<CampaignConfig, 'skus' | 'soldUnder'>, line: RecordedLine): boolean {
+  const recorded = attr(line, '_ship_region');
+  if (recorded !== 'INT' && recorded !== 'NEAR') return false;
+  const batch = attr(line, '_batch');
+  const match = batch ? /^([A-Za-z0-9-]+):(\d+)$/.exec(batch) : null;
+  if (match) return config.skus[match[1]]?.batches[Number(match[2]) - 1]?.paid === true;
+  const promise = attr(line, 'Preorder') ?? attr(line, '_ship_promise');
+  const sku = line.sku?.trim();
+  return Boolean(promise && sku && paidPromises(config, sku).has(promise));
+}
+
+/** The region a line's units fill the batches in: its shipping region, or
+ *  EU for a grandfathered paid line ({@link grandfatheredPaidLine}). */
+export function lineAllocationRegion(region: Region, grandfathered: boolean): Region {
+  return grandfathered && isInternationalRegion(region) ? 'EU' : region;
+}
+
+/** The paid stack's ship promise as the /preorder page shows it to a buyer
+ *  in `region`: only where paid stock ships (`paidRegions`, the EU). NEAR,
+ *  INT and US buyers see no "ships late November" lane and no "order them
+ *  separately" line. */
+export function stackPaidShips(region: Region, paidShips: string | null, paidRegions: readonly Region[] | undefined): string | null {
+  return (paidRegions ?? ['EU']).includes(region) ? paidShips : null;
+}
+
+/** True for a region outside the EU and the US: NEAR and INT ship through
+ *  Shopify's international market (destination currency, rates at checkout). */
+export function isInternationalRegion(region: Region): boolean {
+  return region === 'NEAR' || region === 'INT';
 }
 
 /** Paid units of one SKU in order, oldest first, as runs of one region:
  *  what the batch allocation needs, since a batch may serve one region
- *  only. A plain number is that many EU units. */
-export type UnitRuns = Array<{region: Region; units: number}>;
+ *  only. A plain number is that many EU units. A run with `march` comes
+ *  from an order that also holds a line not shipping with paid stock: it
+ *  ships as one parcel with that line, so its units skip paid batches
+ *  ({@link shipsOnlyWithPaid}, founder 2026-11-01). */
+export type UnitRuns = Array<{region: Region; units: number; march?: boolean}>;
 
 /** A SKU's paid units: a count (all EU) or its runs by region. */
 export type PaidUnitsOf = number | UnitRuns;
@@ -57,6 +121,11 @@ export type CampaignBatch = {
   /** The ship promise once the supplier order is placed, e.g.
    *  "ships early November 2026". Required for paid stock. */
   ships?: string;
+  /** Paid stock that is on hand in Belgium: it ships within a few working
+   *  days of the order, so `ships` names no month ("in stock in Belgium,
+   *  ships to EU addresses in a few working days") and the batch has no
+   *  delivery date of its own (terms 7.1 govern). */
+  inStock?: boolean;
   /** Reviewed final customer delivery date, separate from dispatch. The ship promise names it; null leaves it out. */
   deliveryBy?: string | null;
   /** The same for a US buyer (shipped direct by the fulfilment partner, duties included); a US promise names only this one, and leaves the delivery
@@ -64,9 +133,10 @@ export type CampaignBatch = {
   deliveryByUS?: string | null;
   /** A separately agreed international arrival deadline; never inherits EU or US dates. */
   deliveryByINT?: string | null;
-  /** The regions this batch ships to; absent means every region. Paid
-   *  stock in Belgium is `["EU"]`: a non-EU unit skips it for the next batch
-   *  that serves the destination. A SKU's last funding batch serves every region. */
+  /** The regions this batch ships to; absent means every region, except a
+   *  paid batch, which takes the campaign's `paidRegions`. A unit of another
+   *  region skips it for the next batch that serves the destination. A SKU's
+   *  last funding batch serves every region. */
   regions?: Region[];
 };
 
@@ -86,6 +156,9 @@ function batchPromise(batch: CampaignBatch, fallback: string): string {
 /** The agreed arrival deadline for a region, YYYY-MM-DD, or null. Used for
  *  visible checkout metadata and ordering the lines of a combined cart. */
 function batchDeliveryDay(batch: CampaignBatch, region: Region): string | null {
+  // NEAR takes a funding batch like INT. Should a paid batch ever serve NEAR
+  // (`paidRegions`), it keeps that batch's `deliveryBy`, as the EU does.
+  if (region === 'NEAR') return (batch.paid ? batch.deliveryBy : batch.deliveryByINT) ?? null;
   return (region === 'US' ? batch.deliveryByUS : region === 'INT' ? batch.deliveryByINT : batch.deliveryBy) ?? null;
 }
 
@@ -96,6 +169,15 @@ export type CampaignConfig = {
    *  It names the target deadline (`endsOn`) and the ship-by date
    *  (`shipsBy`), as terms 7bis.2 do; the tests hold the three in step. */
   pendingShips: string;
+  /** Every funding batch is produced whatever its count (founder 2026-11-11,
+   *  terms 2.9): no unit waits for a target, `pendingShips` names the ship-by
+   *  date only, the meters read as a confirmed batch and no SKU closes for a
+   *  missed target. Absent or false: a batch without `ships` is a funding
+   *  target with the deadline `endsOn`. */
+  confirmed?: boolean;
+  /** Confirmed campaigns only: what happens to the funding batches after
+   *  `endsOn` ({@link AfterEndsOn}). Absent: `retail`. */
+  afterEndsOn?: AfterEndsOn;
   /** The one ship-by date of every funding-target unit, YYYY-MM-DD: a
    *  target reached early does not ship earlier than planned. */
   shipsBy: string;
@@ -105,6 +187,10 @@ export type CampaignConfig = {
   /** Price steps by paid units, in order: `upTo` is the last unit of the
    *  step and `off` its share off retail. Past the last step: retail. */
   priceTiers: PriceTier[];
+  /** Where paid stock (Belgium) ships: the regions of every paid batch that
+   *  lists none of its own. The one entry that decides who gets batch 1
+   *  (founder 2026-11-03: the EU only; NEAR, INT and the US take March). */
+  paidRegions?: Region[];
   /** Per SKU: its batches, and optionally its own price steps in place of
    *  the campaign's (`tiersFor`). */
   skus: Record<string, {batches: CampaignBatch[]; priceTiers?: PriceTier[]}>;
@@ -119,40 +205,82 @@ export type CampaignConfig = {
    *  campaign SKU (`batch`, no `stock`), so a non-EU order is never refused for
    *  a SKU the campaign does not list. Belgian stock stays EU only. */
   usStock?: ShipsWith;
-  /** The dates orders were sold under before a date change. An order created
-   *  before `before` (ISO timestamp) keeps these promises on its account page
-   *  instead of the current ones (terms 7bis.3: a moved date is never applied
-   *  silently to an existing order). */
-  soldUnder?: SoldUnder;
+  /** What earlier orders were promised, oldest first. An order created
+   *  before an entry's `before` (ISO timestamp) keeps that entry's promises
+   *  on its account page, in the hold pass and in the notify scripts instead
+   *  of the current ones (terms 7bis.3 and 15.1: a later version never
+   *  changes what an existing order was promised). One entry, or a list. */
+  soldUnder?: SoldUnder | SoldUnder[];
+  /** The instant the buy now or pre-order choice went live (ISO timestamp,
+   *  set with `BATCH_CHOICE = "1"`). From then on an order line of a board's
+   *  `Pre-order` variant is a March unit ({@link preorderChoiceLine}); before
+   *  it that variant sold batch 1 stock. Absent: the choice never ran. */
+  choiceFrom?: string;
 };
+
+/** What the funding batches do after `endsOn` in a confirmed campaign:
+ *  `closed` stops their ordering, `retail` keeps it open at the retail price
+ *  (no price step), `earlyBird` keeps it open with the price steps running. */
+export type AfterEndsOn = 'closed' | 'retail' | 'earlyBird';
+export const AFTER_ENDS_ON: readonly AfterEndsOn[] = ['closed', 'retail', 'earlyBird'];
 
 export type SoldUnder = {
   before: string;
-  shipsBy: string;
+  /** The ship-by date of that time, when it differed. */
+  shipsBy?: string;
+  /** The funding promise those orders carry, when it differed. One that
+   *  names a target ("by <date> if the target is reached by <date>, ...")
+   *  is still recognised everywhere ({@link fundingPromise}). */
+  pendingShips?: string;
   /** Ship promise of a paid batch, e.g. "ships early November 2026". */
   paidShips: string;
-  /** Funding-target batch delivery days, YYYY-MM-DD. */
-  deliveryBy: string;
-  deliveryByUS: string;
+  /** Delivery day those orders were given for paid stock, YYYY-MM-DD. */
+  paidDeliveryBy?: string;
+  /** Funding-target batch delivery days, YYYY-MM-DD, when they differed. */
+  deliveryBy?: string;
+  deliveryByUS?: string;
 };
 
-/** The campaign as an order created before `soldUnder.before` was sold: same
- *  batches, the promised dates of that time. Unchanged for any later order. */
+/** `soldUnder` as a list, oldest first. */
+export function soldUnderEras(config: Pick<CampaignConfig, 'soldUnder'>): SoldUnder[] {
+  const eras = config.soldUnder === undefined ? [] : Array.isArray(config.soldUnder) ? config.soldUnder : [config.soldUnder];
+  return [...eras].sort((a, b) => Date.parse(a.before) - Date.parse(b.before));
+}
+
+/** The campaign as an order created at `createdAt` was sold: same batches,
+ *  the promises of the earliest `soldUnder` entry it falls before. Unchanged
+ *  for an order after the last entry. */
 export function configSoldUnder(config: CampaignConfig, createdAt: string | undefined): CampaignConfig {
-  const old = config.soldUnder;
-  if (!old || !createdAt || !(Date.parse(createdAt) < Date.parse(old.before))) return config;
+  const old = createdAt ? soldUnderEras(config).find((era) => Date.parse(createdAt) < Date.parse(era.before)) : undefined;
+  if (!old) return config;
   const skus: CampaignConfig['skus'] = {};
   for (const [sku, entry] of Object.entries(config.skus)) {
     skus[sku] = {
       ...entry,
       batches: entry.batches.map((b) =>
         b.paid
-          ? {...b, ships: old.paidShips}
-          : {...b, deliveryBy: b.deliveryBy ? old.deliveryBy : b.deliveryBy, deliveryByUS: b.deliveryByUS ? old.deliveryByUS : b.deliveryByUS},
+          ? {...b, inStock: undefined, ships: old.paidShips, deliveryBy: old.paidDeliveryBy ?? b.deliveryBy}
+          : {
+              ...b,
+              deliveryBy: b.deliveryBy && old.deliveryBy ? old.deliveryBy : b.deliveryBy,
+              deliveryByUS: b.deliveryByUS && old.deliveryByUS ? old.deliveryByUS : b.deliveryByUS,
+            },
       ),
     };
   }
-  return {...config, shipsBy: old.shipsBy, skus};
+  return {...config, shipsBy: old.shipsBy ?? config.shipsBy, pendingShips: old.pendingShips ?? config.pendingShips, skus};
+}
+
+/** Every ship promise a paid batch of `sku` has carried: its `ships` today
+ *  and the `paidShips` of each `soldUnder` entry. A line from before the
+ *  `_batch` attribute is matched to paid stock by these. */
+export function paidPromises(config: Pick<CampaignConfig, 'skus' | 'soldUnder'>, sku: string): Set<string> {
+  const out = new Set<string>();
+  const batches = config.skus[sku]?.batches ?? [];
+  if (!batches.some((b) => b.paid)) return out;
+  for (const b of batches) if (b.paid && b.ships?.trim()) out.add(b.ships.trim());
+  for (const era of soldUnderEras(config)) out.add(era.paidShips.trim());
+  return out;
 }
 
 export type ShipsWith = {
@@ -180,9 +308,27 @@ export function countedSkus(config: CampaignConfig): Set<string> {
 
 /** The price steps one SKU sells on: its own when set, else the campaign's.
  *  A SKU that ships with another has a flat price: no steps. */
-export function tiersFor(config: CampaignConfig, sku: string): PriceTier[] {
+export function tiersFor(config: CampaignConfig, sku: string, now: Date = new Date()): PriceTier[] {
   if (config.shipsWith?.[sku]) return [];
+  // A confirmed campaign that stays open at retail after `endsOn` has no
+  // price step from then on: the storefront, the step bar and the Shopify
+  // price writer (shopify-price-tier.ts) all read this one list.
+  if (afterEndsOn(config, now) === 'retail') return [];
   return config.skus[sku]?.priceTiers ?? config.priceTiers;
+}
+
+/**
+ * What applies to the funding batches of a confirmed campaign at `now`:
+ * null before the end of `endsOn` (and always for a campaign that is not
+ * confirmed, whose deadline closes unreached targets instead), else the
+ * configured mode, `retail` when none is set.
+ */
+export function afterEndsOn(
+  config: Pick<CampaignConfig, 'confirmed' | 'afterEndsOn' | 'endsOn'>,
+  now: Date = new Date(),
+): AfterEndsOn | null {
+  if (!config.confirmed || !fundingClosed(config, now)) return null;
+  return config.afterEndsOn ?? 'retail';
 }
 
 function checkTiers(tiers: unknown, where: string): void {
@@ -243,6 +389,13 @@ export type CampaignState = {
   /** Units left in the paid batch the next unit comes out of; null when the
    *  next unit is not paid stock. A cart line must not ask for more. */
   paidLeft?: number | null;
+  /** The campaign is confirmed (`CampaignConfig.confirmed`): this unit's
+   *  funding batch is produced whatever its count, so `targetReached` is
+   *  true and nothing reads as waiting for a target. Set by `applyCampaign`. */
+  confirmed?: boolean;
+  /** The next unit is paid stock on hand (`CampaignBatch.inStock`): it ships
+   *  within a few working days and has no ship month or delivery day. */
+  inStock?: boolean;
   /** The next unit still gets a price step, so Shopify's price is under
    *  retail. */
   earlyPrice: boolean;
@@ -302,6 +455,17 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
   if (!c.skus || typeof c.skus !== 'object' || Array.isArray(c.skus)) {
     throw new Error('preorders: skus must be an object');
   }
+  if (c.paidRegions !== undefined) {
+    if (!Array.isArray(c.paidRegions) || !c.paidRegions.length || c.paidRegions.some((r) => !REGIONS.includes(r))) {
+      throw new Error(`preorders: paidRegions must list ${REGIONS.join(' or ')}`);
+    }
+    // Every reader after this point sees the regions on the paid batch itself.
+    for (const entry of Object.values(c.skus)) {
+      for (const batch of entry?.batches ?? []) {
+        if (batch?.paid && batch.regions === undefined) batch.regions = [...c.paidRegions];
+      }
+    }
+  }
   for (const [sku, entry] of Object.entries(c.skus)) {
     if (!entry || !Array.isArray(entry.batches) || !entry.batches.length) {
       throw new Error(`preorders: ${sku} needs at least one batch`);
@@ -312,6 +476,10 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
       }
       if (batch.paid && !batch.ships?.trim()) {
         throw new Error(`preorders: ${sku} paid batch needs a ship promise`);
+      }
+      if (batch.inStock !== undefined) {
+        if (typeof batch.inStock !== 'boolean') throw new Error(`preorders: ${sku} inStock must be true or false`);
+        if (batch.inStock && !batch.paid) throw new Error(`preorders: ${sku} inStock needs a paid batch`);
       }
       if (batch.reserved !== undefined) {
         if (!batch.paid) throw new Error(`preorders: ${sku} reserved units need a paid batch`);
@@ -338,15 +506,26 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
     }
     if (entry.priceTiers !== undefined) checkTiers(entry.priceTiers, `${sku} priceTiers`);
   }
+  if (c.choiceFrom !== undefined && (typeof c.choiceFrom !== 'string' || !/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(c.choiceFrom) || !Number.isFinite(Date.parse(c.choiceFrom)))) {
+    throw new Error('preorders: choiceFrom must be an ISO timestamp in UTC');
+  }
+  if (c.confirmed !== undefined && typeof c.confirmed !== 'boolean') throw new Error('preorders: confirmed must be true or false');
+  if (c.afterEndsOn !== undefined && !AFTER_ENDS_ON.includes(c.afterEndsOn)) {
+    throw new Error(`preorders: afterEndsOn must be ${AFTER_ENDS_ON.join(', ')}`);
+  }
   if (c.soldUnder !== undefined) {
-    const o = c.soldUnder;
-    if (!o || typeof o.before !== 'string' || Number.isNaN(Date.parse(o.before))) {
-      throw new Error('preorders: soldUnder.before must be an ISO timestamp');
+    for (const o of Array.isArray(c.soldUnder) ? c.soldUnder : [c.soldUnder]) {
+      if (!o || typeof o.before !== 'string' || Number.isNaN(Date.parse(o.before))) {
+        throw new Error('preorders: soldUnder.before must be an ISO timestamp');
+      }
+      for (const day of [o.shipsBy, o.deliveryBy, o.deliveryByUS, o.paidDeliveryBy]) {
+        if (day !== undefined && !isCalendarDay(day)) throw new Error('preorders: soldUnder dates must be calendar dates');
+      }
+      if (typeof o.paidShips !== 'string' || !o.paidShips.trim()) throw new Error('preorders: soldUnder.paidShips is required');
+      if (o.pendingShips !== undefined && (typeof o.pendingShips !== 'string' || !o.pendingShips.trim())) {
+        throw new Error('preorders: soldUnder.pendingShips must be text');
+      }
     }
-    if (!isCalendarDay(o.shipsBy) || !isCalendarDay(o.deliveryBy) || !isCalendarDay(o.deliveryByUS)) {
-      throw new Error('preorders: soldUnder dates must be calendar dates');
-    }
-    if (typeof o.paidShips !== 'string' || !o.paidShips.trim()) throw new Error('preorders: soldUnder.paidShips is required');
   }
   if (c.shipsWith !== undefined) {
     if (!c.shipsWith || typeof c.shipsWith !== 'object' || Array.isArray(c.shipsWith)) {
@@ -515,6 +694,12 @@ export function shipGroupKey(
   shipPromise: string | null,
   campaign: CampaignState | null | undefined,
 ): string {
+  // A confirmed batch waits for no target: every line of it ships together
+  // by the one ship-by date, so they share one group. It is not a `date:`
+  // group: a cart of stock and this batch still splits (`splitPlan`).
+  if (campaign && campaign.shipsOnTarget && !campaign.paidStock && campaign.confirmed) {
+    return `batch:${campaign.shipByDay ?? shipPromise ?? ''}`;
+  }
   if (campaign && campaign.shipsOnTarget && !campaign.paidStock) {
     // A SKU that ships with another waits for the lead's target.
     return `target:${campaign.shipsWith ?? sku ?? ''}:${campaign.batch}`;
@@ -543,10 +728,14 @@ export function mixedShipPromise(
 /** The day that orders a line's date against the other lines of its cart:
  *  its delivery day, else its ship-by day. Null when the state has neither. */
 export function shipOrderDay(
-  state: Pick<CampaignState, 'shipByDay' | 'deliveryByDay'> | null | undefined,
+  state: (Pick<CampaignState, 'shipByDay' | 'deliveryByDay'> & Partial<Pick<CampaignState, 'inStock' | 'paidStock'>>) | null | undefined,
 ): string | null {
-  return state?.deliveryByDay ?? state?.shipByDay ?? null;
+  // Stock on hand ships now: it sorts before every dated line.
+  return state?.deliveryByDay ?? state?.shipByDay ?? (state?.inStock && state.paidStock ? STOCK_ORDER_DAY : null);
 }
+
+/** The order day of stock on hand: before any real date. */
+export const STOCK_ORDER_DAY = '0000-00-00';
 
 /** Whether a batch ships to `region`: a batch without `regions` serves all. */
 export function servesRegion(batch: Pick<CampaignBatch, 'regions'>, region: Region): boolean {
@@ -577,25 +766,77 @@ function toRuns(ordered: PaidUnitsOf): UnitRuns {
   return units ? [{region: 'EU', units}] : [];
 }
 
+/**
+ * Whether an order ships with paid stock only (founder 2026-11-01): every
+ * line with units is a campaign SKU that has a paid batch, or a `shipsWith`
+ * SKU pinned to a paid batch (a stocked one only while its units fit the
+ * stock). Any other line, a motor, frame, receiver or prop, makes the whole
+ * order ship in March, boards included, so its units skip paid batches.
+ * `stockUsed` is the units each stocked SKU has already taken from stock.
+ */
+export function shipsOnlyWithPaid(
+  config: Pick<CampaignConfig, 'skus' | 'shipsWith'>,
+  lines: Array<{sku: string | null | undefined; quantity: number; preorder?: boolean}>,
+  stockUsed: Record<string, number> = {},
+): boolean {
+  for (const line of lines) {
+    if (!(line.quantity > 0)) continue;
+    // The buyer chose the pre-order variant of a board ({@link preorderChoiceLine}).
+    if (line.preorder) return false;
+    const sku = line.sku?.trim();
+    if (!sku) return false;
+    const rule = config.shipsWith?.[sku];
+    if (rule) {
+      const lead = config.skus[rule.sku]?.batches ?? [];
+      if (rule.stock !== undefined) {
+        if (!lead[(rule.batch ?? 0) - 1]?.paid || (stockUsed[sku] ?? 0) + line.quantity > rule.stock) return false;
+      } else if (!lead[(rule.batch ?? 0) - 1]?.paid) return false;
+    } else if (!config.skus[sku]?.batches.some((b) => b.paid)) return false;
+  }
+  return true;
+}
+
+/**
+ * Whether an order line is a board bought as a pre-order: its variant title
+ * as the order recorded it names the `Pre-order` value of the `Batch` option
+ * ("20×20 / Pre-order") and the order was created at or after `choiceFrom`.
+ * Such a line ships in March and makes its whole order a March order, so it
+ * takes no batch 1 stock. Before `choiceFrom` (and without one) the same
+ * variant sold batch 1 stock, so the title decides nothing. The price is
+ * bound to the variant by Shopify, so this cannot be edited from a cart.
+ */
+export function preorderChoiceLine(
+  config: Pick<CampaignConfig, 'choiceFrom'>,
+  line: {variantTitle?: string | null},
+  createdAt: string | null | undefined,
+): boolean {
+  if (!config.choiceFrom || !createdAt) return false;
+  const created = Date.parse(createdAt);
+  if (!Number.isFinite(created) || created < Date.parse(config.choiceFrom)) return false;
+  return (line.variantTitle ?? '').split(' / ').some((part) => part.trim() === 'Pre-order');
+}
+
 /** Every paid unit of a SKU, whatever its region: the count the price
  *  steps and the funding target read. */
 export function totalUnits(ordered: PaidUnitsOf): number {
   return toRuns(ordered).reduce((sum, run) => sum + Math.max(0, Math.floor(run.units) || 0), 0);
 }
 
-/** The paid units of one region. */
+/** The paid units of one region that ship with paid stock: `march` units
+ *  leave the stock on hand untouched. */
 export function regionUnits(ordered: PaidUnitsOf, region: Region): number {
   return toRuns(ordered)
-    .filter((run) => run.region === region)
+    .filter((run) => run.region === region && !run.march)
     .reduce((sum, run) => sum + Math.max(0, Math.floor(run.units) || 0), 0);
 }
 
 /** 0-based index of the batch the next unit for `region` falls into: the
  *  first batch that serves the region and still has room (the open last
  *  batch always has room). `fill` is the units already in each batch. */
-function nextIndex(list: CampaignBatch[], fill: number[], region: Region): number {
+function nextIndex(list: CampaignBatch[], fill: number[], region: Region, march = false): number {
   for (let i = 0; i < list.length; i += 1) {
     if (!servesRegion(list[i], region)) continue;
+    if (march && list[i].paid) continue;
     if (i === list.length - 1 || fill[i] < sellableUnits(list[i])) return i;
   }
   return list.length - 1;
@@ -612,7 +853,7 @@ export function batchFill(batches: CampaignBatch[], ordered: PaidUnitsOf): numbe
   for (const run of toRuns(ordered)) {
     let left = Math.max(0, Math.floor(run.units) || 0);
     while (left > 0) {
-      const i = nextIndex(list, fill, run.region);
+      const i = nextIndex(list, fill, run.region, run.march);
       const room = i === list.length - 1 ? left : Math.min(left, sellableUnits(list[i]) - fill[i]);
       fill[i] += room;
       left -= room;
@@ -624,15 +865,17 @@ export function batchFill(batches: CampaignBatch[], ordered: PaidUnitsOf): numbe
 /**
  * Allocate one unit for `region` into `fill` (from {@link batchFill}, or
  * all zero) and return its 1-based batch and entry. `fill` is updated.
+ * A `march` unit (its order ships with a line outside paid stock) skips paid batches.
  */
 export function allocateUnit(
   batches: CampaignBatch[],
   fill: number[],
   region: Region,
+  march = false,
 ): {batch: number; entry: CampaignBatch} {
   const list = openBatches(batches);
   while (fill.length < list.length) fill.push(0);
-  const index = nextIndex(list, fill, region);
+  const index = nextIndex(list, fill, region, march);
   fill[index] += 1;
   return {batch: index + 1, entry: list[index]};
 }
@@ -666,7 +909,9 @@ export function batchOfUnit(batches: CampaignBatch[], unit: number): {batch: num
  */
 export function tierUnits(batches: CampaignBatch[], ordered: PaidUnitsOf): number {
   const list = openBatches(batches);
-  const fill = batchFill(batches, ordered);
+  // Price steps keep counting every paid unit as one ladder: `march` units
+  // fill the batches as they did before the batch-1-only rule.
+  const fill = batchFill(batches, toRuns(ordered).map(({region, units}) => ({region, units})));
   const index = nextIndex(list, fill, 'EU');
   const before = list.slice(0, index).filter((b) => servesRegion(b, 'EU')).reduce((sum, b) => sum + sellableUnits(b), 0);
   return before + fill[index];
@@ -686,11 +931,14 @@ export function campaignState(
   priceTiers: PriceTier[],
   retail: number | null = null,
   region: Region = 'EU',
+  /** The next unit is a pre-order: it skips paid batches, like the units of
+   *  an order that ships in March. */
+  march = false,
 ): CampaignState {
   const units = totalUnits(ordered);
   const list = openBatches(batches);
   const fill = batchFill(batches, ordered);
-  const index = nextIndex(list, fill, region);
+  const index = nextIndex(list, fill, region, march);
   const current = list[index];
 
   const stepUnits = tierUnits(batches, ordered);
@@ -716,6 +964,7 @@ export function campaignState(
     deliveryByDay: batchDeliveryDay(current, region),
     shipsText: current.ships?.trim() || null,
     paidLeft: current.paid ? sellableUnits(current) - fill[index] : null,
+    ...(current.paid && current.inStock ? {inStock: true} : {}),
     earlyPrice: tier !== null,
     tierUpTo: tier?.upTo ?? null,
     tierLeft: tier ? tier.upTo - stepUnits : 0,
@@ -880,8 +1129,10 @@ function pinnedBatchState(
  *
  * After the funding deadline (`endsOn`, end of day in Brussels) a variant
  * whose next unit would wait for a funding target closes as sold out: its
- * ship promise names a deadline that has passed. Paid stock, and a batch
- * with its own ship date (its supplier order is placed), keep selling.
+ * ship promise names a deadline that has passed. Paid stock, a batch
+ * with its own ship date (its supplier order is placed) and a funding
+ * target that was reached keep selling: the deadline only matters to a
+ * target still missing units.
  *
  * A SKU in `shipsWith` gets its lead's state at its own flat price
  * ({@link shipsWithState}) and closes on the same conditions, except the
@@ -896,8 +1147,19 @@ export function applyCampaign(
   units: Record<string, PaidUnitsOf> | null,
   now: Date = new Date(),
   region: Region = 'EU',
+  /** A wholesale buyer outside the EU (an applied wholesale code): batch 1
+   *  stock is offered to them too, shipped by courier, import charges theirs
+   *  (founder 2026-11-11). Consumers outside the EU never get it. */
+  dealer = false,
 ): Catalog {
-  const closed = fundingClosed(config, now);
+  const confirmed = Boolean(config.confirmed);
+  // A confirmed batch never closes for a missed target: after `endsOn` it
+  // closes only in the `closed` mode. Otherwise the deadline closes every
+  // target still missing units.
+  const closed = confirmed ? afterEndsOn(config, now) === 'closed' : fundingClosed(config, now);
+  /** A funding unit of a confirmed campaign waits for no target. */
+  const settle = (state: CampaignState): CampaignState =>
+    confirmed && state.shipsOnTarget && !state.paidStock ? {...state, targetReached: true, confirmed: true} : state;
   return {
     ...catalog,
     campaign_counts: units ? 'verified' : 'unavailable',
@@ -925,11 +1187,11 @@ export function applyCampaign(
             units[variant.sku] ?? 0,
             region,
           );
-          if (closed && state.shipsOnTarget) {
+          if (closed && state.shipsOnTarget && (confirmed || !state.targetReached)) {
             return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
           }
           const dated: CampaignState = {
-            ...state,
+            ...settle(state),
             deadline: campaignDate(config.endsOn),
             latestShip: state.shipsOnTarget ? latestShipDate(config) : null,
             shipByDay: state.shipsOnTarget ? latestShipDay(config) : null,
@@ -937,29 +1199,59 @@ export function applyCampaign(
           return {...variant, availability: 'preorder', ship_promise: state.shipPromise, campaign: dated};
         }
         if (!entry) return variant;
-        const state = campaignState(
-          entry.batches,
-          units[variant.sku] ?? 0,
-          config.pendingShips,
-          tiersFor(config, variant.sku),
-          variant.compare_price,
-          region,
-        );
-        if (closed && state.shipsOnTarget && !state.paidStock) {
-          return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
-        }
-        // Shopify still charges under this SKU's step, so the step has not
-        // been written yet: close rather than sell under it.
-        if (state.price != null && variant.price < state.price - 0.005) {
-          return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
-        }
-        const dated: CampaignState = {
-          ...state,
+        const tiers = tiersFor(config, variant.sku, now);
+        const stateFor = (march: boolean) =>
+          campaignState(entry.batches, units[variant.sku] ?? 0, config.pendingShips, tiers, variant.compare_price, region, march);
+        const date = (state: CampaignState): CampaignState => ({
+          ...settle(state),
           deadline: campaignDate(config.endsOn),
           latestShip: state.shipsOnTarget && !state.paidStock ? latestShipDate(config) : null,
           shipByDay: state.shipsOnTarget && !state.paidStock ? latestShipDay(config) : null,
+        });
+        /** Whether the unit `state` describes is sold at the price Shopify
+         *  charges for this variant today. */
+        const open = (state: CampaignState): boolean => {
+          if (closed && state.shipsOnTarget && !state.paidStock && (confirmed || !state.targetReached)) return false;
+          // Shopify still charges under this SKU's step, so the step has not
+          // been written yet: close rather than sell under it.
+          return !(state.price != null && variant.price < state.price - 0.005);
         };
-        return {...variant, availability: 'preorder', ship_promise: state.shipPromise, campaign: dated};
+        const soldOut: CatalogVariant = {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
+        // A board with a `Buy now` variant (`BATCH_CHOICE`): batch 1 stock is
+        // that variant, at its own retail price, for an EU buyer while units
+        // are left; the entry's own Shopify variant is the pre-order and
+        // never takes batch 1 stock.
+        if (variant.buy_now) {
+          const {buy_now: buyNow, ...entryVariant} = variant;
+          const march = stateFor(true);
+          const preorder = open(march)
+            ? {merchandise_id: variant.merchandise_id, price: variant.price, compare_price: variant.compare_price, ship_promise: march.shipPromise, campaign: date(march)}
+            : null;
+          const exportStock = dealer && region !== 'EU';
+          const stock = exportStock
+            ? campaignState(entry.batches, units[variant.sku] ?? 0, config.pendingShips, tiers, variant.compare_price, 'EU', false)
+            : stateFor(false);
+          const stocked = (region === 'EU' || exportStock) && buyNow.available && stock.paidStock && (stock.paidLeft ?? 0) > 0;
+          if (stocked) {
+            return {
+              ...entryVariant,
+              offer: 'buy_now',
+              merchandise_id: buyNow.merchandise_id,
+              price: buyNow.price,
+              compare_price: null,
+              availability: 'preorder',
+              ship_promise: stock.shipPromise,
+              // Retail, whatever the step: stock has no price step.
+              campaign: {...date(stock), earlyPrice: false, tierUpTo: null, tierLeft: 0, tierOff: 0, price: null, nextPrice: null},
+              ...(preorder ? {preorder_offer: preorder} : {}),
+            };
+          }
+          if (!preorder) return {...soldOut, buy_now: undefined, offer: 'preorder'};
+          return {...entryVariant, offer: 'preorder', availability: 'preorder', ship_promise: preorder.ship_promise, campaign: preorder.campaign};
+        }
+        const state = stateFor(false);
+        if (!open(state)) return soldOut;
+        return {...variant, availability: 'preorder', ship_promise: state.shipPromise, campaign: date(state)};
       }),
     })),
   };
@@ -1010,16 +1302,51 @@ function capitalizeFirst(text: string): string {
   return text ? text[0].toUpperCase() + text.slice(1) : text;
 }
 
-/** The ship-by date a funding-target promise names, "by 31 March 2027 if
- *  the target is reached", or null when it names none. */
-function promiseLatestShip(promise: string): string | null {
-  const match = promise.match(/\bby (\d{1,2} [A-Za-z]+ \d{4}) if\b/);
-  return match ? match[1] : null;
+/**
+ * A funding-batch promise read from its text: the ship-by date it names and
+ * whether it was sold on a target. Two wordings exist on orders:
+ * - "ships by 31 March 2027": the confirmed batch (terms 2.9);
+ * - "ships by 31 March 2027 if the target is reached by 15 December 2026,
+ *   otherwise ...": sold before the batch was confirmed (`conditional`).
+ * Both belong to the same batch. Null for any other promise, such as a
+ * month ("ships late November 2026"), stock on hand, or a mixed-order line
+ * ("ships with the rest of this order by ...").
+ */
+export function fundingPromise(promise: string | null | undefined): {latestShip: string; conditional: boolean} | null {
+  const text = promise?.trim() ?? '';
+  const conditional = text.match(/\bby (\d{1,2} [A-Za-z]+ \d{4}) if\b/);
+  if (conditional) return {latestShip: conditional[1], conditional: true};
+  const plain = text.match(/^ships by (\d{1,2} [A-Za-z]+ \d{4})(?:[.,;]|$)/i);
+  return plain ? {latestShip: plain[1], conditional: false} : null;
 }
 
-function fundingShort(latestShip: string | null): string {
+/** Stock on hand on a chip or a cart line: the short form of its promise. */
+export const STOCK_SHORT = 'In stock, ships in a few working days';
+
+/** A promise of stock on hand ("in stock in Belgium, ships to EU addresses
+ *  in a few working days", `CampaignBatch.inStock`): it names no month. */
+export function stockPromise(promise: string | null | undefined): boolean {
+  return /^in stock\b/i.test(promise?.trim() ?? '');
+}
+
+/** Whether a promise read from its text alone still waits for a target: a
+ *  conditional promise, unless the campaign is confirmed (then an order sold
+ *  on a target is part of the confirmed batch, terms 7bis.3bis). */
+export function waitsForTarget(promise: string | null | undefined, confirmed: boolean = CAMPAIGN_CONFIRMED): boolean {
+  const text = promise?.trim() ?? '';
+  if (/\bafter its target\b/.test(text)) return !confirmed;
+  return Boolean(fundingPromise(text)?.conditional) && !confirmed;
+}
+
+/** The ship-by date a funding promise names, or null when it names none. */
+function promiseLatestShip(promise: string): string | null {
+  return fundingPromise(promise)?.latestShip ?? null;
+}
+
+function fundingShort(latestShip: string | null, conditional: boolean): string {
   const date = shortCampaignDate(latestShip);
-  return date ? `Ships by ${date} if the target is reached` : 'Funding target';
+  if (!date) return conditional ? 'Funding target' : 'Confirmed batch';
+  return conditional ? `Ships by ${date} if the target is reached` : `Ships by ${date}`;
 }
 
 /** The parts of a dated promise: "ships early November 2026" gives
@@ -1041,6 +1368,7 @@ export function datedShipParts(
 /** A dated promise, short: "Ships early Nov 2026".
  *  A promise that names no month and year keeps its own words. */
 function datedShort(promise: string): string {
+  if (stockPromise(promise)) return STOCK_SHORT;
   const parts = datedShipParts(promise);
   if (!parts) return capitalizeFirst(promise.trim());
   return `Ships ${parts.when}`;
@@ -1060,12 +1388,18 @@ function longSentence(promise: string): string {
  * you choose a refund or to wait."
  */
 export function shipLabel(
-  campaign: Pick<CampaignState, 'shipPromise' | 'paidStock' | 'shipsOnTarget' | 'latestShip'>,
+  campaign: Pick<CampaignState, 'shipPromise' | 'paidStock' | 'shipsOnTarget' | 'latestShip'> & Partial<Pick<CampaignState, 'confirmed'>>,
   form: ShipLabelForm,
 ): string {
-  if (form === 'long') return longSentence(campaign.shipPromise);
+  if (form === 'long') {
+    const latest = campaign.confirmed ? promiseLatestShip(campaign.shipPromise) : null;
+    return latest ? `Ships by ${latest}.` : longSentence(campaign.shipPromise);
+  }
   if (campaign.shipsOnTarget && !campaign.paidStock) {
-    return fundingShort(campaign.latestShip ?? promiseLatestShip(campaign.shipPromise));
+    return fundingShort(
+      campaign.latestShip ?? promiseLatestShip(campaign.shipPromise),
+      !campaign.confirmed && waitsForTarget(campaign.shipPromise, false),
+    );
   }
   return datedShort(campaign.shipPromise);
 }
@@ -1078,12 +1412,17 @@ export function shipLabel(
 export function shipLabelFromPromise(
   promise: string | null | undefined,
   form: ShipLabelForm,
+  confirmed: boolean = CAMPAIGN_CONFIRMED,
 ): string | null {
   const text = promise?.trim();
   if (!text) return null;
-  if (form === 'long') return longSentence(text);
   const latest = promiseLatestShip(text);
-  return latest || /\bafter its target\b/.test(text) ? fundingShort(latest) : datedShort(text);
+  const funding = Boolean(latest) || /\bafter its target\b/.test(text);
+  // An order sold on a target is part of the confirmed batch: its long
+  // sentence drops the condition too.
+  const waits = waitsForTarget(text, confirmed);
+  if (form === 'long') return funding && latest && !waits ? `Ships by ${latest}.` : longSentence(text);
+  return funding ? fundingShort(latest, waits) : datedShort(text);
 }
 
 /**
@@ -1092,11 +1431,14 @@ export function shipLabelFromPromise(
  * line then carries only its short label. Null when no line waits for a
  * target.
  */
-export function cartShipNote(promises: Array<string | null | undefined>): string | null {
+export function cartShipNote(
+  promises: Array<string | null | undefined>,
+  confirmed: boolean = CAMPAIGN_CONFIRMED,
+): string | null {
   for (const promise of promises) {
     const text = promise?.trim();
-    if (text && (promiseLatestShip(text) || /\bafter its target\b/.test(text))) {
-      return shipLabelFromPromise(text, 'long');
+    if (text && waitsForTarget(text, confirmed)) {
+      return shipLabelFromPromise(text, 'long', confirmed);
     }
   }
   return null;

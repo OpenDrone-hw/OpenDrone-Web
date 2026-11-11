@@ -1,3 +1,4 @@
+import {useRouteLoaderData} from 'react-router';
 import {NavLink} from '~/components/nav';
 import {
   DISCORD_INVITE_URL,
@@ -6,6 +7,7 @@ import {
 } from '~/lib/company';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {Txt} from '~/components/Txt';
+import {copyText} from '~/lib/copy';
 import {SiteWordmark} from '~/components/SiteWordmark';
 import {
   LegalLanguages,
@@ -51,9 +53,12 @@ const SOCIAL_LINKS: Array<{href: string; copy: string}> = [
 const HELP_LINKS: Array<{to: string; copy: string}> = [
   {to: '/support', copy: 'nav_support'},
   {to: '/shipping', copy: 'nav_shipping'},
+  {to: '/markets', copy: 'nav_markets'},
   {to: '/herroepingsrecht', copy: 'nav_returns'},
   {to: '/warranty', copy: 'nav_warranty'},
   {to: '/support/find', copy: 'nav_find_ticket'},
+  {to: '/guides/flash', copy: 'nav_flash'},
+  {to: '/guides', copy: 'nav_guides'},
 ];
 
 const COMPANY_LINKS: Array<{to: string; copy: string}> = [
@@ -111,13 +116,24 @@ function FooterGroup({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    const summary = el.querySelector('summary');
     const mq = window.matchMedia('(max-width: 639px)');
     const apply = () => {
       el.open = mq.matches ? open : true;
+      // Wide screens: the summary is a plain heading (the mouse can't toggle
+      // it), so keep it out of the Tab order and don't let Enter collapse it.
+      if (summary) summary.tabIndex = mq.matches ? 0 : -1;
     };
+    const guard = (e: Event) => {
+      if (!mq.matches) e.preventDefault();
+    };
+    summary?.addEventListener('click', guard);
     apply();
     mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
+    return () => {
+      mq.removeEventListener('change', apply);
+      summary?.removeEventListener('click', guard);
+    };
   }, [open]);
   return (
     <details ref={ref} open className="group/fg">
@@ -163,10 +179,11 @@ function FooterNavLink({
   return (
     <NavLink
       end
-      prefetch="intent"
+      prefetch={to === '/guides/flash' ? 'none' : 'intent'}
+      reloadDocument={to === '/guides/flash'}
       to={to}
       className={({isActive}) =>
-        `footer-link text-xs transition-colors flex items-center min-h-[36px] md:min-h-0 ${
+        `footer-link text-xs transition-colors flex items-center min-h-[36px] md:min-h-[24px] ${
           isActive
             ? 'text-[var(--color-text)]'
             : 'text-[var(--color-text-muted)]'
@@ -253,6 +270,9 @@ function DrawingView() {
   const pad = o ? o.w * 0.18 : 0;
   return (
     <div ref={ref} className="footer-view" aria-hidden="true">
+      {/* The art box is reserved before the drawing loads (CSS aspect-ratio), so the label under it and the
+          footer never move when it arrives. */}
+      <div className="footer-view-art">
       {o ? (
         <svg
           viewBox={`${o.x - pad} ${o.y - pad} ${o.w + pad * 2} ${o.h + pad * 2.4}`}
@@ -286,6 +306,7 @@ function DrawingView() {
           </text>
         </svg>
       ) : null}
+      </div>
       <Txt id="chrome.footer_view_label" as="p" className="footer-view-label" />
     </div>
   );
@@ -320,6 +341,13 @@ const BUILD_DATE = typeof __BUILD_DATE__ === 'string' ? __BUILD_DATE__ : '';
 
 export function Footer({company, turnstileSiteKey}: FooterProps) {
   const legalLocale = useLegalLocale();
+  // Buy now or pre-order on: the early bird Discord role moves here from /preorder.
+  const root = useRouteLoaderData('root') as {batchChoice?: boolean; ordinaryShop?: boolean} | undefined;
+  const batchChoice = Boolean(root?.batchChoice);
+  // An ordinary shop (nothing is pre-order): no Preorders link, /preorder redirects anyway.
+  const baseLinks = root?.ordinaryShop ? SHOP_LINKS.filter((link) => link.to !== '/preorder') : SHOP_LINKS;
+  // The early bird role is a pre-order perk: gone in the ordinary shop (founder 2026-11-11).
+  const shopLinks = batchChoice && !root?.ordinaryShop ? [...baseLinks, {to: '/early-bird', copy: 'nav_early_bird'}] : baseLinks;
   // Reference designators run across the whole parts list, J1 to Jn.
   let refNo = 0;
   const nextRef = () => ++refNo;
@@ -380,35 +408,35 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
               />
               <div className="footer-parts-grid">
                 <FooterGroup id="chrome.heading_shop" open>
-                  <nav className="flex flex-col gap-1.5">
-                    {SHOP_LINKS.map((link) => (
+                  <nav aria-label={copyText('chrome.heading_shop') ?? 'Shop'} className="flex flex-col gap-1.5 md:gap-0">
+                    {shopLinks.map((link) => (
                       <FooterNavLink
                         key={link.to}
                         to={link.to}
                         refNo={nextRef()}
                       >
-                        <Txt id={`chrome.${link.copy}`} />
+                        <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                       </FooterNavLink>
                     ))}
                   </nav>
                 </FooterGroup>
 
                 <FooterGroup id="chrome.heading_help" open>
-                  <nav className="flex flex-col gap-1.5">
+                  <nav aria-label={copyText('chrome.heading_help') ?? 'Customer service'} className="flex flex-col gap-1.5 md:gap-0">
                     {HELP_LINKS.map((link) => (
                       <FooterNavLink
                         key={link.to}
                         to={legalHref(link.to, legalLocale)}
                         refNo={nextRef()}
                       >
-                        <Txt id={`chrome.${link.copy}`} />
+                        <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                       </FooterNavLink>
                     ))}
                   </nav>
                 </FooterGroup>
 
                 <FooterGroup id="chrome.heading_open_source">
-                  <nav className="flex flex-col gap-1.5">
+                  <nav aria-label={copyText('chrome.heading_open_source') ?? 'Community'} className="flex flex-col gap-1.5 md:gap-0">
                     {/* The newsletter archive, first in Community; the signup
                         form is Detail A above. */}
                     <FooterNavLink to="/newsletter" refNo={nextRef()}>
@@ -423,24 +451,24 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                         href={link.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="footer-link text-xs text-[var(--color-text-muted)] transition-colors flex items-center min-h-[36px] md:min-h-0"
+                        className="footer-link text-xs text-[var(--color-text-muted)] transition-colors flex items-center min-h-[36px] md:min-h-[24px]"
                       >
                         <RefTag n={nextRef()} />
-                        <Txt id={`chrome.${link.copy}`} />
+                        <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                       </a>
                     ))}
                   </nav>
                 </FooterGroup>
 
                 <FooterGroup id="chrome.heading_company">
-                  <nav className="flex flex-col gap-1.5">
+                  <nav aria-label={copyText('chrome.heading_company') ?? 'Company'} className="flex flex-col gap-1.5 md:gap-0">
                     {COMPANY_LINKS.map((link) => (
                       <FooterNavLink
                         key={link.to}
                         to={link.to}
                         refNo={nextRef()}
                       >
-                        <Txt id={`chrome.${link.copy}`} />
+                        <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                       </FooterNavLink>
                     ))}
                   </nav>
@@ -448,14 +476,14 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
 
                 <div>
                   <FooterGroup id="chrome.heading_legal">
-                    <nav className="footer-legal-nav flex flex-col gap-1.5">
+                    <nav aria-label={copyText('chrome.heading_legal') ?? 'Legal'} className="footer-legal-nav flex flex-col gap-1.5 md:gap-0">
                       {LEGAL_LINKS.map((link) => (
                         <FooterNavLink
                           key={link.to}
                           to={legalHref(link.to, legalLocale)}
                           refNo={nextRef()}
                         >
-                          <Txt id={`chrome.${link.copy}`} />
+                          <Txt id={`chrome.${link.copy}`} fallback={link.copy === 'nav_early_bird' ? 'Early bird role on Discord' : undefined} />
                         </FooterNavLink>
                       ))}
                     </nav>

@@ -145,22 +145,21 @@ describe('groupPins and viewFor', () => {
     assert.deepEqual(cells[0]!.pilots.map((p) => p.name), ['amy', 'zed']);
   });
 
-  it('gives a non-owner the total and nothing else', () => {
+  it('gives a non-owner nothing, not even a count', () => {
     const view = viewFor(false, rows);
-    assert.deepEqual(view, {total: 3});
+    assert.deepEqual(view, {});
     assert.equal('cells' in view, false);
     assert.doesNotMatch(JSON.stringify(view), /amy|Mira|zed|111111|\d+:\d+/);
   });
 
   it('gives a qualified owner the cells', () => {
     const view = viewFor(true, rows);
-    assert.equal(view.total, 3);
     assert.equal(view.cells?.length, 2);
   });
 
   it('is empty without pins', () => {
-    assert.deepEqual(viewFor(false, []), {total: 0});
-    assert.deepEqual(viewFor(true, []), {total: 0, cells: []});
+    assert.deepEqual(viewFor(false, []), {});
+    assert.deepEqual(viewFor(true, []), {cells: []});
   });
 });
 

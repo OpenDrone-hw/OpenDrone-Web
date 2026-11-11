@@ -1,5 +1,6 @@
 import {AppSession} from '~/lib/session';
 import {createCatalogClient, type CatalogClient} from '~/lib/catalog-client';
+import {DEALER_SESSION_KEY} from '~/lib/wholesale-codes';
 
 /**
  * The request context: env, the session cookie, the worker cache, the
@@ -43,6 +44,6 @@ export async function createAppLoadContext(
     session,
     cache,
     waitUntil,
-    catalog: createCatalogClient({env, request}),
+    catalog: createCatalogClient({env, request, dealer: Boolean(session.get(DEALER_SESSION_KEY))}),
   };
 }

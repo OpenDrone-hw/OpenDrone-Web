@@ -3,10 +3,10 @@ import type {KeyboardEvent} from 'react';
 import {Form, useLocation, useRouteLoaderData} from 'react-router';
 import {Link, NavLink} from '~/components/nav';
 import {AnimatePresence} from 'motion/react';
-import {useAside} from '~/components/Aside';
+import {MOBILE_DRAWER_ID, useAside} from '~/components/Aside';
 import {LangToggle} from '~/components/LangToggle';
 import {useHeaderPopover} from '~/components/header-popover';
-import {RegionSwitch} from '~/components/RegionSwitch';
+import {CountryPicker} from '~/components/CountryPicker';
 import {SiteWordmark} from '~/components/SiteWordmark';
 import {IncutecWordmark} from '~/components/IncutecWordmark';
 import {Pod} from '~/components/Pod';
@@ -460,7 +460,6 @@ function FamilyNav({
         <NavLink
           prefetch="intent"
           to={cat.to}
-          aria-expanded={open === cat.label}
         >
           {familyShort(cat.type, cat.label)}
         </NavLink>
@@ -527,6 +526,8 @@ export function HeaderMenu({
 }) {
   const {close} = useAside();
   const isMobile = viewport === 'mobile';
+  // An ordinary shop (nothing is pre-order): no Preorders item; /preorder redirects anyway.
+  const ordinaryShop = Boolean((useRouteLoaderData('root') as {ordinaryShop?: boolean} | undefined)?.ordinaryShop);
 
   return (
     <nav
@@ -535,7 +536,11 @@ export function HeaderMenu({
           ? 'site-mobile-nav flex flex-col gap-1 px-1'
           : 'hidden md:flex items-center gap-8 ml-10'
       }
-      role="navigation"
+      aria-label={
+        isMobile
+          ? (copyText('chrome.menu_toggle_aria') ?? 'Menu')
+          : (copyText('chrome.main_nav_aria') ?? 'Main')
+      }
     >
       {/* Mobile drawer only: surface Search + the product families + Home up
           top. The desktop header carries these in its own bar / FamilyNav,
@@ -607,7 +612,7 @@ export function HeaderMenu({
           </NavLink>
         </>
       )}
-      {HEADER_MENU.items.map((item) => {
+      {HEADER_MENU.items.filter((item) => !(ordinaryShop && item.url === '/preorder')).map((item) => {
         if (!item.url) return null;
         const url = item.url;
         // Desktop already exposes these destinations in its category bar,
@@ -646,7 +651,8 @@ export function HeaderMenu({
             end
             key={item.id}
             onClick={close}
-            prefetch="intent"
+            prefetch={url === '/guides/flash' ? 'none' : 'intent'}
+            reloadDocument={url === '/guides/flash'}
             to={url}
             className={({isActive}) =>
               `${isMobile ? 'text-base' : 'text-[13px]'} transition-colors ${
@@ -721,7 +727,14 @@ function SecondaryLinks({onNavigate}: {onNavigate?: () => void}) {
   return (
     <>
       {HEADER_MENU_LINKS.map((l) => (
-        <NavLink key={l.to} prefetch="intent" to={l.to} className={cls} onClick={onNavigate}>
+        <NavLink
+          key={l.to}
+          prefetch={l.to === '/guides/flash' ? 'none' : 'intent'}
+          reloadDocument={l.to === '/guides/flash'}
+          to={l.to}
+          className={cls}
+          onClick={onNavigate}
+        >
           <Txt id={l.copy} />
         </NavLink>
       ))}
@@ -851,7 +864,7 @@ function HeaderCtas({
           currency controls inside the drawer instead. */}
       <div className="site-header-utils">
         <LangToggle className="header-lang-toggle" />
-        <RegionSwitch variant="menu" className="header-region-switch" />
+        <CountryPicker className="header-region-switch" />
         {/* The community: desktop only here, the phone drawer lists it. */}
         <DiscordLink
           placement="header"
@@ -884,14 +897,17 @@ function HeaderCtas({
 }
 
 function HeaderMenuMobileToggle() {
-  const {open} = useAside();
+  const {open, type} = useAside();
   return (
     <button
       className="site-header-icon site-header-menu-toggle text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
       onClick={() => open('mobile')}
+      aria-expanded={type === 'mobile'}
+      aria-controls={MOBILE_DRAWER_ID}
+      aria-haspopup="dialog"
       aria-label={copyText('chrome.menu_toggle_aria') ?? 'Menu'}
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" focusable="false">
         <line x1="4" y1="7" x2="20" y2="7" />
         <line x1="4" y1="12" x2="20" y2="12" />
         <line x1="4" y1="17" x2="20" y2="17" />
@@ -993,6 +1009,7 @@ const HEADER_MENU = {
     {id: 'menu-wholesale', title: 'Wholesale', url: '/wholesale'},
     {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
     {id: 'menu-owners', title: 'Owners map', url: '/owners'},
+    {id: 'menu-guides', title: 'Firmware guides', url: '/guides'},
     // Mobile drawer only: desktop shows Support as the Contact link.
     {id: 'menu-support', title: 'Support', url: '/support'},
     {

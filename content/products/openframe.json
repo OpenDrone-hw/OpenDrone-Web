@@ -3,7 +3,7 @@
   "family": "Carbon Frame",
   "status": "preorder",
   "imagesAreRenders": true,
-  "statusNote": "ships by 31 March 2027 if the target is reached by 15 December 2026",
+  "statusNote": "ships by 31 March 2027",
   "hero": {
     "line1": "",
     "line2Italic": "",
@@ -101,11 +101,11 @@
     },
     {
       "qty": "1×",
-      "item": "Hardware kit: screws, nuts, press nuts, standoffs and soft-mount grommets, with 2 spares of every screw size"
+      "item": "Hardware kit: screws, lock nuts and standoffs, with 2 spares of every screw and nut"
     },
     {
       "qty": "1×",
-      "item": "Build card"
+      "item": "Guide"
     },
     {
       "qty": "1×",
@@ -194,9 +194,6 @@
         {
           "qty": "2×",
           "item": "Battery straps, 20 × 220 mm"
-        },
-        {
-          "item": "Aluminium M3 cup washers, anodised"
         }
       ],
       "inTheBoxImage": {
@@ -288,13 +285,6 @@
             "y": 67.88,
             "w": 70.79,
             "h": 12.85
-          },
-          {
-            "item": 10,
-            "x": 75.06,
-            "y": 67.81,
-            "w": 20.76,
-            "h": 6.14
           }
         ]
       },

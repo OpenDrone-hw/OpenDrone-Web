@@ -14,9 +14,9 @@ import type {PilotPanel} from '~/lib/pilot-map-server';
  *
  * | Viewer | Sees |
  * |---|---|
- * | Signed out | the number of pilots and a sign-in link |
- * | Signed in, no qualifying order | the number and a note |
- * | Owner | who is in each area (dots on the map), and the sign-up or withdraw controls |
+ * | Signed out | a sign-in link, no figures |
+ * | Signed in, no qualifying order | a note, no figures |
+ * | Owner | who is in each area (dots on the map, no counts), and the sign-up or withdraw controls |
  *
  * The point an owner taps is held in `draft` (owned by the map) until Submit
  * and is snapped to its cell on the server; only the cell is stored.

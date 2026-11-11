@@ -1,4 +1,4 @@
-import type {Catalog, CatalogProduct, CatalogVariant} from './catalog.ts';
+import {BATCH_OPTION, batchOfferOf, titleWithoutBatch, type BatchOffer, type Catalog, type CatalogProduct, type CatalogVariant} from './catalog.ts';
 import {devOverride} from './support/dev-overrides.ts';
 
 const DEFAULT_API_VERSION = '2026-07';
@@ -154,6 +154,10 @@ export const CART_ATTRIBUTES_UPDATE_MUTATION = `#graphql
 export const PREORDER_ATTRIBUTE = 'Preorder';
 /** The separately agreed customer arrival deadline, visible at checkout. */
 export const DELIVERY_BY_ATTRIBUTE = 'Delivery by';
+/** The visible line attribute of a UK, Swiss or Norwegian line (region
+ *  NEAR): the buyer pays import VAT and duties on delivery. */
+export const DUTIES_ATTRIBUTE = 'Import VAT and duties';
+export const DUTIES_VALUE = 'Paid by you on delivery, unless collected at checkout';
 /** The line's own deadline while its visible deadline follows a combined order. */
 export const DELIVERY_BY_OWN_ATTRIBUTE = '_delivery_by_own';
 
@@ -178,6 +182,16 @@ export const BATCH_ATTRIBUTE = '_batch';
  *  rest of this order by ..."). Absent on every other line. */
 export const PREORDER_OWN_ATTRIBUTE = '_preorder_own';
 
+/** The visible line attribute of an EU line sold from batch 1 stock in
+ *  Belgium: "In stock in Belgium, ships in a few working days." in place of the
+ *  `Preorder` promise and its `Delivery by` date. */
+export const SHIPPING_ATTRIBUTE = 'Shipping';
+
+/** The hidden line attribute holding the batch promise of that EU stock
+ *  line, so the cart and the hold pass read the same promise a `Preorder`
+ *  attribute carried before (`hasPromise` in preorder-fulfilment.ts). */
+export const SHIP_PROMISE_ATTRIBUTE = '_ship_promise';
+
 export type ShopifyMoney = {amount: string; currencyCode: string};
 
 export type ShopifyCartLine = {
@@ -190,6 +204,11 @@ export type ShopifyCartLine = {
   sku: string | null;
   image: {url: string; altText: string | null} | null;
   selectedOptions: Array<{name: string; value: string}>;
+  /** The Shopify `Batch` option of the line's variant: a `buy_now` line is
+   *  batch 1 stock at retail, a `preorder` line the March batch. Absent on a
+   *  variant without the option. `variantTitle` and `selectedOptions` never
+   *  carry the option itself. */
+  offer?: BatchOffer;
   /** The line's own ship promise: the hidden `_preorder_own` attribute when
    *  the line carries the mixed-order wording, else its `Preorder` attribute. */
   shipPromise: string | null;
@@ -201,6 +220,9 @@ export type ShopifyCartLine = {
   /** The region the promise was computed for, from `_ship_region`; null
    *  for an EU line. */
   shipRegion?: string | null;
+  /** True for an EU line from batch 1 stock (`_ship_promise`, no own
+   *  delivery date): the cart writes `Shipping` on it, not `Preorder`. */
+  euStock?: boolean;
   /** The `Availability` attribute: the batch and where it ships. */
   availability?: string | null;
   /** The hidden `_batch` attribute, `SKU:N`. */
@@ -236,6 +258,9 @@ export type CartLineInput = {
 export type CartLineUpdate = {
   id: string;
   quantity: number;
+  /** Move the line to another variant of the same product (`CartLineUpdateInput.merchandiseId`):
+   *  a board from its `Buy now` variant to its `Pre-order` one. */
+  merchandiseId?: string;
   attributes?: Array<{key: string; value: string}>;
 };
 
@@ -247,7 +272,13 @@ type StorefrontEnv = Pick<
   | 'SHOPIFY_CHECKOUT_DOMAIN'
   | 'SHOPIFY_PRICES_INCLUDE_VAT'
   | 'SHOPIFY_PREVIEW_POLICY_JSON'
+  | 'BATCH_CHOICE'
 >;
+
+/** The buy now or pre-order choice is on: only for exactly "1". */
+export function batchChoiceOn(env: {BATCH_CHOICE?: string} | null | undefined): boolean {
+  return env?.BATCH_CHOICE === '1';
+}
 
 type GraphqlResult<T> = {data?: T; errors?: Array<{message?: string}>};
 
@@ -386,6 +417,10 @@ export function mapShopifyCatalog(
   /** The default catalog must be EUR and the US catalog USD. Other country
    *  contexts use one consistent currency returned by Shopify. */
   market: string = 'default',
+  /** `BATCH_CHOICE` is on: a board's `Buy now` variant becomes `buy_now` on
+   *  its entry. Off: that variant is left out, so the catalog reads exactly
+   *  as it did before the board had one. */
+  batchChoice: boolean = false,
 ): Catalog {
   const expectedCurrency = market === 'US' ? 'USD' : market === 'default' ? 'EUR' : null;
   if (pricesIncludeVat !== '1') {
@@ -409,12 +444,39 @@ export function mapShopifyCatalog(
     if (product.variants.pageInfo.hasNextPage) {
       throw new Error(`shopify: ${product.handle} has more than 100 variants`);
     }
-    const variants: CatalogVariant[] = product.variants.nodes.map((variant) => {
+    // A board sells as two Shopify variants under the `Batch` option, both
+    // with the board's one SKU: `Pre-order` (the entry below) and `Buy now`
+    // (folded into it). That pair is the only duplicate SKU accepted: it
+    // must be one of each, on one product. Anything else still fails closed.
+    const offerOf = (variant: {selectedOptions: Array<{name: string; value: string}>}): BatchOffer | null => {
+      const value = variant.selectedOptions.find((o) => o.name === BATCH_OPTION)?.value;
+      if (value === undefined) return null;
+      const offer = batchOfferOf([{name: BATCH_OPTION, value}]);
+      if (!offer) throw new Error(`shopify: unknown ${BATCH_OPTION} value on ${product.handle}`);
+      return offer;
+    };
+    const buyNow = new Map<string, (typeof product.variants.nodes)[number]>();
+    for (const variant of product.variants.nodes) {
+      if (offerOf(variant) !== 'buy_now') continue;
+      const sku = variant.sku?.trim();
+      if (!sku || buyNow.has(sku)) {
+        throw new Error(`shopify: missing or duplicate SKU on ${product.handle}`);
+      }
+      buyNow.set(sku, variant);
+    }
+    const entries = product.variants.nodes.filter((variant) => offerOf(variant) !== 'buy_now');
+    for (const sku of buyNow.keys()) {
+      if (!entries.some((variant) => variant.sku?.trim() === sku && offerOf(variant) === 'preorder')) {
+        throw new Error(`shopify: ${sku} has a Buy now variant without its Pre-order variant`);
+      }
+    }
+    const variants: CatalogVariant[] = entries.map((variant) => {
       const sku = variant.sku?.trim();
       if (!sku || seen.has(sku)) {
         throw new Error(`shopify: missing or duplicate SKU on ${product.handle}`);
       }
       seen.add(sku);
+      const paired = offerOf(variant) === 'preorder' ? buyNow.get(sku) : undefined;
       const configured = policy[sku];
       if (
         !configured ||
@@ -427,8 +489,11 @@ export function mapShopifyCatalog(
         throw new Error(`shopify: closed SKU ${sku} must not carry a ship promise`);
       }
       const options = Object.fromEntries(
-        variant.selectedOptions.map(({name, value}) => [name, value]),
+        variant.selectedOptions.filter(({name}) => name !== BATCH_OPTION).map(({name, value}) => [name, value]),
       );
+      if (paired && paired.price.currencyCode !== variant.price.currencyCode) {
+        throw new Error(`shopify: ${sku} Buy now price currency differs`);
+      }
       const price = finiteMoney(variant.price.amount, `${sku} price`);
       if ((expectedCurrency && variant.price.currencyCode !== expectedCurrency) || !/^[A-Z]{3}$/.test(variant.price.currencyCode)) {
         throw new Error(`shopify: ${sku} is not priced in ${expectedCurrency}`);
@@ -448,7 +513,7 @@ export function mapShopifyCatalog(
         : null;
       return {
         sku,
-        title: variant.title,
+        title: offerOf(variant) ? titleWithoutBatch(variant.title) : variant.title,
         model: options.Model ?? null,
         options,
         price,
@@ -468,6 +533,13 @@ export function mapShopifyCatalog(
         cart_add_url: `${CART_PATH}?sku=${encodeURIComponent(sku)}&qty=1`,
         cart_add_method: 'POST',
         merchandise_id: variant.id,
+        ...(batchChoice && paired
+          ? {buy_now: {
+              merchandise_id: paired.id,
+              price: finiteMoney(paired.price.amount, `${sku} Buy now price`),
+              available: paired.availableForSale,
+            }}
+          : {}),
       } as CatalogVariant;
     });
     return {
@@ -518,6 +590,7 @@ export async function fetchShopifyCatalog(
     required(env, 'SHOPIFY_PREVIEW_POLICY_JSON'),
     required(env, 'SHOPIFY_PRICES_INCLUDE_VAT'),
     market,
+    batchChoiceOn(env),
   );
 }
 
@@ -602,27 +675,35 @@ function validatedCart(
     lines: cart.lines.nodes.map((line) => {
       // Non-EU lines record their region; absence remains the EU default.
       const shipRegion = line.attributes.find(({key}) => key === SHIP_REGION_ATTRIBUTE)?.value;
-      const preorder = line.attributes.find(({key}) => key === PREORDER_ATTRIBUTE)?.value ?? null;
+      const preorder = line.attributes.find(({key}) => key === PREORDER_ATTRIBUTE)?.value
+        ?? line.attributes.find(({key}) => key === SHIP_PROMISE_ATTRIBUTE)?.value
+        ?? null;
       const own = line.attributes.find(({key}) => key === PREORDER_OWN_ATTRIBUTE)?.value;
       const availability = line.attributes.find(({key}) => key === AVAILABILITY_ATTRIBUTE)?.value;
       const deliveryBy = line.attributes.find(({key}) => key === DELIVERY_BY_ATTRIBUTE)?.value;
       const ownDeliveryBy = line.attributes.find(({key}) => key === DELIVERY_BY_OWN_ATTRIBUTE)?.value;
       const batch = line.attributes.find(({key}) => key === BATCH_ATTRIBUTE)?.value;
+      // An EU stock line has no delivery date of its own: a `Delivery by` on
+      // it is the mixed order's.
+      const euStock = line.attributes.some(({key, value}) => key === SHIP_PROMISE_ATTRIBUTE && Boolean(value));
+      const ownBy = ownDeliveryBy || (euStock ? null : deliveryBy);
       return {
         id: line.id,
         merchandiseId: line.merchandise.id,
         quantity: line.quantity,
         title: line.merchandise.product.title,
-        variantTitle: line.merchandise.title,
+        variantTitle: titleWithoutBatch(line.merchandise.title),
         handle: line.merchandise.product.handle,
         sku: line.merchandise.sku,
         image: line.merchandise.image,
-        selectedOptions: line.merchandise.selectedOptions,
+        selectedOptions: line.merchandise.selectedOptions.filter(({name}) => name !== BATCH_OPTION),
+        ...(batchOfferOf(line.merchandise.selectedOptions) ? {offer: batchOfferOf(line.merchandise.selectedOptions)!} : {}),
         shipPromise: own && preorder ? own : preorder,
-        ...(deliveryBy ? {deliveryBy: ownDeliveryBy || deliveryBy} : {}),
-        ...(ownDeliveryBy && deliveryBy && ownDeliveryBy !== deliveryBy ? {orderDeliveryBy: deliveryBy} : {}),
+        ...(deliveryBy && ownBy ? {deliveryBy: ownBy} : {}),
+        ...(deliveryBy && ownBy !== deliveryBy ? {orderDeliveryBy: deliveryBy} : {}),
         ...(own && preorder && own !== preorder ? {orderPromise: preorder} : {}),
         ...(shipRegion ? {shipRegion} : {}),
+        ...(euStock ? {euStock} : {}),
         ...(availability ? {availability} : {}),
         ...(batch ? {batch} : {}),
         total: line.cost.totalAmount,

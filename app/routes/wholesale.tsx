@@ -44,7 +44,7 @@ export async function action({request, context}: Route.ActionArgs) {
   return data<TradeResult>({ok: true});
 }
 
-const field = 'mt-2 block w-full rounded-[var(--r-xs)] border border-[var(--color-border)] bg-transparent px-3 py-2.5 font-sans text-[16px] normal-case tracking-normal text-[var(--color-text)] focus:border-[var(--color-text)] aria-[invalid=true]:border-[var(--od-pcb-copper)]';
+const field = 'mt-2 block w-full rounded-[var(--r-xs)] border border-[var(--color-border)] bg-transparent px-3 py-2.5 font-sans text-[16px] normal-case tracking-normal text-[var(--color-text)] focus:border-[var(--color-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus)] aria-[invalid=true]:border-[var(--od-pcb-copper)]';
 const label = 'block min-w-0 font-sans text-[13px] text-[var(--color-text-muted)]';
 
 function FieldError({message, id}: {message?: string; id: string}) {
@@ -106,7 +106,7 @@ function ApplicationForm() {
           </select>
           <FieldError id="country-error" message={errors.country} />
         </label>
-        <label className={label}>{t('site')} <span className="text-[11px] opacity-70">{t('optional')}</span>
+        <label className={label}>{t('site')} <span className="text-[11px] text-[var(--color-text-dim)]">{t('optional')}</span>
           <input name="site" maxLength={300} inputMode="url" autoComplete="url" placeholder="yourshop.com" className={field} aria-invalid={!!errors.website} aria-describedby={errors.website ? 'site-error' : undefined} />
           <FieldError id="site-error" message={errors.website} />
         </label>
@@ -119,7 +119,7 @@ function ApplicationForm() {
           </select>
           <FieldError id="shop-type-error" message={errors.shopType} />
         </label>
-        <label className={label}>{t('tax_id')} <span className="text-[11px] opacity-70">{t('optional')}</span>
+        <label className={label}>{t('tax_id')} <span className="text-[11px] text-[var(--color-text-dim)]">{t('optional')}</span>
           <input name="taxId" maxLength={30} autoComplete="off" placeholder={t('tax_id_placeholder')} className={field} aria-invalid={!!errors.taxId} aria-describedby={errors.taxId ? 'tax-id-error' : undefined} />
           <FieldError id="tax-id-error" message={errors.taxId} />
         </label>
@@ -136,7 +136,7 @@ function ApplicationForm() {
         </div>
         <FieldError id="quantities-error" message={errors.quantities} />
       </div>
-      <label className={label}>{t('rhythm')} <span className="text-[11px] opacity-70">{t('optional')}</span>
+      <label className={label}>{t('rhythm')} <span className="text-[11px] text-[var(--color-text-dim)]">{t('optional')}</span>
         <select name="rhythm" defaultValue="" className={field} aria-invalid={!!errors.rhythm} aria-describedby={errors.rhythm ? 'rhythm-error' : undefined}>
           <option value="">{t('rhythm_choose')}</option>
           {ORDER_RHYTHMS.map(rhythm => <option key={rhythm} value={rhythm}>{t(`rhythm_${rhythm}`)}</option>)}
@@ -162,6 +162,8 @@ function ApplicationForm() {
 
 export default function WholesaleRoute() {
   const {email} = useLoaderData<typeof loader>();
+  // Buy now or pre-order on: the cart's code field shows only through this link.
+  const codeLink = Boolean((useRouteLoaderData('root') as {batchChoice?: boolean} | undefined)?.batchChoice);
   return (
     <div className="page-shell wholesale-page">
       <div className="mx-auto max-w-[560px] pb-6 sm:pb-12">
@@ -177,6 +179,14 @@ export default function WholesaleRoute() {
         </section>
         <ApplicationForm />
         <p className="wholesale-contact text-[var(--color-text-muted)]">{t('contact_lead')} <a href={`mailto:${email}`} className="text-[var(--color-text)] underline underline-offset-4">{email}</a></p>
+        {/* The only way to the cart's code field: a link that carries the parameter. */}
+        {codeLink ? (
+          <p className="wholesale-code-link mt-4 text-[13px] text-[var(--color-text-muted)]">
+            <Link to="/cart?wholesale=1" className="underline underline-offset-4" data-wholesale-code-link>
+              {copyText('wholesale.code_link') ?? 'Have a wholesale code?'}
+            </Link>
+          </p>
+        ) : null}
       </div>
     </div>
   );
