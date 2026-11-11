@@ -53,5 +53,6 @@
   "turnstile_failed": "Please complete the security check and try again. You can also contact",
   "not_configured": "Applications are unavailable. Please contact",
   "unavailable": "We could not confirm your application was saved. Try again later, or contact",
-  "offline": "For wholesale enquiries, email"
+  "offline": "For wholesale enquiries, email",
+  "code_link": "Have a wholesale code?"
 }

@@ -67,5 +67,6 @@
   "community_builds_title": "Follow the boards being built",
   "community_builds_body": "Every hardware pull request gets its own thread, and the git feed posts each merge and release.",
   "community_test_title": "Help test",
-  "community_test_body": "Report what you find on new firmware and early boards, and propose the next change in #proposals."
+  "community_test_body": "Report what you find on new firmware and early boards, and propose the next change in #proposals.",
+  "choice_title": "build"
 }
