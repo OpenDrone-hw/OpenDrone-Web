@@ -430,8 +430,8 @@ export function paidBatchLeft(variant: Pick<CatalogVariant, 'campaign'> | null |
 export function paidBatchMessage(left: number, shipPromise: string | null, inCart = 0): string {
   const promise = shipPromise?.trim() ? ` (${shipPromise.trim()})` : '';
   const base = left === 1
-    ? `Only 1 unit is left in the paid batch${promise}. Order 1 at most; later units belong to the next batch, which is a funding target.`
-    : `Only ${left} units are left in the paid batch${promise}. Order ${left} or fewer; later units belong to the next batch, which is a funding target.`;
+    ? `Only 1 unit is left in the paid batch${promise}. Order 1 at most; later units ship with the next batch.`
+    : `Only ${left} units are left in the paid batch${promise}. Order ${left} or fewer; later units ship with the next batch.`;
   return inCart > 0 ? `${base} Your cart already has ${inCart}.` : base;
 }
 

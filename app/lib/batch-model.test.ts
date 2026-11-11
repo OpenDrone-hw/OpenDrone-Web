@@ -6,6 +6,7 @@ import {applyCampaign, parseCampaignConfig, type CampaignConfig} from './preorde
 import {mapShopifyCatalog} from './shopify-storefront.ts';
 import {choiceCatalogData, CHOICE_IDS, CHOICE_POLICY} from './batch-choice-fixture.ts';
 import {regionFor} from './region.ts';
+import {paidBatchMessage} from './shopify-cart-action.ts';
 import {geoBarText, type GeoAvailabilityRegion} from './geo-availability.ts';
 
 /**
@@ -86,5 +87,23 @@ describe('batch model: a country the shop cannot sell to', () => {
       assert.deepEqual(region.lanes, {buyNow: false, preorder: false}, country);
       assert.equal(region.shipping.available, false, country);
     }
+  });
+});
+
+describe('batch model: no funding condition left in customer words', () => {
+  it('the paid-batch limit message names no target', () => {
+    for (const left of [1, 5]) for (const inCart of [0, 2]) assert.doesNotMatch(paidBatchMessage(left, 'In stock in Belgium', inCart), /target|funding/i);
+  });
+});
+
+describe('batch model: failures read as what they are', () => {
+  const page = fs.readFileSync(new URL('../routes/products.$handle.tsx', import.meta.url), 'utf8');
+  it('a refused Buy now explains itself even when the Buy now card is gone (source guard)', () => {
+    assert.match(page, /\{expressRefusal && choiceOn \? <p className="cart-alert" role="alert">/);
+    assert.doesNotMatch(page, /\{offerChoice && expressRefusal \?/);
+  });
+  it('a 503 (cart or catalog down a moment) shows its own message, not "unexpected error" (source guard)', () => {
+    const root = fs.readFileSync(new URL('../root.tsx', import.meta.url), 'utf8');
+    assert.match(root, /errorStatus === 503 && errorMessage \?/);
   });
 });

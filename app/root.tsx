@@ -536,8 +536,16 @@ export function ErrorBoundary() {
     <div className="route-error page-shell">
       <p className="route-error-status">{errorStatus}</p>
       <Txt id="not-found.error_title" as="h1" className="route-error-title" />
-      <Txt id="not-found.error_body" as="p" className="route-error-body" />
-      {errorMessage ? (
+      {/* A service that is down for a moment (a failed cart or catalog read) says so in its own
+          words, never "an unexpected error". */}
+      {errorStatus === 503 && errorMessage ? (
+        <p className="route-error-body" role="alert">
+          {errorMessage} {copyText('not-found.error_retry') ?? 'Try again in a minute. Nothing you added was lost.'}
+        </p>
+      ) : (
+        <Txt id="not-found.error_body" as="p" className="route-error-body" />
+      )}
+      {errorMessage && errorStatus !== 503 ? (
         <details className="route-error-details">
           <summary>
             <Txt id="not-found.error_details" />

@@ -2141,7 +2141,9 @@ function ProductPage() {
           fullBuild={build ? {size: build.size, href: fullBuildHref(build.size)} : null}
         />
       ) : null}
-      {offerChoice && expressRefusal ? <p className="cart-alert" role="alert">{expressRefusal}</p> : null}
+      {/* Also once the Buy now lane is gone: the stock that refused the purchase is often the
+          reason the card is no longer there, and the buyer must read why. */}
+      {expressRefusal && choiceOn ? <p className="cart-alert" role="alert">{expressRefusal}</p> : null}
       {stepBar}
       {/* Star aggregate + link to the reviews chapter. Renders nothing
           without reviews. */}
