@@ -67,8 +67,8 @@ export function HowOrdering({data}: {data: HowOrderingData}) {
     ...(earlyOpen && data.afterEndsOn === 'retail'
       ? [{key: 'early', title: say('why_early_title', 'Early bird price'), line: say('why_early_line', 'Under retail until {date}.', {date: ends})}]
       : []),
-    // Batch 1: built, tested and shipped to EU customers in November 2026.
-    {key: 'proven', title: say('why_proven_title', 'Done once already'), line: say('why_proven_line', 'Batch 1 was built, tested and shipped to EU customers in November 2026.'), link: {to: '/testing', text: say('why_proven_link', 'How we test')}},
+    // Batch 1: built and tested, shipped or in stock ready to ship (founder, 11 Nov 2026).
+    {key: 'proven', title: say('why_proven_title', 'Done once already'), line: say('why_proven_line', 'Batch 1 is built and tested. It has shipped to EU customers and the rest is in stock.'), link: {to: '/testing', text: say('why_proven_link', 'How we test')}},
     // The OSHWA certification chips and /open-source.
     {key: 'open', title: say('why_open_title', 'Open and inspectable'), line: say('why_open_line', 'The designs are open source and OSHWA certified.'), link: {to: '/open-source', text: say('why_open_link', 'Open source')}},
   ];
