@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {checkoutOpen} from './shopify-cart-action.ts';
+import {checkoutOpen, shopShownOpen} from './shopify-cart-action.ts';
 
 const APP = {COMMERCE_SOURCE: 'app', APP_API_URL: 'https://app.example'} as const;
 
@@ -13,5 +13,13 @@ describe('checkoutOpen', () => {
   it('on the app ignores the Shopify write flag, so turning it off at the switch keeps the shop open', () => {
     assert.equal(checkoutOpen({...APP, SHOPIFY_CHECKOUT_WRITE_ENABLED: '0', PUBLIC_COMING_SOON: '0'} as never), true);
     assert.equal(checkoutOpen({...APP, SHOPIFY_CHECKOUT_WRITE_ENABLED: '1', PUBLIC_COMING_SOON: '1'} as never), false);
+  });
+});
+
+describe('shopShownOpen', () => {
+  it('follows checkoutOpen outside the dev server: LOCAL_SHOP_PREVIEW opens nothing in a build or a test', () => {
+    assert.equal(shopShownOpen({SHOPIFY_CHECKOUT_WRITE_ENABLED: '1', PUBLIC_COMING_SOON: '0'} as never), true);
+    assert.equal(shopShownOpen({SHOPIFY_CHECKOUT_WRITE_ENABLED: '0', PUBLIC_COMING_SOON: '0', LOCAL_SHOP_PREVIEW: '1'} as never), false);
+    assert.equal(shopShownOpen({SHOPIFY_CHECKOUT_WRITE_ENABLED: '0', PUBLIC_COMING_SOON: '1', LOCAL_SHOP_PREVIEW: '1'} as never), false);
   });
 });

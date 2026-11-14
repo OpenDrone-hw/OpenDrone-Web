@@ -292,6 +292,16 @@ export function checkoutOpen(env: CartEnv & Partial<Pick<Env, 'COMMERCE_SOURCE' 
   return env.SHOPIFY_CHECKOUT_WRITE_ENABLED === '1' && env.PUBLIC_COMING_SOON === '0';
 }
 
+/** Whether pages render the open shop (buy buttons, availability bar, /cart). It is `checkoutOpen`, plus on the dev server
+ *  only (`npm run dev:like-live`) `LOCAL_SHOP_PREVIEW=1` with the coming-soon flag off: the pages read as on opendrone.be
+ *  while SHOPIFY_CHECKOUT_WRITE_ENABLED stays off, so the cart action still refuses every write. A build folds the DEV
+ *  flag to false and drops the preview. */
+export function shopShownOpen(env: CartEnv & Partial<Pick<Env, 'COMMERCE_SOURCE' | 'APP_API_URL' | 'LOCAL_SHOP_PREVIEW'>>): boolean {
+  if (checkoutOpen(env)) return true;
+  const dev = typeof import.meta.env !== 'undefined' && Boolean(import.meta.env.DEV);
+  return dev && env.LOCAL_SHOP_PREVIEW === '1' && env.PUBLIC_COMING_SOON === '0';
+}
+
 /**
  * The attributes a line of this variant carries: a preorder states its ship
  * promise, so checkout and the order confirmation show the delivery time the
@@ -1163,14 +1173,15 @@ async function recordAttribution(form: FormData, cart: ShopifyCart, dependencies
 
 /**
  * The session cart for the /cart page, or null. Closed behind the same two
- * gates as the action, so an old session cookie never shows or reopens a
- * cart while the store is closed.
+ * gates as the action (`shopShownOpen`: a read, so the dev preview may show
+ * it), so an old session cookie never shows or reopens a cart while the
+ * store is closed.
  */
 export async function loadSessionCart(
   env: CartEnv,
   dependencies: Pick<ShopifyCartDependencies, 'getCartId' | 'unsetCartId' | 'getCart' | 'logError'>,
 ): Promise<ShopifyCart | null> {
-  if (!checkoutOpen(env)) throw fail('Checkout is closed.', 410);
+  if (!shopShownOpen(env)) throw fail('Checkout is closed.', 410);
   const id = dependencies.getCartId?.();
   if (!id || !dependencies.getCart) return null;
   try {
@@ -1250,7 +1261,7 @@ export async function handleShopifyCartLoader(
   env: CartEnv,
   dependencies: Pick<ShopifyCartDependencies, 'getCartId' | 'unsetCartId' | 'getCart' | 'logError'> = {},
 ): Promise<Response> {
-  if (!checkoutOpen(env)) throw fail('Checkout is closed.', 410);
+  if (!shopShownOpen(env)) throw fail('Checkout is closed.', 410);
   if (new URL(request.url).searchParams.get('summary') !== '1') return redirect('/cart');
   const cart = await loadSessionCart(env, dependencies);
   return Response.json(cart ? cartSummary(cart) : {totalQuantity: 0, lines: []}, {headers: NO_STORE});

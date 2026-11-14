@@ -27,21 +27,46 @@ git clone https://github.com/OpenDrone-hw/OpenDrone-Web.git
 cd OpenDrone-Web
 npm install
 cp .env.example .env       # configure the session and catalog values below
-npm run dev                # http://localhost:3000
+npm run dev                # http://localhost:3000, closed shop
+npm run dev:like-live      # http://localhost:3000, what opendrone.be shows
 ```
 
-Set the required `SHOPIFY_*` values described in
-`.env.example`. Keep `PUBLIC_COMING_SOON=1` and `SHOPIFY_CHECKOUT_WRITE_ENABLED`
-unset or `0` unless you are testing checkout. The app fails closed when the
-catalog policy or tax configuration is missing. Node 22 (what CI uses).
+Set the required `SHOPIFY_*` values described in `.env.example`. The app fails
+closed when the catalog policy or tax configuration is missing. Node 22 (what
+CI uses).
 
 Minimum for a full local preview with real catalog data (names only):
 `SESSION_SECRET`, `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_STOREFRONT_TOKEN`,
 `SHOPIFY_STOREFRONT_API_VERSION`, `SHOPIFY_PREVIEW_POLICY_JSON`,
-`SHOPIFY_PRICES_INCLUDE_VAT`. The root loader requires the Shopify catalog;
-missing catalog settings render an error page. Variants marked Sold out or
-closed stay selectable on every run: sold-out state only disables the buy
-button.
+`SHOPIFY_PRICES_INCLUDE_VAT`, and `SHOPIFY_ADMIN_API_TOKEN` for the paid-unit
+counts (units left in a paid batch). The root loader requires the Shopify catalog; missing
+catalog settings render an error page.
+
+`npm run dev` drops every `[vars]` entry of the wrangler config
+(`vite.config.ts`): the Worker reads `.env`, then `.env.local` over it. So a
+plain run is not production. `npm run dev:like-live`
+(`scripts/dev-like-live.mjs`) writes `.env.local` (git-ignored) and starts the
+dev server:
+
+| Writes | From |
+|---|---|
+| `PUBLIC_COMING_SOON`, `PUBLIC_US_SALES`, `BATCH_CHOICE`, `ACCOUNTS_ENABLED`, `TRADE_MAIL_ENABLED`, `PILOT_MAP_ENABLED`, `CHATFPV_URL`, `CHATFPV_WIDGET_ENABLED`, `HANDOFF_ENABLED` | `wrangler.production.toml` `[vars]`, read at each run |
+| `SHOPIFY_PREVIEW_POLICY_JSON` | rebuilt: every SKU in `content/preorders.json` `skus` and `shipsWith` is `preorder` with `shipPromise: null`, every other SKU the `.env` policy names is `sold_out`. The production value is a Worker secret and cannot be read back |
+| `SHOPIFY_CHECKOUT_WRITE_ENABLED=0` and every Shopify, support and alert write off | fixed |
+| `LOCAL_SHOP_PREVIEW=1` | fixed: on the dev server only, pages render the open shop (Buy, Pre-order, the availability bar, `/cart`) while the write gate stays shut; a build ignores it |
+
+A click on Buy or Pre-order locally fails with "Shopify checkout writes are
+not enabled." (404 from `/api/shopify/cart`): no cart, checkout or order is
+created. To test checkout itself, use the test shop below. Delete
+`.env.local` to go back to the `.env` defaults.
+
+The region follows `?country=`: the first page load with it stores the
+choice in the `od_ship_country` cookie and redirects without it (localhost
+has no Cloudflare IP country). A Belgian view:
+`http://localhost:3000/?country=BE`; a US view: `http://localhost:3000/?country=US`.
+
+Variants marked Sold out or closed stay selectable on every run: sold-out
+state only disables the buy button.
 
 ### Test shop on the incutec app
 
