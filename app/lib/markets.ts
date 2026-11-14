@@ -28,7 +28,7 @@ export type MarketRow = {
 const TAXES: Record<TaxShown, string> = {
   'eu-vat-included': 'VAT included',
   'us-duties-included': 'Duties included',
-  'import-on-delivery': 'Import charges paid on delivery',
+  'import-on-delivery': 'Base price, no EU VAT; import taxes on delivery',
 };
 
 const ORDER: MarketId[] = ['eu', 'us', 'import', 'world', 'none'];

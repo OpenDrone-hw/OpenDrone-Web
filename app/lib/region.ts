@@ -10,12 +10,15 @@
  * so the server and the browser can never disagree (no hydration flip).
  *
  * The markets mirror what Shopify is configured to sell (Admin API, read
- * 2026-11-11, `npm run check:reach`): Shopify's "Belgium" and
- * "International" markets both sell in EUR with taxes in the price, its
- * "United States" market in USD with duties in the price. The site presents
- * four buyer-facing markets on top of them, each with its own honest tax
- * wording: EU, United States, UK / Switzerland / Norway (import VAT and
- * duties on delivery) and Rest of world (import charges on delivery).
+ * 2026-11-14, `npm run check:reach`): Shopify's "Belgium" (`be`, BE only)
+ * and "EU" (`eu-oss`, the 26 other member states, destination VAT under the
+ * OSS) sell in EUR with VAT in the list price; "International" (every other
+ * country Shopify sells to) sells in EUR at the base price before tax (the
+ * list price / 1.21, no EU VAT); "United States" sells in USD at the base
+ * price plus US duty, duties included. The site presents four buyer-facing
+ * markets on top of them, each with its own honest tax wording: EU, United
+ * States, UK / Switzerland / Norway (import VAT and duties on delivery) and
+ * Rest of world (import charges on delivery).
  *
  * Lanes: `buyNow` is batch 1 stock in Belgium, EU only (bpost contract);
  * `preorder` is batch 2, every destination Shopify can ship to. The shipping
@@ -41,7 +44,7 @@ export type TaxShown =
   | 'eu-vat-included'
   /** US: duties and import handling included, no US sales tax collected. */
   | 'us-duties-included'
-  /** UK, CH, NO, rest of world: no local tax collected; import VAT, duties and fees are the buyer's on delivery. */
+  /** UK, CH, NO, rest of world: the base price, no EU VAT; import VAT, duties and fees are the buyer's on delivery. */
   | 'import-on-delivery';
 
 /** Why a country cannot be sold to. */
@@ -60,8 +63,8 @@ export type Region = {
   country: string | null;
   source: CountrySource;
   market: MarketId;
-  /** Shopify's market handle that prices this country (`be`, `international`, `us`), null when none. */
-  shopifyMarket: 'be' | 'international' | 'us' | null;
+  /** Shopify's market handle that prices this country (`be`, `eu-oss`, `international`, `us`), null when none. */
+  shopifyMarket: 'be' | 'eu-oss' | 'international' | 'us' | null;
   currency: 'EUR' | 'USD';
   taxes: TaxShown;
   lanes: {buyNow: boolean; preorder: boolean};
@@ -104,10 +107,10 @@ export function regionFor(
     shipping: {available: false, reason},
   });
   if (!quote || quote.kind === 'blocked') return none('blocked');
-  if (quote.kind === 'closed') return none('not-approved', code === 'BE' ? 'be' : 'international');
+  if (quote.kind === 'closed') return none('not-approved', code === 'BE' ? 'be' : EU.has(code) ? 'eu-oss' : 'international');
   if (quote.kind === 'shops') return code === 'US' ? none('us-closed', 'us', 'EUR') : none('no-route');
   if (EU.has(code)) {
-    return {...base, market: 'eu', shopifyMarket: code === 'BE' ? 'be' : 'international', currency: 'EUR', taxes: 'eu-vat-included', lanes: {buyNow: true, preorder: true}, shipping: {available: true}};
+    return {...base, market: 'eu', shopifyMarket: code === 'BE' ? 'be' : 'eu-oss', currency: 'EUR', taxes: 'eu-vat-included', lanes: {buyNow: true, preorder: true}, shipping: {available: true}};
   }
   if (code === 'US') {
     return {...base, market: 'us', shopifyMarket: 'us', currency: 'USD', taxes: 'us-duties-included', lanes: {buyNow: false, preorder: true}, shipping: {available: true}};

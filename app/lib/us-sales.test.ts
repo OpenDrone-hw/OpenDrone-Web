@@ -16,7 +16,7 @@ import {handleShopifyCartAction, usSellable} from './shopify-cart-action.ts';
 import {handleCartCountry} from './shopify-cart-country.ts';
 import {mapShopifyCatalog, type CartLineInput, type ShopifyCart} from './shopify-storefront.ts';
 import {US_SALES, usSalesRate, usdBand, usdLadder, usdOf, withMarketPrices} from './us-sales.ts';
-import {findUsList, nameWithUplift, planUplift, readUpliftPct} from '../../scripts/us-prices.mjs';
+import {dutyUsd, familyOf, findOtherLists, findUsList, fixedInput, intlPrice, planFixed, planFixedBy, readRule, ukPrice, unitKgOf, usdPrice, withEnding} from '../../scripts/us-prices.mjs';
 import {priceNote} from './visitor-country.ts';
 
 const REAL = parseCampaignConfig(JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')));
@@ -455,21 +455,109 @@ describe('US price ladder', () => {
   });
 });
 
-describe('US price uplift source', () => {
-  it('commits the uplift Shopify holds and compares it with the price list', () => {
-    assert.equal(readUpliftPct(new URL('../../content/us-sales.json', import.meta.url).pathname), 25);
-    assert.equal(US_SALES.priceUpliftPct, 25);
-    const list = {
-      id: 'gid://shopify/PriceList/1', name: 'United States USD, duties included (+25%)', currency: 'USD',
-      parent: {adjustment: {type: 'PERCENTAGE_INCREASE', value: 25}},
-    };
-    assert.equal(planUplift(list, 25), null);
-    assert.deepEqual(planUplift(list, 30), {
-      id: list.id, from: 25, to: 30,
-      name: {from: list.name, to: 'United States USD, duties included (+30%)'},
-    });
-    assert.equal(nameWithUplift('US list', 30), 'US list (+30%)');
-    const eurList = {id: 'e', name: 'EU', currency: 'EUR', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 0}}};
+describe('US price rule source', () => {
+  const rule = readRule(new URL('../../content/us-sales.json', import.meta.url).pathname);
+
+  it('commits the base-plus-landed-cost rule and never a VAT-inclusive uplift', () => {
+    assert.equal(US_SALES.priceRule, 'base-plus-landed-cost');
+    assert.equal((US_SALES as Record<string, unknown>).priceUpliftPct, undefined);
+    assert.equal(rule.fallbackUpliftPct, 25);
+    assert.deepEqual(rule.endings, [0, 0.5, 0.9]);
+  });
+
+  it('maps every sellable SKU family, the hardware kit before the frame parts', () => {
+    assert.equal(familyOf('OPENFC-LITE-2020', rule), 'FC');
+    assert.equal(familyOf('ACC-FRM-HW-3', rule), 'SCREWS');
+    assert.equal(familyOf('ACC-FRM-ARM-5', rule), 'FRAME');
+    assert.equal(familyOf('OPENMOTOR-2306-4S', rule), 'MOTOR');
+    assert.throws(() => familyOf('UNKNOWN-SKU', rule), /no US duty family/);
+  });
+
+  it('weighs every sellable SKU, the full frame before its spare parts', () => {
+    assert.equal(unitKgOf('OPENFRAME-5', rule), 0.3);
+    assert.equal(unitKgOf('ACC-FRM-HW-5', rule), 0.03);
+    assert.equal(unitKgOf('ACC-FRM-ARM-5', rule), 0.025);
+    assert.equal(unitKgOf('OPENMOTOR-1604-4S', rule), 0.03);
+    assert.throws(() => unitKgOf('UNKNOWN-SKU', rule), /no unitKg/);
+  });
+
+  it('rounds to the nearest .00, .50 or .90, a tie to the higher price', () => {
+    const e = [0, 0.5, 0.9];
+    assert.equal(withEnding(29.17, e), 29);
+    assert.equal(withEnding(29.3, e), 29.5);
+    assert.equal(withEnding(29.71, e), 29.9);
+    assert.equal(withEnding(29.96, e), 30);
+    assert.equal(withEnding(29.25, e), 29.5);
+    assert.equal(withEnding(0.83, e), 0.9);
+  });
+
+  it('prices base x FX x (1 + fulfilment) + duty + freight with an ending, so the US margin is the Belgian one', () => {
+    const r = {...rule, usdPerEur: 1.1052, feesPct: 0.3464, fulfilmentPct: 6.05, freightUsdPerKg: 9.88, dutyPct: {...rule.dutyPct, FC: 37.5}};
+    // A made-up factory price: real supplier prices stay out of this public repository.
+    const factory = 10;
+    const duty = dutyUsd('OPENFC-LITE-2020', factory, r);
+    assert.ok(Math.abs(duty - 3.78464) < 1e-9);
+    const usd = usdPrice(26.1, 'OPENFC-LITE-2020', factory, r);
+    assert.equal(usd, 29.5);
+    // What is left after duty, freight and fulfilment, back in EUR, is the base 26.10 / 1.21 within the ending step.
+    const base = 26.1 / 1.21;
+    const left = (usd - duty - 0.045 * 9.88 - base * 1.1052 * 0.0605) / 1.1052;
+    assert.ok(Math.abs(left - base) < 0.5 / 1.1052);
+  });
+
+  it('plans a fixed price for each active variant that differs, and none when in sync', () => {
+    const r = {...rule, usdPerEur: 1.1052, feesPct: 0.3464};
+    const variants = [
+      {id: 'v1', sku: 'OPENFC-LITE-2020', title: 'Pre-order', price: '26.10', compareAtPrice: '29.00', product: {status: 'ACTIVE'}},
+      {id: 'v2', sku: 'OPENRX-MONO', title: 'Mono', price: '24.30', compareAtPrice: '27.00', product: {status: 'ACTIVE'}},
+      {id: 'v3', sku: 'OPENSTACK', title: 'Default', price: '114.00', compareAtPrice: null, product: {status: 'ARCHIVED'}},
+    ];
+    const factory = {'OPENFC-LITE-2020': 10};
+    const first = planFixed(variants, new Map(), factory, r);
+    assert.deepEqual(first.missing, ['OPENRX-MONO']);
+    assert.equal(first.plan.length, 1);
+    const [p] = first.plan;
+    assert.deepEqual(fixedInput(first.plan), [{
+      variantId: 'v1',
+      price: {amount: p.price.toFixed(2), currencyCode: 'USD'},
+      compareAtPrice: {amount: p.compareAt!.toFixed(2), currencyCode: 'USD'},
+    }]);
+    const synced = new Map([['v1', {price: p.price, compareAt: p.compareAt}]]);
+    assert.equal(planFixed(variants, synced, factory, r).plan.length, 0);
+  });
+
+  it('prices International at the base and the UK at base x GBP x 1.20, both with an ending', () => {
+    const r = {...rule, gbpPerEur: 0.83559, ukVatPct: 20};
+    assert.equal(intlPrice(26.1, r), 21.5); // 21.57
+    assert.equal(intlPrice(53.1, r), 43.9); // 43.88
+    assert.equal(ukPrice(26.1, r), 21.5); // 21.63 GBP
+    assert.equal(ukPrice(21.6, r), 17.9); // 17.90 GBP
+  });
+
+  it('plans fixed EUR prices for the International list, compare-at included', () => {
+    const variants = [
+      {id: 'v1', sku: 'OPENFC-LITE-2020', title: 'Pre-order', price: '26.10', compareAtPrice: '29.00', product: {status: 'ACTIVE'}},
+      {id: 'v2', sku: 'ACC-STRAP-20X220', title: 'Default', price: '2.00', compareAtPrice: null, product: {status: 'ACTIVE'}},
+    ];
+    const {plan, missing} = planFixedBy(variants, new Map(), (eur: number) => ({price: intlPrice(eur, rule)}));
+    assert.deepEqual(missing, []);
+    assert.deepEqual(fixedInput(plan, 'EUR'), [
+      {variantId: 'v1', price: {amount: '21.50', currencyCode: 'EUR'}, compareAtPrice: {amount: '24.00', currencyCode: 'EUR'}},
+      {variantId: 'v2', price: {amount: '1.50', currencyCode: 'EUR'}},
+    ]);
+  });
+
+  it('finds the International base-price list and the GBP list only when they exist', () => {
+    const us = {id: 'u', name: 'US', currency: 'USD', parent: {adjustment: {type: 'PERCENTAGE_INCREASE', value: 25}}};
+    const intl = {id: 'i', name: 'International', currency: 'EUR', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 17.3554}}};
+    const uk = {id: 'g', name: 'UK', currency: 'GBP', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 0.8264}}};
+    assert.deepEqual(findOtherLists([us], rule), {intl: null, uk: null});
+    assert.deepEqual(findOtherLists([us, intl, uk], rule), {intl, uk});
+  });
+
+  it('finds the one USD price list', () => {
+    const list = {id: 'gid://shopify/PriceList/1', name: 'US', currency: 'USD', parent: {adjustment: {type: 'PERCENTAGE_INCREASE', value: 25}}};
+    const eurList = {id: 'e', name: 'International', currency: 'EUR', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 17.3554}}};
     assert.equal(findUsList([eurList, list]).id, list.id);
     assert.throws(() => findUsList([eurList]), /exactly one/);
   });

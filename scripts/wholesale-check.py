@@ -18,7 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from wholesale_lib import GROUPS, WHOLESALE_PERCENT, divisor, label, live_variants, load_env, slot_code  # noqa: E402
 
-CART = """mutation($lines:[CartLineInput!]!){cartCreate(input:{lines:$lines}){cart{id} userErrors{message}}}"""
+CART = """mutation($lines:[CartLineInput!]!,$country:CountryCode){cartCreate(input:{lines:$lines,buyerIdentity:{countryCode:$country}}){cart{id} userErrors{message}}}"""
 READ = """query($id:ID!){cart(id:$id){discountCodes{code applicable}
   lines(first:100){nodes{quantity merchandise{... on ProductVariant{id sku}} cost{totalAmount{amount}}}}}}"""
 SITE = Path(__file__).resolve().parent.parent / "app/lib/shopify-storefront.ts"
@@ -32,9 +32,10 @@ def site_mutation():
     return m.group(1)
 
 
-def check(env, code, percent=WHOLESALE_PERCENT, divisor_=1.0):
-    """Return a list of problem strings (empty when every line is 75% of retail; of NET retail for a reverse-charge customer)."""
-    variants = live_variants(env)
+def check(env, code, percent=WHOLESALE_PERCENT, divisor_=1.0, country=None):
+    """Return a list of problem strings (empty when every line is 75% of retail; of NET retail for a reverse-charge
+    customer). With `country` the cart is priced in that country's market and retail is that market's retail."""
+    variants = live_variants(env, country)
     ids = {v["id"]: v for v in variants}  # by variant id: Buy now and Pre-order share a SKU
     url = f"https://{env['SHOPIFY_STORE_DOMAIN']}/api/{env.get('SHOPIFY_STOREFRONT_API_VERSION', '2026-07')}/graphql.json"
 
@@ -43,7 +44,7 @@ def check(env, code, percent=WHOLESALE_PERCENT, divisor_=1.0):
             {"X-Shopify-Storefront-Access-Token": env["SHOPIFY_STOREFRONT_TOKEN"], "Content-Type": "application/json"})
         return json.loads(urllib.request.urlopen(req, timeout=60).read())
 
-    out = sf(CART, {"lines": [{"merchandiseId": v["id"], "quantity": 1} for v in variants]})
+    out = sf(CART, {"lines": [{"merchandiseId": v["id"], "quantity": 1} for v in variants], "country": country})
     if out.get("errors") or out["data"]["cartCreate"]["userErrors"]:
         return [f"cart error: {json.dumps(out.get('errors') or out['data']['cartCreate']['userErrors'])[:300]}"]
     cart_id = out["data"]["cartCreate"]["cart"]["id"]
@@ -73,8 +74,10 @@ def main():
     a.add_argument("code")
     a.add_argument("--percent", type=float, default=WHOLESALE_PERCENT)
     a.add_argument("--net-country", default="", help="reverse-charge retailer's EU country: expect 75%% of retail net of its VAT")
+    a.add_argument("--country", default="", help="retailer's country: price the cart in its market (GB, CH, US: 75%% of that market's retail)")
     o = a.parse_args()
-    problems = check(load_env(), o.code.upper(), o.percent, divisor(o.net_country.upper(), True) if o.net_country else 1.0)
+    country = (o.country or o.net_country).upper() or None
+    problems = check(load_env(), o.code.upper(), o.percent, divisor(o.net_country.upper(), True) if o.net_country else 1.0, country)
     for p in problems:
         print("PROBLEM", p)
     print("wholesale-check OK" if not problems else f"wholesale-check FAILED: {len(problems)} problem(s)")

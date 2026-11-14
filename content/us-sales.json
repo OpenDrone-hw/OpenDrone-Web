@@ -1,5 +1,55 @@
 {
-  "$comment": "US consumer preorders, read by app/lib/us-sales.ts. The US is sold direct only while the PUBLIC_US_SALES gate is \"1\" in the wrangler config AND rate is a number: the flat US shipping rate in USD that the Shopify US shipping zone charges. null keeps the US closed even with the gate on. Every product sells to the US: a campaign SKU from its first US-serving batch, any other SKU as a preorder of `usStock` in preorders.json. Only Belgian paid stock (batch `regions` in preorders.json) is EU only. priceUpliftPct is the percentage on top of the EUR VAT-inclusive price for a US buyer: Shopify's US price list adds it, converts to USD at its FX rate and rounds to whole dollars. It covers US duties and import handling; no US sales tax is collected. Shopify holds the live value; `npm run us:prices` compares it with this file and, with --apply, writes this file's value to the price list. Changing the number is a pricing decision that needs the founder's go.",
+  "$comment": "US consumer preorders, read by app/lib/us-sales.ts. The US is sold direct only while the PUBLIC_US_SALES gate is \"1\" in the wrangler config AND rate is a number: the flat US shipping rate in USD that the Shopify US shipping zone charges. null keeps the US closed even with the gate on. Every product sells to the US: a campaign SKU from its first US-serving batch, any other SKU as a preorder of `usStock` in preorders.json. Only Belgian paid stock (batch `regions` in preorders.json) is EU only. Price rule (founder 2026-11-14: one base price before tax, the same margin in every market, each market adds only what it costs): a US price is the base price (the EUR list price / 1.21) converted at usdPerEur (ECB reference rate of 13 Nov 2026), plus fulfilmentPct of that (the US partner's fee, box, postage and storage per order above the USD rate the buyer pays for shipping, as a share of an average US order's base value), plus the US duty per unit (dutyPct[family] + feesPct, the merchandise processing fee, of the factory price: the customs value under the first-sale rule), plus freight (unitKg x freightUsdPerKg, air Shenzhen to Houston with customs clearance), then the nearest price ending in `endings`. The same script keeps the International EUR list (base with an ending; its -intlDecreasePct % adjustment is the fallback) and, once it exists, the UK GBP list (base x gbpPerEur x (1 + ukVatPct / 100) with an ending) in sync. Shopify holds it as one fixed USD price per variant on the US price list; fallbackUpliftPct is that list's percentage adjustment, which prices only a variant without a fixed price. Factory prices are supplier prices and never enter this public repository: `npm run us:prices -- --factory <private json>` reads them, compares Shopify with this rule and, with --apply, writes the fixed prices. No US sales tax is collected. Changing a number is a pricing decision that needs the founder's go.",
   "rate": 9.95,
-  "priceUpliftPct": 25
+  "priceRule": "base-plus-landed-cost",
+  "usdPerEur": 1.1052,
+  "feesPct": 0.3464,
+  "dutyPct": {
+    "FC": 37.5,
+    "ESC": 37.5,
+    "RX": 20,
+    "ANT": 20,
+    "MOTOR": 41.5,
+    "FRAME": 62.5,
+    "SCREWS": 81.2,
+    "PROP": 62.5,
+    "CAP": 37.5,
+    "STRAP": 27
+  },
+  "family": [
+    ["OPENFC", "FC"],
+    ["OPENESC", "ESC"],
+    ["OPENRX", "RX"],
+    ["ACC-ANT", "ANT"],
+    ["OPENMOTOR", "MOTOR"],
+    ["OPENFRAME", "FRAME"],
+    ["ACC-FRM-HW", "SCREWS"],
+    ["ACC-FRM", "FRAME"],
+    ["ACC-PROP", "PROP"],
+    ["ACC-CAP", "CAP"],
+    ["ACC-STRAP", "STRAP"]
+  ],
+  "fulfilmentPct": 6.05,
+  "freightUsdPerKg": 9.88,
+  "unitKg": [
+    ["OPENFRAME-5", 0.3],
+    ["OPENFRAME-3", 0.2],
+    ["OPENFC", 0.045],
+    ["OPENESC", 0.055],
+    ["OPENRX", 0.02],
+    ["OPENMOTOR-2306", 0.05],
+    ["OPENMOTOR-1604", 0.03],
+    ["ACC-FRM-HW", 0.03],
+    ["ACC-FRM-PAD", 0.01],
+    ["ACC-FRM", 0.025],
+    ["ACC-PROP", 0.02],
+    ["ACC-ANT", 0.01],
+    ["ACC-CAP", 0.005],
+    ["ACC-STRAP", 0.01]
+  ],
+  "endings": [0, 0.5, 0.9],
+  "intlDecreasePct": 17.3554,
+  "gbpPerEur": 0.83559,
+  "ukVatPct": 20,
+  "fallbackUpliftPct": 25
 }

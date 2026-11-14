@@ -1925,9 +1925,10 @@ function ProductPage() {
       ? say('product-chrome.buy_qty_max_batch', '{count} left', {count: maxQuantity})
       : say('product-chrome.buy_qty_max', 'Max {count} per order', {count: maxQuantity});
 
-  // Inside the EU the price includes 21% Belgian VAT. Outside it the same
-  // euro price applies with no EU VAT charged on the export, so nothing is
-  // printed next to it. Shipping is shown at checkout only.
+  // Inside the EU the list price includes VAT. Outside the EU and the US the
+  // price is the base price before tax (Shopify's International market: list
+  // price / 1.21) with no EU VAT charged on the export, and the note says so
+  // next to it. Shipping is shown at checkout only.
   // A US buyer while US sales are open: the USD list price, duties included, no sales tax.
   const usRate = rootData?.usShippingRate ?? null;
   const usBuyer = usRate != null && rootData?.visitorCountry === 'US';
@@ -1939,10 +1940,7 @@ function ProductPage() {
     : taxes === 'us-duties-included' && buyPrice?.currencyCode === 'USD'
       ? say('product-chrome.buy_us_price_note', 'Duties included')
       : internationalBuyer
-        ? dutiesNote
-          // UK, CH, NO: the duties note under the button says who pays import charges; this line does not repeat it.
-          ? say('product-chrome.buy_near_price_note', 'Shipping confirmed at checkout.')
-          : say('product-chrome.buy_international_price_note', 'Shipping and applicable sale taxes confirmed at checkout. Import charges may be payable on delivery.')
+        ? say('product-chrome.buy_international_price_note', 'No EU VAT charged. Import taxes may be due on delivery.')
         : null;
   // The destination gate decides whether the buy button is available.
   // Blocked destinations and an EU country not open

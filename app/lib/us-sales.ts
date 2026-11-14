@@ -10,9 +10,20 @@ import {priceLadder, tiersFor, type CampaignConfig, type UsdLadderStep} from './
 
 export type UsSalesFile = {
   rate?: number | null;
-  /** Percentage on top of the EUR VAT-inclusive price, set on the Shopify US
-   *  price list (`npm run us:prices`). Shopify converts and rounds. */
-  priceUpliftPct?: number;
+  /** The US price rule (`npm run us:prices`): base price (EUR list / 1.21) x
+   *  `usdPerEur` x (1 + `fulfilmentPct`) + US duty + freight per unit, with a
+   *  price ending, held by Shopify as fixed USD prices. */
+  priceRule?: 'base-plus-landed-cost';
+  usdPerEur?: number;
+  feesPct?: number;
+  dutyPct?: Record<string, number>;
+  family?: Array<[string, string]>;
+  fulfilmentPct?: number;
+  freightUsdPerKg?: number;
+  unitKg?: Array<[string, number]>;
+  endings?: number[];
+  /** The US price list's percentage adjustment: prices only a variant without a fixed price. */
+  fallbackUpliftPct?: number;
 };
 
 function loadUsSales(): UsSalesFile {
@@ -116,10 +127,11 @@ export function usdLadder(
  * with Shopify's US market prices laid over it: each variant's price,
  * compare-at price and currency from `market` (the `@inContext(country: US)`
  * read, USD, no EU VAT). The price-step check already ran on the EUR
- * catalog. A campaign's price is Shopify's US price. Shopify rounds every US
- * market price itself, so a later USD step is derived from the live EUR to
- * USD band ({@link usdBand}) and marked `approx` unless every factor in the
- * band gives the same whole dollars.
+ * catalog. A campaign's price is Shopify's US price. A later USD step is
+ * derived from the live EUR to USD band ({@link usdBand}) and marked `approx`
+ * unless every factor in the band gives the same whole dollars; with the
+ * base-plus-landed-cost rule (fixed USD prices with duty and freight per unit) no single
+ * factor fits, so no ladder is shown rather than a guessed one.
  *
  * Fail closed: without a market read, and for a variant the US market does
  * not price in USD or does not sell, the variant is sold out.
