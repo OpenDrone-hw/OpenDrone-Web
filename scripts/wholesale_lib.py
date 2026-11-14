@@ -5,7 +5,7 @@ whatever preorder price step the variant is on, and RETAIL is the price of the
 retailer's own market (founder 2026-11-14: one base price before tax, each
 market adds only its own VAT or duties): EU list price in the EU (net of the
 retailer's VAT under reverse charge), the base price before tax outside the EU
-(International market: list / 1.21), the USD base-plus-duty price in the US. Shopify takes a percentage off
+(International market: list / 1.21), the USD base-plus-landed-cost price in the US. Shopify takes a percentage off
 the live price, so one code cannot do it: each retailer gets one customer-limited
 code per price group, percentage = 1 - (1 - rate) * compare_at / price, scoped
 to the variants of that group. Slot 1 is the code the retailer types

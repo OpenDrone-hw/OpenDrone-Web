@@ -1,16 +1,25 @@
 #!/usr/bin/env node
-// Compare the Shopify US price list with the US price rule in content/us-sales.json
-// and, with --apply, write one fixed USD price per active variant.
+// Compare the Shopify fixed-price lists of the non-EU markets with the price rule in
+// content/us-sales.json and, with --apply, write one fixed price per active variant:
+//   United States (USD list): the US rule below.
+//   International (EUR list, -intlDecreasePct % fallback): base with a price ending.
+//   United Kingdom (GBP list, once it exists): base x gbpPerEur x (1 + ukVatPct) with an ending.
+// Belgium and the EU keep the EUR list price and have no list here.
 //
 //   npm run us:prices -- --factory <private.json>            dry run: prints every difference, changes nothing
 //   npm run us:prices -- --factory <private.json> --check    the same, exit 1 on any difference (scheduled check)
 //   npm run us:prices -- --factory <private.json> --apply    writes the fixed prices, then reads them back
 //
-// Rule (founder 2026-11-14): US price = EUR list price / 1.21 x usdPerEur + US duty per
-// unit, to the cent, no rounding. Duty per unit = factory price x (dutyPct[family] +
-// feesPct) / 100. The factory price (customs value under the first-sale rule) is a
-// supplier price: it is read from the --factory file ({"factoryUsd": {SKU: number}}),
-// kept outside this public repository. Compare-at prices follow the same rule.
+// Rule (founder 2026-11-14: one base price before tax, the same margin in every market):
+// US price = base x usdPerEur x (1 + fulfilmentPct / 100) + duty + freight, then the
+// nearest price ending in `endings` (.00, .50, .90). Base = EUR list price / 1.21.
+// Duty per unit = factory price x (dutyPct[family] + feesPct) / 100. Freight per unit =
+// unitKg[prefix] x freightUsdPerKg (air, Shenzhen to Houston, with clearance).
+// fulfilmentPct is the US fulfilment cost per order above the shipping the buyer pays,
+// as a share of an average order's base value. The factory price (customs value under
+// the first-sale rule) is a supplier price: it is read from the --factory file
+// ({"factoryUsd": {SKU: number}}), kept outside this public repository. Compare-at
+// prices follow the same rule.
 //
 // The list's percentage adjustment (fallbackUpliftPct) is never written here: it only
 // prices a variant without a fixed price, and this script reports such a variant as a
@@ -69,14 +78,38 @@ export function readRule(file) {
   const fail = (m) => {
     throw new Error(`content/us-sales.json: ${m}`);
   };
-  if (raw.priceRule !== 'base-plus-duty') fail('priceRule must be "base-plus-duty"');
+  if (raw.priceRule !== 'base-plus-landed-cost') fail('priceRule must be "base-plus-landed-cost"');
   if (!(raw.usdPerEur > 0.5 && raw.usdPerEur < 2)) fail('usdPerEur must be a rate between 0.5 and 2');
   if (!(raw.feesPct >= 0 && raw.feesPct < 5)) fail('feesPct must be from 0 to 5');
   for (const [k, v] of Object.entries(raw.dutyPct ?? {})) if (!(v >= 0 && v <= 300)) fail(`dutyPct.${k} must be from 0 to 300`);
   if (!Array.isArray(raw.family) || !raw.family.every(([p, f]) => typeof p === 'string' && f in raw.dutyPct)) {
     fail('family must be [prefix, dutyPct key] pairs');
   }
-  return {usdPerEur: raw.usdPerEur, feesPct: raw.feesPct, dutyPct: raw.dutyPct, family: raw.family, fallbackUpliftPct: raw.fallbackUpliftPct};
+  if (!(raw.freightUsdPerKg >= 0 && raw.freightUsdPerKg < 50)) fail('freightUsdPerKg must be from 0 to 50');
+  if (!(raw.fulfilmentPct >= 0 && raw.fulfilmentPct < 30)) fail('fulfilmentPct must be from 0 to 30');
+  if (!Array.isArray(raw.unitKg) || !raw.unitKg.every(([p, kg]) => typeof p === 'string' && kg > 0 && kg < 5)) {
+    fail('unitKg must be [prefix, kg] pairs');
+  }
+  if (!Array.isArray(raw.endings) || !raw.endings.length || !raw.endings.every((e) => e >= 0 && e < 1)) {
+    fail('endings must be fractions from 0 to below 1');
+  }
+  if (!(raw.intlDecreasePct > 0 && raw.intlDecreasePct < 50)) fail('intlDecreasePct must be from 0 to 50');
+  if (!(raw.gbpPerEur > 0.5 && raw.gbpPerEur < 2)) fail('gbpPerEur must be a rate between 0.5 and 2');
+  if (!(raw.ukVatPct >= 0 && raw.ukVatPct < 30)) fail('ukVatPct must be from 0 to 30');
+  return {
+    usdPerEur: raw.usdPerEur,
+    feesPct: raw.feesPct,
+    dutyPct: raw.dutyPct,
+    family: raw.family,
+    freightUsdPerKg: raw.freightUsdPerKg,
+    unitKg: raw.unitKg,
+    fulfilmentPct: raw.fulfilmentPct,
+    endings: raw.endings,
+    intlDecreasePct: raw.intlDecreasePct,
+    gbpPerEur: raw.gbpPerEur,
+    ukVatPct: raw.ukVatPct,
+    fallbackUpliftPct: raw.fallbackUpliftPct,
+  };
 }
 
 /** The duty family of a SKU: the first matching prefix, in file order. */
@@ -86,14 +119,61 @@ export function familyOf(sku, rule) {
   return hit[1];
 }
 
-/** US duty per unit in USD, to the cent. */
+/** US duty and fees per unit in USD (not rounded: it is one term of the price). */
 export function dutyUsd(sku, factoryUsd, rule) {
-  return cents((factoryUsd * (rule.dutyPct[familyOf(sku, rule)] + rule.feesPct)) / 100);
+  return (factoryUsd * (rule.dutyPct[familyOf(sku, rule)] + rule.feesPct)) / 100;
 }
 
-/** The US price of a EUR VAT-inclusive list price: base x FX + duty, to the cent. */
-export function usdPrice(eurList, duty, rule) {
-  return cents((eurList / (1 + BE_VAT)) * rule.usdPerEur + duty);
+/** Packed weight per unit in kg: the first matching prefix, in file order. */
+export function unitKgOf(sku, rule) {
+  const hit = rule.unitKg.find(([prefix]) => sku.startsWith(prefix));
+  if (!hit) throw new Error(`${sku}: no unitKg in content/us-sales.json`);
+  return hit[1];
+}
+
+/** The nearest price ending (.00, .50, .90 by default); a tie goes to the higher price. */
+export function withEnding(x, endings) {
+  const whole = Math.trunc(x);
+  let best = null;
+  for (const w of [whole - 1, whole, whole + 1]) {
+    for (const e of endings) {
+      const c = w + e;
+      if (c <= 0) continue;
+      if (best === null || Math.abs(c - x) < Math.abs(best - x) || (Math.abs(c - x) === Math.abs(best - x) && c > best)) best = c;
+    }
+  }
+  return cents(best);
+}
+
+/** The US price of a EUR VAT-inclusive list price: base x FX x (1 + fulfilment) + duty + freight, with an ending. */
+export function usdPrice(eurList, sku, factoryUsd, rule) {
+  const base = eurList / (1 + BE_VAT);
+  const exact =
+    base * rule.usdPerEur +
+    dutyUsd(sku, factoryUsd, rule) +
+    unitKgOf(sku, rule) * rule.freightUsdPerKg +
+    base * rule.usdPerEur * (rule.fulfilmentPct / 100);
+  return withEnding(exact, rule.endings);
+}
+
+/** The International EUR price of a EUR VAT-inclusive list price: the base with an ending. */
+export function intlPrice(eurList, rule) {
+  return withEnding(eurList / (1 + BE_VAT), rule.endings);
+}
+
+/** The UK GBP price, UK VAT inside: base x gbpPerEur x (1 + ukVatPct), with an ending. */
+export function ukPrice(eurList, rule) {
+  return withEnding((eurList / (1 + BE_VAT)) * rule.gbpPerEur * (1 + rule.ukVatPct / 100), rule.endings);
+}
+
+/** The International base-price list (EUR, -intlDecreasePct %) and the UK list (GBP), when they exist. */
+export function findOtherLists(lists, rule) {
+  const intl = lists.filter(
+    (l) => l.currency === 'EUR' && l.parent?.adjustment?.type === 'PERCENTAGE_DECREASE' && Math.abs(l.parent.adjustment.value - rule.intlDecreasePct) < 0.001,
+  );
+  const uk = lists.filter((l) => l.currency === 'GBP' && l.parent?.adjustment);
+  if (intl.length > 1 || uk.length > 1) throw new Error(`expected at most one International and one GBP price list, found ${intl.length} and ${uk.length}`);
+  return {intl: intl[0] ?? null, uk: uk[0] ?? null};
 }
 
 /** The USD price list that prices the US market. */
@@ -108,18 +188,29 @@ export function findUsList(lists) {
  * differs from the rule (or that has none). `fixed` maps variant id to {price, compareAt}.
  */
 export function planFixed(variants, fixed, factory, rule) {
+  return planFixedBy(variants, fixed, (eur, v) => {
+    const f = factory[v.sku];
+    if (typeof f !== 'number' || !(f > 0)) return null;
+    return {price: usdPrice(eur, v.sku, f, rule), duty: cents(dutyUsd(v.sku, f, rule))};
+  });
+}
+
+/**
+ * The same plan for any list: `priceOf(eurList, variant)` gives {price, duty?} or null
+ * (no rule price: reported as missing, priced by the list's fallback adjustment).
+ */
+export function planFixedBy(variants, fixed, priceOf) {
   const plan = [];
   const missing = [];
   for (const v of variants) {
     if (v.product?.status !== 'ACTIVE') continue;
-    const f = factory[v.sku];
-    if (typeof f !== 'number' || !(f > 0)) {
+    const now = priceOf(Number(v.price), v);
+    if (!now) {
       missing.push(v.sku);
       continue;
     }
-    const duty = dutyUsd(v.sku, f, rule);
-    const price = usdPrice(Number(v.price), duty, rule);
-    const compare = v.compareAtPrice && Number(v.compareAtPrice) > Number(v.price) ? usdPrice(Number(v.compareAtPrice), duty, rule) : null;
+    const {price, duty = null} = now;
+    const compare = v.compareAtPrice && Number(v.compareAtPrice) > Number(v.price) ? priceOf(Number(v.compareAtPrice), v).price : null;
     const live = fixed.get(v.id);
     const same = live && cents(live.price) === price && (live.compareAt == null ? compare == null : compare != null && cents(live.compareAt) === compare);
     if (!same) {
@@ -130,11 +221,11 @@ export function planFixed(variants, fixed, factory, rule) {
 }
 
 /** The mutation input of a plan. */
-export function fixedInput(plan) {
+export function fixedInput(plan, currencyCode = 'USD') {
   return plan.map((p) => ({
     variantId: p.id,
-    price: {amount: p.price.toFixed(2), currencyCode: 'USD'},
-    ...(p.compareAt != null ? {compareAtPrice: {amount: p.compareAt.toFixed(2), currencyCode: 'USD'}} : {}),
+    price: {amount: p.price.toFixed(2), currencyCode},
+    ...(p.compareAt != null ? {compareAtPrice: {amount: p.compareAt.toFixed(2), currencyCode}} : {}),
   }));
 }
 
@@ -163,7 +254,7 @@ async function admin(query, variables) {
   return body.data;
 }
 
-async function readLive() {
+async function readLive(rule) {
   const variants = [];
   let after = null;
   let first;
@@ -174,17 +265,36 @@ async function readLive() {
     after = data.productVariants.pageInfo.hasNextPage ? data.productVariants.pageInfo.endCursor : null;
   } while (after);
   const list = findUsList(first.priceLists.nodes);
+  const other = findOtherLists(first.priceLists.nodes, rule);
   const us = first.markets.nodes.find((m) => m.handle === 'us');
-  const fixed = new Map();
-  let cursor = null;
-  do {
-    const page = (await admin(FIXED_QUERY, {id: list.id, after: cursor})).priceList.prices;
-    for (const n of page.nodes) {
-      fixed.set(n.variant.id, {price: Number(n.price.amount), compareAt: n.compareAtPrice ? Number(n.compareAtPrice.amount) : null});
-    }
-    cursor = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
-  } while (cursor);
-  return {variants, list, fixed, taxStrategy: us?.priceInclusions?.inclusiveTaxPricingStrategy ?? null};
+  const fixedOf = async (l) => {
+    const fixed = new Map();
+    let cursor = null;
+    do {
+      const page = (await admin(FIXED_QUERY, {id: l.id, after: cursor})).priceList.prices;
+      for (const n of page.nodes) {
+        fixed.set(n.variant.id, {price: Number(n.price.amount), compareAt: n.compareAtPrice ? Number(n.compareAtPrice.amount) : null});
+      }
+      cursor = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
+    } while (cursor);
+    return fixed;
+  };
+  const lists = [{name: 'US', list, currency: 'USD', fixed: await fixedOf(list)}];
+  if (other.intl) lists.push({name: 'International', list: other.intl, currency: 'EUR', fixed: await fixedOf(other.intl)});
+  if (other.uk) lists.push({name: 'UK', list: other.uk, currency: 'GBP', fixed: await fixedOf(other.uk)});
+  const taxStrategies = Object.fromEntries(first.markets.nodes.map((m) => [m.handle, m.priceInclusions?.inclusiveTaxPricingStrategy ?? null]));
+  return {variants, lists, taxStrategy: us?.priceInclusions?.inclusiveTaxPricingStrategy ?? null, taxStrategies};
+}
+
+/** Per list: the plan of fixed prices that differ from the rule. */
+export function planAll(variants, lists, factory, rule) {
+  return lists.map((l) => {
+    const {plan, missing} =
+      l.currency === 'USD'
+        ? planFixed(variants, l.fixed, factory, rule)
+        : planFixedBy(variants, l.fixed, (eur) => ({price: l.currency === 'EUR' ? intlPrice(eur, rule) : ukPrice(eur, rule)}));
+    return {...l, plan, missing};
+  });
 }
 
 function argValue(args, name) {
@@ -207,34 +317,44 @@ async function main() {
   loadDotenv();
   const rule = readRule(path.join(ROOT, 'content/us-sales.json'));
   const factory = JSON.parse(fs.readFileSync(factoryFile, 'utf8')).factoryUsd ?? {};
-  const live = await readLive();
-  console.log(apply ? 'APPLY: writing US fixed prices.' : 'DRY RUN: nothing is changed.');
-  console.log(`Rule: base (list / 1.21) x ${rule.usdPerEur} USD/EUR + duty; fees ${rule.feesPct}%`);
-  console.log(`Shopify "${live.list.name}": ${live.list.parent.adjustment.type} ${live.list.parent.adjustment.value} (fallback), ${live.fixed.size} fixed prices; US market ${live.taxStrategy}`);
-  if (live.taxStrategy !== 'INCLUDES_TAXES_IN_PRICE') {
-    throw new Error(`US market uses ${live.taxStrategy}: the rule assumes INCLUDES_TAXES_IN_PRICE (no Belgian VAT deducted by Shopify); review before writing`);
+  const live = await readLive(rule);
+  console.log(apply ? 'APPLY: writing fixed prices.' : 'DRY RUN: nothing is changed.');
+  console.log(`US rule: base (list / 1.21) x ${rule.usdPerEur} USD/EUR x (1 + ${rule.fulfilmentPct}%) + duty (fees ${rule.feesPct}%) + kg x ${rule.freightUsdPerKg} USD; International: base; UK: base x ${rule.gbpPerEur} GBP/EUR x (1 + ${rule.ukVatPct}%); ending ${rule.endings.join('/')}`);
+  for (const [handle, strategy] of Object.entries(live.taxStrategies)) {
+    if (handle !== 'be' && strategy !== 'INCLUDES_TAXES_IN_PRICE') {
+      throw new Error(`market ${handle} uses ${strategy}: the rule assumes INCLUDES_TAXES_IN_PRICE (no Belgian VAT deducted by Shopify); review before writing`);
+    }
   }
-  const {plan, missing} = planFixed(live.variants, live.fixed, factory, rule);
-  for (const sku of missing) console.log(`NO FACTORY PRICE ${sku}: priced by the +${live.list.parent.adjustment.value}% fallback`);
-  for (const p of plan) {
-    const from = p.from ? `${p.from.price.toFixed(2)}${p.from.compareAt != null ? ` (was ${p.from.compareAt.toFixed(2)})` : ''}` : 'none';
-    console.log(`${p.sku} ${p.title}: ${from} -> ${p.price.toFixed(2)}${p.compareAt != null ? ` (was ${p.compareAt.toFixed(2)})` : ''} USD, duty ${p.duty.toFixed(2)}`);
+  const plans = planAll(live.variants, live.lists, factory, rule);
+  let differ = 0;
+  for (const l of plans) {
+    console.log(`Shopify "${l.list.name}" (${l.name}): ${l.list.parent.adjustment.type} ${l.list.parent.adjustment.value} (fallback), ${l.fixed.size} fixed prices`);
+    for (const sku of l.missing) console.log(`  NO FACTORY PRICE ${sku}: priced by the ${l.list.parent.adjustment.value}% fallback`);
+    for (const p of l.plan) {
+      const from = p.from ? `${p.from.price.toFixed(2)}${p.from.compareAt != null ? ` (was ${p.from.compareAt.toFixed(2)})` : ''}` : 'none';
+      console.log(`  ${p.sku} ${p.title}: ${from} -> ${p.price.toFixed(2)}${p.compareAt != null ? ` (was ${p.compareAt.toFixed(2)})` : ''} ${l.currency}${p.duty != null ? `, duty ${p.duty.toFixed(2)}` : ''}`);
+    }
+    differ += l.plan.length + l.missing.length;
   }
-  if (!plan.length && !missing.length) {
-    console.log('In sync: every active variant has its rule price.');
+  if (!differ) {
+    console.log('In sync: every active variant has its rule price in every list.');
     return;
   }
   if (!apply) {
-    console.log(`${plan.length} fixed price(s) differ. ${args.includes('--check') ? '' : 'Re-run with --apply to write them (founder\'s go: this changes prices).'}`);
+    console.log(`${differ} fixed price(s) differ. ${args.includes('--check') ? '' : 'Re-run with --apply to write them (founder\'s go: this changes prices).'}`);
     if (args.includes('--check')) process.exit(1);
     return;
   }
-  const result = (await admin(FIXED_ADD, {id: live.list.id, prices: fixedInput(plan)})).priceListFixedPricesAdd;
-  if (result.userErrors?.length) throw new Error(result.userErrors.map((e) => e.message).join('; '));
-  const back = await readLive();
-  const left = planFixed(back.variants, back.fixed, factory, rule).plan;
-  if (left.length) throw new Error(`read-back: ${left.length} fixed price(s) still differ`);
-  console.log(`Done: ${plan.length} fixed price(s) written and read back. Run the smoke test.`);
+  for (const l of plans) {
+    if (!l.plan.length) continue;
+    const result = (await admin(FIXED_ADD, {id: l.list.id, prices: fixedInput(l.plan, l.currency)})).priceListFixedPricesAdd;
+    if (result.userErrors?.length) throw new Error(`${l.name}: ${result.userErrors.map((e) => e.message).join('; ')}`);
+  }
+  const again = await readLive(rule);
+  const back = planAll(again.variants, again.lists, factory, rule);
+  const left = back.reduce((n, l) => n + l.plan.length, 0);
+  if (left) throw new Error(`read-back: ${left} fixed price(s) still differ`);
+  console.log(`Done: ${plans.reduce((n, l) => n + l.plan.length, 0)} fixed price(s) written and read back. Run the smoke test.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

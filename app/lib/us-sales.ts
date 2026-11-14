@@ -11,12 +11,17 @@ import {priceLadder, tiersFor, type CampaignConfig, type UsdLadderStep} from './
 export type UsSalesFile = {
   rate?: number | null;
   /** The US price rule (`npm run us:prices`): base price (EUR list / 1.21) x
-   *  `usdPerEur` + US duty per unit, held by Shopify as fixed USD prices. */
-  priceRule?: 'base-plus-duty';
+   *  `usdPerEur` x (1 + `fulfilmentPct`) + US duty + freight per unit, with a
+   *  price ending, held by Shopify as fixed USD prices. */
+  priceRule?: 'base-plus-landed-cost';
   usdPerEur?: number;
   feesPct?: number;
   dutyPct?: Record<string, number>;
   family?: Array<[string, string]>;
+  fulfilmentPct?: number;
+  freightUsdPerKg?: number;
+  unitKg?: Array<[string, number]>;
+  endings?: number[];
   /** The US price list's percentage adjustment: prices only a variant without a fixed price. */
   fallbackUpliftPct?: number;
 };
@@ -125,7 +130,7 @@ export function usdLadder(
  * catalog. A campaign's price is Shopify's US price. A later USD step is
  * derived from the live EUR to USD band ({@link usdBand}) and marked `approx`
  * unless every factor in the band gives the same whole dollars; with the
- * base-plus-duty rule (fixed USD prices with a duty per unit) no single
+ * base-plus-landed-cost rule (fixed USD prices with duty and freight per unit) no single
  * factor fits, so no ladder is shown rather than a guessed one.
  *
  * Fail closed: without a market read, and for a variant the US market does
