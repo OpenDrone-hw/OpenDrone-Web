@@ -69,20 +69,27 @@ def slot_code(main, slot):
 
 
 def live_variants(env):
-    """Active variants: id, sku, price, retail.
+    """Active variants: id, sku, title, price, retail. Both lanes of a board (Buy now and Pre-order) share one SKU
+    and are separate variants with their own price, so every variant is keyed by id, never by SKU.
 
     Retail is the compare-at price while a preorder step is below it, else the price itself: at the retail step
     app/lib/shopify-price-tier.ts clears the compare-at (same rule as its `retail`), and such a variant still gets
     the wholesale rate."""
-    d = gql(env, '{productVariants(first:100,query:"sku:OPEN*"){nodes{id sku price compareAtPrice product{status}}}}')
+    d = gql(env, '{productVariants(first:100,query:"sku:OPEN*"){nodes{id sku title price compareAtPrice product{status}}}}')
     out = []
     for v in d["productVariants"]["nodes"]:
         if v["product"]["status"] != "ACTIVE":
             continue
         price = float(v["price"])
         compare = float(v["compareAtPrice"]) if v["compareAtPrice"] else None
-        out.append({"id": v["id"], "sku": v["sku"], "price": price, "retail": compare if compare and compare > price else price})
-    return sorted(out, key=lambda v: v["sku"])
+        out.append({"id": v["id"], "sku": v["sku"], "title": v.get("title") or "", "price": price,
+                    "retail": compare if compare and compare > price else price})
+    return sorted(out, key=lambda v: (v["sku"], v["title"], v["id"]))
+
+
+def label(v):
+    """SKU plus variant title (the lane), since a Buy now and a Pre-order variant share one SKU."""
+    return f"{v['sku']} ({v['title']})" if v.get("title") else v["sku"]
 
 
 def divisor(country, exempt):
@@ -161,8 +168,10 @@ def rounding_check(group, rate_percent, max_qty=50, divisor_=1.0):
 
 
 def code_input(title, code, pct, variant_ids, customer_ids, starts_at):
+    # endsAt null: a slot deactivated earlier (discountCodeDeactivate sets endsAt to now, status EXPIRED) runs again
+    # without an end once it is reused; without this its old endsAt stays and the slot stays expired.
     return {
-        "title": title, "code": code, "startsAt": starts_at, "appliesOncePerCustomer": False,
+        "title": title, "code": code, "startsAt": starts_at, "endsAt": None, "appliesOncePerCustomer": False,
         "context": {"customers": {"add": customer_ids}},
         "customerGets": {"value": {"percentage": pct},
                          "items": {"products": {"productVariantsToAdd": variant_ids}}},
@@ -215,7 +224,8 @@ def apply_slot(env, action, existing, title, code, want, customer_ids, starts_at
         r = gql(env, "mutation($id:ID!,$i:DiscountCodeBasicInput!){discountCodeBasicUpdate(id:$id,basicCodeDiscount:$i){codeDiscountNode{id} userErrors{field message}}}",
                 {"id": existing["id"], "i": inp})["discountCodeBasicUpdate"]
         user_errors(r)
-        if existing["status"] != "ACTIVE":
+        # With endsAt cleared and startsAt now, a reused EXPIRED slot is normally ACTIVE again; activate only if not.
+        if existing["status"] != "ACTIVE" and (read_code(env, code) or {}).get("status") != "ACTIVE":
             r = gql(env, "mutation($id:ID!){discountCodeActivate(id:$id){userErrors{field message}}}", {"id": existing["id"]})["discountCodeActivate"]
             user_errors(r)
     elif action == "deactivate":

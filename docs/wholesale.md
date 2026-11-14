@@ -27,7 +27,7 @@ Shopify discount codes take a percentage off the live price, so one code cannot 
 | 1 | `WS25-FPV24` (typed by the retailer) | the largest price group | `1 - 0.75 x retail / price` |
 | 2 to 4 | `WS25-FPV24-G2` to `-G4` | the other groups | same formula |
 
-Today: variants at the 10% step get 16.6667% off, variants at the 20% step 6.25% off, variants at retail 25%. A variant already under 75% of retail gets no code. Groups change whenever a price step moves, so `wholesale-sync.py` re-points the slots (unused slots are deactivated). The cart sends all four codes when the buyer enters the main code (`app/lib/wholesale-codes.ts`), so the retailer types one.
+Today: variants at the 10% step get 16.6667% off, variants at the 20% step 6.25% off, variants at retail 25%. A variant already under 75% of retail gets no code. Both lanes of a board count: the Buy now and the Pre-order variant share one SKU but are separate variants with their own price, so groups, the sync and the cart check work per variant id. Groups change whenever a price step moves, so `wholesale-sync.py` re-points the slots (unused slots are deactivated; deactivating sets an end date, and a slot that is reused later gets that end date cleared). The cart sends all four codes when the buyer enters the main code (`app/lib/wholesale-codes.ts`), so the retailer types one.
 
 ## Onboard one retailer
 

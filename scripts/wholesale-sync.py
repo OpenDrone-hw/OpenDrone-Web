@@ -15,8 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from wholesale_lib import (CODE_RE, GROUPS, apply_slot, customer_divisor, gql, groups, live_variants, load_env,  # noqa: E402
-                           plan_slot, read_code, slot_code, tax_pricing_problem)
+from wholesale_lib import (CODE_RE, GROUPS, apply_slot, customer_divisor, gql, groups, label, live_variants,  # noqa: E402
+                           load_env, plan_slot, read_code, slot_code, tax_pricing_problem)
 
 
 def retailers(env):
@@ -127,7 +127,7 @@ def run(env, apply_):
             if action == "none":
                 continue
             diffs += 1
-            detail = f"percentage={want['pct']} variants={','.join(v['sku'] for v in want['variants'])}" if want else ""
+            detail = f"percentage={want['pct']} variants={','.join(label(v) for v in want['variants'])}" if want else ""
             print(f"{'APPLY' if apply_ else 'PLAN '} {code}: {action} {detail}")
             if apply_:
                 apply_slot(env, action, existing, f"Wholesale {main} G{n}", code, want, first["customers"], now)
