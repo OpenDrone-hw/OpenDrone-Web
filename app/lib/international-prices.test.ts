@@ -58,7 +58,7 @@ test('only EU units fill batch 1; NEAR, INT and US units go to the funding targe
   const ordered = [{region: 'INT', units: 3}, {region: 'NEAR', units: 4}, {region: 'US', units: 2}, {region: 'EU', units: 5}] as const;
   const eu = campaignState(config.skus['OPENFC-LITE-2020'].batches, [...ordered], config.pendingShips, [], null, 'EU');
   assert.equal(eu.batch, 1);
-  assert.equal(eu.paidLeft, 195); // 200 sellable (250 less 50 reserved, to be confirmed) less the 5 EU units
+  assert.equal(eu.paidLeft, 210); // 215 sellable (250 less 35 reserved for reviewers and testing) less the 5 EU units
   assert.equal(eu.targetOrdered, 9); // the 3 INT, 4 NEAR and 2 US units
   for (const region of ['NEAR', 'INT'] as const) {
     const state = campaignState(config.skus['OPENFC-LITE-2020'].batches, [...ordered], config.pendingShips, [], null, region);
