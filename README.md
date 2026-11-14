@@ -1262,7 +1262,9 @@ those tags automatically. An earlier accepted promise is not silently extended.
    `units`, `paid` and `ships` for ordered stock (plus `reserved` for units
    of it held back from sale), `endsOn`, `shipsBy` and `pendingShips`
    for funding batches, and `priceTiers`. `npm test` checks that
-   `pendingShips` names `shipsBy`.
+   `pendingShips` names `shipsBy`. A confirmed campaign leaves
+   `pendingShips` out: the parser writes it from `shipsBy`, so the ship-by
+   date is typed once.
 2. In Shopify, set each campaign SKU's compare-at price to retail and its
    price to the first step. A SKU priced under its step stays closed.
 3. Set the SKU to `preorder` in `SHOPIFY_PREVIEW_POLICY_JSON` with
@@ -1271,7 +1273,7 @@ those tags automatically. An earlier accepted promise is not silently extended.
    `open`, `allOpen: true`, no pending price step.
 
 **Confirmed batches.** `confirmed: true` removes the funding condition:
-`pendingShips` names `shipsBy` only ("ships by 31 March 2027"), the product
+the promise is written from `shipsBy` ("ships by" and the date), the product
 page and /preorder read "Batch confirmed" in place of a count toward a target,
 every line of the batch ships together (one ship group) and no SKU closes for
 a missed target. `afterEndsOn` is the one value for what the funding batches

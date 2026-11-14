@@ -166,8 +166,8 @@ export type CampaignConfig = {
   /** First day whose paid Shopify orders count, YYYY-MM-DD. */
   countFrom: string;
   /** Ship promise for a unit in a batch whose supplier order is not placed.
-   *  It names the target deadline (`endsOn`) and the ship-by date
-   *  (`shipsBy`), as terms 7bis.2 do; the tests hold the three in step. */
+   *  Left out of a confirmed campaign's file: the parser writes it from
+   *  `shipsBy` ("ships by 31 March 2027"), so the date lives in one field. */
   pendingShips: string;
   /** Every funding batch is produced whatever its count (founder 2026-11-11,
    *  terms 2.9): no unit waits for a target, `pendingShips` names the ship-by
@@ -446,11 +446,15 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
     throw new Error('preorders: endsOn must be YYYY-MM-DD');
   }
   checkTiers(c.priceTiers, 'priceTiers');
-  if (typeof c.pendingShips !== 'string' || !c.pendingShips.trim()) {
-    throw new Error('preorders: pendingShips is required');
-  }
   if (!isCalendarDay(c.shipsBy) || c.shipsBy <= c.endsOn) {
     throw new Error('preorders: shipsBy must be a calendar date after endsOn');
+  }
+  // A confirmed campaign's promise is the ship-by date alone, so it is
+  // written from `shipsBy` and the date is typed once.
+  const pendingShips =
+    c.pendingShips === undefined && c.confirmed === true ? confirmedShipPromise(c.shipsBy) : c.pendingShips;
+  if (typeof pendingShips !== 'string' || !pendingShips.trim()) {
+    throw new Error('preorders: pendingShips is required');
   }
   if (!c.skus || typeof c.skus !== 'object' || Array.isArray(c.skus)) {
     throw new Error('preorders: skus must be an object');
@@ -564,7 +568,7 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
     }
     if (!servesRegion(pinned, 'US')) throw new Error('preorders: usStock batch must serve the US');
   }
-  return c as CampaignConfig;
+  return {...c, pendingShips} as CampaignConfig;
 }
 
 /** The shared non-EU accessory rule, stored under the existing `usStock` key.
@@ -641,6 +645,11 @@ export function campaignDate(isoDay: string): string {
  */
 export function latestShipDay(config: Pick<CampaignConfig, 'shipsBy'>): string {
   return config.shipsBy;
+}
+
+/** The promise of a confirmed batch: "ships by 31 March 2027". */
+export function confirmedShipPromise(shipsBy: string): string {
+  return `ships by ${campaignDate(shipsBy)}`;
 }
 
 /** The ship-by date in words: "31 March 2027". */

@@ -25,6 +25,7 @@
  */
 
 import type {Locale} from './i18n.ts';
+import {CAMPAIGN_SHIPS_BY} from './campaign-file.ts';
 import {EU_COUNTRY_CODES, IMPORT_COUNTRY_CODES} from './eu-countries.ts';
 
 /**
@@ -63,10 +64,10 @@ export function stockRegion(region: GeoAvailabilityRegion | null | undefined): b
   return region === 'eu';
 }
 
-/** First day of the pre-order batch's ship month; a test checks it against
- *  `content/preorders.json` (`shipsBy`). Every month in the lines below is
- *  read from it, so no line names a batch month of its own. */
-export const INTL_AVAILABILITY_STARTS = '2027-03-01';
+/** First day of the pre-order batch's ship month, from `shipsBy` in
+ *  `content/preorders.json`. Every month in the lines below is read from it,
+ *  so no line names a batch month of its own. */
+export const INTL_AVAILABILITY_STARTS = `${CAMPAIGN_SHIPS_BY.slice(0, 7)}-01`;
 
 /** The pre-order batch's month in a locale: "March 2027", "maart 2027"; short: "Mar 2027", "mrt 2027". */
 export function shipMonth(locale: Locale, style: 'long' | 'short' = 'long'): string {
@@ -233,9 +234,8 @@ export const GEO_STOCK_COPY: Record<Locale, Record<KnownGeoRegion, {long: string
   },
 };
 
-/** The pre-order batch's ship-by day; a test checks it against
- *  `content/preorders.json` (`shipsBy`). */
-export const PREORDER_SHIPS_BY = '2027-03-31';
+/** The pre-order batch's ship-by day: `shipsBy` in `content/preorders.json`. */
+export const PREORDER_SHIPS_BY = CAMPAIGN_SHIPS_BY;
 
 /** "31 March 2027" (long) or "31 Mar 2027" (short) in a locale. */
 export function shipByDate(locale: Locale, style: 'long' | 'short' = 'long'): string {

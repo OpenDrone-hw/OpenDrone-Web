@@ -3,6 +3,7 @@ import {readdirSync, readFileSync} from 'node:fs';
 import {describe, it} from 'node:test';
 
 import {FACTS, SITE, WORDMARK, applyFacts, expandMacros, shell} from './email-shell.ts';
+import {parseCampaignConfig} from './preorder-campaign.ts';
 import {launchCopy, renderBlast, renderShopifyEmailMd} from '../../scripts/launch-blast.mjs';
 import {pasteList} from '../../scripts/emails/hash.mjs';
 
@@ -34,7 +35,9 @@ describe('email shell', () => {
     assert.equal(p.shipsBy, '2027-03-31');
     // One promise phrase everywhere: the mails say what the site says.
     assert.equal(FACTS.shipBy, '31 March 2027');
-    assert.equal(p.pendingShips, `ships by ${FACTS.shipBy}`);
+    // The promise is written from shipsBy, never typed in the file a second time.
+    assert.equal(p.pendingShips, undefined);
+    assert.equal(parseCampaignConfig(p).pendingShips, `ships by ${FACTS.shipBy}`);
     assert.match(p.skus['OPENFC-LITE-2020'].batches[0].ships, new RegExp(FACTS.batch1));
     assert.equal(FACTS.shipByShort, '31 Mar 2027');
     assert.equal(FACTS.closeShort, '15 Dec 2026');
@@ -44,7 +47,7 @@ describe('email shell', () => {
     const p: any = JSON.parse(readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8'));
     const allowed = new Set([
       p.skus['OPENFC-LITE-2020'].batches[0].ships,
-      p.pendingShips,
+      parseCampaignConfig(p).pendingShips,
       `ships with the rest of this order by ${FACTS.shipBy}`,
       // What an order from before terms 2.9 carries (`soldUnder`): it keeps its promise and its delivery date.
       ...p.soldUnder.flatMap((era: any) => [era.paidShips, era.pendingShips]),

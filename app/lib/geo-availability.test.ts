@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {describe, it} from 'node:test';
 import {EU_COUNTRY_CODES} from './eu-countries.ts';
+import {parseCampaignConfig} from './preorder-campaign.ts';
 import {
   GEO_AVAILABILITY_COPY,
   availabilityBannerHiddenOn,
@@ -77,7 +78,7 @@ describe('structured data matches the line', () => {
   });
 
   it('starts the intl offer in the month the March batch ships', () => {
-    assert.match(PREORDERS.pendingShips, /March 2027/);
+    assert.match(parseCampaignConfig(PREORDERS).pendingShips, /March 2027/);
     assert.match(INTL_AVAILABILITY_STARTS, /^2027-03-/);
   });
 });
