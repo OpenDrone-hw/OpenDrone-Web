@@ -14,19 +14,17 @@ import {PRODUCT_CONTENT} from './product-content.ts';
 describe('preorderNote', () => {
   it("is the product's own statusNote when the content file carries one", () => {
     assert.equal(preorderNote('openesc'), 'in stock in Belgium, ships to EU addresses in a few working days');
-    assert.equal(preorderNote('openrx'), 'ships by 31 March 2027');
   });
 
-  it('falls back to the shop-wide default for a product without a note', () => {
+  it('falls back to the campaign promise, written from shipsBy, for a product without a note', () => {
+    assert.equal(preorderNote('openrx'), 'ships by 31 March 2027');
     PRODUCT_CONTENT['__test-nonote'] = {
       ...PRODUCT_CONTENT.openesc,
       statusNote: undefined,
     };
     try {
-      // Without Vite the copy store is empty, so this is the literal fallback,
-      // which mirrors product-chrome.preorder_lead_default.
-      assert.equal(preorderNote('__test-nonote'), 'ships in about 10 weeks');
-      assert.equal(preorderNote('no-such-product'), 'ships in about 10 weeks');
+      assert.equal(preorderNote('__test-nonote'), 'ships by 31 March 2027');
+      assert.equal(preorderNote('no-such-product'), 'ships by 31 March 2027');
     } finally {
       delete PRODUCT_CONTENT['__test-nonote'];
     }

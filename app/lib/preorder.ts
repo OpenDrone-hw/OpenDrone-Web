@@ -10,14 +10,15 @@
 // Relative imports on purpose: the node:test suites run this module without
 // Vite, so the `~` alias is not available here.
 import {PRODUCT_CONTENT} from './product-content.ts';
-import {copyText} from './copy.ts';
+import {CAMPAIGN_SHIPS_BY} from './campaign-file.ts';
+import {confirmedShipPromise} from './preorder-campaign.ts';
 
 /**
  * The ship promise for a pre-order product: the catalog's word for it when
  * the caller has the catalog variant in hand, else the content file's
- * `statusNote`, else the shop-wide default from copy. The literal fallback
- * mirrors `product-chrome.preorder_lead_default` for the bundler-free test
- * path.
+ * `statusNote`, else the pre-order batch's promise written from `shipsBy` in
+ * `content/preorders.json` ("ships by 31 March 2027"), so no content file
+ * types the date again.
  */
 export function preorderNote(
   handle: string,
@@ -26,8 +27,7 @@ export function preorderNote(
   return (
     fromCatalog ||
     PRODUCT_CONTENT[handle]?.statusNote ||
-    copyText('product-chrome.preorder_lead_default') ||
-    'ships in about 10 weeks'
+    confirmedShipPromise(CAMPAIGN_SHIPS_BY)
   );
 }
 

@@ -4,7 +4,7 @@
  * Vite and node:test agree.
  */
 
-type CampaignFile = {confirmed?: boolean};
+type CampaignFile = {confirmed?: boolean; shipsBy?: string};
 
 function load(): CampaignFile {
   if (import.meta.env) {
@@ -26,4 +26,13 @@ function load(): CampaignFile {
  * as orders placed before the confirmation carry it, reads as the confirmed
  * batch wherever only the text is at hand (cart line, account, mail).
  */
-export const CAMPAIGN_CONFIRMED: boolean = load().confirmed === true;
+const FILE = load();
+
+export const CAMPAIGN_CONFIRMED: boolean = FILE.confirmed === true;
+
+/**
+ * The pre-order batch's ship-by day, YYYY-MM-DD (`shipsBy` in
+ * `content/preorders.json`): the one place the date is typed. Lines that name
+ * it (the availability bar, /markets) read it from here.
+ */
+export const CAMPAIGN_SHIPS_BY: string = FILE.shipsBy ?? '';
