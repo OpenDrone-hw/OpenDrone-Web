@@ -8,8 +8,8 @@ Validate: `npm run typecheck && npm run lint && npm test` (add `npm run build` w
 
 - Public repository: no supplier names, costs, personal data, private strategy or regulatory research.
 - A merge to `main` deploys production (`.github/workflows/cloudflare-production.yml`).
-- Storefront gates in `wrangler.production.toml` (`PUBLIC_COMING_SOON`, `SHOPIFY_CHECKOUT_WRITE_ENABLED`) and `SUPPORT_EMAIL_NOTIFY_ENABLED` / `SUPPORT_MAIL_INTAKE_ENABLED` change only with Stan's yes (root AGENTS.md, Ask Stan first).
-- Prices, tax, shipping and inventory policy change only with Stan's yes; `npm run us:prices -- --apply` writes to Shopify.
+- Storefront gates in `wrangler.production.toml` (`PUBLIC_COMING_SOON`, `SHOPIFY_CHECKOUT_WRITE_ENABLED`) and `SUPPORT_EMAIL_NOTIFY_ENABLED` / `SUPPORT_MAIL_INTAKE_ENABLED` change only after Stan's yes (root AGENTS.md "Ask Stan first").
+- Prices, tax, shipping and inventory policy: Stan's yes first; `npm run us:prices --apply` writes to Shopify.
 - Box contents are owned by the InvenTree kit BOM; `inTheBox` in content/products is a copy and is checked against it before a publish.
 - Legal text in `app/content/legal/` is copied unchanged from `operations/documents/storefront-legal/` in one PR; never a legal draft or review PR here.
 - Public appearance of opendrone.be does not change unless the task says so; use only real product photos and renders.
@@ -18,7 +18,5 @@ Validate: `npm run typecheck && npm run lint && npm test` (add `npm run build` w
 
 ## Pointers
 
-- `README.md`: run, test, edit content, deploy; it lists every file in `docs/`
-- `docs/selling.md`: shop gates, preorder campaigns, batch release, buyer mails
-- `docs/support.md`: support tickets, staff API, mail drafts
+- `README.md`: run, campaign, order and support procedures
 - `docs/product-status.md`: roadmap display and checkout gates

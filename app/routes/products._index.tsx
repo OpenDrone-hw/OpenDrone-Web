@@ -9,7 +9,7 @@ import type {RootLoader} from '~/root';
 import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
 import {EarlyBirdNote, anyEarlyPrice} from '~/components/EarlyPriceCue';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
-import {toCards} from '~/lib/catalog';
+import {cartOffer, toCards} from '~/lib/catalog';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {campaignSkus} from '~/lib/preorder-campaign';
 import {FAMILIES} from '~/lib/families';
@@ -403,7 +403,10 @@ export default function ProductsIndex() {
       if (axis && liveTiers.length > 0) {
         for (const [value] of liveTiers) {
           const sv = variantFor(p, axis, value);
-          const price = sv?.price ?? p.priceRange.minVariantPrice;
+          // The card's cart button adds a board's pre-order (the cart is the
+          // pre-order lane), so the card shows that offer's price and date.
+          const offer = cartOffer(sv);
+          const price = offer?.price ?? p.priceRange.minVariantPrice;
           out.push({
             key: `${p.handle}:${value}`,
             product: p,
@@ -411,17 +414,17 @@ export default function ProductsIndex() {
             searchText: searchTextFor(p, value),
             build: buildOf(BUILDS, sv?.sku),
             mount: mountOf(value),
-            paidStock: datedOf(sv?.campaign),
+            paidStock: datedOf(offer?.campaign),
             to: `/products/${p.handle}?${encodeURIComponent(axis)}=${encodeURIComponent(value)}`,
             price,
             image: sv?.image ?? p.featuredImage,
             onSale: sv ? saleVariant(sv) : productOnSale(p),
             // A second option axis (the motor's 4S or 6S winding) is the
             // buyer's choice on the product page, never a silent default.
-            quickAdd: sv && !content?.secondAxis
+            quickAdd: offer && !content?.secondAxis
               ? {
-                  href: sv.cartAddUrl,
-                  available: Boolean(sv.availableForSale),
+                  href: offer.cartAddUrl,
+                  available: Boolean(offer.availableForSale),
                 }
               : undefined,
           });
@@ -432,8 +435,9 @@ export default function ProductsIndex() {
         const comingSoon = allTiers.length > 0;
         // Quick-add only when there is genuinely ONE variant - a future
         // multi-option accessory must send the buyer to the PDP to choose.
-        const firstVariant =
+        const onlyVariant =
           p.variants.nodes.length === 1 ? p.variants.nodes[0] : undefined;
+        const firstVariant = cartOffer(onlyVariant);
         out.push({
           key: p.handle,
           product: p,

@@ -5,6 +5,7 @@ import {
   byHandle,
   bySku,
   cartAddUrl,
+  cartOffer,
   familyGroups,
   formatPrice,
   mapProductOptions,
@@ -360,5 +361,19 @@ describe('thirdPartyBrand', () => {
     assert.equal(thirdPartyBrand('opendrone'), null);
     assert.equal(thirdPartyBrand(''), null);
     assert.equal(thirdPartyBrand(null), null);
+  });
+});
+
+describe('cartOffer', () => {
+  type Offer = {sku: string; price: {amount: string}; cartAddUrl: string; preorderOffer?: Offer | null};
+  it('a list card with an in-stock board shows the pre-order its cart button adds', () => {
+    const preorder: Offer = {sku: 'OPENFC-LITE-2020', price: {amount: '40.00'}, cartAddUrl: '/cart/add?sku=A&offer=preorder'};
+    const stock: Offer = {sku: 'OPENFC-LITE-2020', price: {amount: '50.00'}, cartAddUrl: '/cart/add?sku=A', preorderOffer: preorder};
+    assert.equal(cartOffer(stock), preorder);
+  });
+  it('a product with one offer stays itself', () => {
+    const only: Offer = {sku: 'ACC-STRAP-20', price: {amount: '5.00'}, cartAddUrl: '/cart/add?sku=B'};
+    assert.equal(cartOffer(only), only);
+    assert.equal(cartOffer(undefined), undefined);
   });
 });

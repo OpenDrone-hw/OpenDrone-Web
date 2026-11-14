@@ -126,7 +126,7 @@ export function ProductItem({
       ) : null}
       {formatPrice(amount, currencyCode)}
       {priceUnit ? <span className="product-card-price-unit"> {priceUnit}</span> : null}
-      <RetailPrice retail={retailFor(product.variants.nodes, {amount})} />
+      <RetailPrice retail={retailFor(offers, {amount})} />
     </span>
   );
 
@@ -139,7 +139,9 @@ export function ProductItem({
   const launchPending = !isPurchasableStatus(status);
   const showPrice = !launchPending;
   // The quick-add SKU is batch 1 stock in the EU: "Add to cart", not "Pre-order" (ShipChip `useGeoInStock`).
-  const quickAddVariant = quickAdd ? product.variants.nodes.find((v) => v.cartAddUrl === quickAdd.href) : undefined;
+  // A board's pre-order offer is not a node of its own: look it up next to its buy-now variant.
+  const offers = product.variants.nodes.flatMap((v) => (v.preorderOffer ? [v, v.preorderOffer] : [v]));
+  const quickAddVariant = quickAdd ? offers.find((v) => v.cartAddUrl === quickAdd.href) : undefined;
   const quickAddInStock = useGeoInStock(quickAddVariant?.campaign, quickAddVariant?.shipPromise);
 
   // Quick-add overlay: revealed on card hover (always visible on touch).
@@ -154,7 +156,7 @@ export function ProductItem({
             placement="catalog"
             href={quickAdd.href}
             product={product.handle}
-            revenue={plausibleRevenue(product.variants.nodes.find((v) => v.cartAddUrl === quickAdd.href)?.price)}
+            revenue={plausibleRevenue(quickAddVariant?.price)}
             disabled={!quickAdd.available}
           >
             {!quickAdd.available
@@ -186,7 +188,7 @@ export function ProductItem({
   // SKU) says when it ships, in the same ship chip as the product page,
   // drawer and cart.
   const cardVariant =
-    product.variants.nodes.find((v) => quickAdd && v.cartAddUrl === quickAdd.href) ??
+    quickAddVariant ??
     product.variants.nodes.find((v) => v.campaign) ??
     null;
   const campaign = status === 'preorder' && !comingSoon ? (cardVariant?.campaign ?? null) : null;

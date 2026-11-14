@@ -25,7 +25,7 @@ describe('/preorder channel copy', () => {
     assert.match(text, /stock in Belgium ships to EU addresses only/);
     assert.match(text, /Outside the EU, everything ships with the confirmed March 2027 preorder batch\./);
     assert.doesNotMatch(text, /target/i);
-    assert.match(text, /Import VAT, duties and customs fees are paid by you on delivery, unless collected at checkout/);
+    assert.match(text, /Outside the EU and US, import VAT and duties are paid by the buyer on delivery\./);
     assert.doesNotMatch(text, /ships to your country/);
     assert.doesNotMatch(text, /November/i);
     assert.doesNotMatch(text, /UK|United Kingdom|Switzerland|Norway/);
