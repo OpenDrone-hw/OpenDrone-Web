@@ -14,7 +14,7 @@ import {
   cartCurrencyMisses,
   cartLineInfo,
   sellsBuyNow,
-  checkoutOpen,
+  shopShownOpen,
   hasMixedShipDates,
   loadSessionCart,
   latestDeliveryBy,
@@ -129,7 +129,7 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
     if (code) headers.append('Set-Cookie', await writeOptions({...(await readOptions(request, context.env)), code}, context.env));
     throw redirect(APP_CART_PATH, {status: 303, headers});
   }
-  if (!checkoutOpen(context.env) || params['*']) throw redirect('/products', 301);
+  if (!shopShownOpen(context.env) || params['*']) throw redirect('/products', 301);
   let cart = await loadSessionCart(context.env, {
     getCartId: () => context.session.get(CART_KEY) as string | undefined,
     unsetCartId: () => context.session.unset(CART_KEY),

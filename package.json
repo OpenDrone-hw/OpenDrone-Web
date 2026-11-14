@@ -17,6 +17,7 @@
     "build": "react-router build",
     "postbuild": "node scripts/compress-models.mjs",
     "dev": "react-router dev",
+    "dev:like-live": "node scripts/dev-like-live.mjs",
     "preview": "npm run build && wrangler dev --config wrangler.production.toml",
     "lint": "eslint --no-error-on-unmatched-pattern .",
     "typecheck": "react-router typegen && tsc --noEmit",

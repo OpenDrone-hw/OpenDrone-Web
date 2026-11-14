@@ -14,7 +14,7 @@ import {shipWord, useGeoInStock, useGeoShipLine} from '~/components/ShipChip';
 import {AddToCartButton} from '~/components/AddToCartButton';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {Txt} from '~/components/Txt';
-import {copy, copyText} from '~/lib/copy';
+import {copy, copyText, editAttrs} from '~/lib/copy';
 import {catalogHasPreorders, formatPrice, toCards} from '~/lib/catalog';
 import {comingSoonFlag} from '~/lib/coming-soon';
 import {
@@ -208,6 +208,10 @@ export async function loader({context}: Route.LoaderArgs) {
     stackStock: stockPromise(stackShips),
     // The March 2027 batch is confirmed: no target, no deadline.
     confirmed: Boolean(CAMPAIGN.confirmed),
+    // The pre-order batch by its ship-by month ("March 2027"), from `shipsBy`.
+    batchMonth: CAMPAIGN.shipsBy
+      ? new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric', timeZone: 'UTC'}).format(new Date(`${CAMPAIGN.shipsBy}T00:00:00Z`))
+      : '',
     endsDay: CAMPAIGN.endsOn,
     etaDay: latestDay,
     ends: shortCampaignDate(campaignDate(CAMPAIGN.endsOn)) ?? CAMPAIGN.endsOn,
@@ -387,10 +391,13 @@ export default function PreorderRoute() {
         <Txt id="preorder.faq_title" as="h2" className="po-group-title" />
         {FAQ.map((key) => {
           const [q, a] = [`preorder.faq_q_${key}`, `preorder.faq_a_${key}`];
+          // "Is the {batch} batch certain?" answers yes: shown only while `confirmed`, its month read from `shipsBy`.
+          if (key === 'missed' && !data.confirmed) return null;
+          const question = key === 'missed' ? copyText(q)?.replace('{batch}', data.batchMonth) : null;
           return copyText(q) ? (
             <details className="po-faq-item" key={key}>
               <summary>
-                <Txt id={q} />
+                {question ? <span {...editAttrs(q)}>{question}</span> : <Txt id={q} />}
               </summary>
               <Txt id={a} as="p" />
             </details>

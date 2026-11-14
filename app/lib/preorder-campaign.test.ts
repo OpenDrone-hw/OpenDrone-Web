@@ -930,9 +930,11 @@ describe('committed dates derive from content/preorders.json', () => {
   });
 
   it('keeps every product note in step with the campaign', () => {
-    const target = `ships by ${latestShipDate(config)}`;
+    // The March batch's products type no date: their note is the campaign's
+    // promise, written from shipsBy (app/lib/preorder.ts preorderNote).
+    assert.equal(config.pendingShips, `ships by ${latestShipDate(config)}`);
     for (const file of ['openrx', 'openframe', 'openmotor']) {
-      assert.equal(json(`content/products/${file}.json`).statusNote, target, file);
+      assert.equal(json(`content/products/${file}.json`).statusNote, undefined, file);
     }
     for (const file of ['openfc-lite', 'openesc']) {
       assert.equal(json(`content/products/${file}.json`).statusNote, early.ships, file);

@@ -3,11 +3,9 @@ import fs from 'node:fs';
 import {describe, it} from 'node:test';
 import {GEO_NOTICE_COPY, batchOnePromises, geoDeliveryLines, geoPreorderLine} from './geo-availability.ts';
 import {nextLastSeen, noticeFor, noticeText} from './location-notice.ts';
+import {parseCampaignConfig} from './preorder-campaign.ts';
 
-const PREORDERS = JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')) as {
-  pendingShips: string;
-  skus: Record<string, {batches: Array<{paid?: boolean; ships?: string}>}>;
-};
+const PREORDERS = parseCampaignConfig(JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')));
 const read = (rel: string) => fs.readFileSync(new URL(rel, import.meta.url), 'utf8');
 
 describe('noticeFor (when the location notice shows)', () => {
