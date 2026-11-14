@@ -64,7 +64,7 @@ type Row = [label: string, headers: Record<string, string>, expect: Partial<Regi
 
 const ROWS: Row[] = [
   ['BE', {'CF-IPCountry': 'BE'}, {market: 'eu', currency: 'EUR', taxes: 'eu-vat-included', shopifyMarket: 'be', buyNow: true, preorder: true, ships: true}],
-  ['DE', {'CF-IPCountry': 'DE'}, {market: 'eu', currency: 'EUR', taxes: 'eu-vat-included', shopifyMarket: 'international', buyNow: true, preorder: true, ships: true}],
+  ['DE', {'CF-IPCountry': 'DE'}, {market: 'eu', currency: 'EUR', taxes: 'eu-vat-included', shopifyMarket: 'eu-oss', buyNow: true, preorder: true, ships: true}],
   ['NL', {'CF-IPCountry': 'NL'}, {market: 'eu', currency: 'EUR', buyNow: true, preorder: true, ships: true}],
   ['FR', {'CF-IPCountry': 'FR'}, {market: 'eu', currency: 'EUR', buyNow: true, preorder: true, ships: true}],
   ['IE', {'CF-IPCountry': 'IE'}, {market: 'eu', currency: 'EUR', taxes: 'eu-vat-included', buyNow: true, preorder: true, ships: true}],

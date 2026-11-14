@@ -26,6 +26,15 @@ class Maths(unittest.TestCase):
         fc = next(g for g in L.groups(V, 25.0, d) if any(v["sku"] == "FC" for v in g["variants"]))
         self.assertEqual(round(35.10 - round(35.10 * fc["pct"], 2), 2), 24.17)
 
+    def test_non_eu_retailer_pays_75_percent_of_its_market_base_price(self):
+        # International market: base before tax = list / 1.21 on price and compare-at. Divisor 1 (not exempt).
+        intl = [{**v, "price": round(v["price"] / 1.21, 2), "retail": round(v["retail"] / 1.21, 2)} for v in V]
+        for g in L.groups(intl, 25.0, L.divisor("CH", False)):
+            for v in g["variants"]:
+                paid = round(v["price"] - round(v["price"] * g["pct"] + 1e-9, 2), 2)
+                self.assertAlmostEqual(paid, round(0.75 * v["retail"], 2), delta=0.011)
+                self.assertLess(paid, 0.75 * v["retail"] * 1.21 - 0.5)  # not 75% of a VAT-inclusive price
+
     def test_not_exempt_or_non_eu_stays_gross(self):
         self.assertEqual(L.divisor("ES", False), 1.0)
         self.assertEqual(L.divisor("AU", False), 1.0)
@@ -63,6 +72,38 @@ class LiveVariantsTest(unittest.TestCase):
         finally:
             L.gql = real
         self.assertEqual(got, {"OPENFC-LITE-3030": 39.0, "OPENFC-LITE-2020": 29.0})
+
+class MarketPricesTest(unittest.TestCase):
+    def test_live_variants_with_a_country_reads_that_markets_prices(self):
+        nodes = [{"id": "b", "sku": "OPENFC-LITE-2020", "title": "Pre-order", "price": "26.10", "compareAtPrice": "29.00",
+                  "product": {"status": "ACTIVE"}, "ctx": {"price": {"amount": "21.57"}, "compareAtPrice": {"amount": "23.97"}}}]
+        seen = []
+        real = L.gql
+        L.gql = lambda env, q, v=None: seen.append(q) or {"productVariants": {"nodes": nodes}}
+        try:
+            got = L.live_variants({}, "CH")
+        finally:
+            L.gql = real
+        self.assertIn("contextualPricing(context:{country:CH})", seen[0])
+        self.assertEqual((got[0]["price"], got[0]["retail"]), (21.57, 23.97))
+
+    def test_base_price_problem_needs_the_international_decrease(self):
+        def fake(adj):
+            return lambda env, q, v=None: {"markets": {"nodes": [{"handle": "international", "catalogs": {"nodes": [
+                {"priceList": {"currency": "EUR", "parent": {"adjustment": adj}}}] if adj else []}}]}}
+        real = L.gql
+        try:
+            L.gql = fake({"type": "PERCENTAGE_DECREASE", "value": 17.3554})
+            self.assertIsNone(L.base_price_problem({}))
+            L.gql = fake(None)
+            self.assertIn("VAT-inclusive", L.base_price_problem({}))
+        finally:
+            L.gql = real
+
+    def test_every_retailer_country_tag_is_its_market(self):
+        self.assertEqual(L.market_country({"tags": ["wholesale", "country-ch"], "note": ""}), "CH")
+        self.assertIsNone(L.market_country({"tags": ["wholesale"], "note": ""}))
+
 
 class BothLanesAndExpiredSlots(unittest.TestCase):
     LANES = [{"id": "pre", "sku": "OPENFC-LITE-2020", "title": "20x20 / Pre-order", "price": 26.10, "retail": 29.0},

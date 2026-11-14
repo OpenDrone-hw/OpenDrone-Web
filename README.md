@@ -84,7 +84,7 @@ in `.dev.vars` and run `npm run dev`.
 | `npm run goals:update` | move the auto-mode goals in `content/goals.json` from the shop's order totals |
 | `npm run check:reach` | read-only: Shopify markets and shipping zones against `NO_SHOPIFY_ROUTE` in `app/lib/shipping-rates.ts`; exits 1 when they differ |
 | `BASE=<url> npm run e2e:region` | drives the header region control in Chrome (pick a market, page currency, cookie, next page, a `?country` link); IP cases only against a local server |
-| `npm run us:prices` | compare the US price uplift in `content/us-sales.json` with Shopify's price list (`-- --apply` writes it; see "US prices") |
+| `npm run us:prices -- --factory <file>` | compare the US fixed prices in Shopify with the rule in `content/us-sales.json` (`--check` exits 1 on a difference, `--apply` writes them; see "US prices") |
 | `npm run sync:lab-visit -- <game dir>` | copy the lab walkthrough's runtime files into `public/lab-visit/` (`-- --check <game dir>` diffs only) |
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
@@ -1128,7 +1128,7 @@ page renders as before. Open:
 | Surface | US buyer (destination US) | EU buyer |
 |---|---|---|
 | Destination | `shippingQuote` zone `us`, rate from `us-sales.json` | unchanged |
-| Prices | the US catalog's USD list price: duties included, no sales tax. The price steps list shows USD too (see "US prices" below) | EUR incl. VAT |
+| Prices | the US catalog's USD price: base price plus US duty, duties included, no sales tax; no USD steps ladder (see "US prices" below) | EUR incl. VAT |
 | Counter | "0 / 250 ordered for the March 2027 batch": same sentence and bar as the EU, counting the highlighted batch | "1 / 250 ordered for batch 1" |
 | Batches | one row per batch in batch order in both regions (`app/lib/availability.ts`, `app/components/Availability.tsx`): batch 1 "EU and international, not the US" first, the March 2027 batch "EU, US and more" second; the buyer's batch is highlighted (US: March 2027, with batch 1 tagged "Not available in the US"; EU: batch 1 while units remain); other products one March row | batch 1 highlighted, March 2027 batch below |
 | Refund line | "If we cannot deliver to you, you get a full refund." (terms 7ter.5, US only) | none |
@@ -1165,29 +1165,36 @@ more"; `batchText` in `app/lib/availability.ts`, words from
 
 #### US prices
 
-A US price is the EUR VAT-inclusive price plus `priceUpliftPct` in
-`content/us-sales.json` (25), converted at Shopify's FX rate and rounded up to
-whole dollars. The uplift covers US duties and import handling; no US sales tax
-is collected. Shopify prices it: the price list "United States USD, duties
-included (+N%)" has a `PERCENTAGE_INCREASE` parent adjustment and no fixed
-prices.
+One base price before tax per product (founder 2026-11-14): the EUR list
+price / 1.21. A US price is that base converted at `usdPerEur` in
+`content/us-sales.json`, plus the US duty per unit, to the cent (no
+rounding): duty = factory price x (`dutyPct` of the product family +
+`feesPct`) / 100, the factory price being the customs value under the
+first-sale rule. Incutec's net after duty is then the Belgian net. No US
+sales tax is collected. Shopify holds the result as one fixed USD price per
+variant on the US price list; Shopify neither converts nor rounds a fixed
+price. The list's percentage adjustment (`fallbackUpliftPct`, +25) only
+prices a variant that has no fixed price.
 
-The storefront shows every price step in USD. The step the next unit falls
-into is Shopify's live US price. The other steps are their EUR prices through
-the EUR to USD factor band that the live EUR/USD pairs of the whole catalog
-allow (`usdBand` in `app/lib/us-sales.ts`); a step is shown as "about US$X"
-when that band cannot fix its whole dollars, and no ladder is shown when no
-factor fits the live prices.
+Factory prices are supplier prices: they stay out of this public repository.
+`npm run us:prices` reads them from a private JSON file
+(`{"factoryUsd": {"<SKU>": <USD>}}`, built from InvenTree).
 
-To change the US uplift end to end (a pricing decision: the founder's go first):
+A fixed USD price does not follow a preorder price step or the exchange rate
+by itself. After every step (and when `usdPerEur` changes):
 
-1. Edit `priceUpliftPct` in `content/us-sales.json`.
-2. `npm run us:prices` (dry run: prints the file value and the Shopify price
-   list, changes nothing), then `npm run us:prices -- --apply` to write the
-   adjustment and the "(+N%)" name suffix, with a read-back. It reads
-   `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN` (`write_products`) and
-   `SHOPIFY_ADMIN_API_VERSION` from `.env`.
-3. Merge the file change, then `BASE=https://opendrone.be node scripts/smoke.mjs`.
+1. `npm run us:prices -- --factory <private.json>` (dry run: every variant
+   whose fixed price or compare-at differs from the rule, changes nothing;
+   `--check` exits 1 on a difference, for a scheduled check).
+2. `npm run us:prices -- --factory <private.json> --apply` (the founder's go:
+   prices) writes the fixed prices with `priceListFixedPricesAdd` and reads
+   them back. It never writes the percentage adjustment. It refuses while the
+   US market is not `INCLUDES_TAXES_IN_PRICE`.
+
+The storefront shows Shopify's live US price. The USD steps ladder needs one
+EUR to USD factor for the whole catalog (`usdBand` in `app/lib/us-sales.ts`);
+with a duty per unit no factor fits, so no ladder is shown in the US rather
+than a guessed one.
 
 Shopify settings the US needs (the US market, its USD price list and
 `INCLUDES_TAXES_IN_PRICE` exist): a US shipping zone at the `us-sales.json`
@@ -1227,7 +1234,7 @@ those tags automatically. An earlier accepted promise is not silently extended.
 |---|---|
 | `content/preorders.json` | `countFrom`, `endsOn`, `confirmed`, `afterEndsOn`, `soldUnder`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `reserved`, `paid`, `ships`, `deliveryBy`, `deliveryByUS`, `deliveryByINT`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
 | `content/registrations.json` | producer numbers and explicit `saleApproved` per EU destination |
-| `content/us-sales.json` | the US flat shipping rate in USD (`null` keeps the US closed) and `priceUpliftPct`, the US price uplift (`npm run us:prices`) |
+| `content/us-sales.json` | the US flat shipping rate in USD (`null` keeps the US closed) and the US price rule: base x `usdPerEur` + duty per family (`npm run us:prices`) |
 | Shopify | compare-at (retail) price, current price, catalog identity, orders, payments |
 | `SHOPIFY_PREVIEW_POLICY_JSON` | which SKUs sell as `preorder` |
 | `app/content/legal/{en,nl,fr}/` | customer terms (7bis) |

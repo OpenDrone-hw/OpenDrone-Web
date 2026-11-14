@@ -1,7 +1,11 @@
 """Shared helpers of wholesale-onboard.py and wholesale-sync.py (stdlib only).
 
 A retailer pays WHOLESALE_PERCENT off RETAIL (a variant's compare-at price),
-whatever preorder price step the variant is on. Shopify takes a percentage off
+whatever preorder price step the variant is on, and RETAIL is the price of the
+retailer's own market (founder 2026-11-14: one base price before tax, each
+market adds only its own VAT or duties): EU list price in the EU (net of the
+retailer's VAT under reverse charge), the base price before tax outside the EU
+(International market: list / 1.21), the USD base-plus-duty price in the US. Shopify takes a percentage off
 the live price, so one code cannot do it: each retailer gets one customer-limited
 code per price group, percentage = 1 - (1 - rate) * compare_at / price, scoped
 to the variants of that group. Slot 1 is the code the retailer types
@@ -16,6 +20,10 @@ GROUPS = 4                # same number as WHOLESALE_GROUPS in app/lib/wholesale
 DECIMALS = 4  # Shopify stores a discount percentage with 4 decimals (0.166667 reads back as 0.1667)
 PCT_TOLERANCE = 5e-5
 EXEMPTION = "EU_REVERSE_CHARGE_EXEMPTION_RULE"
+# The International market prices the base before tax: a price list of -(1 - 1/1.21) on the EUR list price
+# (Shopify market handle `international`). Without it a non-EU retailer would pay 75% of a VAT-inclusive price.
+BASE_DECREASE_PCT = 17.3554
+INTERNATIONAL_HANDLE = "international"
 EU = set("AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE".split())
 # Standard VAT rate (percent) per EU member state, as of 29 Oct 2026. Source: the 2026 rate tables of
 # https://www.eurofiscalis.com/en/vat-rates-in-ue/ and https://www.numeral.com/blog/eu-vat-rates (consistent for all 27
@@ -68,18 +76,26 @@ def slot_code(main, slot):
     return main if slot == 1 else f"{main}-G{slot}"
 
 
-def live_variants(env):
+def live_variants(env, country=None):
     """Active variants: id, sku, title, price, retail. Both lanes of a board (Buy now and Pre-order) share one SKU
     and are separate variants with their own price, so every variant is keyed by id, never by SKU.
+
+    With `country` the prices are that country's market prices (Admin contextualPricing), the prices the retailer's
+    checkout charges; without it the shop's EUR list prices (EU and Belgian retailers: the same).
 
     Retail is the compare-at price while a preorder step is below it, else the price itself: at the retail step
     app/lib/shopify-price-tier.ts clears the compare-at (same rule as its `retail`), and such a variant still gets
     the wholesale rate."""
-    d = gql(env, '{productVariants(first:100,query:"sku:OPEN*"){nodes{id sku title price compareAtPrice product{status}}}}')
+    ctx = (' ctx:contextualPricing(context:{country:%s}){price{amount} compareAtPrice{amount}}' % country) if country else ""
+    d = gql(env, '{productVariants(first:100,query:"sku:OPEN*"){nodes{id sku title price compareAtPrice product{status}%s}}}' % ctx)
     out = []
     for v in d["productVariants"]["nodes"]:
         if v["product"]["status"] != "ACTIVE":
             continue
+        if country:
+            c = v.get("ctx") or {}
+            v = {**v, "price": (c.get("price") or {}).get("amount", v["price"]),
+                 "compareAtPrice": (c.get("compareAtPrice") or {}).get("amount")}
         price = float(v["price"])
         compare = float(v["compareAtPrice"]) if v["compareAtPrice"] else None
         out.append({"id": v["id"], "sku": v["sku"], "title": v.get("title") or "", "price": price,
@@ -98,7 +114,8 @@ def divisor(country, exempt):
     Shopify keeps a tax-inclusive price unchanged for a tax-exempt customer (no VAT line, same gross price; Shopify help,
     "Tax overrides and exemptions": the customer "will still be charged the full listed product price"). Reverse charge
     means the retailer pays NET prices and accounts for VAT at home, so the price base becomes retail / (1 + the standard
-    VAT rate of the retailer's country). Non-EU retailers stay on the gross price (founder pricing choice)."""
+    VAT rate of the retailer's country). A non-EU retailer is not exempt: its market price is already the base price
+    before tax (International price list, BASE_DECREASE_PCT), so its divisor is 1 and it pays 75% of that base."""
     if not exempt:
         return 1.0
     if country not in EU_VAT:
@@ -118,6 +135,26 @@ def customer_country(customer):
 def customer_divisor(customer):
     exempt = EXEMPTION in (customer.get("taxExemptions") or [])
     return divisor(customer_country(customer), exempt) if exempt else 1.0
+
+
+def market_country(customer):
+    """The retailer's country for market prices: its `country-xx` tag (set for every retailer since 2026-11-14),
+    else the country of a VAT ID on its note, else None (shop EUR prices)."""
+    return customer_country(customer)
+
+
+def base_price_problem(env):
+    """None when the International market carries the base-price list (-BASE_DECREASE_PCT %), else the reason: a
+    non-EU retailer would then pay 75% of a VAT-inclusive price."""
+    d = gql(env, "{markets(first:50){nodes{handle catalogs(first:5){nodes{... on MarketCatalog{priceList{currency parent{adjustment{type value}}}}}}}}}")
+    m = next((m for m in d["markets"]["nodes"] if m["handle"] == INTERNATIONAL_HANDLE), None)
+    if m is None:
+        return "no International market"
+    for c in m["catalogs"]["nodes"]:
+        adj = ((c.get("priceList") or {}).get("parent") or {}).get("adjustment") or {}
+        if adj.get("type") == "PERCENTAGE_DECREASE" and abs(float(adj.get("value", 0)) - BASE_DECREASE_PCT) < 0.001:
+            return None
+    return f"International market has no -{BASE_DECREASE_PCT}% base-price list: non-EU retailers pay 75% of a VAT-inclusive price"
 
 
 def tax_pricing_problem(env):

@@ -1,5 +1,33 @@
 {
-  "$comment": "US consumer preorders, read by app/lib/us-sales.ts. The US is sold direct only while the PUBLIC_US_SALES gate is \"1\" in the wrangler config AND rate is a number: the flat US shipping rate in USD that the Shopify US shipping zone charges. null keeps the US closed even with the gate on. Every product sells to the US: a campaign SKU from its first US-serving batch, any other SKU as a preorder of `usStock` in preorders.json. Only Belgian paid stock (batch `regions` in preorders.json) is EU only. priceUpliftPct is the percentage on top of the EUR VAT-inclusive price for a US buyer: Shopify's US price list adds it, converts to USD at its FX rate and rounds to whole dollars. It covers US duties and import handling; no US sales tax is collected. Shopify holds the live value; `npm run us:prices` compares it with this file and, with --apply, writes this file's value to the price list. Changing the number is a pricing decision that needs the founder's go.",
+  "$comment": "US consumer preorders, read by app/lib/us-sales.ts. The US is sold direct only while the PUBLIC_US_SALES gate is \"1\" in the wrangler config AND rate is a number: the flat US shipping rate in USD that the Shopify US shipping zone charges. null keeps the US closed even with the gate on. Every product sells to the US: a campaign SKU from its first US-serving batch, any other SKU as a preorder of `usStock` in preorders.json. Only Belgian paid stock (batch `regions` in preorders.json) is EU only. Price rule (founder 2026-11-14, one base price before tax, every market adds only what it costs): a US price is the base price (the EUR list price / 1.21) converted at usdPerEur, plus the US duty per unit, to the cent, no rounding: dutyPct[family] + feesPct (merchandise processing and harbor maintenance fees) of the factory price, the customs value under the first-sale rule. Shopify holds it as one fixed USD price per variant on the US price list; fallbackUpliftPct is that list's percentage adjustment, which prices only a variant without a fixed price. Factory prices are supplier prices and never enter this public repository: `npm run us:prices -- --factory <private json>` reads them, compares Shopify with this rule and, with --apply, writes the fixed prices. No US sales tax is collected. Changing a number is a pricing decision that needs the founder's go.",
   "rate": 9.95,
-  "priceUpliftPct": 25
+  "priceRule": "base-plus-duty",
+  "usdPerEur": 1.1238,
+  "feesPct": 0.4714,
+  "dutyPct": {
+    "FC": 40.2,
+    "ESC": 37.5,
+    "RX": 20,
+    "ANT": 20,
+    "MOTOR": 41.5,
+    "FRAME": 62.5,
+    "SCREWS": 81.2,
+    "PROP": 37.5,
+    "CAP": 37.5,
+    "STRAP": 27
+  },
+  "family": [
+    ["OPENFC", "FC"],
+    ["OPENESC", "ESC"],
+    ["OPENRX", "RX"],
+    ["ACC-ANT", "ANT"],
+    ["OPENMOTOR", "MOTOR"],
+    ["OPENFRAME", "FRAME"],
+    ["ACC-FRM-HW", "SCREWS"],
+    ["ACC-FRM", "FRAME"],
+    ["ACC-PROP", "PROP"],
+    ["ACC-CAP", "CAP"],
+    ["ACC-STRAP", "STRAP"]
+  ],
+  "fallbackUpliftPct": 25
 }
