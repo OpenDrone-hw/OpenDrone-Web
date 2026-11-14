@@ -21,6 +21,7 @@ import {
   announcedProduct,
   defaultSalePolicy,
   fillSalesTokens,
+  laneShipping,
   productNameOfSku,
   SALES,
   salesModel,
@@ -255,5 +256,33 @@ describe('sales model: a preorder gets a new ship date', () => {
     const model = salesModel(own);
     assert.equal(model.shipsBy, '2027-06-30');
     assert.equal(geoBarText('intl', 'en', false, false, model), 'Pre-order, ships by 30 June 2027');
+  });
+});
+
+describe('sales model: a product with no ship-by date', () => {
+  // The battery strap ships with the FC's stock batch and has no unit count
+  // of its own: no ship-by date exists for it.
+  const STRAP = 'ACC-STRAP-20X220';
+  const strapCatalog = (region: Region) => {
+    const shopify = mapShopifyCatalog(choiceCatalogData({extraSku: STRAP}), 'open-drone-test.myshopify.com', JSON.stringify({...CHOICE_POLICY, [STRAP]: {saleMode: 'preorder', shipPromise: null}}), '1', 'default', true);
+    return bySku(applyCampaign(shopify, parseCampaignConfig(structuredClone(RAW)), {}, NOW, region), STRAP)!.variant;
+  };
+
+  it('in the stock region it is stock: where it ships from and to, no date', () => {
+    const strap = strapCatalog('EU');
+    assert.equal(strap.ship_promise, STOCK_TEXT);
+    assert.equal(strap.campaign!.latestShip, null);
+    assert.equal(strap.campaign!.inStock, true);
+    assert.equal(geoInStock('eu', {paidStock: strap.campaign!.paidStock, shipPromise: strap.ship_promise}, batchOnePromises(parseCampaignConfig(structuredClone(RAW)))), true);
+    assert.deepEqual(laneShipping(strap.campaign), {kind: 'stock'}, 'lane card: stock words, never "Ships by ,"');
+  });
+
+  it('elsewhere it is a pre-order with its date', () => {
+    assert.deepEqual(laneShipping(strapCatalog('US').campaign), {kind: 'date', date: '31 March 2027'});
+  });
+
+  it('a lane with neither a date nor stock says the next batch, never an empty date', () => {
+    assert.deepEqual(laneShipping({latestShip: '  ', inStock: false}), {kind: 'next'});
+    assert.deepEqual(laneShipping(null), {kind: 'next'});
   });
 });

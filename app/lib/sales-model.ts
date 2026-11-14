@@ -256,6 +256,19 @@ export function defaultSalePolicy(sku: string, model: SalesModel = SALES): {sale
   return null;
 }
 
+/**
+ * What a pre-order lane card says about shipping: its ship-by date when it
+ * has one; stock on hand (where it ships from and to) when it has none; else
+ * the next batch. Never a sentence with an empty date.
+ */
+export function laneShipping(
+  campaign: {latestShip?: string | null; inStock?: boolean} | null | undefined,
+): {kind: 'date'; date: string} | {kind: 'stock'} | {kind: 'next'} {
+  const date = campaign?.latestShip?.trim();
+  if (date) return {kind: 'date', date};
+  return campaign?.inStock ? {kind: 'stock'} : {kind: 'next'};
+}
+
 /** Whether a product file announces a product that does not sell yet:
  *  `idea` or `development`. Pages show it with a notify-me and no cart button. */
 export function announcedProduct(content: Pick<ProductContent, 'status'> | null | undefined): boolean {

@@ -2216,18 +2216,13 @@ function ProductPage() {
         showAvailability && campaign ? (
           <Availability campaign={campaign} region={usBuyer ? 'US' : internationalBuyer ? 'INT' : 'EU'} countShown={Boolean(stepBar)} />
         ) : offerChoice || (choiceOn && campaign && !geoInStock) ? (
-          // One line in one slot for both offers, so choosing moves nothing;
-          // the same pre-order line in every region.
+          // The lane card next to the price states when and where this lane
+          // ships, once; under the button only the terms that go with it.
           <p className="product-buy-ship offer-status" data-offer-status>
-            <span>
-              {offerChoice && offerMode === 'buy_now'
-                ? (rootData as {wholesaleExport?: boolean} | undefined)?.wholesaleExport
-                  ? say('product-chrome.offer_status_buy_now_wholesale', 'In stock in {{stock_from}}, wholesale order, ships by courier, import charges on delivery')
-                  : say('product-chrome.offer_status_buy_now', 'In stock in {{stock_from}}, ships in days, {{stock_scope}} only')
-                : say('product-chrome.offer_status_preorder', 'Ships by {date}, worldwide', {
-                    date: (offerChoice ? offerChoice.preorder.campaign?.latestShip : campaign?.latestShip) ?? '',
-                  })}
-            </span>
+            {/* A wholesale export order adds what the lane card does not say. */}
+            {offerChoice && offerMode === 'buy_now' && (rootData as {wholesaleExport?: boolean} | undefined)?.wholesaleExport ? (
+              <span>{say('product-chrome.offer_status_buy_now_wholesale', 'In stock in {{stock_from}}, wholesale order, ships by courier, import charges on delivery')}</span>
+            ) : null}
             <Link prefetch="intent" to={offerChoice && offerMode === 'buy_now' ? '/terms' : '/preorder'} className="product-buy-terms-link">
               {offerChoice && offerMode === 'buy_now'
                 ? say('product-chrome.offer_terms_buy_now', 'Terms of sale')

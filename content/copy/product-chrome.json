@@ -637,7 +637,5 @@
   "offer_stack_total": "Stack total",
   "build_total": "Total",
   "offer_status_buy_now_wholesale": "In stock in {{stock_from}}, wholesale order, ships by courier, import charges on delivery",
-  "offer_status_buy_now": "In stock in {{stock_from}}, ships in days, {{stock_scope}} only",
-  "offer_status_preorder": "Ships by {date}, worldwide",
   "offer_terms_buy_now": "Terms of sale"
 }
