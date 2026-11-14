@@ -20,7 +20,7 @@ import favicon from '~/assets/favicon.svg';
 import interVarWoff2 from '~/assets/fonts/inter-var.woff2';
 import jetbrainsMonoWoff2 from '~/assets/fonts/jetbrains-mono-Regular.woff2';
 import {comingSoonFlag, resolveAllStatuses, roadmapStatusMap} from '~/lib/coming-soon';
-import {checkoutOpen} from '~/lib/shopify-cart-action';
+import {shopShownOpen} from '~/lib/shopify-cart-action';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {launchedStatusFlags} from '~/lib/launched-roadmap';
 import {CAMPAIGN} from '~/lib/catalog-client';
@@ -187,7 +187,7 @@ export async function loader(args: Route.LoaderArgs) {
   // US consumer preorders: the US rate while the gate and the committed
   // rate both open them, else null (the US buys through shops).
   const usRate = usSalesRate(env);
-  const shopOpen = !globalComingSoon && checkoutOpen(env);
+  const shopOpen = !globalComingSoon && shopShownOpen(env);
   // An open shop files the boards with a paid first batch under beta, as the
   // launch's topic flip will (app/lib/launched-roadmap.ts).
   const statusFlags = launchedStatusFlags(liveFlags, shopOpen, CAMPAIGN);
