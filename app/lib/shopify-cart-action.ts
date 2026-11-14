@@ -10,6 +10,7 @@ import {cartWholesaleCode, wholesaleCartPath, wholesaleCodes, wholesaleMainCode}
 import {cartAttributesFromForm, ORDER_ATTRIBUTE} from './growth/attribution.ts';
 import {internationalShippingFrom} from './international-shipping.ts';
 import {GEO_AVAILABILITY_COPY, hasBatchOne} from './geo-availability.ts';
+import {fillSalesTokens} from './sales-model.ts';
 import {
   BATCH_ATTRIBUTE,
   PREORDER_ATTRIBUTE,
@@ -212,8 +213,14 @@ export function cartCountryFor(
 }
 
 /** What a buyer reads when an in-stock item is added for a US destination. */
-export const US_EU_ONLY_MESSAGE =
-  'This item ships from our stock in Belgium to EU addresses only, so it cannot be delivered to the United States. Preorder items ship to the US.';
+export const US_EU_ONLY_MESSAGE = fillSalesTokens(
+  'This item ships from our stock in {{stock_from}} to {{stock_scope}} addresses only, so it cannot be delivered to the United States. Preorder items ship to the US.',
+);
+
+/** What a buyer outside the stock region reads for an in-stock item. */
+const STOCK_ONLY_MESSAGE = fillSalesTokens(
+  'This item ships from stock in {{stock_from}} to {{stock_scope}} addresses only. International orders use the preorder batch.',
+);
 
 /** What a buyer reads when the destination is not sold direct. */
 export function destinationMessage(kind: ShippingQuote['kind'], _usOpen: boolean): string {
@@ -1092,7 +1099,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       if (!variant.merchandise_id) throw fail('Product is unavailable.', 409);
       // Only while pre-orders exist is the cart the pre-order lane.
       if (isBuyNowOnly(variant) && catalogHasPreorders(catalog)) throw fail(BUY_NOW_NOT_IN_CART, 409);
-      if (region !== 'EU' && euOnlyStock(variant, catalog)) throw fail(region === 'US' ? US_EU_ONLY_MESSAGE : 'This item ships from stock in Belgium to EU addresses only. International orders use the preorder batch.', 409);
+      if (region !== 'EU' && euOnlyStock(variant, catalog)) throw fail(region === 'US' ? US_EU_ONLY_MESSAGE : STOCK_ONLY_MESSAGE, 409);
       const attributes = lineAttributes(variant, region, euStockKnown);
       return attributes
         ? {merchandiseId: variant.merchandise_id, quantity, attributes}

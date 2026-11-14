@@ -5,6 +5,7 @@
  */
 
 import type {Words} from './availability.ts';
+import {fillSalesTokens} from './sales-model.ts';
 
 type CopyFile = Record<string, unknown>;
 
@@ -25,7 +26,7 @@ const COPY = load();
 /** Lookup for `availability.ts`: the copy value, else the English fallback. */
 export const serverPreorderWords: Words = (key, fallback, vars = {}) => {
   const value = COPY[key];
-  return (typeof value === 'string' ? value : fallback).replace(/\{(\w+)\}/g, (match, name: string) =>
+  return fillSalesTokens(typeof value === 'string' ? value : fallback).replace(/\{(\w+)\}/g, (match, name: string) =>
     name in vars ? String(vars[name]) : match,
   );
 };

@@ -15,10 +15,12 @@ flowchart LR
 ```
 
 **Catalog.** `app/lib/shopify-storefront.ts` reads the Shopify Storefront API
-into the catalog shape in `app/lib/catalog.ts`. Every Shopify SKU needs an
-entry in `SHOPIFY_PREVIEW_POLICY_JSON` (`saleMode` `in_stock`, `preorder` or
-`sold_out`, plus `shipPromise`); a missing entry, a non-EUR price or missing
-VAT confirmation fails the catalog closed. Country-context reads use
+into the catalog shape in `app/lib/catalog.ts`. `SHOPIFY_PREVIEW_POLICY_JSON`
+sets a SKU's `saleMode` (`in_stock`, `preorder` or `sold_out`, plus
+`shipPromise`). A SKU it does not name sells as `preorder` when
+`content/preorders.json` sells it, and is `sold_out` when only a product file
+lists it (`skus` in `content/products/<handle>.json`). Any other SKU, a non-EUR
+price or missing VAT confirmation fails the catalog closed. Country-context reads use
 Shopify's destination prices and currency after this base check. The US keeps its USD ladder; other international destinations
 copy live country prices without inferring later price steps. Missing prices
 close the affected destination variants. Customer-account links stay hidden unless an

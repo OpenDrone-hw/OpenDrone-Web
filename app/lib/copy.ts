@@ -14,6 +14,8 @@
  * IS the source.
  */
 
+import {fillSalesTokens} from './sales-model.ts';
+
 /** One page's strings. Values are plain text, or an array of paragraphs. */
 export type CopyValue = string | string[];
 export type CopyFile = Record<string, CopyValue>;
@@ -57,7 +59,19 @@ export function splitId(id: string): {page: string; key: string} {
  */
 export function copy(id: string): CopyValue | undefined {
   const {page, key} = splitId(id);
-  return PAGES[page]?.[key];
+  return filled(PAGES[page]?.[key]);
+}
+
+/**
+ * A copy value with its sales facts filled in: `{{stock_from}}`,
+ * `{{preorder_month}}` and the other tokens of `sales-model.ts` come from
+ * `content/preorders.json`, so no copy file types a date, a place or a
+ * product line that changes over time. Nested lists (legal tables) too.
+ */
+function filled<T>(value: T): T {
+  if (typeof value === 'string') return fillSalesTokens(value) as T;
+  if (Array.isArray(value)) return value.map((v) => filled(v)) as T;
+  return value;
 }
 
 /** Same, narrowed to a single string. Arrays collapse to their first entry. */
@@ -109,7 +123,7 @@ export function copyFill(
   fallback: string,
   vars: Record<string, string | number> = {},
 ): string {
-  return (copyText(id) ?? fallback).replace(/\{(\w+)\}/g, (match, name: string) =>
+  return fillSalesTokens(copyText(id) ?? fallback).replace(/\{(\w+)\}/g, (match, name: string) =>
     name in vars ? String(vars[name]) : match,
   );
 }

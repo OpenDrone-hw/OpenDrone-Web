@@ -25,6 +25,7 @@ import {
   shipMonth,
   variantDisplayName,
 } from '~/lib/product-content';
+import {announcedProduct, stockShipsTo} from '~/lib/sales-model';
 import {datedShipText, useGeoShipLine} from '~/components/ShipChip';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {Txt} from '~/components/Txt';
@@ -100,10 +101,10 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const catalog = await context.catalog.forBuyer();
   // The one fixed ship date of the campaign, the stack's paid batch, for
   // the "Ships late Nov 2026" filter chip.
-  // A non-EU buyer has no paid stock batch: no
-  // chip, as /preorder drops the stack lane.
+  // A buyer outside the stock region (`paidRegions`) has no paid stock
+  // batch: no chip, as /preorder drops the stack lane.
   const stackShips =
-    context.catalog.region !== 'EU'
+    !stockShipsTo(context.catalog.region)
       ? null
       : (Object.values(CAMPAIGN.skus)
           .flatMap((entry) => entry.batches)
@@ -400,7 +401,10 @@ export default function ProductsIndex() {
       const allTiers =
         axis && content?.variants ? Object.entries(content.variants) : [];
       const liveTiers = allTiers.filter(([, v]) => !v.comingSoon);
-      if (axis && liveTiers.length > 0) {
+      // Announced in its product file (`idea`, `development`): listed, never
+      // sold from the list (sales-model.ts).
+      const announced = announcedProduct(content);
+      if (axis && liveTiers.length > 0 && !announced) {
         for (const [value] of liveTiers) {
           const sv = variantFor(p, axis, value);
           // The card's cart button adds a board's pre-order (the cart is the
@@ -432,7 +436,7 @@ export default function ProductsIndex() {
       } else {
         // A line whose every tier is still coming soon (e.g. OpenFC) is an
         // unreleased teaser - show it greyed and non-clickable, not buyable.
-        const comingSoon = allTiers.length > 0;
+        const comingSoon = allTiers.length > 0 || announced;
         // Quick-add only when there is genuinely ONE variant - a future
         // multi-option accessory must send the buyer to the PDP to choose.
         const onlyVariant =

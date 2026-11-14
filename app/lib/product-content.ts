@@ -475,6 +475,15 @@ export type ProductContent = {
    *  ('development' while set, 'live' once cleared), or the legacy
    *  `comingSoon` boolean when present. */
   status?: ProductStatus;
+  /** The product's name where a page names it without the catalog at hand:
+   *  "OpenFC Lite" in "Ships with the OpenFC Lite batch". */
+  name?: string;
+  /** The product line in a list of lines: "FC", "ESC", "RX", "frames".
+   *  Copy reads it through `app/lib/sales-model.ts` ("FC and ESC"). */
+  lineName?: string;
+  /** The Shopify SKUs of this product. `app/lib/sales-model.ts` maps every
+   *  SKU in `content/preorders.json` to its product through this list. */
+  skus?: string[];
   /** `false` marks a resold product (motors, other OEM parts) that has a
    *  content file for its status and copy but is NOT open hardware: no
    *  CERN-OHL-S claim, no "Open for learning" or contributors chapter.
@@ -1193,8 +1202,8 @@ export function resolveStatus(
   globalFlag: boolean,
   flags: Record<string, RoadmapStatus> = {},
   availability?: CatalogAvailability,
+  content: ProductContent | undefined = handle ? PRODUCT_CONTENT[handle] : undefined,
 ): ProductStatus {
-  const content = handle ? PRODUCT_CONTENT[handle] : undefined;
   if (content?.status === 'idea' || content?.status === 'development') {
     return content.status;
   }

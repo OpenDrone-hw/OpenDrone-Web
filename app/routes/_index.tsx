@@ -30,6 +30,7 @@ import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 import {CommunitySection} from '~/components/Discord';
 import {fetchDiscordCounts, type DiscordCounts} from '~/lib/discord-community';
+import {stockShipsTo} from '~/lib/sales-model';
 
 /**
  * The homepage's words live in `content/copy/home.json`, shared with
@@ -120,8 +121,8 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const discord = fetchDiscordCounts();
   const {heroBuilds, featured} = await home;
 
-  // The stack card is for buyers of the EU's paid batch only.
-  const stackOffer = context.catalog.region === 'EU';
+  // The stack card is for buyers in the stock region only (`paidRegions`).
+  const stackOffer = stockShipsTo(context.catalog.region);
 
   return {isMobileHint, featured, heroBuilds, stackOffer, discord};
 }

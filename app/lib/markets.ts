@@ -11,6 +11,7 @@
 import {COUNTRY_NAMES_EN} from './country-names.ts';
 import {EU_COUNTRY_CODES, IMPORT_COUNTRY_CODES} from './eu-countries.ts';
 import {shipByDate} from './geo-availability.ts';
+import {stockFrom} from './sales-model.ts';
 import {regionFor, type MarketId, type Region, type TaxShown} from './region.ts';
 import type {RegistrationsFile} from './registrations.ts';
 import {SHIPPING_ZONES, countryName} from './shipping-rates.ts';
@@ -83,10 +84,10 @@ export function marketRows(usRate: number | null, ordinary = false, registration
             : `Rest of the world (${regions.length} countries)`;
     const shipping =
       market === 'eu'
-        ? `From Belgium, ${euro(Math.min(...euRates))} to ${euro(Math.max(...euRates))}; ${ordinary ? 'in stock ships in days' : `in stock ships in days, ${shipBy}`}`
+        ? `From ${stockFrom()}, ${euro(Math.min(...euRates))} to ${euro(Math.max(...euRates))}; ${ordinary ? 'in stock ships in days' : `in stock ships in days, ${shipBy}`}`
         : market === 'us'
           ? `Flat US$${usRate!.toFixed(2)}; ${shipBy}`
-          : `From Belgium, rate at checkout; ${shipBy}`;
+          : `From ${stockFrom()}, rate at checkout; ${shipBy}`;
     rows.push({
       market,
       who,
