@@ -416,7 +416,7 @@ describe('spec sheet', () => {
     assert.equal(terseSpecValue('Current sensor', 'On-board, 165 A'), '0-165A');
     assert.equal(terseSpecValue('BEC', '10 V switchable + 5 V always-on, 3.5 A'), '5V + 10V, 3.5A');
     assert.equal(terseSpecValue('MCU', 'AT32F421, one per motor'), '4x AT32F421');
-    assert.equal(terseSpecValue('General-purpose I/O', '4× DShot, bidirectional'), '4x bidir DShot');
+    assert.equal(terseSpecValue('General-purpose I/O', '4 PWM-capable pads (DShot, bidirectional)'), '4 PWM-capable pads (bidir DShot)');
     assert.equal(terseSpecValue('Size', '26.9 × 26.9 mm'), '26.9x26.9 mm');
   });
   it('names the grommet screw size from the box on the mounting row', () => {

@@ -264,7 +264,7 @@
     ],
     [
       "General-purpose I/O",
-      "4× DShot, bidirectional"
+      "4 PWM-capable pads (DShot, bidirectional)"
     ],
     [
       "RX",
@@ -586,22 +586,22 @@
             {
               "label": "M1",
               "kind": "motor",
-              "title": "Motor 1"
+              "title": "General-purpose I/O 1 (ESC signal)"
             },
             {
               "label": "M2",
               "kind": "motor",
-              "title": "Motor 2"
+              "title": "General-purpose I/O 2 (ESC signal)"
             },
             {
               "label": "M3",
               "kind": "motor",
-              "title": "Motor 3"
+              "title": "General-purpose I/O 3 (ESC signal)"
             },
             {
               "label": "M4",
               "kind": "motor",
-              "title": "Motor 4"
+              "title": "General-purpose I/O 4 (ESC signal)"
             }
           ]
         },
@@ -863,22 +863,22 @@
         {
           "label": "M1",
           "kind": "motor",
-          "title": "Motor 1"
+          "title": "General-purpose I/O 1 (ESC signal)"
         },
         {
           "label": "M2",
           "kind": "motor",
-          "title": "Motor 2"
+          "title": "General-purpose I/O 2 (ESC signal)"
         },
         {
           "label": "M3",
           "kind": "motor",
-          "title": "Motor 3"
+          "title": "General-purpose I/O 3 (ESC signal)"
         },
         {
           "label": "M4",
           "kind": "motor",
-          "title": "Motor 4"
+          "title": "General-purpose I/O 4 (ESC signal)"
         }
       ]
     },
