@@ -1,6 +1,12 @@
 {
   "fileNumber": "01",
   "family": "4-in-1 ESC",
+  "name": "OpenESC",
+  "lineName": "ESC",
+  "skus": [
+    "OPENESC-2020",
+    "OPENESC-3030"
+  ],
   "status": "preorder",
   "statusNote": "in stock in Belgium, ships to EU addresses in a few working days",
   "hero": {

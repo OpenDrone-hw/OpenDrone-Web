@@ -117,8 +117,8 @@ export function HowOrdering({data}: {data: HowOrderingData}) {
       <div className={`ho-lanes${data.stacks.length ? '' : ' is-single'}`}>
         {data.stacks.length ? (
           <section className="ho-lane" aria-labelledby="ho-stock">
-            <h3 id="ho-stock" className="ho-lane-title">{say('lane_stock_title', 'In stock: the FC and ESC stack')}</h3>
-            <p className="ho-line is-stock">{say('lane_stock_line', 'Ships in days from Belgium, EU only')}</p>
+            <h3 id="ho-stock" className="ho-lane-title">{say('lane_stock_title', 'In stock: the {{stock_lines}} stack')}</h3>
+            <p className="ho-line is-stock">{say('lane_stock_line', 'Ships in days from {{stock_from}}, {{stock_scope}} only')}</p>
             <div className="ho-actions">
               {data.stacks.map((stack) => (
                 <ExpressBuy key={stack.size} lines={stack.lines} className="hero-build-add" product={`stack-${stack.size}-inch`}>
@@ -133,7 +133,7 @@ export function HowOrdering({data}: {data: HowOrderingData}) {
         ) : null}
         <section className="ho-lane" aria-labelledby="ho-preorder">
           <h3 id="ho-preorder" className="ho-lane-title">{say('lane_preorder_title', 'Pre-order: everything')}</h3>
-          <p className="ho-line">{say('lane_preorder_line', 'Every product, FC and ESC included. Ships by {date}, worldwide.', {date: shipBy})}</p>
+          <p className="ho-line">{say('lane_preorder_line', 'Every product, {{stock_lines}} included. Ships by {date}, worldwide.', {date: shipBy})}</p>
           <div className="ho-actions">
             <Link to="/products" prefetch="intent" className="hero-build-add">
               <span className="btn-label">{say('lane_preorder_cta', 'Pre-order from the products')}</span>

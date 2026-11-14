@@ -47,7 +47,7 @@ export function offerCards(
       pinPrice: formatPrice(buyNow.price.amount, buyNow.price.currencyCode),
       price: samePrice ? null : formatPrice(buyNow.price.amount, buyNow.price.currencyCode),
       ships: say('offer_buy_now_ships', 'In stock, ships in days'),
-      where: say('offer_buy_now_where', 'From Belgium, EU only'),
+      where: say('offer_buy_now_where', 'From {{stock_from}}, {{stock_scope}} only'),
       extra: left != null ? say('offer_left', '{count} left', {count: left}) : null,
     },
     {
@@ -130,7 +130,7 @@ export function OfferStatus({
   const found = offerCards(buyNow, preorder).find((c) => c.offer === offer)!;
   // A product simply in stock (no pre-order anywhere for it): "In stock · Ships in days".
   const card = offer === 'buy_now'
-    ? {...found, title: copyText('product-chrome.offer_in_stock') ?? 'In stock', ships: copyText('product-chrome.offer_in_stock_ships') ?? 'Ships in days', where: copyText('product-chrome.offer_in_stock_where') ?? 'From Belgium'}
+    ? {...found, title: copyText('product-chrome.offer_in_stock') ?? 'In stock', ships: copyText('product-chrome.offer_in_stock_ships') ?? 'Ships in days', where: copyFill('product-chrome.offer_in_stock_where', 'From {{stock_from}}')}
     : found;
   const extra = offer === 'preorder' ? card.extra : null;
   return (

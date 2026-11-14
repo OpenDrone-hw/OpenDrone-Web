@@ -41,8 +41,7 @@ import {
 } from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
 import {isPurchasableStatus, lineDisplayName, setSize, shortShipPromise, variantDisplayName} from '~/lib/product-content';
-import {latestShipDate, parseCampaignConfig, shipLabelFromPromise} from '~/lib/preorder-campaign';
-import preordersJson from '../../content/preorders.json';
+import {shipLabelFromPromise} from '~/lib/preorder-campaign';
 import {Txt} from '~/components/Txt';
 import {ShipChip, parcelPromise, soonerMonth, useGeoDutiesNote, useGeoParcel} from '~/components/ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from '~/components/ParcelChip';
@@ -70,6 +69,7 @@ import {
   storeSplitItems,
   type SplitItem,
 } from '~/lib/cart-client';
+import {fillSalesTokens, SALES, salesDay} from '~/lib/sales-model';
 
 const CART_KEY = 'shopifyCartId';
 const BUILDS = parseBuilds(buildsJson);
@@ -81,7 +81,7 @@ const MAX_LINE_QUANTITY = 50;
 
 /** A copy string with `{name}` placeholders filled, or the fallback. */
 function t(key: string, fallback: string, vars: Record<string, string | number> = {}): string {
-  return (copyText(`cart.${key}`) ?? fallback).replace(/\{(\w+)\}/g, (match, name: string) =>
+  return fillSalesTokens(copyText(`cart.${key}`) ?? fallback).replace(/\{(\w+)\}/g, (match, name: string) =>
     name in vars ? String(vars[name]) : match,
   );
 }
@@ -229,7 +229,7 @@ const CHECK_NOTICES: Record<CartCheck, () => string> = {
   [CART_CHECK.priceAndDate]: () => t('check_price_and_date', 'A price and a ship date changed. Check the dates and the total below.'),
   [CART_CHECK.mixedDates]: () => t('parcel_note', 'Your order ships in one parcel, when its last item is ready.'),
   [CART_CHECK.batchChoice]: () => t('check_batch_choice', 'An in-stock board could not be moved to pre-order. Remove it here, or buy it from its product page.'),
-  [CART_CHECK.usEuOnly]: () => t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.'),
+  [CART_CHECK.usEuOnly]: () => t('check_us_eu_only', 'An item in your cart ships to {{stock_scope}} addresses only. Remove it or choose an {{stock_scope}} delivery country.'),
   [CART_CHECK.market]: () => t('check_market', "Your cart moved to your delivery country's prices. Check the total below."),
 };
 
@@ -701,7 +701,7 @@ function PopulatedCart({
         <div className="cart-details">
           {euOnlyForUs ? (
             <Notice tone="error">
-              {t('check_non_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.')}
+              {t('check_non_eu_only', 'An item in your cart ships to {{stock_scope}} addresses only. Remove it or choose an {{stock_scope}} delivery country.')}
             </Notice>
           ) : null}
           {choiceOpen ? <Notice tone="warn">{CHECK_NOTICES[CART_CHECK.batchChoice]()}</Notice> : null}
@@ -859,8 +859,8 @@ function PopulatedCart({
 
 const CHECKOUT_FORM_ID = 'cart-checkout';
 
-/** The one ship-by date of the March batch, "31 March 2027". */
-const SHIP_BY = latestShipDate(parseCampaignConfig(preordersJson));
+/** The day every pre-order ships by, "31 March 2027" (sales-model.ts). */
+const SHIP_BY = salesDay(SALES.shipsBy);
 
 /**
  * The phone's checkout bar: subtotal, the parcel's ship date and Checkout,

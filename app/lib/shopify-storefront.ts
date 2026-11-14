@@ -1,5 +1,6 @@
 import {BATCH_OPTION, batchOfferOf, titleWithoutBatch, type BatchOffer, type Catalog, type CatalogProduct, type CatalogVariant} from './catalog.ts';
 import {devOverride} from './support/dev-overrides.ts';
+import {defaultSalePolicy, SALES, type SalesModel} from './sales-model.ts';
 
 const DEFAULT_API_VERSION = '2026-07';
 const CART_PATH = '/api/shopify/cart';
@@ -421,6 +422,8 @@ export function mapShopifyCatalog(
    *  its entry. Off: that variant is left out, so the catalog reads exactly
    *  as it did before the board had one. */
   batchChoice: boolean = false,
+  /** The sales model a SKU missing from the policy follows (tests pass a fixture). */
+  sales: SalesModel = SALES,
 ): Catalog {
   const expectedCurrency = market === 'US' ? 'USD' : market === 'default' ? 'EUR' : null;
   if (pricesIncludeVat !== '1') {
@@ -477,7 +480,9 @@ export function mapShopifyCatalog(
       }
       seen.add(sku);
       const paired = offerOf(variant) === 'preorder' ? buyNow.get(sku) : undefined;
-      const configured = policy[sku];
+      // A SKU the policy does not name follows content/preorders.json
+      // (sales-model.ts): sold there as a pre-order; any other SKU fails closed.
+      const configured = policy[sku] ?? defaultSalePolicy(sku, sales);
       if (
         !configured ||
         !['in_stock', 'preorder', 'sold_out'].includes(String(configured.saleMode)) ||

@@ -1,5 +1,5 @@
 import {execSync} from 'node:child_process';
-import {existsSync} from 'node:fs';
+import {existsSync, readFileSync} from 'node:fs';
 import {dirname, join, resolve} from 'node:path';
 import {defineConfig, type Plugin} from 'vite';
 import {cloudflare} from '@cloudflare/vite-plugin';
@@ -12,6 +12,7 @@ import {
 } from './studio/vite-plugin-studio';
 import {isContentJson, stripContent} from './app/lib/content-strip';
 import {buildManifest} from './app/lib/editorial/manifest.ts';
+import {salesModel} from './app/lib/sales-model.ts';
 import {
   FIRMWARE_STAGING_FORBIDDEN_OUTPUTS,
   FIRMWARE_STAGING_FORBIDDEN_SOURCES,
@@ -30,6 +31,18 @@ function contentStripPlugin(): Plugin {
     transform(code, id) {
       if (!isContentJson(id)) return null;
       return {code: JSON.stringify(stripContent(JSON.parse(code))), map: null};
+    },
+  };
+}
+
+// content/preorders.json and the product files as the pages read them
+// (app/lib/sales-model.ts): a bad entry stops the build and the dev server
+// with the file and field named, before any page renders.
+function salesModelCheckPlugin(): Plugin {
+  return {
+    name: 'opendrone:sales-model',
+    buildStart() {
+      salesModel(JSON.parse(readFileSync(resolve('content/preorders.json'), 'utf8')));
     },
   };
 }
@@ -141,6 +154,7 @@ export default defineConfig({
     // in publicDir, so Vite would otherwise serve it at a public URL.
     heroStudioExcludePlugin(),
     contentStripPlugin(),
+    salesModelCheckPlugin(),
     editorialManifestPlugin(),
     tailwindcss(),
     // Runs server.ts in workerd in dev and builds it as the Worker entry
