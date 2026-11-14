@@ -68,11 +68,9 @@ describe('/markets: wired into the site', () => {
     assert.match(page, /<NewsletterSignup/);
     const copy = JSON.parse(read('../../content/copy/markets.json')) as Record<string, string>;
     assert.equal(copy.title, 'Where we ship');
-    assert.equal(copy.wholesale, 'Shops and dealers:');
-    // One dealer story: /markets prints the /wholesale sentence, never its own.
-    assert.match(page, /copyText\('wholesale\.how_6'\)/);
-    const wholesale = JSON.parse(read('../../content/copy/wholesale.json')) as Record<string, string>;
-    assert.equal(wholesale.how_6, 'You pay at checkout. In-stock boards ship now; outside the EU by courier, with import charges paid by you. Pre-orders ship with their batch.');
+    // States only what stays true: shops can apply, the link goes to /wholesale. No stock or ship claim.
+    assert.equal(copy.wholesale, 'Shops and dealers can apply for wholesale.');
+    assert.match(page, /to="\/wholesale"/);
     assert.equal(copy.notify_title, 'Not shipping to your country yet? Get notified.');
     for (const v of Object.values(copy)) assert.doesNotMatch(v, /—/, 'no em dashes');
   });
