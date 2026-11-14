@@ -1,47 +1,47 @@
 {
-  "_note": "Written by build-hero.mjs --split. Array order is load order: the runtime shows each chunk as it lands.",
+  "_note": "Written by compress-explode.mjs. Array order is load order.",
   "chunks": [
     {
       "id": "frame",
-      "label": "airframe",
+      "label": "airframe and hardware",
       "file": "frame.glb",
-      "bytes": 541608,
-      "verts": 62353
+      "bytes": 349840,
+      "verts": 37490
     },
     {
       "id": "drive",
       "label": "motors and props",
       "file": "drive.glb",
-      "bytes": 177456,
-      "verts": 21377
+      "bytes": 295868,
+      "verts": 37138
     },
     {
       "id": "board-OpenESC-30x30-4in1",
       "label": "OpenESC-30x30-4in1",
       "file": "board-OpenESC-30x30-4in1.glb",
-      "bytes": 634492,
-      "verts": 116380
+      "bytes": 899888,
+      "verts": 171387
     },
     {
       "id": "board-OpenFC-Lite",
       "label": "OpenFC-Lite",
       "file": "board-OpenFC-Lite.glb",
-      "bytes": 707056,
-      "verts": 130170
+      "bytes": 817500,
+      "verts": 154366
     },
     {
       "id": "board-OpenRX-Mono",
       "label": "OpenRX-Mono",
       "file": "board-OpenRX-Mono.glb",
-      "bytes": 302096,
-      "verts": 45189
+      "bytes": 376568,
+      "verts": 64834
     },
     {
       "id": "video",
-      "label": "video system",
+      "label": "camera and video system",
       "file": "video.glb",
-      "bytes": 581736,
-      "verts": 81289
+      "bytes": 320372,
+      "verts": 43791
     }
   ]
 }

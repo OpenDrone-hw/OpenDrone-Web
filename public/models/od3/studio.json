@@ -1,69 +1,50 @@
 {
   "name": "OpenDrone 3\"",
-  "model": "drone.glb",
-  "_howto": [
-    "Flow for a new design: export the assembly from Onshape, run",
-    "scripts/hero-assets/build-hero.mjs --all into public/models/<design>/, then",
-    "copy this file and _studio.html in beside the GLB and open that folder's",
-    "_studio.html. The studio loads this file on open and writes it back, so no",
-    "JavaScript edit is needed for the values below. See _status for what the",
-    "panel does not cover.",
-    "",
-    "Name matching, verified against this assembly: three.js appends _1/_2 to",
-    "duplicate node names, turns spaces into underscores, and DELETES the",
-    "characters [ ] . : / (three/src/animation/PropertyBinding.js sanitizeNodeName).",
-    "Onshape also wraps each part in occurrence_of_<name>. Note the deletion means",
-    "the tpu match below, which contains a slash, does not currently fire for",
-    "Airtag/Antenna-Mount.",
-    "",
-    "Colour: baseColorFactor in these exports is 8-bit sRGB written into a field",
-    "glTF defines as linear (measured: 183 of 183 components are exact n/255), so",
-    "the studio decodes it on load. Set tint only where the CAD colour is wrong or",
-    "missing, never to correct brightness."
-  ],
   "lighting": {
-    "exposure": 1,
-    "environment": 0.3,
-    "ambient": 0,
+    "toneMapping": "aces",
+    "exposure": 0.95,
+    "environment": 0.35,
+    "ambient": 0.04,
+    "groundShadow": 0.6,
     "background": "#0a0c0f",
     "key": {
-      "power": 2.6,
-      "azimuth": 89,
-      "elevation": 46,
-      "colour": "#e69728"
+      "power": 2.3,
+      "azimuth": 55,
+      "elevation": 52,
+      "colour": "#ffffff"
     },
     "fill": {
-      "power": 0.55,
-      "azimuth": 135,
-      "elevation": 36,
-      "colour": "#e5f7de"
+      "power": 0.25,
+      "azimuth": 150,
+      "elevation": 18,
+      "colour": "#9db4d8"
     },
     "rim": {
-      "power": 2.2,
-      "azimuth": 283,
-      "elevation": 31,
-      "colour": "#cfe2ff"
+      "power": 2.0,
+      "azimuth": 238,
+      "elevation": 24,
+      "colour": "#ffd2a0"
     },
     "bounce": {
-      "power": 0.3,
-      "colour": "#7d7417"
+      "power": 0.04,
+      "colour": "#555555"
     }
   },
   "spotlight": {
-    "power": 22.5,
+    "power": 3.0,
     "beam": 0.44,
     "strike": 0.27,
     "coneAngle": 26,
     "softness": 0.6,
     "sideAngle": 35,
     "height": 0.48,
-    "darkenRest": 1,
-    "dimLights": 0.28,
+    "darkenRest": 0.85,
+    "dimLights": 0.12,
     "shrinkDrone": 0.55,
     "stageLeft": 0.28,
     "boardTilt": 0.04,
     "stageLift": -0.06,
-    "colour": "#ffd7a0",
+    "colour": "#ffffff",
     "beamColour": "#ffcf96",
     "beamGain": 4
   },
@@ -71,15 +52,33 @@
     "speed": 0.85,
     "hold": 8.4,
     "travel": 4.6,
-    "partSize": 0.6,
-    "inspectSpin": 0.06,
-    "autoOrbit": 0.195,
-    "propRate": 1.25,
-    "propHanded": -1,
+    "partSize": 0.5,
+    "inspectSpin": 0,
+    "autoOrbit": 0,
     "_note": "travel and hold are timeline units, not seconds: they set the SHAPE of a transition (how much of it the part spends flying versus held under the spotlight). scroll.springHz sets the SPEED. speed/autoOrbit/inspectSpin are read by the studio's autoplay; the hero drives position from the scroll spring instead and ignores speed."
   },
   "_materialNote": "match is a regex tried against the normalised occurrence name. Order matters; the last entry should be a catch-all. Board substrate is matched by suffix before any of these.",
   "materials": [
+    {
+      "id": "sideplate",
+      "label": "side plate (anodised gold)",
+      "match": null,
+      "tint": null,
+      "metalness": 1.0,
+      "roughness": 0.15,
+      "env": 1.4,
+      "sat": 1
+    },
+    {
+      "id": "carbonedge",
+      "label": "carbon cut edge",
+      "match": null,
+      "tint": null,
+      "metalness": 0.0,
+      "roughness": 0.8,
+      "env": 0.4,
+      "sat": 1
+    },
     {
       "id": "antislip",
       "label": "Battery grip pad",
@@ -94,20 +93,20 @@
       "id": "carbon",
       "label": "carbon fibre",
       "match": "^(Arm|Cross|Base-Top|Base-Bot|Top)$",
-      "tint": "#000000",
-      "metalness": 0,
-      "roughness": 0.19,
-      "env": 0.37,
-      "sat": 2.04
+      "tint": null,
+      "metalness": 0.0,
+      "roughness": 1.0,
+      "env": 0.45,
+      "sat": 1
     },
     {
       "id": "alu",
       "label": "aluminium",
       "match": "^(Cam-Mount|Standoff|20mmx4mm)",
       "tint": null,
-      "metalness": 0.74,
-      "roughness": 0.13,
-      "env": 0.87,
+      "metalness": 0.95,
+      "roughness": 0.18,
+      "env": 1.3,
       "sat": 1.06
     },
     {
@@ -115,9 +114,9 @@
       "label": "motor (anodised)",
       "match": "^Admi",
       "tint": null,
-      "metalness": 1,
-      "roughness": 0.32,
-      "env": 0.9,
+      "metalness": 1.0,
+      "roughness": 0.16,
+      "env": 1.35,
       "sat": 1
     },
     {
@@ -135,9 +134,9 @@
       "label": "TPU print",
       "match": "^(Bumper|AirtagAntenna-Mount|VTX-Mount|Boot-)",
       "tint": null,
-      "metalness": 0.79,
-      "roughness": 1,
-      "env": 0,
+      "metalness": 0.0,
+      "roughness": 0.62,
+      "env": 0.55,
       "sat": 1
     },
     {
@@ -145,9 +144,9 @@
       "label": "rubber / grommet",
       "match": "^softmount",
       "tint": null,
-      "metalness": 1,
-      "roughness": 1,
-      "env": 0.05,
+      "metalness": 0.0,
+      "roughness": 0.8,
+      "env": 0.5,
       "sat": 1
     },
     {
@@ -166,8 +165,8 @@
       "match": "^(CW PROP|CCW PROP)$",
       "tint": null,
       "metalness": 0.21,
-      "roughness": 0.44,
-      "env": 0.35,
+      "roughness": 0.4,
+      "env": 0.8,
       "sat": 1
     },
     {
@@ -195,9 +194,9 @@
       "label": "steel fasteners",
       "match": "(screw|hex nut|pressnut|press nut|washer)",
       "tint": null,
-      "metalness": 1,
-      "roughness": 0.36,
-      "env": 0.9,
+      "metalness": 1.0,
+      "roughness": 0.16,
+      "env": 1.3,
       "sat": 1
     },
     {
@@ -251,33 +250,13 @@
       "sat": 1
     }
   ],
-  "_boardNote": "Each entry merges into one group at load: substrate fragments named <prefix>_pad/_silkscreen/_soldermask/_PCB, plus every occurrence standing on the board. 'exclude' keeps things that merely pass through the board plane (standoffs, stack screws) out of it.",
-  "boards": [
-    {
-      "id": "OpenFC-Lite-Mini",
-      "title": "OpenFC-Lite-Mini",
-      "note": ""
-    },
-    {
-      "id": "OpenESC-20x20-4in1-mini",
-      "title": "OpenESC-20x20-4in1-mini",
-      "note": ""
-    },
-    {
-      "id": "OpenRX-Lite-UFL",
-      "title": "OpenRX-Lite-UFL",
-      "note": ""
-    }
-  ],
-  "boardExclude": "(screw|hex nut|pressnut|press nut|washer|softmount|Standoff|20mmx4mm|Casing|^Arm$|^Cross$|^Base-|^Top$|DJI|VTX-Mount|Bumper|AirTag|Boot-|Admi|BM6B|^[0-9]+$)",
-  "videoModule": "^(Top Casing|Bottom Casing|Front Housing|DJI|VTX-Mount|USB C|Body|Lens|BM6B)",
-  "notFrame": "^(Admi|2306|prop-pivot|CW PROP|CCW PROP|5in-prop|[0-9]+$)",
-  "_beatNote": "select is one of: {board}, {names}, {cluster} one spatial cluster, {complement} everything not in another beat. choreo names a built-in behaviour. caption is the beginner explainer under the note, hint is a one-line 'connects to', href links the beat to its product page; a stop that is active shows its own caption/hint/href, not the beat's. Copy baseline: drafts/beginner-narrative.md.",
+  "_beatNote": "select is {none} or {group}: a group id from explode.json (fc, esc, rx, motor, frame, video). The scene focuses those parts: camera eases to them, the rest dims. caption is the beginner explainer under the note, hint a one-line 'connects to', href the product page; handle pulls the caption and link from the product's What-does-this-do content.",
   "beats": [
     {
       "id": "whole",
       "title": "OpenDrone 3\"",
       "note": "3\" freestyle build",
+      "caption": "Scroll to take it apart, one part at a time.",
       "select": {
         "none": true
       }
@@ -289,9 +268,10 @@
       "hint": "RX in, ESC out.",
       "href": "/products/openfc-lite",
       "select": {
-        "board": "OpenFC-Lite-Mini"
+        "group": "fc"
       },
-      "handle": "openfc-lite"
+      "handle": "openfc-lite",
+      "partSize": 0.62
     },
     {
       "id": "esc",
@@ -300,84 +280,119 @@
       "hint": "Battery in, four motors out.",
       "href": "/products/openesc",
       "select": {
-        "board": "OpenESC-20x20-4in1-mini"
+        "group": "esc"
       },
-      "handle": "openesc"
+      "handle": "openesc",
+      "partSize": 0.62
     },
     {
       "id": "rx",
       "title": "OpenRX Lite UFL",
       "note": "ELRS receiver",
       "select": {
-        "board": "OpenRX-Lite-UFL"
+        "group": "rx"
       },
-      "handle": "openrx"
+      "handle": "openrx",
+      "partSize": 0.72,
+      "frameKinds": [
+        "rx"
+      ]
     },
     {
       "id": "motor",
       "title": "OpenMotor",
       "note": "1604",
       "select": {
-        "cluster": "^Admi",
-        "withProp": true
+        "group": "motor"
       },
       "caption": "Brushless, sold per motor, four per quad.",
       "hint": "Three wires each to the ESC.",
       "href": "/products/openmotor",
-      "handle": "openmotor"
+      "handle": "openmotor",
+      "partSize": 0.62,
+      "frameKinds": [
+        "motor"
+      ]
     },
     {
       "id": "frame",
       "title": "OpenFrame",
       "note": "3\", T700 carbon",
       "select": {
-        "complement": true,
-        "plus": "videoModule"
+        "group": "frame"
       },
-      "fade": 0.99,
-      "partSize": 0.72,
-      "choreo": "frame-teardown",
+      "fade": 0.8,
+      "partSize": 0.9,
+      "handle": "openframe",
+      "caption": "Carbon plates and arms. Everything bolts onto it and it takes the crashes.",
+      "href": "/products/openframe"
+    },
+    {
+      "id": "video",
+      "title": "Camera + VTX",
+      "note": "Not sold here: DJI, Walksnail, HDZero or analog",
+      "select": {
+        "group": "video"
+      },
+      "fade": 0.8,
+      "partSize": 0.78,
+      "caption": "The whole video system moves between frames in one piece.",
       "stops": [
         {
           "at": 0,
-          "title": "OpenFrame 3\"",
-          "note": "T700 carbon",
-          "caption": "Carbon plates and arms. Everything bolts onto it and it takes the crashes.",
-          "href": "/products/openframe"
+          "title": "Camera + VTX",
+          "note": "Top screws out"
         },
         {
-          "at": 0.62,
+          "at": 0,
           "title": "Camera + VTX",
-          "note": "Not sold here: DJI, Walksnail, HDZero or analog"
+          "note": "Top plate off"
+        },
+        {
+          "at": 0,
+          "title": "Camera + VTX",
+          "note": "Slide the video system out",
+          "caption": "Air unit, antennas and camera come out together, nose first through the camera mount."
+        },
+        {
+          "at": 0,
+          "title": "Camera + VTX",
+          "note": "Swap in a fresh frame"
+        },
+        {
+          "at": 0,
+          "title": "Camera + VTX",
+          "note": "Slide it back in, bolt it down"
         }
-      ],
-      "handle": "openframe"
+      ]
     }
   ],
   "camera": {
-    "distance": 2.15,
-    "height": 0.5,
-    "heightOnBoard": 0.72,
-    "dollyOnShow": 0.92,
-    "lift": 0.24
+    "distance": 2.85,
+    "distanceAssembled": 2.4,
+    "height": 0.42,
+    "heightOnPart": 0.55,
+    "lift": 0.06,
+    "stageShift": 0.2,
+    "azimuth": 0.7
   },
-  "_saved": "2026-08-08, saved from the studio panel",
-  "_status": "WIRED BOTH WAYS. app/components/HeroDroneScene.tsx reads this file at runtime. public/models/od3/_studio.html loads it on open, including the beat timeline, so every control starts on the value the site renders, and its save button POSTs the whole file back through the dev-only /__studio/write endpoint. The panel edits beat titles, notes, captions, hints, hrefs, fade, partSize and stops (each stop with its own caption, hint and href, which replace the beat-level ones while the stop is active), but not the shape of the timeline: adding, deleting and reordering beats, and every `select` and `choreo`, are file edits. Also carried through untouched on save: name, model, boards, boardExclude, videoModule, notFrame, scroll.minDwellS, spotlight.beamGain (which the panel renderer has no equivalent for), and each material id, label and match.",
   "scroll": {
     "_note": "Weight comes from springHz: it is a critically damped spring, so a lower frequency reads as more mass.  commitAt how much of a stop-to-stop move a gesture must cover before it counts as intent to advance.",
-    "springHz": 0.55,
+    "springHz": 0.45,
     "magnet": 0.11,
     "commitAt": 0.24,
     "minDwellS": 0.5,
     "restDwellS": 0.7
   },
   "yAxisUp": false,
-  "motorMatch": "^Admi",
-  "propMatch": "^(CW PROP|CCW PROP)$",
   "source": {
-    "document": "78e093d02798373a79bc68d0",
-    "workspace": "0fcddf153f58a0417231386c",
-    "element": "fce8fc1bdf426e13532126f3",
-    "microversion": "57768d6d87306c1ec19874bb"
-  }
+    "release": "OpenFrame-3F rev2.2",
+    "onshapeVersion": "f3d95fa697d50ef2745d320c",
+    "microversion": "09d82dba2e04b77705035058"
+  },
+  "explode": {
+    "selectFade": 0.7
+  },
+  "_howto": "Exploded-view hero. Assets are built from the final STEP assemblies by scripts/hero-assets/explode (see docs/hero-studio.md): <chunk>.glb files streamed in the order of chunks.json, explode.json (parts, labels, timed moves, beat groups). This file holds look and motion tuning only. Materials are chosen by the class each GLB material is named with ('<class>|<r,g,b>'); the match regexes are a fallback for older exports.",
+  "_lightingNote": "Low-key studio: ACES filmic tone mapping at a pulled-back exposure, a soft white key, a warm kicker behind-left that traces edges and gives the gold side plates and motor bells a glint, a cool low fill, a modest environment map for reflections on carbon, gold and screws, and a soft contact shadow disc. Dark theme only (the site has no light theme)."
 }
