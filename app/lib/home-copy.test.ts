@@ -14,12 +14,12 @@ test('the 5-inch scene names the OpenESC-30x30 rating: 60 A per motor', () => {
 });
 
 test('the phone tagline says the motors are OEM', () => {
-  assert.match(home.m_tagline, /Motors are OEM, not open hardware\.$/);
+  assert.match(home.m_tagline, /The motors are OEM parts, not open hardware\.$/);
 });
 
-test('the build card shows "parts, not a drone" in words taken from build_help', () => {
+test('the build card says "parts, not a drone" once: the note, not repeated in build_help', () => {
   assert.match(home.build_note, /^Parts, not a ready-to-fly drone\./);
   const rest = home.build_note.replace(/^Parts, not a ready-to-fly drone\. /, '');
-  assert.ok(home.build_help.includes(rest), 'second sentence is verbatim from build_help');
+  assert.ok(!home.build_help.includes(rest), 'build_help must not repeat the note');
   assert.match(read('../components/HeroBuildGuide.tsx'), /<Txt id="home\.build_note" as="p" className="hero-build-ship" \/>/);
 });

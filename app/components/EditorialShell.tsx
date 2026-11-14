@@ -8,7 +8,6 @@ import {useEffect, useLayoutEffect, useRef} from 'react';
 const useBeforePaint =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 import {Link} from 'react-router';
-import {BrandWatermark} from '~/components/BrandWatermark';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 import {EDITORIAL_SERIES, nextInSeries} from '~/lib/editorial-index';
@@ -158,7 +157,7 @@ export function EditorialShell({
       className={`editorial-shell${aside ? '' : ' is-narrow'}${reveal ? '' : ' cascade-armed'}`}
       ref={shellRef}
     >
-      {backdrop ?? <BrandWatermark />}
+      {backdrop ?? null}
       <div
         className={`editorial-page${pageClassName ? ` ${pageClassName}` : ''}`}
       >

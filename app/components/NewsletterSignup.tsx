@@ -348,7 +348,7 @@ export function NewsletterSignup({
             type="submit"
             disabled={isSubmitting}
             className={[
-              'font-mono text-xs uppercase tracking-[0.14em] font-bold',
+              'font-sans text-sm font-semibold',
               // The footer form sits under every page's own gold action, so
               // it takes a neutral outline: gold stays on the page's action.
               isFooter

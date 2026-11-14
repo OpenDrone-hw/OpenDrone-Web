@@ -116,7 +116,7 @@ export function CommunitySection({
             className="home-community-title"
             {...editAttrs('home.community_title')}
           >
-            {copyText('home.community_title') ?? 'Built in the open, with the community'}
+            {copyText('home.community_title') ?? 'OpenDrone on Discord'}
           </h2>
           {counts instanceof Promise ? (
             <Suspense fallback={null}>
@@ -132,7 +132,7 @@ export function CommunitySection({
             {copyText('home.community_cta') ?? 'Join the Discord'}
           </DiscordLink>
           <Link to="/owners" prefetch="intent" className="home-community-owners">
-            <Txt id="home.community_owners_link" fallback="See where owners are" /> <span aria-hidden="true">→</span>
+            <Txt id="home.community_owners_link" fallback="See where owners are" />
           </Link>
         </div>
         <ul className="home-community-reasons">

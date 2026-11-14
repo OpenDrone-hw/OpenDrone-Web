@@ -79,7 +79,7 @@ export default function ConfirmPage() {
             <button
               type="submit"
               disabled={busy || !token}
-              className="border border-[var(--color-border)] bg-[var(--color-accent)] px-5 py-2.5 font-mono text-[12px] uppercase tracking-[0.14em] text-[var(--color-on-accent)] disabled:opacity-60"
+              className="border border-[var(--color-border)] bg-[var(--color-accent)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--color-on-accent)] disabled:opacity-60"
             >
               {busy ? (copyText('newsletter.confirm_busy') ?? 'Confirming') : (copyText('newsletter.confirm_submit') ?? 'Confirm')}
             </button>

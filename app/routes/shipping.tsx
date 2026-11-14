@@ -21,7 +21,7 @@ function ShippingGlance({locale}: {locale: Locale}) {
       {g.rows.map(([label, value]) => (
         <div key={label} className="contents">
           <dt className="text-[var(--color-text-muted)]">{label}</dt>
-          <dd className="font-mono text-[var(--color-text)]">{value}</dd>
+          <dd className="text-[var(--color-text)]">{value}</dd>
         </div>
       ))}
     </dl>

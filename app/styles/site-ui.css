@@ -170,14 +170,10 @@
    /preorder: the campaign page
    ============================================ */
 
-/* Full content width (1120px). The brand watermark stays off this page:
-   it sat behind the product cards. */
+/* Full content width (1120px). */
 .editorial-shell:has(> .editorial-page.preorder-page) {
   grid-template-columns: minmax(0, 1120px);
   justify-content: center;
-}
-.editorial-shell:has(> .editorial-page.preorder-page) > .editorial-watermark {
-  display: none;
 }
 .editorial-page.preorder-page {
   max-width: 1120px;
@@ -1225,23 +1221,9 @@
 .product-safety[open] > summary::after { content: '−'; }
 .product-safety > summary::-webkit-details-marker { display: none; }
 
-/* The original gold export stays centered behind the specs table. */
+/* Specs chapter: visible overflow so the frame drawing can spill sideways. */
 .chapter#specs { overflow: visible; content-visibility: visible; }
-.product-page:has(.product-silhouette) .chapter#in-the-box { background: transparent; }
 .product-specs { position: relative; isolation: isolate; }
-.product-silhouette {
-  position: absolute;
-  inset: 0 calc(50% - 50vw);
-  z-index: -1;
-  overflow-x: clip;
-  pointer-events: none;
-  user-select: none;
-}
-.product-silhouette-stage { height: 100%; display: flex; align-items: center; justify-content: center; }
-.product-silhouette-art { position: relative; display: block; flex: none; width: min(132.6vw, 129.2svh, 1428px); height: auto; aspect-ratio: 1; color: var(--color-gold-text); opacity: 0.03; }
-@media (max-width: 767px) {
-  .product-silhouette-art { width: min(149.6vw, 119svh); opacity: 0.02; }
-}
 /* Frame and motor: the exploding outline drawing fills the Specs chapter
    behind the table and the part list, the same footprint as a board's art,
    with the same mask quieting it under the text columns. */
@@ -1297,27 +1279,6 @@
   }
 }
 
-/* A board export is the part itself: it reads clearly around the table, and
-   a scrim over the table's columns quiets it under the spec text. */
-.product-silhouette[data-board] .product-silhouette-art { opacity: 0.1; }
-.product-silhouette[data-board] .product-silhouette-art {
-  -webkit-mask-image: linear-gradient(90deg, #000 12%, rgb(0 0 0 / 0.4) 26%, rgb(0 0 0 / 0.4) 74%, #000 88%);
-  mask-image: linear-gradient(90deg, #000 12%, rgb(0 0 0 / 0.4) 26%, rgb(0 0 0 / 0.4) 74%, #000 88%);
-}
-@media (max-width: 767px) {
-  /* The table spans the phone's width: no clear sides, so a lower flat value. */
-  .product-silhouette[data-board] .product-silhouette-art { opacity: 0.06; }
-  .product-silhouette[data-board] .product-silhouette-art { -webkit-mask-image: none; mask-image: none; }
-}
-/* The board backdrop is one static, unmasked <img>. The 0.7 opacity is the
-   average of the old base (0.25) plus two complementary light bands (0.45),
-   so the overall look is unchanged while the surface composites once instead
-   of repainting per scroll frame. `object-fit: contain` reproduces the SVG
-   <image> letterboxing inside the square. */
-.product-silhouette-img { display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0.7; }
-@media (prefers-reduced-motion: reduce) {
-  .product-silhouette-light { opacity: 0.45 !important; }
-}
 
 .hero-buy--guide { width: 370px; max-width: calc(100vw - 40px); right: 24px; bottom: 36px; pointer-events: auto; }
 .hero-buy--guide, .home-mobile-build { display: flex; flex-direction: column; gap: 10px; }
@@ -1375,6 +1336,8 @@ a.hero-build-add { text-decoration: none; }
   .hero-build-buyrow .cta-size,
   .hero-build-buyrow .hero-build-add svg { display: none; }
   .hero-build-buyrow .hero-build-qty .product-qty-value { flex-basis: 32px; width: 32px; }
+  /* At phone width the label and the total do not fit on one line: let the label wrap instead of clipping. */
+  .hero-build-buyrow .hero-build-add .btn-label { white-space: normal; line-height: 1.25; text-align: left; }
 }
 .hero-build-add:hover { background: var(--color-gold-fill-hover); }
 .hero-build-add:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -2015,10 +1978,9 @@ a.hero-build-add { text-decoration: none; }
   padding: 0 1rem;
   background: var(--color-gold-fill);
   color: var(--color-on-accent);
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -2084,6 +2046,12 @@ body:has(.avail-bar) {
 body:has(.test-banner) .site-header,
 body:has(.avail-bar) .site-header {
   top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px));
+}
+/* The cart and menu drawers start below the strips too, so the strip does not cover their heading. */
+body:has(.test-banner) .overlay aside,
+body:has(.avail-bar) .overlay aside {
+  top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px));
+  height: calc(100dvh - var(--test-banner-h, 0px) - var(--avail-bar-h, 0px));
 }
 
 /* Sticky footer: the layout fills the viewport below the top strips, <main> grows, and the footer is the

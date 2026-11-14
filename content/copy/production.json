@@ -8,13 +8,13 @@
   "lead": "As Incutec we aim to be as transparent as possible, so that you know who and what you are supporting when buying the products.",
   "s2_title": "Today",
   "s2_body": [
-    "Fabrication and assembly happen in China. The BOM is written around parts you can actually order, so a self-build is a real option, not a theoretical one. Each board's KiCad project is published in its GitHub repository, linked from its product page.",
+    "Fabrication and assembly happen in China. The BOM uses parts you can order yourself, so a self-build is a real option. Each board's KiCad project is on GitHub, linked from its product page.",
     "Manufacturing, quality control and sales are Incutec's side of the project: the things a community cannot do alone. [Finished products](/collections/all) are tested, inspected and packed before they ship to you."
   ],
   "s3_title": "The future",
   "s3_body": [
-    "We want more of this made in-house, closer to home. The obstacle is not ambition, it is capital: every step on the ladder is equipment, floor space and people. So the plan is to buy it with what we earn, one capability at a time, cheapest and most useful first.",
-    "PCB assembly is the first because it is genuinely approachable at our scale and pays for itself fastest. It also buys freedom: we choose the parts instead of designing around what a fab stocks, and a revision takes days instead of weeks.",
+    "We want more of it made in-house, closer to home. What stops us is capital: each step is equipment, floor space and people. So we buy it with what we earn, one capability at a time, cheapest and most useful first.",
+    "PCB assembly comes first: it is within reach at our scale and pays for itself fastest. It also lets us choose the parts instead of designing around what a fab stocks, and a revision takes days instead of weeks.",
     "We can start stocking a standard library of components for the community to design around for rapid prototyping.",
     "After that it gets harder and more expensive. CNC carbon is mostly a filtration and enclosure problem. Aluminium means a 5-axis machine and a chemical line to anodise what comes off it. Motors are the deep end: stamping and stacking steel laminations, coating and winding them, bonding magnets into a flux ring, machining bells and bases, balancing the rotors. One can dream.",
     "This is also why the community half of the project matters. Every design a maintainer takes on is engineering time we can spend on manufacturing instead of on the next schematic. We would rather be the people who build it well than be the only people allowed to design it."

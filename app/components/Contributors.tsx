@@ -5,7 +5,7 @@ import {Txt} from './Txt';
 import {copyText} from '~/lib/copy';
 
 /**
- * Contributor grid for the PDP "Built in the open" chapter: one tile per
+ * Contributor grid for the PDP contributors chapter: one tile per
  * GitHub account with commits on the product's repos, plus a standing
  * "+ you" tile. The tile points at Discord, not the issue tracker: the
  * contributing flow is talk-first (find the maintainer, agree on the change,

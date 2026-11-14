@@ -20,7 +20,7 @@
     ],
     "fit": "It sits in the middle of the stack. The receiver, ESC, camera and VTX all connect to it.",
     "chain": "fc",
-    "hero": "The brain. Runs Betaflight, reads the gyro and your sticks, and tells the ESC how fast to spin each motor."
+    "hero": "Runs Betaflight, reads the gyro and your sticks, and tells the ESC how fast to spin each motor."
   },
   "install": "Solder",
   "firmware": {

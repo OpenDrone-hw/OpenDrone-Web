@@ -43,7 +43,6 @@ import {ProductDiscordRow} from '~/components/Discord';
 import {ProductPrice} from '~/components/ProductPrice';
 import {EarlyBirdLine, RetailPrice} from '~/components/EarlyPriceCue';
 import {ProductGallery} from '~/components/ProductGallery';
-import {ProductSilhouette} from '~/components/ProductSilhouette';
 import {ProductForm} from '~/components/ProductForm';
 import {RelatedProducts} from '~/components/RelatedProducts';
 import {BuildWithThis} from '~/components/BuildWithThis';
@@ -790,7 +789,6 @@ function layoutBox(el: HTMLElement) {
 }
 
 function ProductPage() {
-  const specsRef = useRef<HTMLDivElement>(null);
   const {
     product,
     bundleProducts,
@@ -1245,7 +1243,6 @@ function ProductPage() {
   // `boardArt` wins, otherwise the shared `teardown.boardArt` (the default
   // board) is shown. Lines without per-tier art just keep the default.
   const activeBoardArt = activeVariant?.boardArt ?? content.teardown?.boardArt;
-  const silhouetteImage = selectedVariant?.image?.url ?? galleryImages[0]?.url;
   // The teardown pin list follows the tier the same way the board art does:
   // each board in a line has its own refdes layout, so a tier's own `pins`
   // win over the shared `teardown.pins` default. Keeps the hover-highlight
@@ -2603,11 +2600,6 @@ function ProductPage() {
               >
                 <span className="sr-only">{NEW_TAB_NOTE}</span>
                 <Txt
-                  id="product-chrome.os_card_study_label"
-                  as="p"
-                  className="open-source-card-label"
-                />
-                <Txt
                   id="product-chrome.os_card_repo_title"
                   as="p"
                   className="open-source-card-title"
@@ -2646,11 +2638,6 @@ function ProductPage() {
                       : 'open-source-card--kicad'
                   }`}
                 >
-                  <Txt
-                    id="product-chrome.os_card_issues_label"
-                    as="p"
-                    className="open-source-card-label"
-                  />
                   <Txt
                     id="product-chrome.os_card_issues_title"
                     as="p"
@@ -2724,11 +2711,6 @@ function ProductPage() {
             className="open-source-card open-source-card--help"
           >
             <span className="sr-only">{NEW_TAB_NOTE}</span>
-            <Txt
-              id="product-chrome.os_card_help_label"
-              as="p"
-              className="open-source-card-label"
-            />
             <Txt
               id="product-chrome.os_card_help_title"
               as="p"
@@ -2956,7 +2938,6 @@ function ProductPage() {
           ) : null}
           <div
             className={`product-specs${frameViewer ? ' product-specs--drawing' : ''}`}
-            ref={specsRef}
           >
             {frameViewer ? (
               // The frame or motor explodes behind the table, the CAD
@@ -2973,13 +2954,7 @@ function ProductPage() {
                   />
                 </SceneErrorBoundary>
               </div>
-            ) : (
-              <ProductSilhouette
-                boardSrc={activeBoardArt?.src ?? null}
-                imageSrc={silhouetteImage ?? null}
-                target={specsRef}
-              />
-            )}
+            ) : null}
             {/* Final values only, never a count-up: a buyer who reads or
                 screenshots a spec must never see a wrong current or voltage. */}
             <table

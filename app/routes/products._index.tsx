@@ -586,7 +586,6 @@ export default function ProductsIndex() {
   return (
     <div className="collection page-shell">
       <header className="page-header collection-header">
-        <Txt id="collections-all.eyebrow" as="p" className="page-eyebrow max-sm:hidden" />
         {term ? (
           <h1 className="page-title is-results" {...editAttrs('collections-all.results_title')}>
             {withTerm('collections-all.results_title', 'Results for "{term}"', term)}

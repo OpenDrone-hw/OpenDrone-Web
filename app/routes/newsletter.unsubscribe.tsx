@@ -159,7 +159,7 @@ export default function UnsubscribePage() {
             <button
               type="submit"
               disabled={busy}
-              className="border border-[var(--color-border)] bg-[var(--color-accent)] px-5 py-2.5 font-mono text-[12px] uppercase tracking-[0.14em] text-[var(--color-on-accent)] disabled:opacity-60"
+              className="border border-[var(--color-border)] bg-[var(--color-accent)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--color-on-accent)] disabled:opacity-60"
             >
               <Txt
                 id={busy ? 'newsletter.unsub_busy' : 'newsletter.unsub_submit'}
@@ -194,7 +194,7 @@ export default function UnsubscribePage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="border border-[var(--color-border)] bg-[var(--color-accent)] px-5 py-2.5 font-mono text-[12px] uppercase tracking-[0.14em] text-[var(--color-on-accent)] disabled:opacity-60"
+                className="border border-[var(--color-border)] bg-[var(--color-accent)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--color-on-accent)] disabled:opacity-60"
               >
                 <Txt
                   id={busy ? 'newsletter.unsub_busy' : 'newsletter.unsub_submit'}
