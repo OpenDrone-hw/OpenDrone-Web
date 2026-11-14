@@ -64,5 +64,45 @@ class LiveVariantsTest(unittest.TestCase):
             L.gql = real
         self.assertEqual(got, {"OPENFC-LITE-3030": 39.0, "OPENFC-LITE-2020": 29.0})
 
+class BothLanesAndExpiredSlots(unittest.TestCase):
+    LANES = [{"id": "pre", "sku": "OPENFC-LITE-2020", "title": "20x20 / Pre-order", "price": 26.10, "retail": 29.0},
+             {"id": "now", "sku": "OPENFC-LITE-2020", "title": "20x20 / Buy now", "price": 29.0, "retail": 29.0},
+             {"id": "pre30", "sku": "OPENFC-LITE-3030", "title": "30x30 / Pre-order", "price": 39.0, "retail": 39.0}]
+
+    def test_buy_now_and_pre_order_of_one_sku_each_land_on_75_percent(self):
+        seen = set()
+        for g in L.groups(self.LANES, 25.0):
+            for v in g["variants"]:
+                seen.add(v["id"])
+                self.assertAlmostEqual(round(v["price"] - round(v["price"] * g["pct"] + 1e-9, 2), 2), round(0.75 * v["retail"], 2))
+        self.assertEqual(seen, {"pre", "now", "pre30"})
+
+    def test_an_expired_slot_is_planned_and_updated_without_an_end(self):
+        want = {"pct": 0.25, "variants": self.LANES[1:]}
+        expired = {"id": "gid://d/3", "status": "EXPIRED", "customers": ["c"], "pct": 0.25, "variants": ["now", "pre30"]}
+        self.assertEqual(L.plan_slot(expired, want, ["c"]), "update")
+        calls = []
+
+        def fake(env, q, v=None):
+            calls.append((q, v))
+            if "codeDiscountNodeByCode" in q:
+                return {"codeDiscountNodeByCode": {"id": "gid://d/3", "codeDiscount": {"status": "ACTIVE", "title": "t"}}}
+            key = "discountCodeBasicUpdate" if "Update" in q else "discountCodeActivate"
+            return {key: {"userErrors": []}}
+        real = L.gql
+        L.gql = fake
+        try:
+            L.apply_slot({}, "update", expired, "Wholesale X G3", "WS25-X-G3", want, ["c"], "2026-11-14T00:00:00Z")
+        finally:
+            L.gql = real
+        update = next(v for q, v in calls if "discountCodeBasicUpdate" in q)
+        self.assertIn("endsAt", update["i"])
+        self.assertIsNone(update["i"]["endsAt"])
+        self.assertFalse(any("discountCodeActivate" in q for q, _ in calls))  # already ACTIVE on read back
+
+    def test_label_names_the_lane(self):
+        self.assertEqual(L.label(self.LANES[1]), "OPENFC-LITE-2020 (20x20 / Buy now)")
+
+
 if __name__ == "__main__":
     unittest.main()
