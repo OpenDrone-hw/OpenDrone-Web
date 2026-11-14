@@ -822,7 +822,7 @@ const SPEC_ORDER = [
   'Burst',
   'BEC',
   'UARTs',
-  'Motor outputs',
+  'I/O outputs',
   'Protocol',
   'Telemetry',
   'MOSFETs',
