@@ -10,11 +10,13 @@ import {
   readOrder,
   signClaimToken,
   statusKey,
+  statusPathToken,
   type EarlyBirdOrder,
 } from './early-bird.ts';
 
 const ENDS_ON = '2026-12-15';
-const STATUS = 'https://opendrone.store/103266419033/orders/abc123/authenticate?key=secret-key-1';
+const TOKEN = 'cc5556930feca703f463f73f461ae457';
+const STATUS = `https://opendrone.store/103266419033/orders/${TOKEN}/authenticate?key=secret-key-1`;
 
 function order(partial: Partial<EarlyBirdOrder> = {}): EarlyBirdOrder {
   return {
@@ -67,6 +69,16 @@ describe('mail link', () => {
     assert.equal(mailKeyMatches(order(), null), false);
     assert.equal(mailKeyMatches(order({statusPageUrl: null}), 'secret-key-1'), false);
     assert.equal(mailKeyMatches(order({statusPageUrl: 'https://opendrone.store/orders/x'}), ''), false);
+  });
+
+  it('matches the order token the mail carries in its status URL path', () => {
+    assert.equal(statusPathToken(STATUS), TOKEN);
+    assert.equal(mailKeyMatches(order(), TOKEN), true);
+    assert.equal(mailKeyMatches(order(), TOKEN.slice(0, -1) + '0'), false);
+    // The customer-account key of the mail's order_status_url is not the Admin key and proves nothing here.
+    assert.equal(mailKeyMatches(order(), 'shcct_aHpBODh6'), false);
+    assert.equal(statusPathToken('https://opendrone.store/orders/x'), null);
+    assert.equal(statusPathToken(null), null);
   });
 });
 

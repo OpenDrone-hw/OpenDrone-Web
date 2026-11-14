@@ -12,7 +12,7 @@
  * | Way to claim | Proof of the order |
  * |---|---|
  * | Signed in on opendrone.be (`/early-bird`, `/account`) | The order belongs to the session's Shopify customer |
- * | Link in the order confirmation mail | `key` equals the key of the order's Shopify status page URL, which only that mail and the order status page carry |
+ * | Link in the order confirmation mail | `key` equals the order token in the path of the order's Shopify status page URL (or that URL's `key`), which only that mail and the order status page carry |
  *
  * Qualifies: placed before the preorder run closes (`endsOn`, end of day in
  * Brussels), paid or partly refunded, not cancelled, and a preorder (the
@@ -103,10 +103,27 @@ function equalStrings(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** The mail link's key matches the order's status page key. */
+/**
+ * The order token in the path of a Shopify order status URL (`/orders/<token>/authenticate`). With new customer
+ * accounts the mail's `order_status_url` carries a different `key` (a `shcct_` token) from the Admin API's
+ * `statusPageUrl`, but both carry the same order token, so the mail link proves the order with it.
+ */
+export function statusPathToken(statusPageUrl: string | null): string | null {
+  if (!statusPageUrl) return null;
+  try {
+    const match = new URL(statusPageUrl).pathname.match(/\/orders\/([0-9a-f]{16,64})(?:\/|$)/i);
+    return match ? match[1]! : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The mail link's key matches the order token of the order's status page URL, or that URL's key. */
 export function mailKeyMatches(order: Pick<EarlyBirdOrder, 'statusPageUrl'>, key: string | null): boolean {
+  if (!key) return false;
+  const token = statusPathToken(order.statusPageUrl);
   const expected = statusKey(order.statusPageUrl);
-  return Boolean(expected && key && equalStrings(expected, key));
+  return Boolean((token && equalStrings(token, key)) || (expected && equalStrings(expected, key)));
 }
 
 function base64Url(bytes: Uint8Array): string {
