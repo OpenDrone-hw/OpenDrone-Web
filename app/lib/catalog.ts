@@ -107,6 +107,13 @@ export function offerSaving(buyNowPrice: number, preorderPrice: number): number 
   return Number.isFinite(saving) && saving > 0 ? saving : null;
 }
 
+/** What a cart button on a list card adds: a board with both offers goes in
+ *  as its pre-order (the cart is the pre-order lane), anything else as itself.
+ *  The card shows this offer's price and ship date, so they match the button. */
+export function cartOffer<T extends {preorderOffer?: T | null}>(variant: T | undefined): T | undefined {
+  return variant?.preorderOffer ?? variant;
+}
+
 /** The pre-order offer of a board as a variant of its own, so every reader
  *  of a `CatalogVariant` (cart lines, attributes, limits) works on it. */
 export function preorderView(variant: CatalogVariant): CatalogVariant | null {

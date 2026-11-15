@@ -32,7 +32,6 @@ import {
   campaignDate,
   datedShipParts,
   isInternationalRegion,
-  latestShipDay,
   stackPaidShips,
   shipLabelFromPromise,
   shortCampaignDate,
@@ -47,6 +46,7 @@ import {parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
 import {HowOrdering, type HowOrderingStack} from '~/components/HowOrdering';
 import type {MoneyV2, ProductImage, SelectedOption} from '~/lib/product-shapes';
+import {SALES} from '~/lib/sales-model';
 
 /**
  * Ship dates and batch progress stay visible; supporting explanations
@@ -180,7 +180,8 @@ export async function loader({context}: Route.LoaderArgs) {
     }),
   );
 
-  const latestDay = latestShipDay(CAMPAIGN);
+  // The latest ship-by date of any pre-order (sales-model.ts).
+  const latestDay = SALES.shipsBy;
   // Buy now or pre-order: the stacks this visitor can buy now, per size.
   const choice = batchChoiceOn(context.env);
   // Nothing is pre-order any more (a batch has landed): the shop is an
@@ -376,8 +377,8 @@ export default function PreorderRoute() {
           {usBatchNote?.first || usBatchNote?.stock ? (
             <p className="po-group-line">
               {(usBatchNote.stock
-                ? (copyText('preorder.us_batch_note_stock') ?? 'The FC and ESC stock in Belgium ships to EU addresses only. US orders ship with the {batch} batch.')
-                : (copyText('preorder.us_batch_note') ?? 'FC and ESC batch 1 ({month}) is EU only. US orders ship from the {batch} batch.')
+                ? (copyText('preorder.us_batch_note_stock') ?? '')
+                : (copyText('preorder.us_batch_note') ?? '')
               )
                 .replace('{month}', usBatchNote.first ?? '')
                 .replace('{batch}', usBatchNote.batch)}
@@ -463,7 +464,7 @@ function Timeline({data, stock}: {data: ReturnType<typeof useLoaderData<typeof l
     {
       key: 'targets',
       label: stackDay || stock
-        ? (copyText('preorder.timeline_targets') ?? 'RX, frames, motors')
+        ? (copyText('preorder.timeline_targets') ?? '')
         : (copyText('preorder.timeline_targets_us') ?? 'Every product'),
       events: [
         ...(confirmed ? [] : [{day: endsDay, date: ends, what: copyText('preorder.timeline_deadline') ?? 'Deadline', kind: 'deadline'}]),

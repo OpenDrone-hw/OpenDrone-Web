@@ -1,6 +1,7 @@
 import {useId} from 'react';
 import {Link} from 'react-router';
 import {copyFill, copyText} from '~/lib/copy';
+import {laneShipping} from '~/lib/sales-model';
 import {formatPrice, offerSaving} from '~/lib/catalog';
 import type {BatchOffer} from '~/lib/catalog';
 import type {ProductVariantFragment} from '~/lib/product-shapes';
@@ -37,7 +38,7 @@ export function offerCards(
     copyFill(`product-chrome.${key}`, fallback, vars);
   const left = buyNow.campaign?.paidLeft ?? null;
   const saving = offerSaving(Number(buyNow.price.amount), Number(preorder.price.amount));
-  const shipBy = preorder.campaign?.latestShip ?? null;
+  const lane = laneShipping(preorder.campaign);
   const samePrice = Number(buyNow.price.amount) === Number(preorder.price.amount);
   return [
     {
@@ -47,7 +48,7 @@ export function offerCards(
       pinPrice: formatPrice(buyNow.price.amount, buyNow.price.currencyCode),
       price: samePrice ? null : formatPrice(buyNow.price.amount, buyNow.price.currencyCode),
       ships: say('offer_buy_now_ships', 'In stock, ships in days'),
-      where: say('offer_buy_now_where', 'From Belgium, EU only'),
+      where: say('offer_buy_now_where', 'From {{stock_from}}, {{stock_scope}} only'),
       extra: left != null ? say('offer_left', '{count} left', {count: left}) : null,
     },
     {
@@ -56,8 +57,15 @@ export function offerCards(
       pin: say('offer_pin_preorder', 'Pre-order'),
       pinPrice: formatPrice(preorder.price.amount, preorder.price.currencyCode),
       price: samePrice ? null : formatPrice(preorder.price.amount, preorder.price.currencyCode),
-      ships: shipBy ? say('offer_preorder_ships', 'Ships by {date}', {date: shipBy}) : say('offer_preorder_ships_plain', 'Ships with the next batch'),
-      where: say('offer_preorder_where', 'Worldwide'),
+      // No ship-by date: stock on hand says where it ships from and to; never an empty date.
+      ships: lane.kind === 'date'
+        ? say('offer_preorder_ships', 'Ships by {date}', {date: lane.date})
+        : lane.kind === 'stock'
+          ? say('offer_buy_now_ships', 'In stock, ships in days')
+          : say('offer_preorder_ships_plain', 'Ships with the next batch'),
+      where: lane.kind === 'stock'
+        ? say('offer_buy_now_where', 'From {{stock_from}}, {{stock_scope}} only')
+        : say('offer_preorder_where', 'Worldwide'),
       extra: saving !== null ? say('offer_save', 'Save {amount}', {amount: formatPrice(saving, preorder.price.currencyCode)}) : null,
     },
   ];
@@ -130,7 +138,7 @@ export function OfferStatus({
   const found = offerCards(buyNow, preorder).find((c) => c.offer === offer)!;
   // A product simply in stock (no pre-order anywhere for it): "In stock · Ships in days".
   const card = offer === 'buy_now'
-    ? {...found, title: copyText('product-chrome.offer_in_stock') ?? 'In stock', ships: copyText('product-chrome.offer_in_stock_ships') ?? 'Ships in days', where: copyText('product-chrome.offer_in_stock_where') ?? 'From Belgium'}
+    ? {...found, title: copyText('product-chrome.offer_in_stock') ?? 'In stock', ships: copyText('product-chrome.offer_in_stock_ships') ?? 'Ships in days', where: copyFill('product-chrome.offer_in_stock_where', 'From {{stock_from}}')}
     : found;
   const extra = offer === 'preorder' ? card.extra : null;
   return (

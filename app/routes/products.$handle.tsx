@@ -74,6 +74,7 @@ import {CONTRIBUTING_URL} from '~/lib/company';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {variantRedirect} from '~/lib/legacy-urls';
 import {copy, copyText, editAttrs} from '~/lib/copy';
+import {fillSalesTokens} from '~/lib/sales-model';
 import {
   resolveChapters,
   type ChapterEntry,
@@ -149,7 +150,7 @@ function fill(template: string, vars: Record<string, string | number>): string {
 
 /** Copy with a readable fallback while a key is missing from the copy file. */
 function say(id: string, fallback: string, vars: Record<string, string | number> = {}): string {
-  return fill(copyText(id) ?? fallback, vars);
+  return fill(fillSalesTokens(copyText(id) ?? fallback), vars);
 }
 
 /** Largest quantity one add may ask for: the cart action's per-line cap. */
@@ -1990,7 +1991,7 @@ function ProductPage() {
     <>
       {usEuOnly ? (
         <p className="product-buy-ship" role="note">
-          {say('product-chrome.buy_us_eu_only', 'Ships from stock in Belgium to EU addresses only')}
+          {say('product-chrome.buy_us_eu_only', 'Ships from stock in {{stock_from}} to {{stock_scope}} addresses only')}
         </p>
       ) : null}
     </>
@@ -2213,18 +2214,13 @@ function ProductPage() {
         showAvailability && campaign ? (
           <Availability campaign={campaign} region={usBuyer ? 'US' : internationalBuyer ? 'INT' : 'EU'} countShown={Boolean(stepBar)} />
         ) : offerChoice || (choiceOn && campaign && !geoInStock) ? (
-          // One line in one slot for both offers, so choosing moves nothing;
-          // the same pre-order line in every region.
+          // The lane card next to the price states when and where this lane
+          // ships, once; under the button only the terms that go with it.
           <p className="product-buy-ship offer-status" data-offer-status>
-            <span>
-              {offerChoice && offerMode === 'buy_now'
-                ? (rootData as {wholesaleExport?: boolean} | undefined)?.wholesaleExport
-                  ? say('product-chrome.offer_status_buy_now_wholesale', 'In stock in Belgium, wholesale order, ships by courier, import charges on delivery')
-                  : say('product-chrome.offer_status_buy_now', 'In stock in Belgium, ships in days, EU only')
-                : say('product-chrome.offer_status_preorder', 'Ships by {date}, worldwide', {
-                    date: (offerChoice ? offerChoice.preorder.campaign?.latestShip : campaign?.latestShip) ?? '',
-                  })}
-            </span>
+            {/* A wholesale export order adds what the lane card does not say. */}
+            {offerChoice && offerMode === 'buy_now' && (rootData as {wholesaleExport?: boolean} | undefined)?.wholesaleExport ? (
+              <span>{say('product-chrome.offer_status_buy_now_wholesale', 'In stock in {{stock_from}}, wholesale order, ships by courier, import charges on delivery')}</span>
+            ) : null}
             <Link prefetch="intent" to={offerChoice && offerMode === 'buy_now' ? '/terms' : '/preorder'} className="product-buy-terms-link">
               {offerChoice && offerMode === 'buy_now'
                 ? say('product-chrome.offer_terms_buy_now', 'Terms of sale')

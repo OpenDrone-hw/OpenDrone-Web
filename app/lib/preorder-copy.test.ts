@@ -1,12 +1,16 @@
 import {describe, it} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {fillSalesTokens} from './sales-model.ts';
 
 // Run with:
 //   node --experimental-strip-types --test app/lib/preorder-copy.test.ts
 
-const copy = JSON.parse(
-  readFileSync(new URL('../../content/copy/preorder.json', import.meta.url), 'utf8'),
+// As pages read it: with the sales facts of content/preorders.json filled in.
+const copy = Object.fromEntries(
+  Object.entries(
+    JSON.parse(readFileSync(new URL('../../content/copy/preorder.json', import.meta.url), 'utf8')) as Record<string, unknown>,
+  ).map(([k, v]) => [k, typeof v === 'string' ? fillSalesTokens(v) : v]),
 ) as Record<string, string>;
 
 describe('/preorder channel copy', () => {
@@ -25,7 +29,7 @@ describe('/preorder channel copy', () => {
     assert.match(text, /stock in Belgium ships to EU addresses only/);
     assert.match(text, /Outside the EU, everything ships with the confirmed March 2027 preorder batch\./);
     assert.doesNotMatch(text, /target/i);
-    assert.match(text, /Import VAT, duties and customs fees are paid by you on delivery, unless collected at checkout/);
+    assert.match(text, /Outside the EU and US, import VAT and duties are paid by the buyer on delivery\./);
     assert.doesNotMatch(text, /ships to your country/);
     assert.doesNotMatch(text, /November/i);
     assert.doesNotMatch(text, /UK|United Kingdom|Switzerland|Norway/);

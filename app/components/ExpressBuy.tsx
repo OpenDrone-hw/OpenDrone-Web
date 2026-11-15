@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react';
 import {useLocation, useRouteLoaderData, useSearchParams} from 'react-router';
 import {LoaderCircle} from 'lucide-react';
 import type {RootLoader} from '~/root';
-import {copyText} from '~/lib/copy';
+import {copyFill, copyText} from '~/lib/copy';
 import {expressLinesField} from '~/lib/hero-build';
 import {trackEvent} from '~/lib/growth/plausible';
 
@@ -14,7 +14,7 @@ const REFUSALS: Record<string, () => string> = {
     'Not enough left in stock just now. Nothing was charged. Try fewer, or pre-order.',
   // eslint-disable-next-line @typescript-eslint/naming-convention -- the query value
   'eu-only': () =>
-    copyText('product-chrome.express_eu_only') ?? 'In-stock boards ship to EU addresses only. Pre-order ships worldwide.',
+    copyFill('product-chrome.express_eu_only', 'In-stock boards ship to {{stock_scope}} addresses only. Pre-order ships worldwide.'),
 };
 
 /** Why the last express purchase went no further, from the `buy` query

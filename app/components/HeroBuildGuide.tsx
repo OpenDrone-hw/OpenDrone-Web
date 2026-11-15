@@ -24,15 +24,9 @@ import {
   type HeroBuild,
 } from '~/lib/hero-build';
 import {shopifyImageUrl} from '~/lib/shopify-image';
-import {
-  latestShipDate,
-  parseCampaignConfig,
-  shortCampaignDate,
-} from '~/lib/preorder-campaign';
+import {shortCampaignDate} from '~/lib/preorder-campaign';
 import {parcelPromise, shipChipText, useGeoShipLine} from '~/components/ShipChip';
-import preorders from '../../content/preorders.json';
-
-const CAMPAIGN = parseCampaignConfig(preorders);
+import {SALES, salesDay} from '~/lib/sales-model';
 
 /**
  * The line under the build's button: when the parcel ships, one date. A
@@ -49,7 +43,7 @@ function buildShipNote(
   const promise = parcelPromise(promises);
   // A batch 1 date reads the visitor's line, as the bar and buy box do.
   if (mix === 'date') return geoText(promise) ?? shipChipText(promise)?.text ?? null;
-  const date = shortCampaignDate(latestShipDate(CAMPAIGN));
+  const date = shortCampaignDate(salesDay(SALES.shipsBy));
   if (!date) return null;
   return (copyText('home.build_ship_target') ?? 'Ships by {date}').replace('{date}', date);
 }

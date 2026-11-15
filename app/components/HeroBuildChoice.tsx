@@ -16,10 +16,8 @@ import {isPurchasableStatus, shortShipPromise} from '~/lib/product-content';
 import {BUILD_ROLES, buildModes, heroBuildSelection, modeAddUrl, stackOffer, type BuildMode, type HeroBuild} from '~/lib/hero-build';
 import {ExpressBuy, useExpressRefusal} from '~/components/ExpressBuy';
 import {shopifyImageUrl} from '~/lib/shopify-image';
-import {latestShipDate, parseCampaignConfig, shortCampaignDate} from '~/lib/preorder-campaign';
-import preorders from '../../content/preorders.json';
-
-const CAMPAIGN = parseCampaignConfig(preorders);
+import {shortCampaignDate} from '~/lib/preorder-campaign';
+import {SALES, salesDay} from '~/lib/sales-model';
 
 /**
  * One build block per drone size, with the two ways to order it:
@@ -70,13 +68,13 @@ export function HeroBuildChoice({
   const say = (key: string, fallback: string, vars: Record<string, string | number> = {}) => copyFill(`home.${key}`, fallback, vars);
 
   // One status line: where and when the chosen lane ships.
-  const shipBy = shortCampaignDate(latestShipDate(CAMPAIGN));
+  const shipBy = shortCampaignDate(salesDay(SALES.shipsBy));
   const statusLine = !selection.available
     ? null
     : ordinary
-      ? say('choice_status_in_stock', 'In stock in Belgium')
+      ? say('choice_status_in_stock', 'In stock in {{stock_from}}')
       : mode === 'buy_now'
-      ? say('choice_status_buy_now', 'In stock in Belgium, ships in days, EU only')
+      ? say('choice_status_buy_now', 'In stock in {{stock_from}}, ships in days, {{stock_scope}} only')
       : shipBy ? say('build_ship_target', 'Ships by {date}', {date: shipBy}) : null;
   // The pre-order build's total with every part in it, for its option.
   const fullBuild = heroBuildSelection(modes.preorder, new Set(modes.preorder.parts.map((part) => part.sku)), sellable, comingSoon);
@@ -86,7 +84,7 @@ export function HeroBuildChoice({
     {
       mode: 'buy_now',
       title: say('choice_buy_now', 'Buy the stack now'),
-      what: [total(stack?.price ?? null, stack?.currency), say('choice_buy_now_what', 'FC and ESC')].filter(Boolean).join(' · '),
+      what: [total(stack?.price ?? null, stack?.currency), say('choice_buy_now_what', '{{stock_lines}}')].filter(Boolean).join(' · '),
     },
     {
       mode: 'preorder',

@@ -12,6 +12,7 @@ import {
 } from '~/lib/geo-availability';
 import {usePendingShipTo, withPendingShipTo} from '~/lib/pending-ship-to';
 import {shippingQuote} from '~/lib/shipping-rates';
+import {productNameOfSku} from '~/lib/sales-model';
 import type {RootLoader} from '~/root';
 import {shipMonth, shortShipPromise} from '~/lib/product-content';
 import {
@@ -263,14 +264,11 @@ export function shipLine(
 }
 
 /**
- * The product a shipsWith SKU waits for ("OpenFC Lite"), from its lead SKU.
- * Null without a lead.
+ * The product a shipsWith SKU waits for ("OpenFC Lite"), from its lead SKU
+ * (`name` and `skus` in content/products). Null without a lead.
  */
 export function leadProduct(sku: string | null | undefined): string | null {
-  if (!sku) return null;
-  if (sku.startsWith('OPENFC')) return copyText('preorder.lead_openfc') ?? 'OpenFC Lite';
-  if (sku.startsWith('OPENFRAME')) return copyText('preorder.lead_openframe') ?? 'OpenFrame';
-  return null;
+  return productNameOfSku(sku);
 }
 
 export function ShipLine({

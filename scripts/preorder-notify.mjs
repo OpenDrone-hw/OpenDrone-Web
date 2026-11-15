@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Email the buyers of one preorder batch: the ship date moved, or the
-// funding target was missed and they choose a refund or to wait.
+// Email the buyers of one preorder batch: the ship date moved, or an item
+// missed its ship-by date and they choose a refund or to wait.
 //
 //   node --experimental-strip-types scripts/preorder-notify.mjs --kind moved  --sku OPENFC-LITE-2020 --batch 1 --new-date "mid November 2026"
 //   node --experimental-strip-types scripts/preorder-notify.mjs --kind missed --sku OPENRX-LITE --batch 1 --new-date "by the end of June 2027"
@@ -19,7 +19,7 @@
 //   --reason TEXT        optional one-sentence reason, moved emails only
 //   --send               send through Resend; without it every email is printed and nothing is sent
 //   --again              also email buyers already tagged as notified for this batch
-//   --record ORDER       record a buyer's answer to a missed-target email as an order tag
+//   --record ORDER       record a buyer's answer to a missed email as an order tag
 //   --choice refund|wait the answer for --record
 //   --apply              write the --record tag; without it the tag is only shown
 //

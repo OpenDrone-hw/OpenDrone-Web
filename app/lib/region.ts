@@ -14,8 +14,8 @@
  * and "EU" (`eu-oss`, the 26 other member states, destination VAT under the
  * OSS) sell in EUR with VAT in the list price; "International" (every other
  * country Shopify sells to) sells in EUR at the base price before tax (the
- * list price / 1.21, no EU VAT); "United States" sells in USD at the base
- * price plus US duty, duties included. The site presents four buyer-facing
+ * list price / 1.21, no EU VAT); "United States" sells in USD at the EUR
+ * list price plus 25%, duties included. The site presents four buyer-facing
  * markets on top of them, each with its own honest tax wording: EU, United
  * States, UK / Switzerland / Norway (import VAT and duties on delivery) and
  * Rest of world (import charges on delivery).

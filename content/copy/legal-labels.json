@@ -213,19 +213,23 @@
       "rows": [
         [
           "Consumer orders",
-          "Stock ships to the EU only; outside the EU, March 2027 preorders (import VAT and duties paid on delivery; US: duties included in the price)"
+          "Stock ships to the EU only; outside the EU, March 2027 preorders"
         ],
         [
           "Pickup",
           "Free at our Leuven office, by appointment"
         ],
         [
-          "Shipping cost",
-          "EU: flat rate per order, VAT included, from €8.50 (Belgium), table below. Outside the EU and US: shipping shown before payment; import charges may be due on delivery"
+          "EU",
+          "Prices include VAT. Flat rate per order from €8.50 (Belgium), table below"
         ],
         [
           "United States",
-          "Duties included in the price; flat USD 9.95 per order"
+          "Prices include duties; ships through a US distribution partner; flat USD 9.95 per order"
+        ],
+        [
+          "Other countries",
+          "Shipping shown before payment; import VAT and duties are paid by the buyer on delivery"
         ],
         [
           "Preorders",
@@ -242,19 +246,23 @@
       "rows": [
         [
           "Consumenten",
-          "Voorraad alleen naar de EU; buiten de EU pre-orders voor maart 2027 (invoer-btw en rechten bij levering; VS: rechten inbegrepen in de prijs)"
+          "Voorraad alleen naar de EU; buiten de EU pre-orders voor maart 2027"
         ],
         [
           "Afhalen",
           "Gratis op ons kantoor in Leuven, op afspraak"
         ],
         [
-          "Verzendkosten",
-          "EU: vast tarief per bestelling, incl. btw, vanaf € 8,50 (België), tabel hieronder. Buiten de EU en de VS: verzendkosten getoond vóór betaling; invoerkosten mogelijk bij levering"
+          "EU",
+          "Prijzen inclusief btw. Vast tarief per bestelling vanaf € 8,50 (België), tabel hieronder"
         ],
         [
           "Verenigde Staten",
-          "Invoerrechten inbegrepen in de prijs; vast tarief van USD 9,95 per bestelling"
+          "Prijzen inclusief invoerrechten; verzending via een Amerikaanse distributiepartner; vast tarief van USD 9,95 per bestelling"
+        ],
+        [
+          "Andere landen",
+          "Verzendkosten getoond vóór betaling; invoer-btw en invoerrechten betaalt de koper bij levering"
         ],
         [
           "Pre-orders",
@@ -271,19 +279,23 @@
       "rows": [
         [
           "Consommateurs",
-          "Stock expédié uniquement dans l’UE ; hors UE, précommandes pour mars 2027 (TVA à l’importation et droits à la livraison ; États-Unis : droits inclus dans le prix)"
+          "Stock expédié uniquement dans l’UE ; hors UE, précommandes pour mars 2027"
         ],
         [
           "Retrait",
           "Gratuit à notre bureau de Louvain, sur rendez-vous"
         ],
         [
-          "Frais de port",
-          "UE : tarif fixe par commande, TVA comprise, à partir de 8,50 € (Belgique), tableau ci-dessous. Hors UE et États-Unis : frais de port affichés avant paiement ; frais d’importation possibles à la livraison"
+          "UE",
+          "Prix TVA comprise. Tarif fixe par commande à partir de 8,50 € (Belgique), tableau ci-dessous"
         ],
         [
           "États-Unis",
-          "Droits d’importation inclus dans le prix ; tarif fixe de 9,95 USD par commande"
+          "Prix droits d’importation compris ; expédié par un partenaire de distribution aux États-Unis ; tarif fixe de 9,95 USD par commande"
+        ],
+        [
+          "Autres pays",
+          "Frais de port affichés avant paiement ; la TVA à l’importation et les droits sont payés par l’acheteur à la livraison"
         ],
         [
           "Précommandes",

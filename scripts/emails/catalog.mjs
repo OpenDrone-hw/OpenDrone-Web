@@ -195,8 +195,8 @@ function supportCards() {
 
 
 function preorderCards() {
-  const endsOn = '2026-12-15';
-  const replyBy = addDays('2026-12-16', 30);
+  const shipsBy = '2027-03-31';
+  const replyBy = addDays('2027-04-01', 30);
   const newDates = {en: 'early November 2026', nl: 'begin november 2026', fr: 'début novembre 2026'};
   const missedDates = {en: 'by the end of June 2027', nl: 'tegen eind juni 2027', fr: 'd’ici fin juin 2027'};
   const cards = [];
@@ -234,14 +234,14 @@ function preorderCards() {
   for (const locale of ['en', 'nl', 'fr']) {
     add(
       `preorder-missed-${locale}`,
-      `Funding target missed, ${locale.toUpperCase()}, other items in the order`,
+      `Ship-by date missed, ${locale.toUpperCase()}, other items in the order`,
       locale,
       renderPreorderEmail('missed', {
         order: '#9002',
         product: 'OpenRX Lite',
         qty: 1,
         newDate: missedDates[locale],
-        deadline: formatDate(endsOn, locale),
+        deadline: formatDate(shipsBy, locale),
         replyBy: formatDate(replyBy, locale),
         others: true,
         email: 'guest.buyer@example.com',
@@ -251,14 +251,14 @@ function preorderCards() {
   }
   add(
     'preorder-missed-en-only',
-    'Funding target missed, EN, only item left to ship',
+    'Ship-by date missed, EN, only item left to ship',
     'en',
     renderPreorderEmail('missed', {
       order: '#9005',
       product: 'OpenRX Lite',
       qty: 2,
       newDate: missedDates.en,
-      deadline: formatDate(endsOn, 'en'),
+      deadline: formatDate(shipsBy, 'en'),
       replyBy: formatDate(replyBy, 'en'),
       others: false,
       email: 'test.pilot@example.com',
@@ -273,7 +273,7 @@ function launchBlastCards() {
   const variants = [
     ['all', 'all', 'Preorders open, list of unknown region (EU batch 1, preorder run, US terms)'],
     ['all', 'eu', 'Preorders open, EU version'],
-    ['all', 'us', 'Preorders open, US version (duties included, FCC receiver line)'],
+    ['all', 'us', 'Preorders open, US version (duties included)'],
     ['openfc-lite', 'eu', 'Preorders open, EU version with a product the reader asked about'],
   ];
   return variants.map(([handle, region, scenario]) => {

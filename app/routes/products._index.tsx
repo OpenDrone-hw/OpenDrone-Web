@@ -9,7 +9,7 @@ import type {RootLoader} from '~/root';
 import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
 import {EarlyBirdNote, anyEarlyPrice} from '~/components/EarlyPriceCue';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
-import {toCards} from '~/lib/catalog';
+import {cartOffer, toCards} from '~/lib/catalog';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {campaignSkus} from '~/lib/preorder-campaign';
 import {FAMILIES} from '~/lib/families';
@@ -25,6 +25,7 @@ import {
   shipMonth,
   variantDisplayName,
 } from '~/lib/product-content';
+import {announcedProduct, stockShipsTo} from '~/lib/sales-model';
 import {datedShipText, useGeoShipLine} from '~/components/ShipChip';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {Txt} from '~/components/Txt';
@@ -100,10 +101,10 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const catalog = await context.catalog.forBuyer();
   // The one fixed ship date of the campaign, the stack's paid batch, for
   // the "Ships late Nov 2026" filter chip.
-  // A non-EU buyer has no paid stock batch: no
-  // chip, as /preorder drops the stack lane.
+  // A buyer outside the stock region (`paidRegions`) has no paid stock
+  // batch: no chip, as /preorder drops the stack lane.
   const stackShips =
-    context.catalog.region !== 'EU'
+    !stockShipsTo(context.catalog.region)
       ? null
       : (Object.values(CAMPAIGN.skus)
           .flatMap((entry) => entry.batches)
@@ -400,10 +401,16 @@ export default function ProductsIndex() {
       const allTiers =
         axis && content?.variants ? Object.entries(content.variants) : [];
       const liveTiers = allTiers.filter(([, v]) => !v.comingSoon);
-      if (axis && liveTiers.length > 0) {
+      // Announced in its product file (`idea`, `development`): listed, never
+      // sold from the list (sales-model.ts).
+      const announced = announcedProduct(content);
+      if (axis && liveTiers.length > 0 && !announced) {
         for (const [value] of liveTiers) {
           const sv = variantFor(p, axis, value);
-          const price = sv?.price ?? p.priceRange.minVariantPrice;
+          // The card's cart button adds a board's pre-order (the cart is the
+          // pre-order lane), so the card shows that offer's price and date.
+          const offer = cartOffer(sv);
+          const price = offer?.price ?? p.priceRange.minVariantPrice;
           out.push({
             key: `${p.handle}:${value}`,
             product: p,
@@ -411,17 +418,17 @@ export default function ProductsIndex() {
             searchText: searchTextFor(p, value),
             build: buildOf(BUILDS, sv?.sku),
             mount: mountOf(value),
-            paidStock: datedOf(sv?.campaign),
+            paidStock: datedOf(offer?.campaign),
             to: `/products/${p.handle}?${encodeURIComponent(axis)}=${encodeURIComponent(value)}`,
             price,
             image: sv?.image ?? p.featuredImage,
             onSale: sv ? saleVariant(sv) : productOnSale(p),
             // A second option axis (the motor's 4S or 6S winding) is the
             // buyer's choice on the product page, never a silent default.
-            quickAdd: sv && !content?.secondAxis
+            quickAdd: offer && !content?.secondAxis
               ? {
-                  href: sv.cartAddUrl,
-                  available: Boolean(sv.availableForSale),
+                  href: offer.cartAddUrl,
+                  available: Boolean(offer.availableForSale),
                 }
               : undefined,
           });
@@ -429,11 +436,12 @@ export default function ProductsIndex() {
       } else {
         // A line whose every tier is still coming soon (e.g. OpenFC) is an
         // unreleased teaser - show it greyed and non-clickable, not buyable.
-        const comingSoon = allTiers.length > 0;
+        const comingSoon = allTiers.length > 0 || announced;
         // Quick-add only when there is genuinely ONE variant - a future
         // multi-option accessory must send the buyer to the PDP to choose.
-        const firstVariant =
+        const onlyVariant =
           p.variants.nodes.length === 1 ? p.variants.nodes[0] : undefined;
+        const firstVariant = cartOffer(onlyVariant);
         out.push({
           key: p.handle,
           product: p,
