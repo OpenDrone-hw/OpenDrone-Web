@@ -799,9 +799,9 @@ const OPENESC: GuideFamily = {
       label: 'Recover',
       title: 'Recover a failed ESC update',
       description:
-        'An OpenESC channel misbehaving after an AM32 flash: power-cycle and reconnect to read it. Reflash it with the AM32 install guide.',
+        'An OpenESC channel misbehaving after an AM32 flash: power-cycle and reconnect to read it. Reflashing from our firmware page is coming after bench verification.',
       intro: [
-        'This page covers reconnecting and reading the ESCs, reflashing with the AM32 install guide, and getting help. It is also for an ESC that was flashed with another tool.',
+        'This page covers reconnecting and reading the ESCs, getting help, and what to do until reflashing is possible. It is also for an ESC that was flashed with another tool.',
         'A failed or interrupted ESC flash is almost always fixable. The AM32 bootloader sits in its own part of each processor\'s memory and is not overwritten by a firmware update. After a failed flash, that motor\'s processor stays in its bootloader and waits for firmware. Its motor will not spin, but the processor can be flashed again.',
       ],
       tools: ESC_TOOLS,
@@ -823,7 +823,7 @@ const OPENESC: GuideFamily = {
         },
         {
           title: 'Reflashing: coming after bench verification',
-          text: 'Flash it again with [Install AM32 on your OpenESC](/guides/flash-openesc/flash). Do not flash third-party AM32 files onto the OpenESC. Leave the failed channel as it is and open a [support ticket](/support) with the ESC model, the channel and what the tool showed.',
+          text: 'Reflashing from our firmware page is coming after bench verification. Do not flash third-party AM32 files onto the OpenESC. Leave the failed channel as it is and open a [support ticket](/support) with the ESC model, the channel and what the tool showed.',
           see: 'Nothing changes on the ESC. The other channels keep working.',
         },
         {
