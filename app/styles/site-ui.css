@@ -1375,6 +1375,8 @@ a.hero-build-add { text-decoration: none; }
   .hero-build-buyrow .cta-size,
   .hero-build-buyrow .hero-build-add svg { display: none; }
   .hero-build-buyrow .hero-build-qty .product-qty-value { flex-basis: 32px; width: 32px; }
+  /* At phone width the label and the total do not fit on one line: let the label wrap instead of clipping. */
+  .hero-build-buyrow .hero-build-add .btn-label { white-space: normal; line-height: 1.25; text-align: left; }
 }
 .hero-build-add:hover { background: var(--color-gold-fill-hover); }
 .hero-build-add:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -2084,6 +2086,16 @@ body:has(.avail-bar) {
 body:has(.test-banner) .site-header,
 body:has(.avail-bar) .site-header {
   top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px));
+}
+/* The menu drawer starts below the strips too, so the strip does not cover its heading. */
+body:has(.test-banner) #site-mobile-drawer aside,
+body:has(.avail-bar) #site-mobile-drawer aside {
+  top: calc(var(--test-banner-h, 0px) + var(--avail-bar-h, 0px));
+  height: calc(100dvh - var(--test-banner-h, 0px) - var(--avail-bar-h, 0px));
+}
+body:has(.test-banner) #site-mobile-drawer aside .aside-body,
+body:has(.avail-bar) #site-mobile-drawer aside .aside-body {
+  height: calc(100dvh - var(--test-banner-h, 0px) - var(--avail-bar-h, 0px) - var(--header-height));
 }
 
 /* Sticky footer: the layout fills the viewport below the top strips, <main> grows, and the footer is the
