@@ -12,7 +12,7 @@ to the variants of that group. Slot 1 is the code the retailer types
 (WS25-FPV24); slots 2 to 4 are WS25-FPV24-G2 .. -G4 and the cart sends all of
 them (app/lib/wholesale-codes.ts).
 """
-import json, os, re, time, urllib.request
+import json, math, os, re, time, urllib.request
 from pathlib import Path
 
 WHOLESALE_PERCENT = 25.0  # standard wholesale rate off retail (founder 2026-10-29); the one place to change it
@@ -23,6 +23,7 @@ EXEMPTION = "EU_REVERSE_CHARGE_EXEMPTION_RULE"
 # The International market prices the base before tax: a price list of -(1 - 1/1.21) on the EUR list price
 # (Shopify market handle `international`). Without it a non-EU retailer would pay 75% of a VAT-inclusive price.
 BASE_DECREASE_PCT = 17.3554
+BASE_DECREASE_TOLERANCE = 0.01  # Shopify stores the adjustment with two decimals: 17.3554 reads back as 17.36
 INTERNATIONAL_HANDLE = "international"
 EU = set("AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE".split())
 # Standard VAT rate (percent) per EU member state, as of 29 Oct 2026. Source: the 2026 rate tables of
@@ -34,6 +35,8 @@ EU = set("AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO S
 EU_VAT = {"AT": 20, "BE": 21, "BG": 20, "HR": 25, "CY": 19, "CZ": 21, "DK": 25, "EE": 24, "FI": 25.5, "FR": 20,
           "DE": 19, "GR": 24, "HU": 27, "IE": 23, "IT": 22, "LV": 21, "LT": 21, "LU": 17, "MT": 18, "NL": 21,
           "PL": 23, "PT": 23, "RO": 21, "SK": 23, "SI": 22, "ES": 21, "SE": 25}
+MAX_UNIT_DEVIATION = 0.02  # refuse groups that leave a unit more than 2% of its price off rate x retail
+OVERPAY_CENTS = 1          # clustered groups never make a unit cost more than this above rate x retail (before cent rounding)
 CODE_RE = re.compile(r"^(WS(\d{1,2})-[A-Z0-9]{2,16})(?:-G([2-4]))?$")
 
 
@@ -152,7 +155,8 @@ def base_price_problem(env):
         return "no International market"
     for c in m["catalogs"]["nodes"]:
         adj = ((c.get("priceList") or {}).get("parent") or {}).get("adjustment") or {}
-        if adj.get("type") == "PERCENTAGE_DECREASE" and abs(float(adj.get("value", 0)) - BASE_DECREASE_PCT) < 0.001:
+        if (((c.get("priceList") or {}).get("currency") == "EUR" and adj.get("type") == "PERCENTAGE_DECREASE"
+             and abs(float(adj.get("value", 0)) - BASE_DECREASE_PCT) <= BASE_DECREASE_TOLERANCE)):
             return None
     return f"International market has no -{BASE_DECREASE_PCT}% base-price list: non-EU retailers pay 75% of a VAT-inclusive price"
 
@@ -170,22 +174,81 @@ def tax_pricing_problem(env):
     return None
 
 
+class GroupsDoNotFit(Exception):
+    """The variants of one retailer cannot be priced with GROUPS codes within MAX_UNIT_DEVIATION."""
+
+
 def groups(variants, rate_percent, divisor_=1.0):
     """Price groups: list of {pct, variants}, largest group first (slot 1).
 
-    pct = 1 - (1 - rate) * retail / divisor / price. A variant whose live price is at or
-    under the wholesale price gets no code (it is already cheaper)."""
+    Each variant wants pct = 1 - (1 - rate) * retail / divisor / price. A variant whose live price is at or
+    under the wholesale price gets no code (it is already cheaper). Up to GROUPS distinct values, each is a group
+    and every unit lands on rate x retail. More (a market with fixed prices, where price and compare-at are rounded
+    to an ending independently) are clustered into GROUPS groups (cluster()). Raises GroupsDoNotFit when a unit
+    would still be off by more than MAX_UNIT_DEVIATION of its price."""
     target = (1 - rate_percent / 100) / divisor_
-    by = {}
+    wanted = []
     for v in variants:
         pct = round(1 - target * v["retail"] / v["price"], DECIMALS)
         if pct > 0:
+            wanted.append((pct, v))
+    if len({p for p, _ in wanted}) <= GROUPS:
+        by = {}
+        for pct, v in wanted:
             by.setdefault(pct, []).append(v)
-    out = [{"pct": p, "variants": vs} for p, vs in by.items()]
+        out = [{"pct": p, "variants": vs} for p, vs in by.items()]
+    else:
+        out = cluster(wanted)
     out.sort(key=lambda g: (-len(g["variants"]), g["pct"]))
-    if len(out) > GROUPS:
-        raise SystemExit(f"{len(out)} price groups, at most {GROUPS} fit the cart's codes")
+    for g in out:
+        for v in g["variants"]:
+            off = unit_deviation(v, g["pct"], rate_percent, divisor_)
+            if abs(off) > MAX_UNIT_DEVIATION * v["price"]:
+                raise GroupsDoNotFit(f"{label(v)} would cost {off:+.2f} against {rate_percent:g}% off retail, over "
+                                     f"{MAX_UNIT_DEVIATION:.0%} of its price {v['price']:.2f}; {GROUPS} codes cannot price it")
     return out
+
+
+def _group_pct(items):
+    """The 4-decimal percentage for one cluster of (wanted pct, variant): the smallest worst deviation in money
+    (price x |pct - wanted|), raised where needed so no unit costs more than OVERPAY_CENTS above its target."""
+    lo, hi = items[0][0], items[-1][0]
+
+    def worst(p):
+        return max(v["price"] * abs(p - w) for w, v in items)
+    for _ in range(100):  # worst() is convex: ternary search
+        a, b = lo + (hi - lo) / 3, hi - (hi - lo) / 3
+        if worst(a) <= worst(b):
+            hi = b
+        else:
+            lo = a
+    floor = max(w - OVERPAY_CENTS / 100 / v["price"] for w, v in items)
+    p = math.ceil(max((lo + hi) / 2, floor) * 10 ** DECIMALS - 1e-6) / 10 ** DECIMALS
+    return p, worst(p)
+
+
+def cluster(wanted):
+    """At most GROUPS groups over (wanted pct, variant) pairs, minimising the largest deviation per unit. Sorted by
+    wanted pct, the best groups are contiguous runs, so a small dynamic programme over the cut points is exact."""
+    items = sorted(wanted, key=lambda t: (t[0], t[1]["id"]))
+    n = len(items)
+    cost = {(i, j): _group_pct(items[i:j]) for i in range(n) for j in range(i + 1, n + 1)}
+    best = {(0, 0): (0.0, [])}  # (groups used, items covered) -> (worst, cuts)
+    for k in range(1, GROUPS + 1):
+        for j in range(1, n + 1):
+            options = [(max(best[(k - 1, i)][0], cost[(i, j)][1]), best[(k - 1, i)][1] + [(i, j)])
+                       for i in range(j) if (k - 1, i) in best]
+            if options:
+                best[(k, j)] = min(options, key=lambda o: o[0])
+    _, cuts = min((best[(k, n)] for k in range(1, GROUPS + 1) if (k, n) in best), key=lambda o: o[0])
+    return [{"pct": cost[(i, j)][0], "variants": [v for _, v in items[i:j]]} for i, j in cuts]
+
+
+def unit_deviation(v, pct, rate_percent, divisor_=1.0):
+    """What one unit costs above (+) or below (-) rate x retail, in money, after Shopify rounds the discount to cents
+    (assumed: half up)."""
+    want_unit = v["retail"] * (1 - rate_percent / 100) / divisor_
+    return v["price"] - round(v["price"] * pct + 1e-9, 2) - want_unit
 
 
 def rounding_check(group, rate_percent, max_qty=50, divisor_=1.0):
@@ -196,12 +259,17 @@ def rounding_check(group, rate_percent, max_qty=50, divisor_=1.0):
     unit = line_worst = 0.0
     for v in group["variants"]:
         want_unit = v["retail"] * (1 - rate_percent / 100) / divisor_
-        unit = max(unit, abs(v["price"] - round(v["price"] * group["pct"] + 1e-9, 2) - want_unit) * 100)
+        unit = max(unit, abs(unit_deviation(v, group["pct"], rate_percent, divisor_)) * 100)
         for q in range(1, max_qty + 1):
             line = round(q * v["price"], 2)
             final = line - round(line * group["pct"] + 1e-9, 2)
             line_worst = max(line_worst, abs(final - q * want_unit) * 100)
     return unit, line_worst
+
+
+def worst_unit_cents(gs, rate_percent, divisor_=1.0):
+    """The largest deviation per unit in cents over all groups (0 when there is none)."""
+    return max((rounding_check(g, rate_percent, 1, divisor_)[0] for g in gs), default=0.0)
 
 
 def code_input(title, code, pct, variant_ids, customer_ids, starts_at):

@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from wholesale_lib import (EU, EXEMPTION, GROUPS, WHOLESALE_PERCENT, apply_slot, base_price_problem, divisor, gql,  # noqa: E402
+from wholesale_lib import (EU, EXEMPTION, GROUPS, WHOLESALE_PERCENT, GroupsDoNotFit, apply_slot, base_price_problem, divisor, gql,  # noqa: E402
                            groups, live_variants, load_env, plan_slot, read_code, rounding_check, slot_code, tax_pricing_problem,
                            user_errors)
 
@@ -108,7 +108,10 @@ def main():
     main = o.code.strip().upper() or main_code(o.percent, o.slug, o.company, email)
     div = divisor(cc, exempt)  # reverse charge: price base is net of the retailer's VAT (wholesale_lib.divisor)
     tax_problem = tax_pricing_problem(env) if exempt else None
-    gs = groups(live_variants(env, cc), o.percent, div)  # 75% of the retailer's own market retail
+    try:
+        gs = groups(live_variants(env, cc), o.percent, div)  # 75% of the retailer's own market retail
+    except GroupsDoNotFit as e:
+        raise SystemExit(f"refusing: {e}")
     base_problem = base_price_problem(env) if cc not in EU else None
     cids = [cust["id"]] if cust else ["<new customer id>"]
     slots = []

@@ -16,7 +16,7 @@ import argparse, json, re, sys, urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from wholesale_lib import GROUPS, WHOLESALE_PERCENT, divisor, label, live_variants, load_env, slot_code  # noqa: E402
+from wholesale_lib import GROUPS, WHOLESALE_PERCENT, GroupsDoNotFit, divisor, groups, label, live_variants, load_env, slot_code  # noqa: E402
 
 CART = """mutation($lines:[CartLineInput!]!,$country:CountryCode){cartCreate(input:{lines:$lines,buyerIdentity:{countryCode:$country}}){cart{id} userErrors{message}}}"""
 READ = """query($id:ID!){cart(id:$id){discountCodes{code applicable}
@@ -32,10 +32,27 @@ def site_mutation():
     return m.group(1)
 
 
-def check(env, code, percent=WHOLESALE_PERCENT, divisor_=1.0, country=None):
-    """Return a list of problem strings (empty when every line is 75% of retail; of NET retail for a reverse-charge
-    customer). With `country` the cart is priced in that country's market and retail is that market's retail."""
+def expected(variants, percent, divisor_):
+    """{variant id: the unit price the codes should give}: price minus its group's percentage, rounded to cents.
+    Where the market's prices need clustered groups this differs from 75% of retail by the deviation the groups
+    allow (wholesale_lib.groups); otherwise it is 75% of retail to the cent."""
+    want = {v["id"]: v["price"] for v in variants}  # no group: already at or under the wholesale price
+    for g in groups(variants, percent, divisor_):
+        for v in g["variants"]:
+            want[v["id"]] = round(v["price"] - round(v["price"] * g["pct"] + 1e-9, 2), 2)
+    return want
+
+
+def check(env, code, percent=WHOLESALE_PERCENT, divisor_=1.0, country=None, worst=None):
+    """Return a list of problem strings (empty when every line costs what the price groups give: 75% of retail, of
+    NET retail for a reverse-charge customer, within the deviation the groups allow). With `country` the cart is
+    priced in that country's market and retail is that market's retail. `worst`, a list, gets the largest
+    deviation per unit from 75% of retail in cents."""
     variants = live_variants(env, country)
+    try:
+        want_of = expected(variants, percent, divisor_)
+    except GroupsDoNotFit as e:
+        return [f"price groups: {e}"]
     ids = {v["id"]: v for v in variants}  # by variant id: Buy now and Pre-order share a SKU
     url = f"https://{env['SHOPIFY_STORE_DOMAIN']}/api/{env.get('SHOPIFY_STOREFRONT_API_VERSION', '2026-07')}/graphql.json"
 
@@ -53,6 +70,7 @@ def check(env, code, percent=WHOLESALE_PERCENT, divisor_=1.0, country=None):
         return [f"site code mutation rejected: {json.dumps(out.get('errors') or out['data']['cartDiscountCodesUpdate']['userErrors'])[:300]}"]
     cart = sf(READ, {"id": cart_id})["data"]["cart"]
     problems = []
+    dev = 0.0
     if not any(c["code"].upper() == code.upper() and c["applicable"] for c in cart["discountCodes"]):
         problems.append(f"main code {code} not applicable")
     for line in cart["lines"]["nodes"]:
@@ -61,11 +79,14 @@ def check(env, code, percent=WHOLESALE_PERCENT, divisor_=1.0, country=None):
             problems.append(f"{line['merchandise']['sku']}: cart line for a variant not in the live list")
             continue
         paid = float(line["cost"]["totalAmount"]["amount"])
-        want = round(v["retail"] * (1 - percent / 100) / divisor_, 2)
-        if v["price"] <= want:
-            want = v["price"]  # already cheaper than wholesale: no code applies
+        want = want_of[v["id"]]
         if abs(paid - want) > 0.0101:
             problems.append(f"{label(v)}: pays {paid:.2f}, want {want:.2f}")
+        target = v["retail"] * (1 - percent / 100) / divisor_
+        if v["price"] > target:
+            dev = max(dev, abs(paid - target) * 100)
+    if worst is not None:
+        worst.append(dev)
     return problems
 
 
@@ -77,7 +98,10 @@ def main():
     a.add_argument("--country", default="", help="retailer's country: price the cart in its market (GB, CH, US: 75%% of that market's retail)")
     o = a.parse_args()
     country = (o.country or o.net_country).upper() or None
-    problems = check(load_env(), o.code.upper(), o.percent, divisor(o.net_country.upper(), True) if o.net_country else 1.0, country)
+    worst = []
+    problems = check(load_env(), o.code.upper(), o.percent, divisor(o.net_country.upper(), True) if o.net_country else 1.0, country, worst)
+    if worst:
+        print(f"worst deviation from {100 - o.percent:g}% of retail: {worst[0]:.1f} cent per unit")
     for p in problems:
         print("PROBLEM", p)
     print("wholesale-check OK" if not problems else f"wholesale-check FAILED: {len(problems)} problem(s)")

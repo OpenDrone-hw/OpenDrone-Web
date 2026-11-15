@@ -15,8 +15,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from wholesale_lib import (CODE_RE, GROUPS, apply_slot, base_price_problem, customer_divisor, gql, groups, label,  # noqa: E402
-                           live_variants, load_env, market_country, plan_slot, read_code, slot_code, tax_pricing_problem)
+from wholesale_lib import (CODE_RE, GROUPS, GroupsDoNotFit, apply_slot, base_price_problem, customer_divisor, gql,  # noqa: E402
+                           groups, label, live_variants, load_env, market_country, plan_slot, read_code, slot_code,
+                           tax_pricing_problem, worst_unit_cents)
 
 
 def retailers(env):
@@ -82,7 +83,10 @@ def health(env):
     for cid in owners:
         if cid not in tagged:
             problems.append({"kind": "code-without-tag", "ref": cid, "detail": "has wholesale codes but no wholesale tag"})
-    drift = run(env, False)
+    unfit = []
+    drift = run(env, False, unfit)
+    for main, why in unfit:
+        problems.append({"kind": "price-groups", "ref": main, "detail": why})
     if drift:
         problems.append({"kind": "price-drift", "ref": "wholesale-sync", "detail": f"{drift} slot(s) differ from the live price groups; run wholesale-sync.py --apply"})
     chk = importlib.util.spec_from_file_location("wholesale_check", Path(__file__).resolve().parent / "wholesale-check.py")
@@ -112,7 +116,11 @@ def retailer_of(env, customer_id):
     return customer_divisor(c), market_country(c)
 
 
-def run(env, apply_):
+def run(env, apply_, unfit=None):
+    """Plan (and with apply_ write) every retailer's slots; return the number of slots that differ. A retailer whose
+    prices do not fit GROUPS codes is skipped, reported and appended to `unfit` as (main code, reason): it never stops
+    the run for the others."""
+    unfit = [] if unfit is None else unfit
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     by_country = {}
     diffs = 0
@@ -124,7 +132,13 @@ def run(env, apply_):
         div, country = retailer_of(env, first["customers"][0])
         if country not in by_country:  # the retailer's own market prices: 75% of that market's retail
             by_country[country] = live_variants(env, country)
-        gs = groups(by_country[country], rate, div)
+        try:
+            gs = groups(by_country[country], rate, div)
+        except GroupsDoNotFit as e:
+            print(f"PROBLEM {main}: {e}; skipped, its codes are unchanged")
+            unfit.append((main, str(e)))
+            continue
+        print(f"{main}: {len(gs)} group(s) on {country or 'shop EUR'} prices, worst {worst_unit_cents(gs, rate, div):.1f} cent per unit")
         for n in range(1, GROUPS + 1):
             code = slot_code(main, n)
             want = gs[n - 1] if n <= len(gs) else None
@@ -153,13 +167,18 @@ def main():
         print(f"wholesale health: {len(problems)} problem(s)")
         sys.exit(1 if problems else 0)
     print(f"mode: {'APPLY' if o.apply else 'DRY RUN (no writes)'}")
-    diffs = run(env, o.apply)
+    unfit = []
+    diffs = run(env, o.apply, unfit)
     if not diffs:
         print("all wholesale codes match the live prices")
     if o.apply and diffs:
         left = run(env, False)
         print("read back OK" if not left else f"READ BACK MISMATCH: {left} slot(s) still differ")
-        sys.exit(0 if not left else 1)
+        if left:
+            sys.exit(1)
+    if unfit:
+        print(f"{len(unfit)} retailer(s) skipped: their prices do not fit {GROUPS} codes")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

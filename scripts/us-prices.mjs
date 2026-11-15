@@ -139,7 +139,7 @@ export function ukPrice(eurList, rule) {
 /** The International base-price list (EUR, -intlDecreasePct %) and the UK list (GBP), when they exist. */
 export function findOtherLists(lists, rule) {
   const intl = lists.filter(
-    (l) => l.currency === 'EUR' && l.parent?.adjustment?.type === 'PERCENTAGE_DECREASE' && Math.abs(l.parent.adjustment.value - rule.intlDecreasePct) < 0.001,
+    (l) => l.currency === 'EUR' && l.parent?.adjustment?.type === 'PERCENTAGE_DECREASE' && Math.abs(l.parent.adjustment.value - rule.intlDecreasePct) <= 0.01,
   );
   const uk = lists.filter((l) => l.currency === 'GBP' && l.parent?.adjustment);
   if (intl.length > 1 || uk.length > 1) throw new Error(`expected at most one International and one GBP price list, found ${intl.length} and ${uk.length}`);
