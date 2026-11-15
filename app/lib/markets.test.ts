@@ -18,8 +18,8 @@ describe('/markets: generated from the region data', () => {
     assert.deepEqual(table(marketRows(9.95)), [
       ['eu', 'EU countries (27)', 'EUR', 'VAT included', 'Yes', 'Yes', 'From Belgium, €8.50 to €39.95; in stock ships in days, pre-orders ship by 31 March 2027'],
       ['us', 'United States', 'USD', 'Duties included', 'No', 'Yes', 'Flat US$9.95; pre-orders ship by 31 March 2027'],
-      ['import', 'United Kingdom, Switzerland and Norway', 'EUR', 'Import charges paid on delivery', 'No', 'Yes', 'From Belgium, rate at checkout; pre-orders ship by 31 March 2027'],
-      ['world', 'Rest of the world (181 countries)', 'EUR', 'Import charges paid on delivery', 'No', 'Yes', 'From Belgium, rate at checkout; pre-orders ship by 31 March 2027'],
+      ['import', 'United Kingdom, Switzerland and Norway', 'EUR', 'Base price, no EU VAT; import taxes on delivery', 'No', 'Yes', 'From Belgium, rate at checkout; pre-orders ship by 31 March 2027'],
+      ['world', 'Rest of the world (181 countries)', 'EUR', 'Base price, no EU VAT; import taxes on delivery', 'No', 'Yes', 'From Belgium, rate at checkout; pre-orders ship by 31 March 2027'],
       ['none', 'Countries not served yet (31)', '-', '-', 'No', 'No', 'Not yet'],
     ]);
   });
@@ -27,8 +27,8 @@ describe('/markets: generated from the region data', () => {
   it('snapshot of the ordinary shop (batch 2 landed, US closed): stock everywhere, no pre-order', () => {
     assert.deepEqual(table(marketRows(null, true)), [
       ['eu', 'EU countries (27)', 'EUR', 'VAT included', 'Yes', 'No', 'From Belgium, €8.50 to €39.95; in stock ships in days'],
-      ['import', 'United Kingdom, Switzerland and Norway', 'EUR', 'Import charges paid on delivery', 'Yes', 'No', 'From Belgium, rate at checkout; ships from stock'],
-      ['world', 'Rest of the world (181 countries)', 'EUR', 'Import charges paid on delivery', 'Yes', 'No', 'From Belgium, rate at checkout; ships from stock'],
+      ['import', 'United Kingdom, Switzerland and Norway', 'EUR', 'Base price, no EU VAT; import taxes on delivery', 'Yes', 'No', 'From Belgium, rate at checkout; ships from stock'],
+      ['world', 'Rest of the world (181 countries)', 'EUR', 'Base price, no EU VAT; import taxes on delivery', 'Yes', 'No', 'From Belgium, rate at checkout; ships from stock'],
       ['none', 'Countries not served yet (32)', '-', '-', 'No', 'No', 'Not yet'],
     ]);
   });

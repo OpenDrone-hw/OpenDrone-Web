@@ -47,7 +47,7 @@ export function HowOrdering({data}: {data: HowOrderingData}) {
   const priceLine = data.us
     ? (copyText('product-chrome.buy_us_price_note') ?? 'Duties included')
     : data.international
-      ? (copyText('product-chrome.buy_international_price_note') ?? 'Shipping and applicable sale taxes confirmed at checkout. Import charges may be payable on delivery.')
+      ? (copyText('product-chrome.buy_international_price_note') ?? 'No EU VAT charged. Import taxes may be due on delivery.')
       : paysEuVat(country) || !country
         ? say('pay_vat', 'Prices include VAT')
         : null;

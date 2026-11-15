@@ -45,7 +45,7 @@ page renders as before. Open:
 | Surface | US buyer (destination US) | EU buyer |
 |---|---|---|
 | Destination | `shippingQuote` zone `us`, rate from `us-sales.json` | unchanged |
-| Prices | the US catalog's USD list price: duties included, no sales tax. The price steps list shows USD too (see "US prices" below) | EUR incl. VAT |
+| Prices | the US catalog's USD list price: duties included, no sales tax. The price steps list shows USD too (see "Prices outside the EU" below) | EUR incl. VAT |
 | Counter | "0 / 250 ordered for the March 2027 batch": same sentence and bar as the EU, counting the highlighted batch | "1 / 250 ordered for batch 1" |
 | Batches | one row per batch in batch order in both regions (`app/lib/availability.ts`, `app/components/Availability.tsx`): batch 1 "EU and international, not the US" first, the March 2027 batch "EU, US and more" second; the buyer's batch is highlighted (US: March 2027, with batch 1 tagged "Not available in the US"; EU: batch 1 while units remain); other products one March row | batch 1 highlighted, March 2027 batch below |
 | Refund line | "If we cannot deliver to you, you get a full refund." (terms 7ter.5, US only) | none |
@@ -80,14 +80,25 @@ more"; `batchText` in `app/lib/availability.ts`, words from
 `content/copy/preorder.json`). Product pages are English only; the legal terms
 (art. 7bis) are unchanged.
 
-#### US prices
+#### Prices outside the EU
 
-A US price is the EUR VAT-inclusive price plus `priceUpliftPct` in
-`content/us-sales.json` (25), converted at Shopify's FX rate and rounded up to
-whole dollars. The uplift covers US duties and import handling; no US sales tax
-is collected. Shopify prices it: the price list "United States USD, duties
-included (+N%)" has a `PERCENTAGE_INCREASE` parent adjustment and no fixed
-prices.
+Founder decision 2026-11-15: equal margins, but US prices do not go down.
+
+| Market | Price | Held in Shopify as |
+| --- | --- | --- |
+| Belgium and the EU | the EUR list price, VAT inside | the product price |
+| International (every non-EU country but the US; the UK until a UK VAT number exists) | the base price: list / 1.21, no EU VAT, nearest `.00`, `.50` or `.90` | one fixed EUR price per variant on the International price list; its `-17.3554%` adjustment prices only a variant without one |
+| United States | the EUR list price + `priceUpliftPct` (25) in USD, duties included | the US price list's `PERCENTAGE_INCREASE` adjustment, no fixed prices |
+| United Kingdom (later, own GBP market) | base x `gbpPerEur` x (1 + `ukVatPct` / 100), with an ending | one fixed GBP price per variant |
+
+The rule lives in `content/us-sales.json`: `priceUpliftPct` for the US,
+`basePrice` (`endings`, `intlDecreasePct`, `gbpPerEur`, `ukVatPct`) for
+International and the UK.
+
+A US price is the EUR VAT-inclusive price plus `priceUpliftPct`, converted at
+Shopify's FX rate and rounded up to whole dollars. The uplift covers US duties
+and import handling; no US sales tax is collected. The price list is named
+"United States USD, duties included (+N%)".
 
 The storefront shows every price step in USD. The step the next unit falls
 into is Shopify's live US price. The other steps are their EUR prices through
@@ -96,15 +107,23 @@ allow (`usdBand` in `app/lib/us-sales.ts`); a step is shown as "about US$X"
 when that band cannot fix its whole dollars, and no ladder is shown when no
 factor fits the live prices.
 
-To change the US uplift end to end:
+A fixed International or UK price does not follow a preorder price step on
+its own. After every step, and after any change to `content/us-sales.json`
+(a pricing decision: the founder's go first):
 
-1. Edit `priceUpliftPct` in `content/us-sales.json`.
-2. `npm run us:prices` (dry run: prints the file value and the Shopify price
-   list, changes nothing), then `npm run us:prices -- --apply` to write the
-   adjustment and the "(+N%)" name suffix, with a read-back. It reads
-   `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN` (`write_products`) and
-   `SHOPIFY_ADMIN_API_VERSION` from `.env`.
-3. Merge the file change, then `BASE=https://opendrone.be node scripts/smoke.mjs`.
+1. `npm run us:prices` (dry run, changes nothing): the US adjustment and name
+   against `priceUpliftPct`, and every variant on the International and UK
+   lists whose fixed price or compare-at differs from the base-price rule.
+   `-- --check` does the same and exits 1 on a difference. Without an
+   International base-price list it says so and compares the US only.
+2. `npm run us:prices -- --apply` writes the differences (the US adjustment
+   and "(+N%)" suffix with `priceListUpdate`, the fixed prices with
+   `priceListFixedPricesAdd`) and reads them back. It refuses to touch the
+   International or UK lists while any market other than Belgium is not
+   `INCLUDES_TAXES_IN_PRICE`. It reads `SHOPIFY_STORE_DOMAIN`,
+   `SHOPIFY_ADMIN_API_TOKEN` (`read_products`, `write_products`,
+   `read_markets`) and `SHOPIFY_ADMIN_API_VERSION` from `.env`.
+3. Merge any file change, then `BASE=https://opendrone.be node scripts/smoke.mjs`.
 
 Shopify settings the US needs (the US market, its USD price list and
 `INCLUDES_TAXES_IN_PRICE` exist): a US shipping zone at the `us-sales.json`
@@ -145,7 +164,7 @@ those tags automatically. An earlier accepted promise is not silently extended.
 | `content/preorders.json` | `countFrom`, `endsOn`, `confirmed`, `afterEndsOn`, `soldUnder`, `shipsBy`, `priceTiers`, `pendingShips`, `paidRegions`, `stockFrom` (where stock is held, per locale), per-SKU `batches` (`units`, `reserved`, `paid`, `inStock`, `ships`, `deliveryBy`, `deliveryByUS`, `deliveryByINT`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
 | `content/products/<handle>.json` | `status` (`idea` or `development`: announced, no cart button), `name`, `lineName` ("FC") and `skus`, which map each campaign SKU to its product |
 | `content/registrations.json` | producer numbers and explicit `saleApproved` per EU destination |
-| `content/us-sales.json` | the US flat shipping rate in USD (`null` keeps the US closed) and `priceUpliftPct`, the US price uplift (`npm run us:prices`) |
+| `content/us-sales.json` | the US flat shipping rate in USD (`null` keeps the US closed), `priceUpliftPct` (the US price uplift) and `basePrice` (the International and UK fixed prices) (`npm run us:prices`) |
 | Shopify | compare-at (retail) price, current price, catalog identity, orders, payments |
 | `SHOPIFY_PREVIEW_POLICY_JSON` | overrides per SKU; a SKU it does not name follows `content/preorders.json` (`docs/architecture.md`, Catalog) |
 | `app/content/legal/{en,nl,fr}/` | customer terms (7bis) |

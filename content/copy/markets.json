@@ -7,7 +7,7 @@
   "lead": "One row per market. Choose your country in the header to see your prices.",
   "table_caption": "Markets, currency, what the price includes, and shipping",
   "your_market": "You",
-  "why_prices": "Prices: EU prices include VAT. United States prices include duties. Other countries: import VAT and duties are paid by the buyer on delivery.",
+  "why_prices": "Prices: EU prices include VAT. United States prices include duties. Other countries: the price without EU VAT; import taxes may be due on delivery.",
   "wholesale": "Shops and dealers can apply for wholesale.",
   "wholesale_link": "Wholesale",
   "preorder_terms": "Pre-orders follow the pre-order terms.",

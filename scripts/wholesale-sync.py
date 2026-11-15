@@ -15,8 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from wholesale_lib import (CODE_RE, GROUPS, apply_slot, customer_divisor, gql, groups, label, live_variants,  # noqa: E402
-                           load_env, plan_slot, read_code, slot_code, tax_pricing_problem)
+from wholesale_lib import (CODE_RE, GROUPS, apply_slot, base_price_problem, customer_divisor, gql, groups, label,  # noqa: E402
+                           live_variants, load_env, market_country, plan_slot, read_code, slot_code, tax_pricing_problem)
 
 
 def retailers(env):
@@ -91,34 +91,40 @@ def health(env):
     tax = tax_pricing_problem(env)
     if tax:
         problems.append({"kind": "tax-pricing", "ref": "shop", "detail": f"{tax}: reverse-charge net prices assume constant tax-inclusive prices"})
+    base = base_price_problem(env)
+    if base:
+        problems.append({"kind": "base-price", "ref": "international", "detail": base})
     for main in sorted(mains):
         owner = codes[main]["customers"][0] if main in codes and codes[main]["customers"] else None
-        div = divisor_of(env, owner) if owner else 1.0
+        div, country = retailer_of(env, owner) if owner else (1.0, None)
         if env.get("SHOPIFY_STOREFRONT_TOKEN"):
-            for p in mod.check(env, main, float(CODE_RE.match(main).group(2)), div):
+            for p in mod.check(env, main, float(CODE_RE.match(main).group(2)), div, country):
                 problems.append({"kind": "cart-check", "ref": main, "detail": p})
         else:
             problems.append({"kind": "cart-check", "ref": main, "detail": "SHOPIFY_STOREFRONT_TOKEN missing, cart not checked"})
     return problems
 
 
-def divisor_of(env, customer_id):
-    """The price-base divisor of a retailer (VAT of a reverse-charge customer's country, else 1)."""
-    c = gql(env, "query($id:ID!){customer(id:$id){tags taxExemptions note}}", {"id": customer_id})["customer"]
-    return customer_divisor(c or {})
+def retailer_of(env, customer_id):
+    """(price-base divisor, market country) of a retailer: the VAT of a reverse-charge customer's country, else 1;
+    and the country whose market prices its codes are computed on (None: shop EUR prices)."""
+    c = gql(env, "query($id:ID!){customer(id:$id){tags taxExemptions note}}", {"id": customer_id})["customer"] or {}
+    return customer_divisor(c), market_country(c)
 
 
 def run(env, apply_):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    variants = live_variants(env)
+    by_country = {}
     diffs = 0
     for main, rate in sorted(retailers(env).items()):
         first = read_code(env, main)
         if not first or not first["customers"]:
             print(f"{main}: main code missing or without customer, skipped")
             continue
-        div = divisor_of(env, first["customers"][0])
-        gs = groups(variants, rate, div)
+        div, country = retailer_of(env, first["customers"][0])
+        if country not in by_country:  # the retailer's own market prices: 75% of that market's retail
+            by_country[country] = live_variants(env, country)
+        gs = groups(by_country[country], rate, div)
         for n in range(1, GROUPS + 1):
             code = slot_code(main, n)
             want = gs[n - 1] if n <= len(gs) else None

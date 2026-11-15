@@ -16,7 +16,7 @@ import {handleShopifyCartAction, usSellable} from './shopify-cart-action.ts';
 import {handleCartCountry} from './shopify-cart-country.ts';
 import {mapShopifyCatalog, type CartLineInput, type ShopifyCart} from './shopify-storefront.ts';
 import {US_SALES, usSalesRate, usdBand, usdLadder, usdOf, withMarketPrices} from './us-sales.ts';
-import {findUsList, nameWithUplift, planUplift, readUpliftPct} from '../../scripts/us-prices.mjs';
+import {findOtherLists, findUsList, fixedInput, intlPrice, nameWithUplift, planAll, planFixedBy, planUplift, readRule, ukPrice, withEnding} from '../../scripts/us-prices.mjs';
 import {priceNote} from './visitor-country.ts';
 
 const REAL = parseCampaignConfig(JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')));
@@ -455,9 +455,11 @@ describe('US price ladder', () => {
   });
 });
 
-describe('US price uplift source', () => {
-  it('commits the uplift Shopify holds and compares it with the price list', () => {
-    assert.equal(readUpliftPct(new URL('../../content/us-sales.json', import.meta.url).pathname), 25);
+describe('Non-EU price rule source', () => {
+  const rule = readRule(new URL('../../content/us-sales.json', import.meta.url).pathname);
+
+  it('keeps the US on the list price +25% and compares it with the US price list', () => {
+    assert.equal(rule.priceUpliftPct, 25);
     assert.equal(US_SALES.priceUpliftPct, 25);
     const list = {
       id: 'gid://shopify/PriceList/1', name: 'United States USD, duties included (+25%)', currency: 'USD',
@@ -469,9 +471,61 @@ describe('US price uplift source', () => {
       name: {from: list.name, to: 'United States USD, duties included (+30%)'},
     });
     assert.equal(nameWithUplift('US list', 30), 'US list (+30%)');
-    const eurList = {id: 'e', name: 'EU', currency: 'EUR', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 0}}};
+    const eurList = {id: 'e', name: 'International', currency: 'EUR', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 17.3554}}};
     assert.equal(findUsList([eurList, list]).id, list.id);
     assert.throws(() => findUsList([eurList]), /exactly one/);
+  });
+
+  it('never plans a fixed price for the US list', () => {
+    const us = {id: 'u', name: 'US', currency: 'USD', parent: {adjustment: {type: 'PERCENTAGE_INCREASE', value: 25}}};
+    const {intl, uk} = findOtherLists([us], rule);
+    assert.equal(intl, null);
+    assert.equal(uk, null);
+    const variants = [{id: 'v1', sku: 'OPENFC-LITE-2020', title: 'Pre-order', price: '26.10', compareAtPrice: '29.00', product: {status: 'ACTIVE'}}];
+    assert.deepEqual(planAll(variants, [], rule), []);
+  });
+
+  it('rounds to the nearest .00, .50 or .90, a tie to the higher price', () => {
+    const e = rule.endings;
+    assert.deepEqual(e, [0, 0.5, 0.9]);
+    assert.equal(withEnding(29.17, e), 29);
+    assert.equal(withEnding(29.3, e), 29.5);
+    assert.equal(withEnding(29.71, e), 29.9);
+    assert.equal(withEnding(29.96, e), 30);
+    assert.equal(withEnding(29.25, e), 29.5);
+    assert.equal(withEnding(0.83, e), 0.9);
+  });
+
+  it('prices International at the base and the UK at base x GBP x 1.20, both with an ending', () => {
+    const r = {...rule, gbpPerEur: 0.83559, ukVatPct: 20};
+    assert.equal(intlPrice(26.1, r), 21.5); // 21.57
+    assert.equal(intlPrice(53.1, r), 43.9); // 43.88
+    assert.equal(ukPrice(26.1, r), 21.5); // 21.63 GBP
+    assert.equal(ukPrice(21.6, r), 17.9); // 17.90 GBP
+  });
+
+  it('plans fixed EUR prices for the International list, compare-at included, and none when in sync', () => {
+    const variants = [
+      {id: 'v1', sku: 'OPENFC-LITE-2020', title: 'Pre-order', price: '26.10', compareAtPrice: '29.00', product: {status: 'ACTIVE'}},
+      {id: 'v2', sku: 'ACC-STRAP-20X220', title: 'Default', price: '2.00', compareAtPrice: null, product: {status: 'ACTIVE'}},
+      {id: 'v3', sku: 'OPENSTACK', title: 'Default', price: '114.00', compareAtPrice: null, product: {status: 'ARCHIVED'}},
+    ];
+    const intl = {id: 'i', name: 'International', currency: 'EUR', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 17.3554}}};
+    const [first] = planAll(variants, [{name: 'International', list: intl, currency: 'EUR', fixed: new Map()}], rule);
+    assert.deepEqual(fixedInput(first.plan, 'EUR'), [
+      {variantId: 'v1', price: {amount: '21.50', currencyCode: 'EUR'}, compareAtPrice: {amount: '24.00', currencyCode: 'EUR'}},
+      {variantId: 'v2', price: {amount: '1.50', currencyCode: 'EUR'}},
+    ]);
+    const synced = new Map([['v1', {price: 21.5, compareAt: 24}], ['v2', {price: 1.5, compareAt: null}]]);
+    assert.equal(planFixedBy(variants, synced, (eur: number) => intlPrice(eur, rule)).length, 0);
+  });
+
+  it('finds the International base-price list and the GBP list only when they exist', () => {
+    const us = {id: 'u', name: 'US', currency: 'USD', parent: {adjustment: {type: 'PERCENTAGE_INCREASE', value: 25}}};
+    const intl = {id: 'i', name: 'International', currency: 'EUR', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 17.3554}}};
+    const uk = {id: 'g', name: 'UK', currency: 'GBP', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 0.8264}}};
+    assert.deepEqual(findOtherLists([us], rule), {intl: null, uk: null});
+    assert.deepEqual(findOtherLists([us, intl, uk], rule), {intl, uk});
   });
 });
 

@@ -765,8 +765,8 @@ function PopulatedCart({
           {international ? (
             <p className="cart-summary-note">
               {dutiesNote
-                ? t('international_note_near', 'Shipping is confirmed at checkout.')
-                : t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}
+                ? t('international_note_near', 'No EU VAT charged. Shipping is confirmed at checkout.')
+                : t('international_note', 'No EU VAT charged. Shipping is confirmed at checkout. Import taxes may be due on delivery.')}
             </p>
           ) : null}
           {/* One parcel, one date: said once here, not under every line. */}

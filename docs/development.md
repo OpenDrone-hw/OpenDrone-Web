@@ -34,7 +34,7 @@ Commands, layout, the studio and the test shop. Start with the [README](../READM
 | `npm run goals:update` | move the auto-mode goals in `content/goals.json` from the shop's order totals |
 | `npm run check:reach` | read-only: Shopify markets and shipping zones against `NO_SHOPIFY_ROUTE` in `app/lib/shipping-rates.ts`; exits 1 when they differ |
 | `BASE=<url> npm run e2e:region` | drives the header region control in Chrome (pick a market, page currency, cookie, next page, a `?country` link); IP cases only against a local server |
-| `npm run us:prices` | compare the US price uplift in `content/us-sales.json` with Shopify's price list (`-- --apply` writes it; see [selling.md](selling.md#us-prices)) |
+| `npm run us:prices` | compare the US price uplift and the International and UK fixed prices in Shopify with `content/us-sales.json` (`-- --check` exits 1 on a difference, `-- --apply` writes them; see [selling.md](selling.md#prices-outside-the-eu)) |
 | `npm run sync:lab-visit -- <game dir>` | copy the lab walkthrough's runtime files into `public/lab-visit/` (`-- --check <game dir>` diffs only) |
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
