@@ -75,6 +75,8 @@ def check(env, code, percent=WHOLESALE_PERCENT, divisor_=1.0, country=None, wors
         problems.append(f"main code {code} not applicable")
     for line in cart["lines"]["nodes"]:
         v = ids.get(line["merchandise"]["id"])
+        if line["quantity"] == 0:
+            continue  # not for sale in this market (for example Belgian stock outside the EU): Shopify empties the line
         if not v:
             problems.append(f"{line['merchandise']['sku']}: cart line for a variant not in the live list")
             continue

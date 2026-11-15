@@ -171,6 +171,30 @@ class SyncKeepsGoing(unittest.TestCase):
         self.assertGreater(diffs, 0)  # WS25-BBB was still planned
 
 
+class CartCheck(unittest.TestCase):
+    def test_a_line_shopify_empties_in_that_market_is_not_a_price_problem(self):
+        import importlib.util, io, json
+        spec = importlib.util.spec_from_file_location("wholesale_check", Path(__file__).resolve().parent / "wholesale-check.py")
+        chk = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(chk)
+        sold = {"id": "s", "sku": "OPENESC-2020", "title": "Buy now", "price": 40.5, "retail": 40.5}
+        pre = {"id": "p", "sku": "OPENESC-2020", "title": "Pre-order", "price": 36.5, "retail": 40.5}
+        chk.live_variants = lambda env, country: [sold, pre]
+        want = chk.expected([sold, pre], 25.0, 1.0)
+        line = lambda v, q, amt: {"quantity": q, "merchandise": {"id": v["id"], "sku": v["sku"]}, "cost": {"totalAmount": {"amount": str(amt)}}}
+        answers = iter([
+            {"data": {"cartCreate": {"cart": {"id": "c"}, "userErrors": []}}},
+            {"data": {"cartDiscountCodesUpdate": {"userErrors": []}}},
+            {"data": {"cart": {"discountCodes": [{"code": "WS25-X", "applicable": True}],
+                               "lines": {"nodes": [line(sold, 0, 0.0), line(pre, 1, want["p"])]}}}},
+        ])
+        chk.urllib.request.urlopen = lambda req, timeout=60: io.BytesIO(json.dumps(next(answers)).encode())
+        worst = []
+        env = {"SHOPIFY_STORE_DOMAIN": "x", "SHOPIFY_STOREFRONT_TOKEN": "t"}
+        self.assertEqual(chk.check(env, "WS25-X", 25.0, 1.0, "CH", worst), [])
+        self.assertLess(worst[0], 1.0)
+
+
 class BothLanesAndExpiredSlots(unittest.TestCase):
     LANES = [{"id": "pre", "sku": "OPENFC-LITE-2020", "title": "20x20 / Pre-order", "price": 26.10, "retail": 29.0},
              {"id": "now", "sku": "OPENFC-LITE-2020", "title": "20x20 / Buy now", "price": 29.0, "retail": 29.0},
