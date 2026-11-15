@@ -526,6 +526,8 @@ describe('Non-EU price rule source', () => {
     const uk = {id: 'g', name: 'UK', currency: 'GBP', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 0.8264}}};
     assert.deepEqual(findOtherLists([us], rule), {intl: null, uk: null});
     assert.deepEqual(findOtherLists([us, intl, uk], rule), {intl, uk});
+    const stored = {...intl, parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 17.36}}}; // Shopify keeps two decimals
+    assert.deepEqual(findOtherLists([us, stored], rule), {intl: stored, uk: null});
   });
 });
 

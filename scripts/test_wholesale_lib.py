@@ -95,6 +95,10 @@ class MarketPricesTest(unittest.TestCase):
         try:
             L.gql = fake({"type": "PERCENTAGE_DECREASE", "value": 17.3554})
             self.assertIsNone(L.base_price_problem({}))
+            L.gql = fake({"type": "PERCENTAGE_DECREASE", "value": 17.36})  # what Shopify stores (two decimals)
+            self.assertIsNone(L.base_price_problem({}))
+            L.gql = fake({"type": "PERCENTAGE_DECREASE", "value": 17.5})
+            self.assertIn("VAT-inclusive", L.base_price_problem({}))
             L.gql = fake(None)
             self.assertIn("VAT-inclusive", L.base_price_problem({}))
         finally:
@@ -103,6 +107,68 @@ class MarketPricesTest(unittest.TestCase):
     def test_every_retailer_country_tag_is_its_market(self):
         self.assertEqual(L.market_country({"tags": ["wholesale", "country-ch"], "note": ""}), "CH")
         self.assertIsNone(L.market_country({"tags": ["wholesale"], "note": ""}))
+
+
+# The International market's live fixed prices (EUR, read through contextualPricing for CH on 15 Nov 2026):
+# price and compare-at rounded to .00/.50/.90 independently, so the wanted percentages take 14 distinct values.
+INTL = [("OPENESC-2020", "Buy now", 40.5, 40.5), ("OPENESC-2020", "Pre-order", 36.5, 40.5),
+        ("OPENESC-3030", "Buy now", 48.9, 48.9), ("OPENESC-3030", "Pre-order", 43.9, 48.9),
+        ("OPENFC-LITE-2020", "Buy now", 24.0, 24.0), ("OPENFC-LITE-2020", "Pre-order", 21.5, 24.0),
+        ("OPENFC-LITE-3030", "Buy now", 32.0, 32.0), ("OPENFC-LITE-3030", "Pre-order", 29.0, 32.0),
+        ("OPENFRAME-3", "3in", 29.0, 32.0), ("OPENFRAME-5", "5in", 36.5, 40.5),
+        ("OPENMOTOR-1604", "6S", 14.0, 15.9), ("OPENMOTOR-1604-4S", "4S", 14.0, 15.9),
+        ("OPENMOTOR-2306", "6S", 17.9, 19.9), ("OPENMOTOR-2306-4S", "4S", 15.9, 19.9),
+        ("OPENRX-GEMINI", "Gemini", 23.9, 29.9), ("OPENRX-LITE", "Lite", 13.9, 17.5),
+        ("OPENRX-LITE-UFL", "Lite-UFL", 15.5, 17.5), ("OPENRX-MONO", "Mono", 20.0, 22.5)]
+INTL_V = [{"id": f"v{i}", "sku": s, "title": t, "price": p, "retail": r} for i, (s, t, p, r) in enumerate(INTL)]
+
+
+class FixedPriceMarketGroups(unittest.TestCase):
+    def test_rounded_market_prices_fit_four_codes(self):
+        gs = L.groups(INTL_V, 25.0)
+        self.assertLessEqual(len(gs), L.GROUPS)
+        self.assertEqual(sorted(v["id"] for g in gs for v in g["variants"]), sorted(v["id"] for v in INTL_V))
+
+    def test_no_unit_costs_more_than_a_cent_or_two_above_75_percent_and_the_worst_is_bounded(self):
+        gs = L.groups(INTL_V, 25.0)
+        for g in gs:
+            for v in g["variants"]:
+                off = L.unit_deviation(v, g["pct"], 25.0)
+                self.assertLessEqual(off, 0.015, v["sku"])                      # never above by more than 1.5 cent
+                self.assertLessEqual(abs(off), L.MAX_UNIT_DEVIATION * v["price"])  # within 2% of the unit price
+        worst = L.worst_unit_cents(gs, 25.0)
+        self.assertLess(worst, 25.0)  # 22.5 cent today (1604 motor at 14.00, retail 15.90)
+        self.assertEqual(worst, max(L.rounding_check(g, 25.0, 1)[0] for g in gs))
+
+    def test_buy_now_at_retail_keeps_exactly_25_percent(self):
+        gs = L.groups(INTL_V, 25.0)
+        at_retail = next(g for g in gs if any(v["title"] == "Buy now" for v in g["variants"]))
+        self.assertEqual(at_retail["pct"], 0.25)
+
+    def test_four_or_fewer_distinct_percentages_are_not_clustered(self):
+        self.assertEqual(sorted(g["pct"] for g in L.groups(V, 25.0)), [0.0625, 0.1667, 0.25])
+
+    def test_prices_that_cannot_fit_raise_for_that_retailer_only(self):
+        spread = [{"id": str(i), "sku": f"S{i}", "title": "", "price": 10.0, "retail": 10.0 + 0.4 * i} for i in range(9)]
+        with self.assertRaises(L.GroupsDoNotFit):
+            L.groups(spread, 25.0)
+
+
+class SyncKeepsGoing(unittest.TestCase):
+    def test_a_retailer_whose_groups_do_not_fit_is_reported_and_the_others_still_sync(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("wholesale_sync", Path(__file__).resolve().parent / "wholesale-sync.py")
+        sync = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sync)
+        spread = [{"id": str(i), "sku": f"S{i}", "title": "", "price": 10.0, "retail": 10.0 + 0.4 * i} for i in range(9)]
+        sync.retailers = lambda env: {"WS25-AAA": 25.0, "WS25-BBB": 25.0}
+        sync.read_code = lambda env, code: {"id": code, "status": "ACTIVE", "customers": [code[:8]], "pct": None, "variants": []} if code.startswith("WS25-BBB") or code == "WS25-AAA" else None
+        sync.retailer_of = lambda env, cid: (1.0, "CH" if cid == "WS25-AAA" else None)
+        sync.live_variants = lambda env, country: spread if country == "CH" else V
+        unfit = []
+        diffs = sync.run({}, False, unfit)
+        self.assertEqual([m for m, _ in unfit], ["WS25-AAA"])
+        self.assertGreater(diffs, 0)  # WS25-BBB was still planned
 
 
 class BothLanesAndExpiredSlots(unittest.TestCase):
