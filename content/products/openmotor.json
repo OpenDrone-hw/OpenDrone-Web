@@ -1,6 +1,14 @@
 {
   "fileNumber": "05",
   "family": "Motors",
+  "name": "OpenMotor",
+  "lineName": "motors",
+  "skus": [
+    "OPENMOTOR-1604",
+    "OPENMOTOR-1604-4S",
+    "OPENMOTOR-2306",
+    "OPENMOTOR-2306-4S"
+  ],
   "editorial": false,
   "status": "preorder",
   "priceUnit": "/ motor",

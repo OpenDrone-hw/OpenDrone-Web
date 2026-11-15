@@ -1,6 +1,12 @@
 {
   "fileNumber": "02",
   "family": "Flight Controller",
+  "name": "OpenFC Lite",
+  "lineName": "FC",
+  "skus": [
+    "OPENFC-LITE-2020",
+    "OPENFC-LITE-3030"
+  ],
   "status": "preorder",
   "statusNote": "in stock in Belgium, ships to EU addresses in a few working days",
   "hero": {

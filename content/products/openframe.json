@@ -1,6 +1,12 @@
 {
   "fileNumber": "04",
   "family": "Carbon Frame",
+  "name": "OpenFrame",
+  "lineName": "frames",
+  "skus": [
+    "OPENFRAME-3",
+    "OPENFRAME-5"
+  ],
   "status": "preorder",
   "imagesAreRenders": true,
   "hero": {

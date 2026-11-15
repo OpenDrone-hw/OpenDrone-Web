@@ -142,11 +142,12 @@ those tags automatically. An earlier accepted promise is not silently extended.
 
 | Source | Owns |
 |---|---|
-| `content/preorders.json` | `countFrom`, `endsOn`, `confirmed`, `afterEndsOn`, `soldUnder`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `reserved`, `paid`, `ships`, `deliveryBy`, `deliveryByUS`, `deliveryByINT`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
+| `content/preorders.json` | `countFrom`, `endsOn`, `confirmed`, `afterEndsOn`, `soldUnder`, `shipsBy`, `priceTiers`, `pendingShips`, `paidRegions`, `stockFrom` (where stock is held, per locale), per-SKU `batches` (`units`, `reserved`, `paid`, `inStock`, `ships`, `deliveryBy`, `deliveryByUS`, `deliveryByINT`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
+| `content/products/<handle>.json` | `status` (`idea` or `development`: announced, no cart button), `name`, `lineName` ("FC") and `skus`, which map each campaign SKU to its product |
 | `content/registrations.json` | producer numbers and explicit `saleApproved` per EU destination |
 | `content/us-sales.json` | the US flat shipping rate in USD (`null` keeps the US closed) and `priceUpliftPct`, the US price uplift (`npm run us:prices`) |
 | Shopify | compare-at (retail) price, current price, catalog identity, orders, payments |
-| `SHOPIFY_PREVIEW_POLICY_JSON` | which SKUs sell as `preorder` |
+| `SHOPIFY_PREVIEW_POLICY_JSON` | overrides per SKU; a SKU it does not name follows `content/preorders.json` (`docs/architecture.md`, Catalog) |
 | `app/content/legal/{en,nl,fr}/` | customer terms (7bis) |
 
 1. Edit `content/preorders.json` (by hand or the studio Data tab): set
@@ -159,10 +160,21 @@ those tags automatically. An earlier accepted promise is not silently extended.
    date is typed once.
 2. In Shopify, set each campaign SKU's compare-at price to retail and its
    price to the first step. A SKU priced under its step stays closed.
-3. Set the SKU to `preorder` in `SHOPIFY_PREVIEW_POLICY_JSON` with
-   `shipPromise: null`, and `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`.
+3. Add the SKU to `skus` in its `content/products/<handle>.json` (a SKU in
+   `content/preorders.json` that the policy secret does not name then sells
+   as `preorder`), and set `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`.
 4. Open the shop ("Open or close the shop") and check `/api/status/campaign`: every campaign SKU
    `open`, `allOpen: true`, no pending price step.
+
+**Sales facts.** `app/lib/sales-model.ts` reads `content/preorders.json` and
+the product files into one checked model: where stock is held and ships, which
+product lines sell from stock or as a pre-order, the latest ship-by date and
+the offer window. A bad entry stops `npm test`, the build and the dev server
+with the file and field named. Copy names these facts as `{{stock_from}}`,
+`{{stock_scope}}`, `{{stock_lines}}`, `{{preorder_lines}}`,
+`{{preorder_month}}` and `{{preorder_ships_by}}`; `copy.ts` fills them in every
+copy string, so no copy file types a date, a place or a product line.
+`app/lib/sales-model.test.ts` shows the everyday changes as file edits.
 
 **Confirmed batches.** `confirmed: true` removes the funding condition:
 the promise is written from `shipsBy` ("ships by" and the date), the product

@@ -1,6 +1,14 @@
 {
   "fileNumber": "03",
   "family": "ELRS Receiver",
+  "name": "OpenRX",
+  "lineName": "RX",
+  "skus": [
+    "OPENRX-LITE",
+    "OPENRX-LITE-UFL",
+    "OPENRX-MONO",
+    "OPENRX-GEMINI"
+  ],
   "status": "preorder",
   "hero": {
     "line1": "",

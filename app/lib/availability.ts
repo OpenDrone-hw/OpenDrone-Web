@@ -16,6 +16,7 @@ import {
   type CampaignState,
   type Region,
 } from './preorder-campaign.ts';
+import {productNameOfSku} from './sales-model.ts';
 
 export type Words = (key: string, fallback: string, vars?: Record<string, string | number>) => string;
 
@@ -52,13 +53,11 @@ function scopeOf(regions: Batch['regions'], words: Words): string {
 
 /**
  * The product a shipsWith SKU waits for ("OpenFC Lite"), from its lead SKU.
- * Null without a lead.
+ * Null without a lead, or for a lead SKU no product file lists.
  */
-export function leadName(sku: string | null | undefined, words: Words): string | null {
-  if (!sku) return null;
-  if (sku.startsWith('OPENFC')) return words('lead_openfc', 'OpenFC Lite');
-  if (sku.startsWith('OPENFRAME')) return words('lead_openframe', 'OpenFrame');
-  return null;
+export function leadName(sku: string | null | undefined, _words?: Words): string | null {
+  // `name` and `skus` in content/products/<handle>.json (sales-model.ts).
+  return productNameOfSku(sku);
 }
 
 type LabelCampaign = Partial<Pick<CampaignState, 'shipsWith'>>;

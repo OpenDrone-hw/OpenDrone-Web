@@ -77,7 +77,7 @@
   "checkout_shops_notify": "Get launch news",
   "checkout_closed": "Orders are not open for {country}.",
   "us_price_note": "Duties included",
-  "check_us_eu_only": "An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.",
+  "check_us_eu_only": "An item in your cart ships to {{stock_scope}} addresses only. Remove it or choose an {{stock_scope}} delivery country.",
   "check_market": "Your cart moved to your delivery country's prices. Check the total below.",
   "checkout_shops_us": "Consumer checkout is not available for this destination.",
   "us_reprice": "This cart was priced for the EU. Checkout moves it to US prices and ship dates first.",
@@ -89,7 +89,7 @@
   "ship_to_failed": "Could not change the country. Try again.",
   "international_note": "Shipping is confirmed at checkout. Import VAT and duties are paid by you on delivery.",
   "international_note_near": "Shipping is confirmed at checkout.",
-  "check_non_eu_only": "An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.",
+  "check_non_eu_only": "An item in your cart ships to {{stock_scope}} addresses only. Remove it or choose an {{stock_scope}} delivery country.",
   "bundle_total_one": "1 part, {price}",
   "bundle_add_one": "Add {name}"
 }

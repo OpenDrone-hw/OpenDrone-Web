@@ -1050,10 +1050,14 @@ export function shipsWithState(
           ordered: 0,
         }]
       : [];
+  // Pinned to stock on hand with no unit count of its own (a strap that
+  // ships with batch 1): it is stock, sold without a cap, not a pre-order.
+  const onHand = !fromStock && rule.stock === undefined && batch !== undefined && Boolean(lead.batches[batch - 1]?.paid && lead.batches[batch - 1]?.inStock);
   return {
     ...state,
     batches: [...skipped, ...state.batches, ...upcoming],
-    paidStock: fromStock,
+    paidStock: fromStock || onHand,
+    ...(onHand ? {inStock: true} : {}),
     paidLeft: fromStock ? rule.stock! - own : null,
     shipsWith: rule.sku,
     earlyPrice: false,
