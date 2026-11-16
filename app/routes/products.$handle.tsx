@@ -2160,6 +2160,7 @@ function ProductPage() {
                 label: stackOn
                   ? say('product-chrome.offer_cta_stack', 'Buy the stack now')
                   : say('product-chrome.buy_cta_buy_now', 'Buy now'),
+                addUrl: commerceHandoff.addUrl,
               }
             : null
         }

@@ -5,7 +5,7 @@ import {ExpressBuy} from './ExpressBuy';
 import {useGeoInStock} from './ShipChip';
 import {useComingSoon, useProductStatus} from '~/lib/coming-soon';
 import {copyFill, copyText} from '~/lib/copy';
-import {formatPrice} from '~/lib/catalog';
+import {cartAddUrl, formatPrice} from '~/lib/catalog';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionProps} from '~/lib/growth/attribution';
 import type {
@@ -42,7 +42,7 @@ export function ProductForm({
   buyAside?: React.ReactNode;
   /** The Buy now lane: the button goes straight to a checkout of these
    *  in-stock lines (times the quantity) instead of adding to the cart. */
-  express?: {lines: ReadonlyArray<{sku: string; quantity: number}>; label: string} | null;
+  express?: {lines: ReadonlyArray<{sku: string; quantity: number}>; label: string; /** The cart action: unset, no "Add to cart" beside Buy now. */ addUrl?: string} | null;
   productOptions: MappedProductOptions[];
   selectedVariant: ProductVariantFragment | null;
   /** Option names already handled elsewhere (e.g. the comparison ladder
@@ -260,9 +260,22 @@ export function ProductForm({
         </div>
       ) : null}
       {express ? (
+        <>
         <ExpressBuy lines={express.lines} quantity={qty} product={selectedVariant?.product?.handle} disabled={disabled}>
           {express.label}
         </ExpressBuy>
+        {express.addUrl ? (
+          // Same lines as Buy now, into the session cart like the menu's add.
+          <AddToCartButton
+            className="od-btn od-btn-secondary buy-add-cart"
+            href={cartAddUrl(express.addUrl, express.lines.map((l) => ({sku: l.sku, quantity: l.quantity * qty})))}
+            disabled={disabled}
+            product={selectedVariant?.product?.handle}
+          >
+            {copyText('product-chrome.buy_cta_add') ?? 'Add to cart'}
+          </AddToCartButton>
+        ) : null}
+        </>
       ) : (
       <AddToCartButton
         href={href}

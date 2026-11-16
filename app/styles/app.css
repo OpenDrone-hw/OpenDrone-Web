@@ -19530,3 +19530,8 @@ a.product-buy-vat-link:focus-visible {
   text-transform: none;
   margin-bottom: 0.5rem;
 }
+/* "Add to cart" under the qty + Buy now row: its own full-width line. */
+.product-form .add-to-cart-form > button.buy-add-cart,
+.product-buy .product-form:has(> .product-qty) > .product-qty ~ .add-to-cart-form > button.buy-add-cart {
+  flex: 1 1 100%;
+}
