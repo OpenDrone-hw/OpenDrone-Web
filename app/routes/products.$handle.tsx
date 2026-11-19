@@ -747,7 +747,10 @@ function useChapterReveal(key: string) {
           }
         }
       },
-      {rootMargin: '0px 0px -15% 0px', threshold: 0.05},
+      // Bottom dead zone kept small: the fixed availability bar pushes the
+      // page down by its height, and at -15% the first chapter then sat inside
+      // the zone (visible but opacity 0) until the first scroll.
+      {rootMargin: '0px 0px -6% 0px', threshold: 0.05},
     );
     chapters.forEach((el) => io.observe(el));
     // A chapter that mounts later (a variant switch adds one) is observed too;
