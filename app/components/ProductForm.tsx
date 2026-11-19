@@ -267,7 +267,6 @@ export function ProductForm({
         {express.addUrl ? (
           // Same lines as Buy now, into the session cart like the menu's add.
           <AddToCartButton
-            className="od-btn od-btn-secondary buy-add-cart"
             href={cartAddUrl(express.addUrl, express.lines.map((l) => ({sku: l.sku, quantity: l.quantity * qty})))}
             disabled={disabled}
             product={selectedVariant?.product?.handle}

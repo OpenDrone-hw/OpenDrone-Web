@@ -2586,6 +2586,18 @@ body:has(.avail-bar) #site-mobile-drawer aside .aside-body {
     margin-top: calc(-1 * var(--sp-1));
   }
 }
+/* The buy button(s) (Buy now + Add to cart, or Pre-order) share the row with the stepper and fill it: the stack
+   total leaves the row (its own line under the buttons, nothing when empty). */
+.product-buy .product-form:has(> .add-to-cart-form) > .buy-total {
+  flex: 1 1 100%;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.375rem;
+}
+.product-buy .product-form:has(> .add-to-cart-form) > .buy-total:empty {
+  display: none;
+}
 .buy-total-amount { font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); white-space: nowrap; }
 .offer-card-line {
   font-size: var(--fs-xs);
