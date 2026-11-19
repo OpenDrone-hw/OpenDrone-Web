@@ -2586,6 +2586,16 @@ body:has(.avail-bar) #site-mobile-drawer aside .aside-body {
     margin-top: calc(-1 * var(--sp-1));
   }
 }
+/* Phones: the stepper takes its own line, the buttons share the next one at full size. */
+@media (max-width: 520px) {
+  .product-buy .product-form:has(> .add-to-cart-form) > .product-qty {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+  .product-buy .product-form:has(> .add-to-cart-form) .btn-label {
+    white-space: nowrap;
+  }
+}
 /* The buy button(s) (Buy now + Add to cart, or Pre-order) share the row with the stepper and fill it: the stack
    total leaves the row (its own line under the buttons, nothing when empty). */
 .product-buy .product-form:has(> .add-to-cart-form) > .buy-total {
