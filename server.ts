@@ -6,6 +6,7 @@ import {tokenEndpointReachable} from '~/lib/accounts/oauth';
 import {purgeExpired} from '~/lib/accounts/sessions';
 import {handleAppMedia} from '~/lib/commerce/app-media';
 import {handleVideoLink} from '~/lib/commerce/video-links';
+import {warmPaidCounts} from '~/lib/catalog-client';
 import {createAppLoadContext} from '~/lib/context';
 import {handleStagingFirmware} from '~/lib/flasher/staging-serve';
 import {stagingChallenge, stagingCredentialsOk} from '~/lib/staging-auth';
@@ -171,6 +172,8 @@ async function handleFetch(
   }
 }
 
+const WARM_CRON = '* * * * *';
+
 export default {
   async fetch(
     request: Request,
@@ -205,7 +208,12 @@ export default {
    * Pilot map (app/lib/pilot-map-data.ts): delete pins 24 months after their
    *   consent, whatever PILOT_MAP_ENABLED says.
    */
-  async scheduled(_event: unknown, env: Env, executionContext: ExecutionContext): Promise<void> {
+  async scheduled(event: unknown, env: Env, executionContext: ExecutionContext): Promise<void> {
+    // Every minute: only warm the paid counts (wrangler.production.toml).
+    // The five-minute run does that too, then the jobs below.
+    const waitUntil = (p: Promise<unknown>) => executionContext.waitUntil(p);
+    executionContext.waitUntil(warmPaidCounts(env, waitUntil));
+    if ((event as {cron?: string} | null)?.cron === WARM_CRON) return;
     if (priceTierWritesEnabled(env) || preorderHoldsEnabled(env)) {
       executionContext.waitUntil(
         (async () => {

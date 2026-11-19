@@ -66,11 +66,17 @@ export function buyerRegion(request: Request | undefined, env: Pick<Env, 'PUBLIC
   return isUsQuote(quote) ? 'US' : isInternationalQuote(quote) ? internationalRegion(quote?.country) : 'EU';
 }
 
-async function withCampaign(env: Env, catalog: Catalog, region: Region, dealer = false): Promise<Catalog> {
+async function withCampaign(
+  env: Env,
+  catalog: Catalog,
+  region: Region,
+  dealer = false,
+  waitUntil?: (p: Promise<unknown>) => void,
+): Promise<Catalog> {
   // A closed store has no campaign preorder variant and never calls the
   // Admin API. Its campaign SKUs still never show a compare-at price.
   if (!needsCampaignCounts(catalog, CAMPAIGN, region)) return {...catalog, campaign_skus: campaignSkus(CAMPAIGN)};
-  const units = await paidUnitRuns(env, CAMPAIGN.countFrom, CAMPAIGN_SKUS, fetch, Date.now, CAMPAIGN).catch(
+  const units = await paidUnitRuns(env, CAMPAIGN.countFrom, CAMPAIGN_SKUS, fetch, Date.now, CAMPAIGN, waitUntil).catch(
     (error: unknown) => {
       console.error(
         '[preorders] paid counts unavailable, closing campaign SKUs',
@@ -83,17 +89,39 @@ async function withCampaign(env: Env, catalog: Catalog, region: Region, dealer =
 }
 
 
+/** Cron: keep this location's shared paid counts warm so the first visitor
+ *  after a quiet minute does not wait on the Admin API. Never throws. */
+export async function warmPaidCounts(env: Env, waitUntil: (p: Promise<unknown>) => void): Promise<void> {
+  await paidUnitRuns(env, CAMPAIGN.countFrom, CAMPAIGN_SKUS, fetch, Date.now, CAMPAIGN, waitUntil).catch(
+    (error: unknown) => console.error('[preorders] warm counts failed', error instanceof Error ? error.message : error),
+  );
+}
+
 /**
  * `dealer`: the session carries an applied wholesale code (`DEALER_SESSION_KEY`).
  * Outside the EU (and outside the US, which has its own partner) such a buyer
  * is offered batch 1 stock too; the express checkout checks the code again.
  */
-export function createCatalogClient({env, request, dealer = false}: {env: Env; request?: Request; dealer?: boolean}): CatalogClient {
+export function createCatalogClient({
+  env,
+  request,
+  dealer = false,
+  waitUntil,
+}: {
+  env: Env;
+  request?: Request;
+  dealer?: boolean;
+  waitUntil?: (p: Promise<unknown>) => void;
+}): CatalogClient {
   if (appCommerceEnabled(env)) return appCatalogClient(env);
   const cached = catalogReader(env, request, dealer, (market = 'default') =>
-    memoCatalog(market, () =>
-      market === 'default' ? fetchShopifyCatalog(env) : fetchShopifyCatalog(env, fetch, market),
+    memoCatalog(
+      market,
+      () => (market === 'default' ? fetchShopifyCatalog(env) : fetchShopifyCatalog(env, fetch, market)),
+      Date.now,
+      waitUntil,
     ),
+    waitUntil,
   );
   const read = (market = 'default') =>
     market === 'default' ? fetchShopifyCatalog(env) : fetchShopifyCatalog(env, fetch, market);
@@ -109,10 +137,11 @@ function catalogReader(
   request: Request | undefined,
   dealer: boolean,
   load: (market?: string) => Promise<Catalog>,
+  waitUntil?: (p: Promise<unknown>) => void,
 ): CatalogReader {
   const region = buyerRegion(request, env);
   const country = request ? shipCountryForRequest(request) ?? undefined : undefined;
-  const get = async () => withCampaign(env, await load('default'), 'EU');
+  const get = async () => withCampaign(env, await load('default'), 'EU', false, waitUntil);
   const forRegion = async (target: Region, destination = country, exportStock = false): Promise<Catalog> => {
     if (target === 'EU') return get();
     if (isInternationalRegion(target) && !destination) throw new Error('catalog: international destination missing');
@@ -126,7 +155,7 @@ function catalogReader(
         return null;
       }),
     ]);
-    const campaign = await withCampaign(env, catalog, target, exportStock && target !== 'US');
+    const campaign = await withCampaign(env, catalog, target, exportStock && target !== 'US', waitUntil);
     return target === 'US' ? withMarketPrices(campaign, market, CAMPAIGN) : withInternationalPrices(campaign, market);
   };
   // The Buy now lane only where the visitor's region has it (region.ts

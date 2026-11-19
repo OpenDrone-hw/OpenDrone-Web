@@ -44,6 +44,6 @@ export async function createAppLoadContext(
     session,
     cache,
     waitUntil,
-    catalog: createCatalogClient({env, request, dealer: Boolean(session.get(DEALER_SESSION_KEY))}),
+    catalog: createCatalogClient({env, request, dealer: Boolean(session.get(DEALER_SESSION_KEY)), waitUntil}),
   };
 }

@@ -180,6 +180,37 @@ describe('paidUnitRuns after a failed read', () => {
   });
 });
 
+describe('paidUnitRuns refresh-ahead', () => {
+  it('serves counts over 5 s old and refreshes behind the response, once', async () => {
+    let clock = 0;
+    const now = () => clock;
+    let calls = 0;
+    const good = async () => { calls += 1; return page([{displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', calls]]}]); };
+    const pending: Promise<unknown>[] = [];
+    const waitUntil = (p: Promise<unknown>) => void pending.push(p);
+    const first = await paidUnitRuns(ENV, '2026-09-21', SKUS, good, now, undefined, waitUntil);
+    clock = 3_000;
+    await paidUnitRuns(ENV, '2026-09-21', SKUS, good, now, undefined, waitUntil);
+    assert.equal(pending.length, 0, 'young counts: no refresh');
+    clock = 10_000;
+    assert.deepEqual(await paidUnitRuns(ENV, '2026-09-21', SKUS, good, now, undefined, waitUntil), first);
+    await paidUnitRuns(ENV, '2026-09-21', SKUS, good, now, undefined, waitUntil);
+    assert.equal(pending.length, 1, 'one refresh in flight');
+    await Promise.all(pending);
+    assert.equal(calls, 2);
+    assert.notDeepEqual(await paidUnitRuns(ENV, '2026-09-21', SKUS, good, now, undefined, waitUntil), first);
+  });
+  it('does not refresh without a waitUntil', async () => {
+    let clock = 0;
+    let calls = 0;
+    const good = async () => { calls += 1; return page([{displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 1]]}]); };
+    await paidUnitRuns(ENV, '2026-09-21', SKUS, good, () => clock);
+    clock = 10_000;
+    await paidUnitRuns(ENV, '2026-09-21', SKUS, good, () => clock);
+    assert.equal(calls, 1);
+  });
+});
+
 describe('fetchPaidUnitRuns', () => {
   it('keeps each unit\'s shipping region in order, merging neighbours', async () => {
     assert.match(PAID_ORDERS_QUERY, /shippingAddress \{ countryCodeV2 \}/);

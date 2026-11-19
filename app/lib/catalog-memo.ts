@@ -16,6 +16,12 @@ export const CATALOG_TTL_MS = 60_000;
  *  the switch just read (cart-replan.ts), and the switch marker lives. */
 export const REPLAN_REUSE_MS = 15_000;
 
+/** With a `waitUntil`, a page may show a catalog up to this old while a
+ *  background read replaces it, so a visitor after the minute lapses (or the
+ *  first one on a warm isolate) does not wait on Shopify. Older than this,
+ *  the page waits for a fresh read. */
+export const CATALOG_STALE_MS = 2 * CATALOG_TTL_MS;
+
 const catalogMemo = new Map<string, {catalog: Catalog; fetchedAt: number}>();
 
 /** The Shopify catalog for `market`, from the memo while it is younger than
@@ -27,10 +33,23 @@ export async function memoCatalog(
   market: string,
   load: () => Promise<Catalog>,
   now: () => number = Date.now,
+  waitUntil?: (p: Promise<unknown>) => void,
 ): Promise<Catalog> {
   const hit = catalogMemo.get(market);
-  if (hit && now() - hit.fetchedAt < CATALOG_TTL_MS) return structuredClone(hit.catalog);
+  const age = hit ? now() - hit.fetchedAt : Infinity;
+  if (hit && age < CATALOG_TTL_MS) return structuredClone(hit.catalog);
   const startedAt = now();
+  if (hit && waitUntil && age < CATALOG_STALE_MS) {
+    // Stale but recent: answer now, refresh behind the response. The read is
+    // owned by this request's waitUntil (never shared), and a failure keeps
+    // the older catalog until the next request retries.
+    waitUntil(
+      load()
+        .then((fresh) => rememberCatalog(market, fresh, startedAt))
+        .catch(() => undefined),
+    );
+    return structuredClone(hit.catalog);
+  }
   const catalog = await load();
   rememberCatalog(market, catalog, startedAt);
   return structuredClone(catalog);
