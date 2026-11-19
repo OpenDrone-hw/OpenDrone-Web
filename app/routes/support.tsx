@@ -2,7 +2,7 @@ import {useEffect, useRef, useState, type FormEvent} from 'react';
 import {data, Form, Link, redirect, useActionData, useLoaderData, useNavigate, useRouteLoaderData} from 'react-router';
 import {Search, Sparkles, Zap} from 'lucide-react';
 import type {Route} from './+types/support';
-import {buildSeoMeta} from '~/lib/seo';
+import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {DISCORD_INVITE_URL, getCompanyIdentity} from '~/lib/company';
 import {legalHref} from '~/components/LangToggle';
@@ -51,6 +51,7 @@ export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
     title: copyText('support.meta_title') ?? 'Support',
     description: copyText('support.meta_description') ?? '',
+    canonical: `${SITE_ORIGIN}/support`,
   });
 
 const t = (key: string, vars: Record<string, string> = {}) => fill(copyText(`support.${key}`), vars);
