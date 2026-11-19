@@ -729,7 +729,7 @@ describe('decisions 2026-11-11: where stock ships, and who buys it outside the E
     assert.equal(Object.values(cartLineInfo(motor, ordinary()))[0].euOnly, false);
   });
 
-  describe('wholesale exports: Buy now outside the EU only with an applied wholesale code', () => {
+  describe('wholesale: the applied code goes on the Buy now checkout; outside the EU Buy now only with one', () => {
     const EXPRESS_CHECKOUT = 'https://checkout.opendrone.be/checkouts/cn/export';
     const buy = (country: string, codes: Array<{code: string; applicable: boolean}> | undefined) => {
       const made: CartLineInput[][] = [];
@@ -769,6 +769,25 @@ describe('decisions 2026-11-11: where stock ships, and who buys it outside the E
         assert.deepEqual(made[0].map((l) => [l.merchandiseId, l.quantity]), [[CHOICE_IDS[FC].buyNow, 2]], country);
         assert.deepEqual(applied, [['cart-export', ['WS25-FPV24', 'WS25-FPV24-G2', 'WS25-FPV24-G3', 'WS25-FPV24-G4']]], country);
         assert.equal(catalogs[0][1], true, 'the catalog read keeps the stock offer for the export');
+      }
+    });
+
+    it('a retailer in the EU with an applied wholesale code gets the codes on the Buy now checkout too', async () => {
+      for (const country of ['BE', 'NL']) {
+        const {response, made, applied, catalogs} = buy(country, [{code: 'WS25-FPV24', applicable: true}]);
+        assert.equal((await response).headers.get('Location'), EXPRESS_CHECKOUT, country);
+        assert.deepEqual(made[0].map((l) => [l.merchandiseId, l.quantity]), [[CHOICE_IDS[FC].buyNow, 2]], country);
+        assert.deepEqual(applied, [['cart-export', ['WS25-FPV24', 'WS25-FPV24-G2', 'WS25-FPV24-G3', 'WS25-FPV24-G4']]], country);
+        assert.equal(catalogs[0][1], false, 'an EU catalog read is the ordinary one');
+      }
+    });
+
+    it('an EU consumer buys now without any code', async () => {
+      for (const codes of [undefined, [{code: 'SUMMER10', applicable: true}], [{code: 'WS25-FPV24', applicable: false}]]) {
+        const {response, made, applied} = buy('NL', codes);
+        assert.equal((await response).headers.get('Location'), EXPRESS_CHECKOUT, JSON.stringify(codes));
+        assert.equal(made.length, 1);
+        assert.deepEqual(applied, []);
       }
     });
 
