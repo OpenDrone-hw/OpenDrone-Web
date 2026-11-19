@@ -23,6 +23,15 @@ describe('cartWholesaleCode', () => {
     assert.equal(cartWholesaleCode([{code: 'WS25-X1-G3', applicable: true}]), null);
     assert.equal(cartWholesaleCode(undefined), null);
   });
+  it('counts as applied when only a companion applies (a cart of one price group)', () => {
+    const codes = [
+      {code: 'WS25-FPV24', applicable: false},
+      {code: 'WS25-FPV24-G2', applicable: true},
+      {code: 'WS25-FPV24-G3', applicable: false},
+    ];
+    assert.deepEqual(cartWholesaleCode(codes), {code: 'WS25-FPV24', applicable: true});
+    assert.deepEqual(cartWholesaleCode([{code: 'WS25-FPV24', applicable: false}, {code: 'WS25-OTHER-G2', applicable: true}]), {code: 'WS25-FPV24', applicable: false});
+  });
 });
 
 describe('the cart shows the wholesale code field to retailers only', () => {

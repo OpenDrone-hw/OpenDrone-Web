@@ -675,12 +675,13 @@ export const CART_CHECK = {
 /** The add field naming the offer of a board: `preorder` or `buy_now` (the default). */
 export const OFFER_FIELD = 'offer';
 /** Why an add of an in-stock board is refused. */
-export const BUY_NOW_NOT_IN_CART = 'In-stock boards are bought now from their product page and do not go in the cart.';
+export const BUY_NOW_NOT_IN_CART = 'In-stock boards ship to EU addresses only.';
 /**
  * True when a board bought as "Buy now" (retail, batch 1 stock) shares the
- * cart with a line of the March batch. The cart takes pre-orders only, so
- * only a cart built outside the site gets here; checkout refuses it, because
- * such an order would ship whole in March and nobody pays retail for that.
+ * cart with a line of the March batch. Checkout refuses it, because such an
+ * order would ship whole in March and nobody pays retail for that: the cart
+ * offers to keep everything together as pre-orders or check out the in-stock
+ * boards first.
  */
 export function batchChoiceConflict(
   cart: Pick<ShopifyCart, 'lines'>,
@@ -691,10 +692,10 @@ export function batchChoiceConflict(
 }
 
 /**
- * The express purchase of in-stock boards (the "Buy now" lane): a Shopify
- * cart of its own, made for this one checkout and never stored as the
- * session cart, so nothing else can join that order and the session cart
- * holds pre-orders only.
+ * The express purchase of in-stock boards (the "Buy now" shortcut): a
+ * Shopify cart of its own, made for this one checkout and never stored as
+ * the session cart, so nothing else can join that order. Adding to the cart
+ * is the main path; this skips it.
  */
 export const EXPRESS_INTENT = 'buy-now';
 /** The query parameter an express purchase that cannot go ahead returns with. */
@@ -704,11 +705,11 @@ export const EXPRESS_REFUSED = {region: 'eu-only', stock: 'sold-out'} as const;
 export type ExpressRefusal = (typeof EXPRESS_REFUSED)[keyof typeof EXPRESS_REFUSED];
 
 /**
- * A cart from before the two lanes may hold a Buy now (in-stock) board. The
- * cart is the pre-order lane, so each such line moves to the Pre-order
- * variant of the same board, same quantity, instead of asking the buyer to
- * remove it by hand. Lines whose board has no pre-order variant in this
- * catalog are left alone.
+ * An in-stock (Buy now) board line where this catalog no longer sells it in
+ * stock (outside the EU, or batch 1 gone) moves to the Pre-order variant of
+ * the same board, same quantity, instead of asking the buyer to remove it by
+ * hand. A line the catalog still sells in stock stays. Lines whose board has
+ * no pre-order variant in this catalog are left alone.
  */
 export function buyNowToPreorder(cart: Pick<ShopifyCart, 'lines'>, catalog: Catalog): CartLineUpdate[] {
   const moves: CartLineUpdate[] = [];
@@ -718,11 +719,29 @@ export function buyNowToPreorder(cart: Pick<ShopifyCart, 'lines'>, catalog: Cata
     if (line.offer !== 'buy_now') continue;
     const variant = bySku(catalog, line.sku)?.variant;
     if (!variant) continue;
-    const target = variant.offer === 'buy_now' ? variant.preorder_offer?.merchandise_id : variant.merchandise_id;
+    if (variant.offer === 'buy_now') continue;
+    const target = variant.merchandise_id;
     if (target && target !== line.merchandiseId) moves.push({id: line.id, quantity: line.quantity, merchandiseId: target});
   }
   return moves;
 }
+
+/** Every in-stock (Buy now) board line to the Pre-order variant of the same
+ *  board, same quantity: the buyer chose to keep a mixed cart in one order,
+ *  which ships with the March batch at the pre-order price. */
+export function keepTogetherMoves(cart: Pick<ShopifyCart, 'lines'>, catalog: Catalog): CartLineUpdate[] {
+  const moves: CartLineUpdate[] = [];
+  for (const line of cart.lines) {
+    if (line.offer !== 'buy_now') continue;
+    const variant = bySku(catalog, line.sku)?.variant;
+    const target = variant?.offer === 'buy_now' ? variant.preorder_offer?.merchandise_id : variant?.merchandise_id;
+    if (target && target !== line.merchandiseId) moves.push({id: line.id, quantity: line.quantity, merchandiseId: target});
+  }
+  return moves;
+}
+
+/** The intent of the cart's "keep everything together" button (`keepTogetherMoves`). */
+export const KEEP_TOGETHER_INTENT = 'keep-together';
 
 /** True when this catalog sells in-stock boards to its buyer (the EU while batch 1 lasts). */
 export function sellsBuyNow(catalog: Catalog): boolean {
@@ -759,7 +778,7 @@ export function expressLines(
   region: Region,
   globalComingSoon: boolean,
   euStockKnown = true,
-  /** A verified wholesale export (`exportWholesaleCodes`): outside the EU allowed. */
+  /** A verified wholesale export (`wholesaleExpressCodes` outside the EU): outside the EU allowed. */
   dealer = false,
 ): {lines: CartLineInput[]} | {refused: ExpressRefusal} {
   if (region !== 'EU' && !(dealer && isInternationalRegion(region))) return {refused: EXPRESS_REFUSED.region};
@@ -777,16 +796,18 @@ export function expressLines(
 }
 
 /**
- * The wholesale codes of a retailer buying stock for outside the EU, or null
- * for anyone else: the session cart must carry a wholesale main code that
- * Shopify applies. The US is left out (its stock goes through the US partner).
+ * The wholesale codes of a retailer buying stock, in the EU or outside it, or
+ * null for anyone else: the session cart must carry a wholesale main code
+ * that Shopify applies. The Buy now checkout is a cart of its own, so without
+ * this an EU retailer paid retail for in-stock boards. The US is left out
+ * (its stock goes through the US partner).
  */
-export async function exportWholesaleCodes(
+export async function wholesaleExpressCodes(
   region: Region,
   cartId: string | undefined,
   dependencies: Pick<ShopifyCartDependencies, 'getCart' | 'setDiscountCodes'>,
 ): Promise<string[] | null> {
-  if (!isInternationalRegion(region) || !cartId || !dependencies.getCart || !dependencies.setDiscountCodes) return null;
+  if ((region !== 'EU' && !isInternationalRegion(region)) || !cartId || !dependencies.getCart || !dependencies.setDiscountCodes) return null;
   const cart = await dependencies.getCart(cartId);
   const code = cartWholesaleCode(cart?.discountCodes);
   return code?.applicable ? wholesaleCodes(code.code.toUpperCase()) : null;
@@ -900,12 +921,26 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         dependencies.logError?.(`wholesale code not applied: ${error instanceof Error ? error.message : 'unknown error'}`);
         return redirect(wholesaleCartPath(CART_CHECK.codeFailed));
       }
-      if (main && applied && !applied.some((c) => c.code.toUpperCase() === main && c.applicable)) {
+      if (main && applied && !cartWholesaleCode(applied)?.applicable) {
         return redirect(wholesaleCartPath(CART_CHECK.codeNotApplied));
       }
       // Applied or cleared: the field shows with the applied code, or not at all.
       dependencies.setDealer?.(main);
       return redirect(main ? '/cart' : wholesaleCartPath());
+    }
+
+    if (intent === KEEP_TOGETHER_INTENT) {
+      if (!existingId || !dependencies.getCart) throw fail('Cart is empty.', 409);
+      const [current, catalog] = await Promise.all([
+        dependencies.getCart(existingId),
+        dependencies.fetchCatalog(region, destination?.country),
+      ]);
+      const moves = current ? keepTogetherMoves(current, catalog) : [];
+      if (moves.length) {
+        if (!dependencies.updateCartLines) throw new Error('shopify: update dependency missing');
+        await dependencies.updateCartLines(existingId, moves);
+      }
+      return redirect('/cart');
     }
 
     if (intent === 'update' || intent === 'remove') {
@@ -970,14 +1005,16 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       if (!destination || destination.kind !== 'direct') {
         return redirect(expressReturn(form, EXPRESS_REFUSED.region));
       }
-      // Consumers: EU addresses only. A retailer outside the EU (and the US)
+      // Consumers: EU addresses only. A retailer outside the EU (not the US)
       // whose session cart carries an applied wholesale code buys from the
-      // same stock, shipped by courier (founder 2026-11-11).
-      const dealerCodes = region === 'EU' ? null : await exportWholesaleCodes(region, existingId, dependencies);
-      if (region !== 'EU' && !dealerCodes) return redirect(expressReturn(form, EXPRESS_REFUSED.region));
+      // same stock, shipped by courier (founder 2026-11-11). A retailer in
+      // the EU gets the same codes on this checkout.
+      const dealerCodes = await wholesaleExpressCodes(region, existingId, dependencies);
+      const exporting = region !== 'EU' && Boolean(dealerCodes);
+      if (region !== 'EU' && !exporting) return redirect(expressReturn(form, EXPRESS_REFUSED.region));
       const requested = requestedLines(form);
-      const catalog = await dependencies.fetchCatalog(region, destination.country, Boolean(dealerCodes));
-      const plan = expressLines(catalog, requested, region, globalComingSoon, euStockKnown, Boolean(dealerCodes));
+      const catalog = await dependencies.fetchCatalog(region, destination.country, exporting);
+      const plan = expressLines(catalog, requested, region, globalComingSoon, euStockKnown, exporting);
       if ('refused' in plan) return redirect(expressReturn(form, plan.refused));
       const express = await dependencies.createCart(plan.lines, cartCountryFor(destination.country, dependencies.registrations, usRate));
       // The retailer's price: the same codes on the express cart.
@@ -1082,10 +1119,12 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       throw fail(destinationMessage(destination.kind, true), 403);
     }
     const requested = requestedLines(form);
-    // The cart holds pre-orders only: a board in stock is bought now through
-    // its own express checkout (EXPRESS_INTENT), never added here.
+    // A board with both offers goes in as the card the buyer chose:
+    // `offer=buy_now` takes the in-stock variant (EU, while batch 1 lasts),
+    // anything else its pre-order. A mixed cart is resolved at checkout
+    // (`batchChoiceConflict`).
     const offer = form.get(OFFER_FIELD);
-    if (offer !== null && offer !== 'preorder') throw fail('Invalid cart offer.', 400);
+    if (offer !== null && offer !== 'preorder' && offer !== 'buy_now') throw fail('Invalid cart offer.', 400);
     const catalog = await dependencies.fetchCatalog(region, destination?.country);
     const lines: CartLineInput[] = requested.map(({sku, quantity}) => {
       const match = bySku(catalog, sku);
@@ -1093,12 +1132,12 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         ? sellableVariant(catalog, match.variant.merchandise_id, globalComingSoon)
         : null;
       if (!primary?.merchandise_id) throw fail('Product is unavailable.', 409);
-      // A board with both offers goes in as its pre-order; every other
-      // product has one offer and takes it either way.
-      const variant = preorderView(primary) ?? primary;
+      // Every other product has one offer and takes it either way.
+      const inStock = offer === 'buy_now' && region === 'EU' && isBuyNowOnly(primary);
+      const variant = inStock ? primary : (preorderView(primary) ?? primary);
       if (!variant.merchandise_id) throw fail('Product is unavailable.', 409);
-      // Only while pre-orders exist is the cart the pre-order lane.
-      if (isBuyNowOnly(variant) && catalogHasPreorders(catalog)) throw fail(BUY_NOW_NOT_IN_CART, 409);
+      // In stock only in the EU: elsewhere such a board has no pre-order to fall back to.
+      if (isBuyNowOnly(variant) && catalogHasPreorders(catalog) && region !== 'EU') throw fail(BUY_NOW_NOT_IN_CART, 409);
       if (region !== 'EU' && euOnlyStock(variant, catalog)) throw fail(region === 'US' ? US_EU_ONLY_MESSAGE : STOCK_ONLY_MESSAGE, 409);
       const attributes = lineAttributes(variant, region, euStockKnown);
       return attributes

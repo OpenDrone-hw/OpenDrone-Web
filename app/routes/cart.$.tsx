@@ -10,10 +10,10 @@ import {
   CART_CHECK,
   DATES_SEEN_FIELD,
   batchChoiceConflict,
+  KEEP_TOGETHER_INTENT,
   buyNowToPreorder,
   cartCurrencyMisses,
   cartLineInfo,
-  sellsBuyNow,
   shopShownOpen,
   hasMixedShipDates,
   loadSessionCart,
@@ -144,7 +144,7 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   let info: Record<string, CartLineInfo> = {};
   let replanned: string | null = null;
   let payments: string[] = [];
-  let movedToPreorder: 'stock-region' | 'elsewhere' | null = null;
+  let movedToPreorder = false;
   let notPriced: {currency: string; lines: string[]} | null = null;
   const country = shipCountryForRequest(request);
   if (cart?.lines.length) {
@@ -165,16 +165,15 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
       logError: (message: string, error?: unknown) => console.error(`[shopify-cart] ${message}`, error instanceof Error ? error.message : 'unknown error'),
     };
     let plan = await planCartPage(cart, destination, context.env, cartReplannedFor(request.headers.get('Cookie')), planDependencies);
-    // A cart from before the two lanes: its in-stock boards move to the
-    // pre-order variant of the same board, then the cart is planned again
-    // (ship promise, batch) for that variant.
+    // In-stock boards this destination cannot get in stock (outside the EU,
+    // or batch 1 gone) move to the pre-order variant of the same board, then
+    // the cart is planned again (ship promise, batch) for that variant.
     const moves = batchChoiceOn(context.env) && plan.catalog ? buyNowToPreorder(plan.cart, plan.catalog) : [];
     if (moves.length && plan.catalog) {
       try {
-        const sellsNow = sellsBuyNow(plan.catalog);
         const updated = await updateCartLines(context.env, plan.cart.id, moves);
         plan = await planCartPage(updated, destination, context.env, null, planDependencies);
-        movedToPreorder = sellsNow ? 'stock-region' : 'elsewhere';
+        movedToPreorder = true;
       } catch (error) {
         console.error('[shopify-cart] moving in-stock boards to pre-order failed', error instanceof Error ? error.message : 'unknown error');
       }
@@ -228,7 +227,7 @@ const CHECK_NOTICES: Record<CartCheck, () => string> = {
   [CART_CHECK.price]: () => t('check_price', 'A price changed. Check the total below.'),
   [CART_CHECK.priceAndDate]: () => t('check_price_and_date', 'A price and a ship date changed. Check the dates and the total below.'),
   [CART_CHECK.mixedDates]: () => t('parcel_note', 'Your order ships in one parcel, when its last item is ready.'),
-  [CART_CHECK.batchChoice]: () => t('check_batch_choice', 'An in-stock board could not be moved to pre-order. Remove it here, or buy it from its product page.'),
+  [CART_CHECK.batchChoice]: () => t('check_batch_choice', 'In-stock boards ship in days, the rest of this cart ships by {date}. One order ships once.', {date: SHIP_BY}),
   [CART_CHECK.usEuOnly]: () => t('check_us_eu_only', 'An item in your cart ships to {{stock_scope}} addresses only. Remove it or choose an {{stock_scope}} delivery country.'),
   [CART_CHECK.market]: () => t('check_market', "Your cart moved to your delivery country's prices. Check the total below."),
 };
@@ -252,7 +251,8 @@ export default function CartPage() {
     storeSplitItems(items);
   };
   // The move to pre-order says it once; the checkout's old refusal is not repeated.
-  const notice = movedToPreorder && check === CART_CHECK.batchChoice ? null : checkNotice(check);
+  // The batch choice shows once, in the cart with its button.
+  const notice = check === CART_CHECK.batchChoice ? null : checkNotice(check);
   const [announcement, setAnnouncement] = useState('');
   // A Ship to switch in flight: the destination gate (Checkout, the shops and
   // blocked notes) follows the picked country at once; Checkout stays
@@ -268,14 +268,7 @@ export default function CartPage() {
       {/* Every cart message: at the top, in the site's notice. */}
       {movedToPreorder ? (
         <Notice dismissible>
-          {movedToPreorder === 'stock-region' ? (
-            <>
-              {t('moved_to_preorder', 'Your in-stock boards were moved to pre-order so everything ships together.')}{' '}
-              {t('moved_to_preorder_now', 'Want them now? Buy them from the product page.')}
-            </>
-          ) : (
-            t('moved_to_preorder_short', 'Your in-stock boards were moved to pre-order.')
-          )}
+          {t('moved_to_preorder_short', 'Your in-stock boards were moved to pre-order.')}
         </Notice>
       ) : null}
       {notPriced ? (
@@ -704,8 +697,17 @@ function PopulatedCart({
               {t('check_non_eu_only', 'An item in your cart ships to {{stock_scope}} addresses only. Remove it or choose an {{stock_scope}} delivery country.')}
             </Notice>
           ) : null}
-          {choiceOpen ? <Notice tone="warn">{CHECK_NOTICES[CART_CHECK.batchChoice]()}</Notice> : null}
-          {together ? (
+          {choiceOpen ? (
+            <Notice tone="warn">
+              {CHECK_NOTICES[CART_CHECK.batchChoice]()}{' '}
+              {t('keep_together_or', 'Pre-order the boards too and everything ships together at the pre-order price, or remove the March items to get the boards now.')}
+              <Form method="post" action="/api/shopify/cart" className="mt-2">
+                <input type="hidden" name="intent" value={KEEP_TOGETHER_INTENT} />
+                <button type="submit" className="btn-secondary btn-sm">{t('keep_together', 'Pre-order everything')}</button>
+              </Form>
+            </Notice>
+          ) : null}
+          {together && !choiceOpen ? (
             <p className="cart-together" data-cart-together>
               {t('together', 'Everything in this cart ships together by {date}.', {date: SHIP_BY})}
             </p>

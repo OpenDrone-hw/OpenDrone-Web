@@ -2160,6 +2160,9 @@ function ProductPage() {
                 label: stackOn
                   ? say('product-chrome.offer_cta_stack', 'Buy the stack now')
                   : say('product-chrome.buy_cta_buy_now', 'Buy now'),
+                addLabel: stackOn
+                  ? say('product-chrome.offer_cta_stack_add', 'Add the stack to cart')
+                  : say('product-chrome.buy_cta_add', 'Add to cart'),
               }
             : null
         }
