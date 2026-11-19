@@ -337,49 +337,6 @@ html {
   start with a small random translate+rotate offset (set per-letter via
   --dx, --dy, --rot in JS) so they "fly in" while the outline draws.
 */
-/*
-  Stroke layer. Two parallel animations:
-    - hw-draw-shape: backwards + forwards on stroke-dashoffset and the
-      fly-in transform: locks the drawn shape after the keyframe ends.
-    - hw-draw-opacity: backwards-only on opacity: fades the stroke in
-      during Phase A, then RELEASES so the inline `opacity: 1 - fill`
-      value takes over once Phase B (fill) starts. This is how the
-      per-letter outline-to-fill handoff stays smooth: as each letter's
-      fill ramps up, its stroke ramps down by the same amount.
-*/
-.hw-strokes .hw-stroke {
-  fill: none;
-  stroke: currentColor;
-  /* vector-effect="non-scaling-stroke" on the path means this width is
-     interpreted in viewport pixels rather than the path's local coord
-     system, so the wireframe stays a consistent thin line regardless
-     of how the SVG is sized or how the inner group is scaled. */
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 100;
-  transform-box: fill-box;
-  transform-origin: center;
-  /* Base opacity = (1 - per-letter fill progress). The draw animation
-     uses fill-mode: backwards (not forwards/both) so the keyframes
-     control opacity ONLY during the run; afterward this calc takes
-     over and the stroke fades as the fill ramps. */
-  opacity: calc(1 - var(--fill-opacity, 0));
-  /* Letters fly in and stitch together. Curve is ease-out-cubic
-     instead of the original quart-ease: quart had so much slow-tail
-     that letters were visually done after ~190ms but the timeline
-     waited another 760ms to fire the next phase. Duration shortened
-     to match perceived motion. fill-mode: backwards so the offset
-     transform is applied BEFORE the delay window: without this the
-     letter sits at rest pose during the delay and the fly-in is
-     invisible. */
-  animation:
-    hw-draw-shape 500ms cubic-bezier(0.33, 1, 0.68, 1) backwards,
-    hw-draw-opacity 500ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  animation-delay: calc(var(--letter-index, 0) * 65ms);
-  will-change: transform, stroke-dashoffset, opacity;
-  transition: opacity 280ms ease-out;
-}
 
 /* Once the parent flags the wordmark as fully filled, kill any
    remaining stroke wireframe completely: no flicker if a per-letter
@@ -411,34 +368,11 @@ html {
   }
 }
 
-/*
-  Phase 2: fill layer. Each glyph has its own per-letter opacity set
-  inline from the React side, computed as a ramp around its progress
-  threshold (letter-index / N). No SVG mask: the letters fade in one at
-  a time as `progress` advances. CSS transition smooths the per-frame
-  jumps coming from the parent's JS lerp.
-*/
-.hw-fills .hw-fill {
-  transition: opacity 70ms ease-out;
-}
-
 .hw-fills .hw-fill--open {
   fill: var(--color-text);
 }
 .hw-fills .hw-fill--drone {
   fill: var(--color-wordmark-gold);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hw-strokes .hw-stroke {
-    animation: none;
-    opacity: 0;
-    transform: none;
-  }
-  .hw-fills .hw-fill {
-    opacity: 1 !important;
-    transition: none;
-  }
 }
 
 /* Settled: the splash is over, the wordmark fades out where it stands. The
@@ -2361,10 +2295,6 @@ button.reset {
   list-style: none;
 }
 
-.cart-line:first-child {
-  padding-top: 0;
-}
-
 .cart-line img {
   width: 72px;
   height: 72px;
@@ -2398,31 +2328,9 @@ button.reset {
   box-shadow: 0 0 24px color-mix(in srgb, var(--color-gold-fill) 30%, transparent);
 }
 
-.cart-checkout-cta:hover {
-  background: var(--color-gold-fill-hover);
-  border-color: var(--color-gold-fill-hover);
-  box-shadow: 0 0 32px color-mix(in srgb, var(--color-gold-fill) 42%, transparent);
-  text-decoration: none;
-  transform: translateY(-1px);
-}
-
-.cart-checkout-cta svg {
-  transition: transform 150ms ease;
-}
-
-.cart-checkout-cta:hover svg {
-  transform: translateX(3px);
-}
-
 /* ============================================
    Product options
    ============================================ */
-
-.product-options-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
 
 .product-options-item {
   padding: 0.25rem 0.75rem;
@@ -2460,11 +2368,6 @@ button.reset {
   padding: 0.5rem 1rem;
   width: 100%;
   font-family: var(--font-mono);
-}
-
-/* Responsive table wrapper for order detail */
-.account-order table {
-  width: 100%;
 }
 @media (max-width: 640px) {
   .account-order-table-wrap {
@@ -2637,16 +2540,6 @@ button.reset {
   border: 1px solid var(--color-border);
 }
 
-/* De-boxed: an empty state is a moment for direction, not a card. Centered
-   text with intentional whitespace reads calmer than a bordered box. */
-.empty-state {
-  padding: var(--sp-7) var(--sp-4);
-  margin: 0 auto;
-  max-width: 32rem;
-  color: var(--color-text-muted);
-  text-align: center;
-}
-
 .products-grid,
 .collections-grid,
 .blogs-grid,
@@ -2688,16 +2581,6 @@ button.reset {
       transform: none;
     }
   }
-  .products-grid > * {
-    animation: grid-card-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-    animation-delay: 0.24s;
-  }
-  .products-grid > *:nth-child(1) { animation-delay: 0.02s; }
-  .products-grid > *:nth-child(2) { animation-delay: 0.06s; }
-  .products-grid > *:nth-child(3) { animation-delay: 0.1s; }
-  .products-grid > *:nth-child(4) { animation-delay: 0.14s; }
-  .products-grid > *:nth-child(5) { animation-delay: 0.18s; }
-  .products-grid > *:nth-child(6) { animation-delay: 0.22s; }
 }
 
 .collections-grid,
@@ -2863,31 +2746,11 @@ button.reset {
   padding-top: 0.25rem;
 }
 
-.product-options-item {
-  min-height: 2.75rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .product-options-item[aria-pressed="true"],
 .product-options-item[aria-current="page"] {
   border-color: var(--color-gold);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-gold) 30%, transparent);
   color: var(--color-text);
-}
-
-/* An option value with a note under its name (the motor's KV per cell count). */
-.product-options-item.has-hint {
-  flex-direction: column;
-  gap: 0.125rem;
-  padding-block: 0.5rem;
-  min-width: 5.5rem;
-}
-.product-options-hint {
-  font-size: 0.6875rem;
-  color: var(--color-text-muted);
-  letter-spacing: 0.02em;
 }
 
 /* The only value an axis has for the chosen earlier option: a label, not a
@@ -2979,11 +2842,6 @@ button.reset {
   pointer-events: none;
 }
 
-.product-gallery-main:focus-visible {
-  outline: 1px solid var(--color-gold);
-  outline-offset: 2px;
-}
-
 .product-gallery-main img {
   width: 100%;
   height: 100%;
@@ -3015,11 +2873,6 @@ button.reset {
   color: var(--color-text-muted);
   border-radius: var(--r-pill);
   transition: color 0.2s ease, background 0.2s ease;
-}
-
-.product-gallery-arrow:hover {
-  color: var(--color-text);
-  background: color-mix(in srgb, var(--color-gold) 15%, transparent);
 }
 
 .product-gallery-counter {
@@ -3255,15 +3108,6 @@ button.reset {
   transition: border-color 0.2s ease, color 0.2s ease;
 }
 
-.collection-sort select:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-field-border));
-}
-
-.collection-sort select:focus-visible {
-  outline: 1px solid var(--color-gold);
-  outline-offset: 2px;
-}
-
 /* ============================================
    All Products: faceted browse (sidebar + grid)
    ============================================ */
@@ -3363,14 +3207,6 @@ button.reset {
      higher on phones. */
   .catalog-filter-head {
     display: none;
-  }
-  .catalog-filter-list {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    gap: 0.5rem;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding-bottom: 2px;
   }
   .catalog-filter-list > li {
     flex: 0 0 auto;
@@ -3482,32 +3318,8 @@ button.reset {
     margin-left: 0;
   }
 }
-.catalog-term {
-  color: var(--color-text);
-  /* A long query is cut with an ellipsis, so the count and Clear stay on
-     screen instead of pushing the page sideways. */
-  display: inline-block;
-  max-width: min(24ch, 40vw);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  vertical-align: bottom;
-}
 .catalog-toolbar .catalog-count {
   min-width: 0;
-}
-.catalog-term-clear {
-  appearance: none;
-  background: none;
-  border: none;
-  padding: 0 0.2rem;
-  font: inherit;
-  letter-spacing: inherit;
-  color: var(--color-gold-text);
-  cursor: pointer;
-}
-.catalog-term-clear:hover {
-  color: var(--color-gold-text);
 }
 /* Pages + articles hits under the grid. */
 .catalog-site-results {
@@ -3605,9 +3417,6 @@ button.reset {
       opacity: 1;
       transform: none;
     }
-  }
-  .product-hero-gallery-col {
-    animation: pdp-hero-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   }
 }
 
@@ -3889,9 +3698,6 @@ button.reset {
   font-weight: 400;
   color: var(--color-text-muted);
 }
-.related-card-unit {
-  margin-left: 0.35em;
-}
 .product-card-badge.is-soldout {
   background: var(--color-bg-elevated);
   color: var(--color-text-muted);
@@ -3916,13 +3722,6 @@ button.reset {
   font-size: var(--fs-sm, 0.875rem);
   color: var(--color-gold-text);
   font-variant-numeric: tabular-nums;
-}
-.specs-note {
-  max-width: 40rem;
-  margin: 0 auto var(--sp-5);
-  text-align: center;
-  font-size: var(--fs-sm, 0.875rem);
-  color: var(--color-text-muted);
 }
 .product-buy-amount .retail-price {
   font-size: 1rem;
@@ -4069,14 +3868,6 @@ button.reset {
   animation: board-art-spin 0.7s linear infinite;
 }
 
-/* Sort control dims + shows progress while the re-sorted page loads. */
-.collection-sort[data-pending] {
-  opacity: 0.6;
-}
-.collection-sort[data-pending] select {
-  cursor: progress;
-}
-
 /* Secondary CTA: outlined, used for Shop Pay express / cart drawer
    secondary actions. */
 .btn-secondary {
@@ -4100,12 +3891,6 @@ button.reset {
 .btn-secondary:hover {
   border-color: var(--color-text-muted);
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
-}
-
-/* A disabled secondary button must look disabled (it looked clickable, /flash 2026-11-02). */
-.btn-secondary:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 .btn-secondary:disabled:hover {
   border-color: var(--color-border-strong);
@@ -4471,9 +4256,6 @@ button.reset {
   text-decoration: none;
   border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
   width: fit-content;
-}
-.product-buy-idea-repo:hover {
-  border-bottom-color: var(--color-gold);
 }
 
 /* Morphing buy rail: wraps the ladder + buy module. At rest it's a
@@ -5073,77 +4855,6 @@ button.reset {
   }
 }
 
-.downloads-grid {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-}
-
-.download-card {
-  display: grid;
-  grid-template-columns: 2rem 1fr;
-  grid-template-rows: auto auto auto auto;
-  column-gap: 0.85rem;
-  row-gap: 0.25rem;
-  padding: var(--sp-3) 0 0;
-  border-top: 2px solid color-mix(in srgb, var(--color-gold) 45%, var(--color-border));
-  color: var(--color-text);
-  text-decoration: none;
-  transition: border-color 0.2s ease;
-}
-
-.download-card:hover {
-  border-top-color: var(--color-gold);
-}
-
-.download-icon {
-  grid-column: 1;
-  grid-row: 1 / span 4;
-  align-self: center;
-  justify-self: center;
-  font-size: 1.2rem;
-  color: var(--color-gold-text);
-  line-height: 1;
-}
-
-.download-label {
-  grid-column: 2;
-  grid-row: 1;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--color-text);
-}
-
-.download-note {
-  grid-column: 2;
-  grid-row: 2;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--color-text-muted);
-}
-
-.download-size {
-  grid-column: 2;
-  grid-row: 3;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.download-cta {
-  grid-column: 2;
-  grid-row: 4;
-  margin-top: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: var(--ls-label);
-  color: var(--color-gold-text);
-}
-
 /* Spec sheet: label muted, value mono. One value column per variant, the
    selected one bold; phones keep only the selected column past two. */
 .spec-sheet {
@@ -5211,9 +4922,6 @@ button.reset {
   font: inherit;
   cursor: pointer;
 }
-.spec-sheet-pick:hover {
-  color: var(--color-gold-text);
-}
 th.is-active .spec-sheet-pick {
   cursor: default;
 }
@@ -5267,27 +4975,6 @@ section.chapter[data-centered] .chapter-body-col {
 .teardown-pin-cost {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "cv11" 1, "ss01" 1;
-}
-
-/* Related products. The element is a <section>, so reset.css adds
-   another 32px of vertical padding on top of these values - keep the
-   internal spacing modest so the row of cards doesn't sit in a stack
-   of dead space. */
-.related-products {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  padding-bottom: 0;
-  border-top: 1px solid var(--color-border);
-}
-
-/* Related cards - spec-forward tiles (board render, catalog-file eyebrow,
-   one-line spec, mono price) with a pointer-following gold spotlight on
-   hover. All tokens. */
-.related-grid {
-  /* Same rhythm as .products-grid so the strip reads as one catalog. */
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--sp-4);
 }
 
 .related-card {
@@ -5368,15 +5055,6 @@ section.chapter[data-centered] .chapter-body-col {
   }
 }
 
-.related-card-body {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  gap: 0.3rem;
-  padding: var(--sp-3) var(--sp-4) var(--sp-4);
-  border-top: 1px solid var(--color-border);
-}
-
 .related-card-title {
   font-family: var(--font-display);
   font-weight: 600;
@@ -5392,71 +5070,6 @@ section.chapter[data-centered] .chapter-body-col {
   color: var(--color-gold-text);
 }
 
-.related-card-spec {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-  letter-spacing: 0.04em;
-  line-height: 1.4;
-  margin: 0;
-}
-
-.related-card-price {
-  display: flex;
-  align-items: baseline;
-  gap: 0.35rem;
-  margin: auto 0 0;
-  padding-top: 0.4rem;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--fs-base);
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text);
-}
-
-.related-card-from {
-  font-size: var(--fs-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-}
-
-/* Quick-add overlay - same reveal recipe as the browse cards; sibling of
-   the card link (a form can't nest inside an anchor). */
-.related-card-quickadd {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  aspect-ratio: 1 / 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  padding: 0.6rem;
-  pointer-events: none;
-  z-index: 4;
-}
-
-.related-card-quickadd > * {
-  pointer-events: auto;
-}
-
-.related-card-skeleton {
-  pointer-events: none;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .product-hero-eyebrow,
-  .product-hero-headline {
-    animation: pdp-hero-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  }
-  .product-hero-eyebrow {
-    animation-delay: 0.04s;
-  }
-  .product-hero-headline {
-    animation-delay: 0.1s;
-  }
-}
-
 .product-hero-eyebrow {
   font-family: var(--font-mono);
   font-weight: 500;
@@ -5465,87 +5078,6 @@ section.chapter[data-centered] .chapter-body-col {
   text-transform: uppercase;
   color: var(--color-text-dim);
   margin: 0;
-}
-
-/* Roadmap status chip beside the eyebrow. Same vocabulary as /roadmap: the
-   dot inherits the kanban's [data-status] coloring, the label is the same
-   copy key, and the chip links back to the board where the legend explains
-   what the word means. Status appears ONLY via this flag, never in prose. */
-.product-status-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45em;
-  margin-left: 0.9em;
-  padding: 0.2em 0.7em;
-  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
-  border-radius: 999px;
-  color: var(--color-text-muted);
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-.product-status-chip:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
-  color: var(--color-text);
-}
-
-/* Product name. Single block, refined display weight, restrained size.
-   The 3-line span pattern from product-content stays in the markup
-   (no text change) but renders inline so it reads as one engineered
-   title rather than an editorial pull-quote. */
-.product-hero-headline {
-  font-family: var(--font-display);
-  font-weight: 600;
-  line-height: 1.05;
-  letter-spacing: -0.025em;
-  font-size: var(--fs-3xl);
-  margin: 0;
-  color: var(--color-text);
-}
-
-/* Word gaps between the headline spans come from the literal space in the
-   markup, never from margins: a real space collapses at a line wrap, a
-   margin does not, and the two together rendered a double-wide gap. */
-.product-hero-headline span {
-  display: inline;
-}
-
-/* Drop the italic. The gold-italic middle-word is the AI-slop tell;
-   keep the emphasized word visible but in roman, soft-gold, same
-   weight as the rest. */
-.product-hero-headline em {
-  font-style: normal;
-  color: var(--color-gold);
-  font-weight: 600;
-}
-
-/* Concept plate: what /products/<handle> renders while the product is
-   planned or in-progress. Reuses the PDP eyebrow, headline, status chip and
-   idea-CTA idioms so it reads as the same family, minus everything that
-   would state a spec that can still change. */
-.concept-plate {
-  min-height: 60vh;
-  display: flex;
-  align-items: center;
-}
-.concept-plate-inner {
-  width: min(100% - 2 * var(--sp-6), 40rem);
-  margin: 0 auto;
-  padding: var(--sp-8) 0;
-}
-.concept-plate .product-hero-headline {
-  margin-top: var(--sp-3);
-}
-.concept-plate-body {
-  margin: var(--sp-5) 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  line-height: 1.6;
-  color: var(--color-text-dim);
-}
-.concept-plate-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-4);
-  margin-top: var(--sp-6);
 }
 /* Vertical rhythm: the root font is 15px, so the small tokens are smaller than
    they read on paper. At --sp-6 a chapter had 30px of air above and below and
@@ -5821,43 +5353,12 @@ section.chapter[data-centered] .chapter-body-col {
   overflow: visible;
   padding: 0;
 }
-.chapter-media-frame--live::after {
-  content: none;
-}
-
-/* Firmware project wordmark in the "The €1" chapter media slot. Sits roughly at
- * column width, pulled a little left into the gutter so it isn't jammed against
- * the page edge. The media frame is overflow: visible, so the bleed shows. */
-.firmware-logo {
-  width: 100%;
-  max-width: none;
-  height: auto;
-  display: block;
-  margin-left: -25%;
-  margin-right: 0;
-}
 
 /* The firmware mark doesn't need to track the scroll like the board art does -
  * pin it in place by dropping the sticky on its media column. */
 .chapter-media:has(.firmware-logo) {
   position: static;
   top: auto;
-}
-
-/* White-on-transparent marks (e.g. AM32) sit on a fixed dark tile that reads
- * in both themes (like the Discord embed), rather than the transparent blow-up
- * a multi-colour mark uses. Kept a compact square centred in the slot - a big
- * square tile leaves dead vertical space next to the short price block. */
-.firmware-logo--tile {
-  width: 78%;
-  max-width: 340px;
-  margin-inline: auto;
-  aspect-ratio: 1 / 1;
-  object-fit: contain;
-  background: #14171c;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-lg);
-  padding: clamp(1.5rem, 7%, 3rem);
 }
 
 .board-art {
@@ -5890,18 +5391,6 @@ section.chapter[data-centered] .chapter-body-col {
 }
 /* === Folder stack: every copper layer is a sheet; the selected one floats up
    like pulling a file out of a folder. === */
-.board-folder {
-  overflow: visible;
-}
-.board-folder-stack {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  /* Headroom above the stack so the floated-up sheet isn't clipped. */
-  margin-top: 12%;
-  perspective: 1700px;
-  transform-style: preserve-3d;
-}
 .board-sheet {
   position: absolute;
   inset: 0;
@@ -6006,11 +5495,6 @@ section.chapter[data-centered] .chapter-body-col {
     opacity: 1;
   }
 }
-.board-sheet-svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
 /* The board silhouette under each layer - a faint engraved sheet edge. */
 .board-sheet-edge {
   fill: none;
@@ -6018,58 +5502,6 @@ section.chapter[data-centered] .chapter-body-col {
   stroke-width: 0.35;
   vector-effect: non-scaling-stroke;
   opacity: 0.6;
-}
-
-/* Rail and board sit side by side: the rail takes its own fixed column on the
-   left (so it can never cover the teardown text to its left), the board takes
-   the rest, and align-items centres the rail vertically against the board. */
-.board-folder-body {
-  display: flex;
-  align-items: center;
-  gap: clamp(8px, 1vw, 18px);
-}
-.board-stack-wrap {
-  flex: 1 1 auto;
-  min-width: 0;
-  /* Overlap the live stack and its flying-out ghost in one cell so the swap
-     lines up pixel-for-pixel. */
-  display: grid;
-}
-.board-stack-wrap > .board-folder-stack {
-  grid-area: 1 / 1;
-}
-.board-folder-stack {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-/* Variant swap (rewritten). The OUTGOING board is a real React subtree
-   (.board-swap-out), NOT an innerHTML clone - see BoardArt.tsx. The incoming
-   (live) board rides ABOVE it (z 5 > 1) so a swap reads as the NEW board sweeping
-   in from the left and SHOVING the old one off to the right. Both stacks share
-   one grid cell (.board-stack-wrap grid 1/1) and are position:relative, so the
-   z-index settles paint order regardless of DOM source order. Durations come
-   from --swap-dur / --swap-stagger / --swap-exit, set on .board-art from the JS
-   SWAP_TIMING contract (app/lib/board-swap-timing.ts) so CSS + the JS settle
-   backstop read identical numbers. The swap end is detected by COUNTING
-   board-swap-out animationend events (N per-sheet on desktop, 1 whole-board on
-   mobile), never a wall-clock timer. */
-.board-folder-stack.is-swapping {
-  z-index: 5;
-}
-.board-swap-out {
-  z-index: 1;
-  pointer-events: none;
-}
-/* will-change is applied (via .is-swap-ready on .board-art, set at flyDone) BEFORE
-   the first swap so the GPU layer already exists at frame 0 - promoting at swap
-   start drops the first frames. */
-.board-art.is-swap-ready .board-sheet {
-  will-change: translate;
-}
-@media (min-width: 880px) {
-  .board-art.is-warm .board-sheet {
-    will-change: translate;
-  }
 }
 /* PERF - strip the per-layer drop-shadow (a gaussian blur) for the flight on BOTH
    stacks; animating ~16 blurred layers at once saturates fill-rate and drops
@@ -6104,10 +5536,6 @@ section.chapter[data-centered] .chapter-body-col {
   }
 }
 @media (max-width: 1023px) {
-  .board-stack-wrap > .board-folder-stack.is-swapping {
-    animation: board-swap-in var(--swap-dur, 0.55s)
-      cubic-bezier(0.2, 0.8, 0.2, 1) var(--swap-in-delay, 0s) both;
-  }
   .board-swap-out {
     animation: board-swap-out var(--swap-exit, 0.65s)
       cubic-bezier(0.5, 0, 0.85, 0.2) both;
@@ -6115,18 +5543,6 @@ section.chapter[data-centered] .chapter-body-col {
   .board-swap-out .board-sheet {
     animation: none !important;
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  .board-swap-out {
-    display: none;
-  }
-}
-/* Layer rail crossfade - only added (BoardArt, guarded by layer-label signature)
-   when the layer SET actually changes between boards, so identical layers never
-   pulse. Reuses the parts-list dip: old tabs fade out, the set switches while
-   hidden (235ms), new fade in. */
-.board-folder-rail.is-swapping {
-  animation: teardown-pins-swap 0.52s ease both;
 }
 /* Layer / sheet rail - a self-contained vertical selector beside the board or
    schematic. The schematic viewer reuses this exact selector style. */
@@ -6187,11 +5603,6 @@ section.chapter[data-centered] .chapter-body-col {
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
-}
-.board-folder-rail-count,
-.schematic-rail-count {
-  color: var(--color-gold-text);
-  letter-spacing: 0.06em;
 }
 .board-folder-tabs,
 .schematic-rail-tabs {
@@ -6257,11 +5668,6 @@ section.chapter[data-centered] .chapter-body-col {
   border-radius: var(--r-lg);
   padding: 0.44em 0.72em;
 }
-.board-folder-tab-name {
-  font-size: clamp(10.5px, 0.74vw, 13px);
-  letter-spacing: var(--ls-label);
-  line-height: 1;
-}
 .board-folder-tab-fn {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -6276,20 +5682,7 @@ section.chapter[data-centered] .chapter-body-col {
 .board-folder-tabs button.is-active .board-folder-tab-fn {
   color: color-mix(in srgb, var(--color-on-accent) 72%, transparent);
 }
-/* The rail sizes to its longest label, so normal sheet names stay on one line.
-   Tighter tracking keeps it compact, and wrapping (rather than nowrap) is the
-   safety net for a very long sheet name (e.g. the OpenRX single sheet) - it
-   stacks onto extra lines inside the capped width instead of leaking out. */
-.schematic-rail-tabs button {
-  letter-spacing: 0.1em;
-  overflow-wrap: anywhere;
-}
 @media (max-width: 1024px) {
-  .board-folder-body,
-  .schematic-body {
-    flex-direction: column;
-    align-items: stretch;
-  }
   .board-folder-rail,
   .schematic-rail {
     width: auto;
@@ -6304,12 +5697,6 @@ section.chapter[data-centered] .chapter-body-col {
     background: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
-  }
-  .board-folder-rail-head,
-  .schematic-rail-head {
-    width: 100%;
-    justify-content: center;
-    gap: 0.5em;
   }
   .board-folder-tabs,
   .schematic-rail-tabs {
@@ -6330,56 +5717,17 @@ section.chapter[data-centered] .chapter-body-col {
   .schematic-rail-tabs::before {
     display: none;
   }
-  .board-folder-tabs button,
-  .schematic-rail-tabs button {
-    flex: 0 0 auto;
-    white-space: nowrap;
-  }
   .board-folder-tabs button {
     flex-direction: row;
     align-items: center;
     border-radius: var(--r-pill);
     padding: 0.48em 0.7em;
   }
-  .board-folder-tab-fn {
-    display: none;
-  }
 }
 
 /* === Schematic viewer - paged sheets of the KiCad schematic, the analogue of
    the board folder. In the wide-media chapter it fills the dominant column and
    bleeds a little into the right gutter for maximum legible width. === */
-.schematic-viewer {
-  width: 100%;
-  margin-left: 0;
-  /* The lazy-load gate IntersectionObserves this box with a 0.01 threshold,
-     which NEVER fires on a zero-area target - and before the manifest loads
-     the viewer is empty. The floor gives the observer something to hit. */
-  min-height: 160px;
-}
-/* Rail + sheet sit side by side, mirroring the board folder: the rail takes a
-   fixed column on the left, the sheet fills the rest, centred vertically. */
-.schematic-body {
-  display: flex;
-  align-items: center;
-  gap: clamp(8px, 1vw, 18px);
-}
-/* Fixed stage: at most one screen tall, so the entire sheet is visible without
- * scrolling, and the height never changes as you page through sheets of
- * differing proportions. Every sheet is contained + centred inside this box. */
-.schematic-page {
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-  /* Short enough that pins + board + schematic read as one screenful
-     (72vh/700px pushed the schematic below the fold; maintainer, 2026-08-12). */
-  height: min(58vh, 560px);
-}
-@media (min-width: 1025px) {
-  .schematic-rail {
-    order: 2;
-  }
-}
 .schematic-sheet {
   position: absolute;
   inset: 0;
@@ -6400,32 +5748,11 @@ section.chapter[data-centered] .chapter-body-col {
 .schematic-sheet.is-active.is-loaded {
   opacity: 1;
 }
-/* Component spotlight: gold boxes over the hovered teardown part. The svg
-   shares the sheet's viewBox and letterboxes exactly like the imgs
-   (object-fit: contain ≡ xMidYMid meet), so boxes land on the symbols at
-   any size. Boxes come from the invisible <text> metadata in the export. */
-.schematic-hl {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-.schematic-hl rect {
-  fill: color-mix(in srgb, var(--color-gold) 20%, transparent);
-  stroke: var(--color-gold);
-  stroke-width: 2px;
-  vector-effect: non-scaling-stroke;
-  animation: schematic-hl-in 0.16s ease both;
-}
 /* Scroll-back reveal: when a SKU was switched while the schematic was off-screen
    (the wipe was skipped), fade the new active sheet in once it comes into view -
    the schematic's "entrance again", cheap (opacity only). */
 .schematic-page.is-revealing .schematic-sheet.is-active.is-loaded {
   animation: schematic-reveal 0.5s ease both;
-}
-.schematic-page.is-wiping {
-  animation: schematic-wipe 0.62s cubic-bezier(0.7, 0, 0.3, 1) both;
 }
 /* The OLD sheet is clipped to the COMPLEMENT - everything RIGHT of the line - so
    the new (left) and old (right) each own one side of the wipe edge and never
@@ -6459,37 +5786,7 @@ section.chapter[data-centered] .chapter-body-col {
     0 100%
   );
 }
-/* The line is that SAME diagonal edge, drawn as a thin band hugging it (±0.4%),
-   in the SAME box → pixel-locked to the entering sheet's reveal edge. The
-   drop-shadow runs AFTER the clip, so the glow haloes the band. */
-.schematic-swap-line {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  background: var(--color-gold-fill);
-  filter: drop-shadow(
-    0 0 10px color-mix(in srgb, var(--color-gold) 75%, transparent)
-  );
-  pointer-events: none;
-  clip-path: polygon(
-    calc(var(--wipe) * 128% - 0.4%) 0,
-    calc(var(--wipe) * 128% + 0.4%) 0,
-    calc(var(--wipe) * 128% - 28% + 0.4%) 100%,
-    calc(var(--wipe) * 128% - 28% - 0.4%) 100%
-  );
-}
-/* Mobile sheet deck - the swipe-first replacement for the sheet-tab rail (which
-   is a mouse-era button strip). Hidden on desktop, where the rail is shown;
-   shown below the page on mobile. Reuses the board explorer's tick + meta
-   chrome (.board-deck-*) so schematic and board page "the same way". */
-.schematic-deck {
-  display: none;
-}
 @media (max-width: 1023px) {
-  .schematic-deck {
-    display: block;
-    margin-top: 0.6rem;
-  }
   .schematic-rail {
     display: none;
   }
@@ -6505,12 +5802,6 @@ section.chapter[data-centered] .chapter-body-col {
   text-transform: uppercase;
   color: var(--color-text-dim);
 }
-@media (max-width: 879px) {
-  .schematic-viewer {
-    width: 100%;
-    margin-left: 0;
-  }
-}
 .board-art-inspect {
   display: inline-block;
   font-family: var(--font-mono);
@@ -6519,10 +5810,6 @@ section.chapter[data-centered] .chapter-body-col {
   text-transform: uppercase;
   color: var(--color-text-dim);
   text-decoration: none;
-}
-/* Inspect link in the teardown's left column - sits in the gap under the pins. */
-.teardown-inspect {
-  margin-top: 1.4rem;
 }
 .board-art-inspect:hover {
   color: var(--color-gold-text);
@@ -6565,12 +5852,6 @@ section.chapter[data-centered] .chapter-body-col {
   transition: opacity 1.1s cubic-bezier(0.2, 0.7, 0.2, 1);
   pointer-events: none;
 }
-.frame-viewer[data-loaded='true'] {
-  opacity: 1;
-}
-.frame-viewer canvas {
-  display: block;
-}
 @media (max-width: 879px) {
   .chapter-backdrop {
     display: none;
@@ -6612,14 +5893,6 @@ section.chapter[data-centered] .chapter-body-col {
   max-width: none;
 }
 
-/* Emphasis segments keep the title colour (2026-08-12, maintainer: gold highlights
-   in chapter heads read as cheesy); the markup keeps its <em> semantics. */
-.chapter-title em {
-  font-style: normal;
-  color: inherit;
-  font-weight: 600;
-}
-
 .chapter-body {
   font-family: var(--font-sans);
   font-size: var(--fs-base);
@@ -6644,38 +5917,6 @@ section.chapter[data-centered] .chapter-body-col {
 .teardown-sides.is-locked {
   pointer-events: none;
 }
-/* A tier swap switches the part list to the new pins AT swap start (handleSwapStart
-   in products.$handle.tsx sets displayedPins in the same commit that adds this
-   class), so the dip just hides the old content instantly and fades the new in -
-   no mid-animation content switch to time. The class is removed by the board's
-   onSwapSettle (~1.3s later), long after this 0.45s fade has finished, so it can
-   never snap back mid-fade. Pointer-events off so a hover can't catch it mid-change. */
-.teardown-sides.is-swapping {
-  pointer-events: none;
-  /* Self-contained crossfade (0.52s): fade the OLD rows out, hold hidden through
-     the 44–56% trough while products.$handle.tsx swaps displayedPins at 235ms,
-     then fade the NEW rows in - so the content change is never visible. */
-  animation: teardown-pins-swap 0.52s ease both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .teardown-sides.is-swapping {
-    animation: none;
-  }
-}
-.teardown-side {
-  /* zero the global `section { padding: 1rem 0 }` so rows fill the bubble edge
-     to edge (no dead space above the first row / below the last). */
-  padding: 0;
-  background: linear-gradient(
-    180deg,
-    var(--color-bg-elevated),
-    var(--color-bg-card)
-  );
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent);
-}
 /* Rows inside a bubble form a table: each row gets ONE divider line, no per-row
    card - so there's no boundary between components as you scroll/hover down. */
 .teardown-pins {
@@ -6699,9 +5940,6 @@ section.chapter[data-centered] .chapter-body-col {
     color-mix(in srgb, var(--color-border) 60%, transparent);
   position: relative;
 }
-.teardown-pins li:last-child {
-  border-bottom: none;
-}
 
 .teardown-pin-part {
   color: var(--color-text);
@@ -6721,63 +5959,6 @@ section.chapter[data-centered] .chapter-body-col {
   color: var(--color-gold-text);
 }
 
-/* A pin that maps to footprints on the board: interactive. Hover fills the whole
-   row (instant - no fade that looks half-painted while the cursor moves) and a
-   gold accent bar wipes in on the left for a bit of life. */
-.teardown-pin-hoverable {
-  cursor: pointer;
-}
-/* The row's keyboard stop is a button filling the <li>; it carries the padding
-   so the whole row stays clickable, and shows its own ring (inset, so the
-   row's overflow never clips it). */
-.teardown-pins li.teardown-pin-hoverable {
-  padding: 0;
-}
-.teardown-pin-btn {
-  all: unset;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.55rem 0.7rem 0.55rem 0.95rem;
-  cursor: pointer;
-}
-.teardown-pin-btn:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: -2px;
-}
-.teardown-pin-hoverable::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--color-gold-fill);
-  transform: scaleY(0);
-  transform-origin: center;
-  transition: transform 0.14s ease;
-}
-.teardown-pin-hoverable:hover,
-.teardown-pin-hoverable:has(.teardown-pin-btn:focus-visible) {
-  background: color-mix(in srgb, var(--color-gold) 13%, transparent);
-  /* extend the tint 1px upward to fill where the divider above used to sit (the
-     :has rule below turns it transparent), so the whole row reads as one gold
-     block with no uncovered sliver at the top. */
-  box-shadow: 0 -1px 0 0 color-mix(in srgb, var(--color-gold) 13%, transparent);
-  outline: none;
-}
-/* Kill the divider directly ABOVE the hovered row - it belongs to the previous
-   row, so the hovered row's fill can't reach it; left visible it reads as a dark
-   sliver at the row's top (the "dead zone"). Gone, the box-shadow fills clean
-   bubble-bg with the same gold tint → seamless, and the spotlight slides
-   row-to-row with no flicker. */
-.teardown-pins li:has(+ .teardown-pin-hoverable:hover) {
-  border-bottom-color: transparent;
-}
-
 /* I/O chip row: one row holding a horizontal set of hoverable pad-group chips.
    width: 0 + min-width: 100% keeps this row out of the bubble's intrinsic
    width (a full chip set unwrapped is ~415px and used to force the whole
@@ -6790,139 +5971,16 @@ section.chapter[data-centered] .chapter-body-col {
   width: 0;
   min-width: 100%;
 }
-.teardown-io-tag {
-  flex: none;
-  font-size: 0.7rem;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.teardown-io-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-.teardown-io-chip {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  padding: 0.2rem 0.55rem;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-text) 4%, transparent);
-  color: var(--color-text);
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-.teardown-io-chip:hover,
-.teardown-io-chip:focus-visible {
-  background: color-mix(in srgb, var(--color-gold) 16%, transparent);
-  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
-  color: var(--color-gold-text);
-  outline: none;
-}
-/* The active chip already wears the hover look: focus needs its own ring. */
-.teardown-io-chip:focus-visible {
-  outline: 2px solid var(--color-focus, var(--color-gold));
-  outline-offset: 2px;
-}
-.teardown-pin-hoverable:hover .teardown-pin-part,
-.teardown-pin-hoverable:has(.teardown-pin-btn:focus-visible) .teardown-pin-part {
-  color: var(--color-gold-text);
-}
-.teardown-pin-hoverable:hover::before,
-.teardown-pin-hoverable:has(.teardown-pin-btn:focus-visible)::before {
-  transform: scaleY(1);
-}
 
 /* === Component highlights === Drawn ANCHORED inside the active sheet's <svg>
    (BoardArt appends a `<g class="board-hilite">`), so they scroll with the board
    and sit exactly on the part. Only present on the Front/Back faces - never on a
    copper layer. The whole group fades in on hover. */
-.board-hilite {
-  pointer-events: none;
-}
 /* A face's spotlight is built once and kept; when nothing is highlighted (or
    another face is showing) it's hidden, not destroyed - so re-lighting it is
    instant and never re-decodes the board image (the flicker). */
 .board-hilite.is-hidden {
   display: none;
-}
-/* Fade in ONLY on first appearance (cursor entering the list from nothing). When
-   moving row-to-row the group is rebuilt every hover; replaying the fade then made
-   the whole spotlight flash out/in. `is-fresh` (added by BoardArt only when there
-   was no prior highlight) keeps the dim constant and just moves the bright spot. */
-.board-hilite.is-fresh {
-  animation: board-hilite-in 0.25s ease both;
-}
-/* Dim veil over the board OUTSIDE the spotlight window (masked + clipped to the
-   board outline) so everything but the selected part(s) recedes. Over the board
-   face only (not the page), so it reads the same in both themes. */
-.board-hilite-dim {
-  fill: #05070a;
-  opacity: 0.62;
-  pointer-events: none;
-}
-/* The face re-shown at the highlighted box, on top of the dim - nudged brighter
-   so the selected region pops out of the dimmed board. */
-.board-hilite-face {
-  filter: brightness(1.12) saturate(1.08);
-  pointer-events: none;
-}
-/* The crisp gold box is the primary "this is selected" marker, drawn on top of
-   the dim. Non-scaling stroke keeps it ~2px at any board zoom. */
-.board-highlight-shape {
-  fill: color-mix(in srgb, var(--color-gold) 10%, transparent);
-  stroke: var(--color-gold);
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-  pointer-events: none;
-}
-
-/* Open source cards */
-.open-source-cards {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  /* Every card is a 16:9 bubble (set on .open-source-card / .latest-commit-card),
-     so equal-width columns give a uniform-height row. */
-  align-items: stretch;
-}
-
-/* This chapter stacks a two-line title, a four-card row and the full-width
-   schematic. At the old 1rem the title and the cards read as one dense block;
-   the row needs to land clearly after the head, not under it. */
-.open-source-cards {
-  margin-top: var(--sp-8);
-}
-
-/* One quiet mono link under the card row, pointing at /open-source. Same
-   voice as .firmware-support-links: muted at rest, gold on hover. The repo
-   lead line (the next chapter's ::before) crosses this row on its way from
-   the GitHub card down to the scope outline: the label sits above the line
-   with its own background, so the line reads as passing behind a station
-   on the route rather than striking through the words. */
-.open-source-story-link {
-  margin: var(--sp-3) 0 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  position: relative;
-  z-index: 1;
-}
-
-.open-source-story-link a {
-  display: inline-block;
-  padding: 0.3rem 0.6rem;
-  margin-left: -0.6rem;
-  background: var(--color-bg);
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.open-source-story-link a:hover {
-  color: var(--color-gold-text);
 }
 
 
@@ -7018,29 +6076,11 @@ section.chapter[data-centered] .chapter-body-col {
   mask-size: contain;
 }
 
-.open-source-card--github::after {
-  -webkit-mask-image: url(/logos/github.svg);
-  mask-image: url(/logos/github.svg);
-}
-
-.open-source-card--cern::after {
-  -webkit-mask-image: url(/logos/cern.svg);
-  mask-image: url(/logos/cern.svg);
-}
-
 /* Iterate card: the design tool's wordmark. Wordmarks are wide, so the
    mask box takes more of the card width than the square marks do. */
 .open-source-card--kicad::after,
 .open-source-card--onshape::after {
   width: 82%;
-}
-.open-source-card--kicad::after {
-  -webkit-mask-image: url(/logos/kicad.svg);
-  mask-image: url(/logos/kicad.svg);
-}
-.open-source-card--onshape::after {
-  -webkit-mask-image: url(/logos/onshape.svg);
-  mask-image: url(/logos/onshape.svg);
 }
 
 /* "Wanna help?" card: the row's 4th bubble, an internal hand-off to
@@ -7128,157 +6168,6 @@ section.chapter[data-centered] .chapter-body-col {
   color: var(--color-gold-text);
 }
 
-/* "Watch" bubble - the video card that replaces the issues card on products
-   with a build film. A 16:9 bubble (aspect-ratio inherited from
-   .open-source-card) showing just the YouTube thumbnail with a centred gold
-   play glyph - no caption. Clicking opens the lightbox player. */
-.watch-card {
-  position: relative;
-  display: block;
-  width: 100%;
-  padding: 0;
-  overflow: hidden;
-  background-color: var(--color-bg-elevated);
-  cursor: pointer;
-  font: inherit;
-}
-
-/* The thumbnail fills the 16:9 card (object-fit cover - a 16:9 frame, so no
-   real crop on a maxres poster). */
-.watch-card-thumb {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.watch-card:hover .watch-card-thumb {
-  transform: scale(1.04);
-}
-
-/* Soft centred scrim so the gold play glyph pops without hiding the thumbnail. */
-.watch-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(0, 0, 0, 0.42) 0%,
-    rgba(0, 0, 0, 0.16) 55%,
-    rgba(0, 0, 0, 0.26) 100%
-  );
-}
-
-/* Content layer: the YouTube play glyph, centred over the thumbnail. */
-.watch-card-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.watch-card-yt {
-  width: 48px;
-  height: auto;
-  color: var(--color-gold-text);
-  transition: transform 0.2s ease;
-}
-
-.watch-card:hover .watch-card-yt {
-  transform: scale(1.08);
-}
-
-/* The play triangle reads against the gold mark via the dark accent ink. */
-.watch-card-yt-tri {
-  fill: var(--color-on-accent);
-}
-
-
-.watch-card:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 50%, var(--color-border));
-}
-/* Its own card (maintainer, 2026-08-12), in the in-the-box table idiom: label as
-   the header, hairline-divided rows, the story links as buttons along the
-   bottom. Shrink-wrapped like the other chapter cards. */
-.provenance-card {
-  margin-top: var(--sp-5);
-  width: fit-content;
-  min-width: min(24rem, 100%);
-  padding: 1rem 1.2rem 1.2rem;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-lg);
-}
-
-.provenance-links {
-  margin: 1rem 0 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-/* Contributor grid + the join button on one line: the grid takes the room,
-   the button holds the right edge. Wraps below the grid when the row runs
-   out of width. */
-.contributors-row {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem 2.5rem;
-  flex-wrap: wrap;
-}
-.contributors-row > *:first-child {
-  flex: 1 1 24rem;
-  min-width: 0;
-}
-.contributors-cta-btn {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  padding: 0.75rem 1.5rem;
-  border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-gold-text);
-  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-}
-.contributors-cta-btn:hover {
-  background: var(--color-gold-fill);
-  border-color: var(--color-gold-fill);
-  color: var(--color-on-accent);
-}
-
-/* Same button treatment as the contributors CTA, one size down, so the two
-   story links read as actions instead of body-text asides. */
-.provenance-links a {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.55rem 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
-  border-radius: 999px;
-  font-weight: 600;
-  color: var(--color-gold);
-  text-decoration: none;
-  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-}
-
-.provenance-links a:hover {
-  background: var(--color-gold-fill);
-  border-color: var(--color-gold-fill);
-  color: var(--color-on-accent);
-}
-
 .provenance-label {
   display: inline-block;
   margin: 0 0 var(--sp-3);
@@ -7291,160 +6180,12 @@ section.chapter[data-centered] .chapter-body-col {
   color: var(--color-gold-text);
 }
 
-.provenance-rows {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 0;
-}
-
-.provenance-rows li {
-  display: grid;
-  grid-template-columns: 5.5rem 1fr;
-  column-gap: 0.9rem;
-  align-items: baseline;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.provenance-rows li:last-child {
-  border-bottom: none;
-}
-
 .provenance-row-label {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text);
-}
-
-.provenance-row-value {
-  color: var(--color-text);
-  font-size: 0.92rem;
-  line-height: 1.5;
-}
-/* Contributor grid: gold-ruled tiles in the downloads-card idiom.
-   Avatars stay square with a hairline border - technical file, not
-   social feed. The "+ you" tile is the standing invitation. */
-.contributor-grid {
-  list-style: none;
-  margin: var(--sp-4) 0 0;
-  padding: 0;
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-}
-.contributor-tile {
-  display: grid;
-  grid-template-columns: 60px 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 0.75rem;
-  align-items: center;
-  padding: var(--sp-3) 0 0;
-  /* Per-contributor accent, hash-colored like their ticks on the commit
-     strip below; gold when no accent is set (skeleton, the "+ you" tile). */
-  border-top: 2px solid
-    color-mix(in srgb, var(--contrib-accent, var(--color-gold)) 55%, var(--color-border));
-  color: var(--color-text);
-  text-decoration: none;
-  transition: border-color 0.2s ease;
-}
-.contributor-tile:hover {
-  border-top-color: var(--contrib-accent, var(--color-gold));
-}
-.contributor-avatar {
-  grid-row: 1 / span 2;
-  width: 60px;
-  height: 60px;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  object-fit: cover;
-}
-.contributor-avatar--you {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono);
-  font-size: 1.6rem;
-  color: var(--color-gold-text);
-  border-style: dashed;
-}
-.contributor-login {
-  align-self: end;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: var(--fs-sm);
-  overflow-wrap: anywhere;
-}
-.contributor-count {
-  align-self: start;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-dim);
-}
-/* The maintainer's tile. Commit counts used to fill this slot and read as a
-   ranking, which credited whoever churned the most files; the one fact worth
-   stating is who holds the board. Gold rule at full strength, gold label. */
-.contributor-tile--lead {
-  border-top-color: var(--color-gold);
-}
-.contributor-role {
-  align-self: start;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-gold-text);
-}
-.contributor-tile.is-skeleton {
-  pointer-events: none;
-}
-.contributor-tile.is-skeleton .contributor-avatar {
-  background: var(--color-border);
-}
-
-/* Bundle components - richer cards than the generic open-source cards
-   because this is the "what's in the box" moment on a bundle PDP. */
-.bundle-components {
-  display: grid;
-  gap: var(--sp-5);
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-
-.bundle-component-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: var(--sp-3) 0 0;
-  border-top: 2px solid color-mix(in srgb, var(--color-gold) 45%, var(--color-border));
-  color: var(--color-text);
-  transition: border-color 0.2s ease;
-}
-
-.bundle-component-card:hover {
-  border-top-color: var(--color-gold);
-  color: var(--color-text);
-  transform: translateY(-1px);
-}
-
-.bundle-component-title {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.25rem;
-  letter-spacing: -0.01em;
-  margin: 0;
-  color: var(--color-text);
-}
-
-.bundle-component-blurb {
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  line-height: 1.6;
-  color: var(--color-text-muted);
-  margin: 0;
 }
 
 .bundle-component-firmware {
@@ -7454,18 +6195,6 @@ section.chapter[data-centered] .chapter-body-col {
   text-transform: uppercase;
   color: var(--color-text-muted);
   margin: 0.25rem 0 0;
-}
-
-.bundle-component-firmware span {
-  color: var(--color-gold-text);
-}
-
-.bundle-component-more {
-  margin-top: 0.5rem;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: var(--color-gold-text);
 }
 /* A single bubble around the whole parts list - a "table card" that sets the
    contents apart from the surrounding copy. Rows are hairline-divided inside. */
@@ -7549,20 +6278,6 @@ section.chapter[data-centered] .chapter-body-col {
   width: 100%;
   box-sizing: border-box;
 }
-.in-the-box-col .provenance-card {
-  margin: 0;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-.in-the-box-figure {
-  margin: 0;
-  max-width: 60rem;
-}
-/* A single part (one motor) stays object-sized instead of filling the column. */
-.in-the-box-figure[data-single] {
-  max-width: 24rem;
-}
 .in-the-box-image {
   display: block;
   width: 100%;
@@ -7633,26 +6348,6 @@ section.chapter[data-centered] .chapter-body-col {
   background: var(--color-gold-fill);
   color: var(--color-bg);
 }
-.in-the-box-row.is-dimmed .in-the-box-row-hit {
-  opacity: 0.55;
-}
-.in-the-box-row-hit:focus-visible {
-  outline: 2px solid var(--color-gold);
-  outline-offset: -2px;
-}
-
-/* Boxes over the render, in percent of the image so they scale with it.
-   At rest: faint corner brackets and a number chip. The active row's boxes
-   take the teardown spotlight: gold outline and glow, the region brightened
-   while the rest of the render dims, the other boxes fade back. */
-.in-the-box-stage {
-  position: relative;
-}
-.in-the-box-marks {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
 .in-the-box-mark {
   --mark-c: color-mix(in srgb, var(--color-text) 38%, transparent);
   position: absolute;
@@ -7691,12 +6386,6 @@ section.chapter[data-centered] .chapter-body-col {
   opacity: 0.85;
   transition: background 0.12s ease, color 0.12s ease, opacity 0.18s ease;
 }
-.in-the-box-image {
-  transition: filter 0.2s ease;
-}
-.in-the-box-figure.has-active .in-the-box-image {
-  filter: brightness(0.62);
-}
 .in-the-box-figure.has-active .in-the-box-mark {
   opacity: 0.3;
 }
@@ -7714,56 +6403,6 @@ section.chapter[data-centered] .chapter-body-col {
   background: var(--color-gold-fill);
   color: var(--color-bg);
   opacity: 1;
-}
-@media (prefers-reduced-motion: reduce) {
-  .in-the-box-row-hit,
-  .in-the-box-row-hit::before,
-  .in-the-box-num,
-  .in-the-box-mark,
-  .in-the-box-mark-num,
-  .in-the-box-image {
-    transition: none;
-  }
-}
-@media (min-width: 880px) {
-  .in-the-box-layout {
-    grid-template-columns: fit-content(34rem) minmax(0, 1fr);
-    column-gap: clamp(var(--sp-5), 4vw, var(--sp-7));
-  }
-  .in-the-box-layout .in-the-box-figure {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: center;
-    align-self: center;
-    width: 100%;
-  }
-  .in-the-box-layout .in-the-box-col {
-    grid-column: 1;
-    grid-row: 1;
-  }
-}
-
-
-/* The signal chain, in hero-scroll order: this product's stage is lit gold,
-   stages we sell link their boards. One glance places the part; the homepage
-   hero tells the same story as a scroll. */
-.what-chain {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.45rem 0;
-  margin: 0 0 var(--sp-5);
-}
-
-.what-chain-step {
-  display: inline-flex;
-  align-items: center;
-}
-
-.what-chain-arrow {
-  margin: 0 0.5rem;
-  color: var(--color-text-dim);
-  font-size: 12px;
 }
 
 .what-chain-chip {
@@ -7793,60 +6432,6 @@ a.what-chain-chip:hover {
 .what-chain-chip.is-active {
   color: var(--color-gold-text);
   font-weight: 600;
-}
-
-
-.what-home-link {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: var(--color-gold-text);
-}
-
-.what-home-link:hover {
-  color: var(--color-gold-text);
-}
-
-/* Spec table */
-.spec-table {
-  display: grid;
-  column-gap: 2.5rem;
-  row-gap: 0;
-  grid-template-columns: 1fr;
-  border-top: 1px solid var(--color-border);
-  margin: 0;
-}
-
-@media (min-width: 720px) {
-  .spec-table {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.spec-table > div {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
-  padding: 0.7rem 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.spec-table dt {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-
-.spec-table dd {
-  color: var(--color-text);
-  font-size: 0.9rem;
-  margin: 0;
-  text-align: right;
 }
 
 /* Firmware credit - the project the board runs, with direct-donation links.
@@ -7891,25 +6476,6 @@ a.what-chain-chip:hover {
   min-width: min(100%, 36rem);
 }
 
-.firmware-support-links a {
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.firmware-support-links a:hover {
-  color: var(--color-gold-text);
-}
-
-.firmware-support-links a.firmware-support-donate {
-  color: var(--color-gold-text);
-}
-
-.firmware-support-nodonate {
-  color: color-mix(in srgb, var(--color-text-muted) 75%, transparent);
-  text-transform: none;
-  letter-spacing: 0.04em;
-}
-
 /* Buy-area aggregate line: stars + average + count, links to #reviews. */
 .product-buy-reviews {
   display: inline-flex;
@@ -7928,27 +6494,6 @@ a.what-chain-chip:hover {
   transition: color 0.2s ease;
 }
 
-.product-buy-reviews:hover .product-buy-reviews-count {
-  color: var(--color-text);
-}
-
-.review-stars {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  letter-spacing: 0.12em;
-  color: var(--color-gold);
-  line-height: 1;
-}
-
-.review-count-line {
-  margin: 1rem 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.04em;
-  color: var(--color-text-dim);
-  font-variant-numeric: tabular-nums;
-}
-
 /* ── Heavy-asset loading skeletons (board art + schematic viewer) ────────────
    Shown while a multi-MB SVG downloads + parses, so the slot reads as
    "loading" rather than a blank/black box. Removed once the asset reveals. */
@@ -7964,9 +6509,6 @@ a.what-chain-chip:hover {
   justify-content: center;
   gap: 0.85rem;
   pointer-events: none;
-}
-.schematic-skeleton {
-  min-height: clamp(260px, 30vw, 420px);
 }
 /* Ghost of the incoming board render behind the spinner. */
 .board-art-skeleton-preview {
@@ -7997,11 +6539,6 @@ a.what-chain-chip:hover {
   color: var(--color-text-muted);
   animation: latest-commit-pulse 1.4s ease-in-out infinite;
 }
-@media (prefers-reduced-motion: reduce) {
-  .board-art-skeleton-spinner {
-    animation-duration: 2.4s;
-  }
-}
 
 @media (max-width: 1023px) {
   .board-art-inspect,
@@ -8029,20 +6566,6 @@ a.what-chain-chip:hover {
   .board-art .board-folder-rail {
     display: none;
   }
-  .board-folder-stack {
-    perspective: none;
-    transform-style: flat;
-    margin-top: 0;
-    position: relative;
-    /* Clip the off-screen layers so the peel slides cleanly in/out. */
-    overflow: hidden;
-    /* pan-y: vertical drags scroll the page like anywhere else. The swipe hook
-       only claims a gesture once it reads as horizontal (and it's biased toward
-       horizontal, so a near-sideways drag isn't mistaken for a scroll), and it
-       preventDefaults that horizontal move so the page never slides out from
-       under a layer peel. */
-    touch-action: pan-y;
-  }
   .board-art .board-sheet {
     animation: none !important;
     filter: none;
@@ -8058,84 +6581,6 @@ a.what-chain-chip:hover {
   }
   .board-art .board-folder-stack.is-dragging .board-sheet {
     transition: none;
-  }
-  .board-folder-rail {
-    display: none;
-  }
-  .board-deck-progress {
-    margin: 0.7rem 0 0;
-  }
-  .board-deck-meta {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 0.2rem 0.55rem;
-    margin: 0.5rem 0 0;
-    font-family: var(--font-mono);
-  }
-  .board-deck-count {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--color-gold-text);
-  letter-spacing: 0.04em;
-}
-  .board-deck-name {
-    font-size: 0.82rem;
-    color: var(--color-text);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-  .board-deck-hint {
-    margin-left: auto;
-    font-size: 12px;
-    letter-spacing: 0.04em;
-    /* muted (not dim) so the gesture cue stays legible on bright light-mode
-       displays; it's the primary "how to explore" affordance now. */
-    color: var(--color-text-muted);
-  }
-  .board-part-tour {
-    margin-top: 0.75rem;
-    padding-top: 0.7rem;
-    border-top: 1px solid var(--color-border);
-  }
-  .board-part-tour-head {
-    display: flex;
-    align-items: baseline;
-    gap: 0.55rem;
-    margin: 0 0 0.5rem;
-    font-family: var(--font-mono);
-  }
-  .board-part-chips {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 2px;
-    /* horizontal scroll of the chip row only - never hijack vertical page scroll */
-    touch-action: pan-x;
-  }
-  .board-part-chips + .board-part-chips {
-    margin-top: 6px;
-  }
-  .board-part-chips-side {
-  position: sticky;
-  left: 0;
-  flex: 0 0 auto;
-  align-self: stretch;
-  display: inline-flex;
-  align-items: center;
-  padding-right: 8px;
-  background: var(--color-bg);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-}
-  .board-part-chips::-webkit-scrollbar {
-    display: none;
   }
   .board-part-chip {
     flex: 0 0 auto;
@@ -8158,14 +6603,6 @@ a.what-chain-chip:hover {
     border-color: var(--color-gold);
     background: color-mix(in srgb, var(--color-gold) 16%, transparent);
     color: var(--color-text);
-  }
-  .board-part-chip-qty {
-    font-size: 0.78em;
-    color: var(--color-text-dim);
-  }
-  .board-art.is-armed .board-folder-rail,
-  .board-art.is-flying .board-folder-rail {
-    opacity: 1;
   }
   .chapter:has(.board-art) .chapter-media {
     margin-top: 0;
@@ -8196,19 +6633,6 @@ a.what-chain-chip:hover {
     position: absolute;
     inset: 0;
   }
-  .schematic-page {
-    /* Out of flex sizing so aspect-ratio derives height from a definite width
-       (the sheet img is position:absolute, so flex-auto height collapses to 0). */
-    flex: none;
-    width: 100%;
-    height: auto;
-    aspect-ratio: var(--sheet-ar, 5 / 2);
-    max-height: min(52vh, 440px);
-    /* Clip the parked neighbours so the drag-peel slides cleanly; pan-y leaves
-       vertical scrolling to the page (the swipe hook claims only horizontal). */
-    overflow: hidden;
-    touch-action: pan-y;
-  }
   .schematic-sheet {
     opacity: 1;
     transform: translateX(calc((var(--rel, 1) + var(--drag, 0)) * 100%));
@@ -8216,10 +6640,6 @@ a.what-chain-chip:hover {
   }
   .schematic-page.is-dragging .schematic-sheet {
     transition: none;
-  }
-  .schematic-sheet--leaving,
-  .schematic-sheet--entering {
-    transform: none;
   }
   .teardown-sides {
     display: none;
@@ -8229,25 +6649,11 @@ a.what-chain-chip:hover {
   .specs-parts .teardown-sides {
     display: block;
   }
-  .specs-parts .teardown-pins li {
-    padding: 0.4rem 0.6rem 0.4rem 0.75rem;
-  }
-  .specs-parts .teardown-pins li.teardown-pin-hoverable {
-    padding: 0;
-  }
-  .specs-parts .teardown-pin-btn {
-    padding: 0.4rem 0.6rem 0.4rem 0.75rem;
-  }
   .specs-parts .teardown-pin-part {
     font-size: 0.85rem;
   }
   .board-art-inspect,
   .schematic-foot {
-    display: none;
-  }
-}
-@media (max-width: 879px) {
-  .chapter-scope-tag {
     display: none;
   }
 }
@@ -8309,41 +6715,6 @@ a.what-chain-chip:hover {
   justify-content: start;
 }
 
-/* Empty state */
-.empty-state-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 1rem;
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--color-gold) 12%, transparent);
-  color: var(--color-gold-text);
-}
-
-.empty-state-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1.25rem;
-  letter-spacing: -0.01em;
-  margin: 0 0 0.5rem;
-  color: var(--color-text);
-}
-
-.empty-state-body {
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-  max-width: 32rem;
-  margin: 0 auto 1.25rem;
-}
-
-.empty-state-actions {
-  display: inline-flex;
-  gap: 0.75rem;
-  justify-content: center;
-}
-
 /* Cart empty */
 .cart-empty {
   display: flex;
@@ -8352,14 +6723,6 @@ a.what-chain-chip:hover {
   text-align: center;
   padding: 1.25rem 1.25rem 2rem;
   gap: 0.85rem;
-}
-
-.cart-empty-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1.1rem;
-  color: var(--color-text);
-  margin: 0;
 }
 
 /* Route error */
@@ -8682,16 +7045,6 @@ a.what-chain-chip:hover {
   overflow-y: auto;
 }
 
-.cart-lines-scroll {
-  flex: none;
-}
-
-.cart-lines-scroll ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
 /* The summary: hairline rows, no card. */
 .cart-summary-page {
   padding: var(--sp-2) 0 0;
@@ -8726,14 +7079,6 @@ a.what-chain-chip:hover {
 
 .cart-sheet-head-item {
   grid-column: 1 / 3;
-}
-
-.cart-sheet-head-qty {
-  text-align: center;
-}
-
-.cart-sheet-head-total {
-  text-align: right;
 }
 
 .cart-line--sheet .cart-sheet-row img {
@@ -8773,12 +7118,6 @@ a.what-chain-chip:hover {
   color: var(--color-text);
 }
 
-.cart-sheet-item ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
 .cart-sheet-item small {
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -8800,15 +7139,6 @@ a.what-chain-chip:hover {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-}
-
-.cart-sheet-qty-value {
-  min-width: 2ch;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text);
 }
 
 /* The stepper's + form is the last child of ITS parent, so the generic
@@ -8863,22 +7193,6 @@ a.what-chain-chip:hover {
     align-items: start;
   }
 
-  .cart-sheet-row > img {
-    grid-area: img;
-  }
-
-  .cart-sheet-item {
-    grid-area: item;
-  }
-
-  .cart-sheet-qty {
-    grid-area: qty;
-  }
-
-  .cart-sheet-total {
-    grid-area: total;
-  }
-
   .cart-line-quantity--sheet {
     flex-direction: row;
     gap: 0.75rem;
@@ -8915,14 +7229,6 @@ a.what-chain-chip:hover {
   color: var(--color-text);
 }
 
-.cart-register-row.is-total {
-  border-bottom-color: var(--color-border-strong);
-}
-
-.cart-register-row.is-total dt {
-  color: var(--color-text);
-}
-
 .cart-register-row.is-total dd {
   font-size: 1.05rem;
   font-weight: 600;
@@ -8944,13 +7250,6 @@ a.what-chain-chip:hover {
   display: block;
   width: 38px;
   height: 24px;
-}
-.cart-payments-name {
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-  padding: 0.2rem 0.4rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-xs);
 }
 .cart-summary-note {
   margin-top: 1rem;
@@ -9015,11 +7314,6 @@ a.what-chain-chip:hover {
   border-color: var(--color-gold);
 }
 
-.cart-line-quantity button:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
 /* "Remove" button: text-only, subtle */
 .cart-line-quantity form:last-child button {
   width: auto;
@@ -9030,12 +7324,6 @@ a.what-chain-chip:hover {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-left: 0.25rem;
-}
-
-.cart-line-quantity form:last-child button:hover {
-  background: transparent;
-  color: #f5b4b4;
-  border: none;
 }
 
 .cart-summary-page button,
@@ -9108,10 +7396,6 @@ a.what-chain-chip:hover {
   gap: 0.75rem;
   align-items: stretch;
   margin-bottom: 1.5rem;
-}
-
-.search-input {
-  flex: 1 1 18rem;
 }
 
 .search-error {
@@ -9304,23 +7588,12 @@ a.what-chain-chip:hover {
   -webkit-overflow-scrolling: touch;
 }
 
-.account-order table {
-  width: 100%;
-  min-width: 640px;
-  border-collapse: collapse;
-}
-
 .account-order th,
 .account-order td {
   border-bottom: 1px solid var(--color-border);
   padding: 0.8rem 0.75rem;
   text-align: left;
   vertical-align: top;
-}
-
-.account-order tfoot th,
-.account-order tfoot td {
-  font-weight: 600;
 }
 
 .account-order-sidebar {
@@ -9376,34 +7649,9 @@ a.what-chain-chip:hover {
   background-color: var(--color-bg-elevated);
   color: var(--color-text);
 }
-
-/* /account ChatFPV history: export and delete (app/lib/accounts/rights.ts).
-   Sits inside the collapsed "Settings and data" .details-toggle-body. */
-.account-chatfpv {
-  display: grid;
-  gap: 0.75rem;
-}
-.account-chatfpv-title {
-  margin: 0;
-  font-size: 1.05rem;
-  /* .details-toggle-body sets a muted ambient text color for its prose;
-     headings stay full-strength regardless of where this class is used. */
-  color: var(--color-text);
-}
 .account-chatfpv-notice {
   margin: 0;
   color: var(--color-text-muted);
-}
-.account-chatfpv-delete {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-}
-.account-chatfpv-delete label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 /* CSS-only "disabled" look before the confirm box is ticked. The submit
    itself is still guarded by the checkbox's `required` attribute (rights.ts
@@ -9500,10 +7748,6 @@ a.what-chain-chip:hover {
   transition: border-color 200ms ease, transform 200ms ease;
 }
 
-.account-dashboard-card:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 50%, transparent);
-}
-
 .account-dashboard-card-accent {
   background: linear-gradient(
     145deg,
@@ -9517,29 +7761,6 @@ a.what-chain-chip:hover {
   justify-content: space-between;
   align-items: baseline;
   gap: 1rem;
-}
-
-.account-dashboard-card-link {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  transition: color 150ms ease;
-}
-
-.account-dashboard-card-link:hover {
-  color: var(--color-text);
-}
-
-.account-dashboard-card-title {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  line-height: 1.25;
-  color: var(--color-text);
-  margin: 0;
 }
 
 .account-dashboard-card-lede {
@@ -9571,17 +7792,6 @@ a.what-chain-chip:hover {
   text-decoration: none;
   cursor: pointer;
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
-}
-
-.account-dashboard-cta:hover {
-  background: color-mix(in srgb, var(--color-gold) 18%, transparent);
-  border-color: var(--color-gold);
-  color: var(--color-gold-text-hover);
-}
-
-.account-dashboard-cta:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 /* Card footer that pairs a primary button with a secondary text link. */
@@ -9689,130 +7899,11 @@ a.what-chain-chip:hover {
    polish/account: the /early-bird order list and the /account/login CTA.
    /account itself is .account-hub-* at the end of this file.
    ============================================ */
-
-/* /early-bird order list: a card holding one bordered row per order. */
-.account-orders-card {
-  display: grid;
-  gap: 0.75rem;
-  padding: 1.25rem 1.35rem;
-  margin-bottom: 1rem;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-}
-.account-orders-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.75rem;
-}
-.account-order {
-  position: relative;
-  display: grid;
-  gap: 0.6rem;
-  padding: 1rem 1.1rem;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  transition: border-color 200ms ease;
-}
-.account-order:hover,
-.account-order:focus-within {
-  border-color: color-mix(in srgb, var(--color-gold) 50%, transparent);
-}
-.account-order-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.25rem 1rem;
-}
-.account-order-id {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.15rem 0.75rem;
-}
-.account-order-number {
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--color-text);
-}
-.account-order-date {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.account-login-cta {
-  margin-bottom: 1.25rem;
-}
 .od-btn.account-login-submit {
   width: 100%;
   justify-content: center;
   padding: 1rem 1.5rem;
   font-size: 13px;
-}
-
-/* Generic collapsed-detail block: /account/login's disclosure and
-   /account's "Settings and data" (ChatFPV history, delete account) both
-   use it, so a real detail stays reachable on the page without dominating
-   it visually. */
-.details-toggle {
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-bg-card);
-}
-.details-toggle-summary {
-  padding: 0.85rem 1.1rem;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: var(--ls-label);
-  color: var(--color-text);
-  cursor: pointer;
-  list-style: none;
-}
-.details-toggle-summary::-webkit-details-marker {
-  display: none;
-}
-.details-toggle-summary::before {
-  content: '+';
-  display: inline-block;
-  width: 1em;
-  color: var(--color-gold-text);
-}
-.details-toggle[open] .details-toggle-summary::before {
-  content: '\2212';
-}
-.details-toggle-body {
-  display: grid;
-  gap: 0.85rem;
-  padding: 0 1.1rem 1.1rem;
-  color: var(--color-text-muted);
-  font-size: 13.5px;
-  line-height: 1.6;
-}
-.details-toggle-body p {
-  margin: 0;
-}
-.details-toggle-body a {
-  color: var(--color-text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-/* account.account-settings: two stacked subsections (ChatFPV history,
-   delete account) inside the shared .details-toggle-body; a hairline
-   separates them instead of two more full card borders. */
-.account-settings-delete {
-  padding-top: 0.85rem;
-  border-top: 1px dashed var(--color-border);
 }
 
 /* ============================================
@@ -10211,15 +8302,6 @@ a.what-chain-chip:hover {
   margin-bottom: 2.25rem;
 }
 
-.editorial-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-gold-text);
-  margin: 0 0 1rem;
-}
-
 .editorial-title {
   font-family: var(--font-display);
   font-weight: 700;
@@ -10587,37 +8669,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   color: var(--color-on-accent);
 }
 
-/* Partner logo on the page's art layer: outside the card, in the right
-   margin like the section sketches: but pinned to ITS card: vertically
-   centered on the box that talks about that firmware. */
-.partner-card {
-  position: relative;
-  overflow: visible;
-}
-.partner-card-logo {
-  display: none;
-  position: absolute;
-  left: calc(100% + var(--sp-7));
-  top: 50%;
-  translate: 0 -50%;
-  width: 15rem;
-  aspect-ratio: var(--logo-ratio, 4);
-  background: currentColor;
-  color: color-mix(in srgb, var(--color-text-muted) 45%, transparent);
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: left center;
-  mask-position: left center;
-  pointer-events: none;
-}
-@media (min-width: 1120px) {
-  .partner-card-logo {
-    display: block;
-  }
-}
-
 /* Plate-sized where the viewport has real whitespace to spend. */
 @media (min-width: 1480px) {
   .section-art {
@@ -10884,116 +8935,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
 }
 
 /* ── Visit page (/visit): walkthrough frame, hours card, photo grid ────── */
-/* Launch card: a still from the scan with the call to enter. The game
-   never runs inside the article; it opens over the whole window. */
-.visit-launch {
-  position: relative;
-  overflow: hidden;
-  margin: 0 0 0.6rem;
-  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
-  border-radius: var(--r-md);
-  background: #000;
-  /* Fixed height on phones: a 16:9 box with a minimum height would widen
-     itself past the viewport. */
-  height: 380px;
-}
-
-@media (min-width: 640px) {
-  .visit-launch {
-    height: auto;
-    aspect-ratio: 16 / 9;
-  }
-}
-
-.visit-launch-poster {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.visit-launch-body {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: clamp(1rem, 4vw, 1.75rem);
-  background: linear-gradient(
-    to top,
-    rgb(0 0 0 / 0.85) 0%,
-    rgb(0 0 0 / 0.55) 45%,
-    rgb(0 0 0 / 0) 75%
-  );
-  color: #f4f1ea;
-}
-
-.visit-launch-kicker {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-gold);
-}
-
-.visit-launch-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: clamp(1.35rem, 3vw, 1.9rem);
-  line-height: 1.1;
-  color: #fff;
-}
-
-.visit-launch-text {
-  margin: 0 0 0.5rem;
-  max-width: 44ch;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  color: rgb(244 241 234 / 0.85);
-}
-
-.visit-launch-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.85rem 1.75rem;
-  border: 0;
-  border-radius: 999px;
-  background: var(--color-gold-fill);
-  color: var(--color-on-accent);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.2s ease;
-}
-
-.visit-launch-button::before {
-  content: '';
-  width: 0;
-  height: 0;
-  border-left: 9px solid currentColor;
-  border-top: 6px solid transparent;
-  border-bottom: 6px solid transparent;
-}
-
-.visit-launch-button:hover {
-  background: var(--color-gold-fill-hover);
-  transform: translateY(-1px);
-}
-
-.visit-launch-meta {
-  margin: 0;
-  font-size: 0.8rem;
-  color: rgb(244 241 234 / 0.7);
-}
 
 /* The game itself: the whole window, above the site header. */
 .visit-game {
@@ -11008,40 +8949,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   background: #000;
 }
 
-.visit-game-frame {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: 0;
-}
-
-/* Last-resort exit if the game fails to load and cannot post `exit`. */
-.visit-game-close {
-  position: absolute;
-  top: max(0.75rem, env(safe-area-inset-top));
-  right: max(0.75rem, env(safe-area-inset-right));
-  width: 2.25rem;
-  height: 2.25rem;
-  border: 1px solid rgb(255 255 255 / 0.25);
-  border-radius: 999px;
-  background: rgb(0 0 0 / 0.45);
-  color: #fff;
-  font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-  opacity: 0.6;
-}
-
-.visit-game-close:hover,
-.visit-game-close:focus-visible {
-  opacity: 1;
-}
-
-.visit-scan-meta {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
-
 .visit-card {
   padding: 1.25rem 1.25rem 1.1rem;
   border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
@@ -11052,20 +8959,11 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   color: color-mix(in srgb, var(--color-text) 72%, var(--color-text-muted));
 }
 
-/* One hours card per width: inline under the intro below the shell's
-   two-column breakpoint (1120px), the sticky side card above it. */
-.visit-card--aside {
-  display: none;
-}
-
 .visit-card--inline {
   margin-top: 2rem;
 }
 
 @media (min-width: 1120px) {
-  .visit-card--aside {
-    display: block;
-  }
 
   .visit-card--inline {
     display: none;
@@ -11117,55 +9015,12 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   color: var(--color-text-muted);
 }
 
-.visit-address {
-  font-style: normal;
-  margin: 0 0 0.6rem;
-}
-
-.visit-address strong {
-  color: var(--color-text);
-}
-
 .visit-card-link {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
-}
-
-.visit-gallery {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.visit-gallery figure {
-  margin: 0;
-}
-
-.visit-gallery img {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-  border-radius: var(--r-sm, 6px);
-}
-
-.visit-gallery figcaption {
-  margin-top: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-@media (max-width: 480px) {
-  .visit-gallery {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 /* Map palette, from scripts/gen-visit-map.py: the /visit map and the /owners
@@ -11208,50 +9063,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   }
 }
 
-.visit-map-canvas {
-  position: absolute;
-  left: calc(var(--pin-x) - var(--lab-x));
-  top: calc(var(--pin-y) - var(--lab-y));
-  width: var(--map-w);
-  height: var(--map-h);
-  background: var(--map-land) url('/makerspace/map-dark.svg') 0 0 / 100% 100% no-repeat;
-}
-
-
-.visit-map-pin {
-  position: absolute;
-  left: var(--pin-x);
-  top: var(--pin-y);
-  width: 0;
-  height: 0;
-}
-
-/* The dot. No animation: an animated child would repaint the masked layer. */
-.visit-map-pin::before {
-  content: '';
-  position: absolute;
-  left: -7px;
-  top: -7px;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: var(--color-gold-fill);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-bg) 70%, transparent);
-}
-
-/* Phones and tablets: the map inside the hours card, centred on the lab. */
-.visit-card-map {
-  position: relative;
-  overflow: hidden;
-  height: 200px;
-  margin: 0 0 1rem;
-  border-radius: var(--r-sm);
-  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
-  background: var(--color-bg);
-  --pin-x: 50%;
-  --pin-y: 50%;
-}
-
 .visit-map-credit {
   margin: 0.6rem 0 0;
   font-size: 0.7rem;
@@ -11265,108 +9076,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
 .ladder {
   margin: 0;
   font-family: var(--font-mono);
-}
-
-/* Drawn as a graphic, not a list: hairline spine, well-separated nodes
-   (gap ~4x the title size so the line reads as a drawn element), the next
-   rung marked by fill + ring, brightness stepping down toward the far
-   rungs, and the line fading out past the last node into the future. */
-.ladder-rungs {
-  list-style: none;
-  margin: 0;
-  padding: 0 0 2.5rem 1.6rem;
-  position: relative;
-}
-
-.ladder-rungs::before {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 0.45rem;
-  bottom: 0;
-  width: 1px;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--color-border) 90%, transparent)
-      calc(100% - 3rem),
-    transparent
-  );
-}
-
-.ladder-rung {
-  position: relative;
-  display: grid;
-  gap: 0.35rem;
-  padding-bottom: 3.5rem;
-}
-
-.ladder-rung:last-child {
-  padding-bottom: 0;
-}
-
-/* Hollow node punched through the hairline: page-background fill so the
-   line does not run through it. */
-.ladder-rung::before {
-  content: '';
-  position: absolute;
-  left: -1.6rem;
-  top: 0.35rem;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--color-bg);
-  border: 1px solid color-mix(in srgb, var(--color-text-muted) 55%, transparent);
-}
-
-/* The next rung up: filled, with a static glow ring. The one place the
-   accent appears inside the graphic. */
-.ladder-rung:first-child::before {
-  left: calc(-1.6rem - 1px);
-  width: 9px;
-  height: 9px;
-  background: var(--color-gold);
-  border-color: var(--color-gold);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-gold) 25%, transparent);
-}
-
-.ladder-when {
-  font-size: 10px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-text-muted) 80%, transparent);
-}
-
-.ladder-title {
-  font-size: 13px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.ladder-rung:first-child .ladder-title {
-  color: var(--color-text);
-}
-
-.ladder-body {
-  margin: 0.35rem 0 0.5rem;
-  font-size: 0.83rem;
-  line-height: 1.55;
-  color: color-mix(in srgb, var(--color-text-muted) 90%, transparent);
-}
-.ladder-meter-row {
-  margin: 0 0 0.25rem;
-}
-.ladder-rung[data-kind='next'] .goal-meter-fill {
-  opacity: 0.45;
-}
-
-.ladder-note {
-  margin: 1.4rem 0 0;
-  padding-top: 1rem;
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
-  font-size: 10px;
-  line-height: 1.7;
-  color: color-mix(in srgb, var(--color-text-muted) 80%, transparent);
 }
 
 /* ── Editorial aside figures (one per page) ────────────────────────────
@@ -11444,21 +9153,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   color: var(--color-text);
 }
 
-/* Firmware partner cards */
-.partners-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: 1fr;
-  margin-top: 1.25rem;
-}
-
-.partner-card {
-  padding: 1.25rem 1.5rem;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-}
-
 .partner-label {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -11468,44 +9162,10 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   margin: 0 0 0.4rem;
 }
 
-/* The board name in the eyebrow links its product page. No rule of its own:
-   `.editorial-section p a` already gives it the site's prose-link treatment
-   (gold, tinted underline at rest, full gold on hover) in the eyebrow's own
-   mono type. */
-
-.partner-project {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.4rem;
-  color: var(--color-text);
-  margin: 0 0 0.6rem;
-}
-
-.partner-blurb {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  line-height: 1.65;
-  color: var(--color-text-muted);
-  margin: 0 0 0.9rem;
-}
-
 .partner-links {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-}
-
-.partner-links a {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-gold-text);
-  transition: color 0.2s ease;
-}
-
-.partner-links a:hover {
-  color: var(--color-gold-text-hover);
 }
 
 /* Roadmap (/roadmap): hairline rows, mono status chips. Tokens only. */
@@ -11545,17 +9205,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
     color-mix(in srgb, var(--color-gold) 45%, transparent) 82%,
     transparent 100%
   );
-}
-.kanban-row-cards {
-  /* Four boards per line at most: 4 x 10.5rem + 3 gaps. A long stage
-     stacks; it never becomes a horizon-wide strip. */
-  max-width: min(100%, 44.7rem);
-}
-.kanban-row-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.9rem;
-  margin-top: 0.75rem;
 }
 .kanban-row-cards > .kanban-card {
   /* flex:none + min-width:0, or the card image's intrinsic min-content
@@ -11629,63 +9278,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
      instead of letting it run visibly behind them. */
   background: var(--color-bg);
 }
-.kanban-row > .kanban-col-head {
-  position: relative;
-}
-
-.kanban-intro {
-  margin-top: 1rem;
-  max-width: 62ch;
-}
-
-/* The stage's own one-line explanation, straight under its head: the board
-   carries the legend, there is no separate chapter to cross-reference. */
-.kanban-stage-note {
-  margin: 0.4rem 0 0;
-  max-width: 58ch;
-  font-size: 0.875rem;
-  line-height: 1.55;
-  color: color-mix(in srgb, var(--color-text-muted) 90%, transparent);
-}
-
-.kanban-vote {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.45rem;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--color-text-muted);
-}
-.kanban-vote-bar {
-  flex: 1;
-  height: 3px;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--color-border) 80%, transparent);
-  overflow: hidden;
-}
-.kanban-vote-fill {
-  display: block;
-  height: 100%;
-  background: var(--color-gold);
-}
-
-.kanban-gate-label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  line-height: 1.4;
-}
-
-/* The board-first hero: just the eyebrow and title, tightened so the board
-   still owns the first screen. */
-.kanban-hero {
-  margin-bottom: 0;
-}
-.kanban-band > .kanban-lead {
-  margin-top: 0;
-}
 
 /* Spill into the free canvas right of the prose column when it exists. */
 @media (min-width: 1280px) {
@@ -11699,22 +9291,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   align-content: start;
   gap: 0.7rem;
   min-width: 0;
-}
-
-.kanban-col-head {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  margin: 0 0 0.3rem;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text);
-}
-
-.kanban-count {
-  color: color-mix(in srgb, var(--color-text-muted) 75%, transparent);
 }
 
 .kanban-dot {
@@ -11738,42 +9314,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
 
 [data-status='alpha'] .kanban-dot {
   border-color: var(--color-gold);
-}
-
-.kanban-card {
-  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
-  border-radius: var(--r-md);
-  padding: 0.85rem 0.95rem;
-  display: grid;
-  gap: 0.55rem;
-}
-/* The whole card is the link; the render is the content. */
-.kanban-card.is-linked {
-  transition: border-color 0.15s ease, transform 0.2s ease;
-}
-.kanban-card.is-linked:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
-  transform: translateY(-2px);
-}
-.kanban-media {
-  display: block;
-  aspect-ratio: 1;
-  padding: 0.4rem;
-}
-.kanban-media img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-}
-
-.kanban-name {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.06em;
-  color: var(--color-text);
 }
 
 .kanban-note {
@@ -11802,18 +9342,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   color: var(--color-gold-text);
 }
 
-.kanban-empty {
-  margin: 0;
-  padding: 0.85rem 0.95rem;
-  border: 1px dashed color-mix(in srgb, var(--color-border) 70%, transparent);
-  border-radius: var(--r-md);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-text-muted) 60%, transparent);
-}
-
 /* Legend under the board. */
 .status-legend {
   margin: 0;
@@ -11835,112 +9363,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
 
 .status-legend dd {
   margin: 0;
-}
-
-/* Community vote standings (/roadmap). Same mono register as the kanban:
-   a name, a hairline track, a share figure. The fill is gold because the
-   bars ARE the community's voice, the one loud element the section gets. */
-.vote-board {
-  margin-top: 1.5rem;
-  display: grid;
-  gap: 0.8rem;
-}
-
-.vote-row {
-  display: grid;
-  grid-template-columns: minmax(9rem, 14rem) 1fr minmax(6ch, auto);
-  align-items: center;
-  gap: 0.9rem;
-}
-
-.vote-name {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  color: var(--color-text);
-  overflow: hidden;
-}
-
-.vote-name > span:first-child {
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.vote-bar {
-  display: block;
-  height: 6px;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--color-border) 70%, transparent);
-  overflow: hidden;
-}
-
-.vote-bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--color-gold);
-  transition: width 0.6s ease;
-}
-
-.vote-share {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-text-muted);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.vote-added,
-.vote-count {
-  display: block;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--color-text-muted) 65%, transparent);
-}
-
-.vote-graduated {
-  margin-top: 1.1rem;
-  padding: 0.85rem 0.95rem;
-  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
-  border-radius: var(--r-md);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--color-text-muted);
-}
-
-.vote-graduated p {
-  margin: 0 0 0.4rem;
-  color: var(--color-gold-text);
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: var(--ls-label);
-}
-
-.vote-graduated ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.3rem;
-}
-
-.vote-foot,
-.vote-empty {
-  margin: 0.9rem 0 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: color-mix(in srgb, var(--color-text-muted) 80%, transparent);
-}
-
-.vote-empty {
-  padding: 0.85rem 0.95rem;
-  border: 1px dashed color-mix(in srgb, var(--color-border) 70%, transparent);
-  border-radius: var(--r-md);
 }
 
 /* Financial goals (/roadmap): one card per goal, meter + hand-set target.
@@ -12000,90 +9422,12 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   color: var(--color-text-muted);
 }
 
-.goal-meter-row {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  margin-top: 0.2rem;
-}
-
-.goal-meter {
-  display: block;
-  flex: 1;
-  height: 6px;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--color-border) 70%, transparent);
-  overflow: hidden;
-}
-
-.goal-meter-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--color-gold);
-  transition: width 0.6s ease;
-}
-
-.goal-target {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-
 .goal-foot {
   margin: 0.9rem 0 0;
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
   color: color-mix(in srgb, var(--color-text-muted) 80%, transparent);
-}
-
-/* Upstream merged-PR receipts (/firmware-partners, section hidden while
-   the MERGED_PRS array is empty). */
-.upstream-list {
-  list-style: none;
-  padding: 0;
-  margin: 0.75rem 0 0;
-}
-
-.upstream-item {
-  padding: 0.85rem 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
-}
-
-.upstream-item:last-child {
-  border-bottom: none;
-}
-
-.upstream-project {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-gold-text);
-  margin: 0 0 0.3rem;
-}
-
-.upstream-title {
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text);
-  transition: color 0.2s ease;
-}
-
-.upstream-title:hover {
-  color: var(--color-gold-text);
-}
-
-.upstream-what {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  line-height: 1.65;
-  color: var(--color-text-muted);
-  margin: 0.3rem 0 0;
 }
 
 
@@ -12148,12 +9492,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   line-height: 1.65;
   color: var(--color-text-muted);
   white-space: pre-line;
-}
-
-/* Trust-chip link state: chips can now be clickable. */
-.trust-chip-link {
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .trust-chip-link:hover {
@@ -12995,197 +10333,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   color: var(--od-ink-dim);
   margin: 0 0 18px;
 }
-
-/* /releases/<handle> ---------------------------------------------- */
-.rn-post-page {
-  max-width: 920px;
-  margin: 0 auto;
-}
-.rn-post-crumb {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--od-ink-dim);
-  margin-bottom: 28px;
-}
-.rn-post-crumb a {
-  color: inherit;
-  text-decoration: none;
-}
-.rn-post-crumb a:hover {
-  color: var(--od-pcb-gold-2);
-}
-.rn-post-crumb .rn-sep {
-  color: var(--od-ink-faint);
-  margin: 0 8px;
-}
-.rn-post-meta {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  flex-wrap: wrap;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--od-ink-dim);
-  margin-bottom: 14px;
-}
-.rn-post-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: clamp(36px, 4.6vw, 60px);
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-  margin: 0 0 18px;
-  text-wrap: pretty;
-}
-.rn-post-title em {
-  font-style: normal;
-  color: var(--od-pcb-gold-2);
-}
-.rn-post-deck {
-  font-family: var(--font-mono);
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--od-ink-dim);
-  max-width: 64ch;
-  margin: 0 0 36px;
-}
-.rn-post-hero {
-  aspect-ratio: 16 / 9;
-  margin: 0 0 40px;
-  border: 1.5px solid var(--od-line-strong);
-  border-radius: var(--r-xs);
-  background: var(--od-bg-2);
-  overflow: hidden;
-}
-.rn-post-hero img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.rn-post-body {
-  font-family: var(--font-mono);
-  font-size: 14px;
-  line-height: 1.75;
-  color: var(--od-ink);
-}
-.rn-post-body > * + * {
-  margin-top: 18px;
-}
-.rn-post-body h2 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 28px;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-  margin: 56px 0 14px;
-  padding-top: 22px;
-  border-top: 1.5px solid var(--od-line-strong);
-}
-.rn-post-body h2:first-child {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: 0;
-}
-.rn-post-body h3 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 18px;
-  line-height: 1.3;
-  margin: 28px 0 10px;
-}
-.rn-post-body p {
-  margin: 0 0 14px;
-  max-width: 70ch;
-}
-.rn-post-body a {
-  color: var(--od-pcb-gold-2);
-  text-decoration: underline;
-}
-.rn-post-body ul,
-.rn-post-body ol {
-  margin: 0 0 14px;
-  padding-left: 22px;
-  max-width: 70ch;
-}
-.rn-post-body li {
-  margin-bottom: 6px;
-}
-.rn-post-body code {
-  font-family: var(--font-mono);
-  font-size: 0.92em;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 1px 6px;
-  border-radius: var(--r-2xs);
-  color: var(--od-pcb-green-glow);
-  border: 1px solid var(--od-line);
-}
-.rn-post-body pre {
-  background: #06080a;
-  border: 1.5px solid var(--od-pcb-green-2);
-  border-radius: var(--r-xs);
-  padding: 14px 18px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--od-pcb-green-glow);
-  line-height: 1.7;
-  overflow-x: auto;
-}
-.rn-post-body pre code {
-  background: transparent;
-  border: 0;
-  padding: 0;
-  color: inherit;
-  font-size: inherit;
-}
-.rn-post-body table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  border-top: 1.5px solid var(--od-line-strong);
-}
-.rn-post-body th,
-.rn-post-body td {
-  padding: 9px 12px 9px 0;
-  border-bottom: 1px solid var(--od-line);
-  text-align: left;
-  vertical-align: top;
-}
-.rn-post-body th {
-  color: var(--od-ink-dim);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-.rn-post-body img {
-  max-width: 100%;
-  height: auto;
-  border: 1.5px solid var(--od-line-strong);
-  border-radius: var(--r-xs);
-}
-.rn-post-body blockquote {
-  margin: 0 0 14px;
-  padding-left: 14px;
-  border-left: 2px solid var(--od-pcb-gold);
-  color: var(--od-ink-dim);
-}
-
-.rn-post-footer {
-  margin-top: 56px;
-  padding-top: 24px;
-  border-top: 1.5px solid var(--od-line-strong);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-@media (max-width: 768px) {
-  .rn-post-footer {
-    grid-template-columns: 1fr;
-  }
-}
 .rn-pn {
   display: flex;
   flex-direction: column;
@@ -13198,36 +10345,11 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   cursor: pointer;
   transition: border-color 0.12s, background 0.12s;
 }
-.rn-pn:hover {
-  border-color: var(--od-pcb-gold);
-  background: var(--rn-gold-tint);
-}
 .rn-pn .rn-k {
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
-  color: var(--od-ink-faint);
-}
-.rn-pn.rn-next {
-  text-align: right;
-  align-items: flex-end;
-}
-@media (max-width: 768px) {
-  .rn-pn.rn-next {
-    text-align: left;
-    align-items: flex-start;
-  }
-}
-.rn-pn .rn-pn-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 14px;
-  line-height: 1.3;
-}
-.rn-pn .rn-pn-date {
-  font-family: var(--font-mono);
-  font-size: 11px;
   color: var(--od-ink-faint);
 }
 
@@ -13610,11 +10732,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   .catalog-toolbar {
     flex-wrap: wrap;
   }
-  .collection-sort,
-  .collection-sort select {
-    min-width: 0;
-    max-width: 100%;
-  }
   .firmware-split-amounts {
     flex-wrap: nowrap;
     gap: 0.4rem;
@@ -13624,17 +10741,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   .firmware-split-total {
     min-width: 0;
   }
-  .catalog-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .catalog-sidebar,
-  .catalog-filter-group,
-  .catalog-filter-list,
-  .catalog-main {
-    min-width: 0;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
   .site-header-main {
     max-width: 100%;
     box-sizing: border-box;
@@ -13643,10 +10749,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
     min-height: 44px;
     display: flex;
     align-items: center;
-  }
-  .product-gallery-arrow {
-    min-width: 44px;
-    justify-content: center;
   }
   .product-card-badge {
     font-size: 12px;
@@ -13670,10 +10772,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
    desktop 3D fan / sticky / gutter math.
    ============================================================ */
 @media (max-width: 1023px) {
-  .board-deck-dots {
-    display: flex;
-    gap: 0.3rem;
-  }
   .board-deck-dot {
     flex: 1 1 0;
     /* 12px visible bar (was 4px: the only pagination affordance on touch
@@ -13694,9 +10792,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
     position: absolute;
     inset: -12px -2px;
   }
-  .board-deck-dot {
-    position: relative;
-  }
   .board-deck-dot.is-done {
     background: color-mix(in srgb, var(--color-gold-fill) 45%, transparent);
   }
@@ -13716,10 +10811,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   /* Catalog as a 2-up grid on phones: twice the products per screen than the
      single 240px-min column, which is the efficient mobile-store default and
      keeps the board renders large enough to read. */
-  .catalog-main .products-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
-  }
 }
 
 /* ---- Council pass 1: kill remaining voids + make touch explorers legible --- */
@@ -13910,16 +11001,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
 
 /* Cart controls on touch: the steppers and Remove were ~26px tall: below
    any usable tap target. Pad them up only where there is no fine pointer. */
-@media (hover: none) {
-  .cart-line-quantity button {
-    min-width: 40px;
-    min-height: 40px;
-  }
-  .cart-line-quantity form button,
-  .cart-line-quantity + form button {
-    min-height: 40px;
-  }
-}
 
 /* === Timeline page (/timeline) ===
    The signature is the trace: a vertical PCB-trace spine that draws in
@@ -13928,12 +11009,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
    motion renders the trace fully drawn. Semantic tokens only. */
 .timeline-page .editorial-hero {
   margin-bottom: var(--sp-6);
-}
-.tl-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: var(--sp-4);
 }
 .tl-filter {
   font-family: var(--font-mono);
@@ -13956,153 +11031,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   color: var(--color-on-accent);
   background: var(--color-gold);
   border-color: var(--color-gold);
-}
-.tl-root {
-  --tl-progress: 0;
-  position: relative;
-  padding-left: 2.25rem;
-  max-width: 46rem;
-}
-.tl-trace {
-  position: absolute;
-  left: 0.55rem;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--color-border);
-}
-.tl-trace::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  height: calc(var(--tl-progress) * 100%);
-  background: var(--color-gold);
-  transition: height 0.15s linear;
-}
-.tl-year {
-  position: relative;
-  padding-top: var(--sp-5);
-}
-.tl-year-label {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: clamp(2rem, 5vw, 3rem);
-  letter-spacing: 0.06em;
-  line-height: 1;
-  color: color-mix(in srgb, var(--color-text) 50%, transparent);
-  margin: 0 0 var(--sp-4);
-}
-.tl-events {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--sp-4);
-}
-.tl-event {
-  position: relative;
-  /* No opacity fade: 0.35 dropped the date and detail text to 1.7:1. The pad
-     and trace already mark passed events. */
-  transform: translateY(6px);
-  transition: transform 0.4s ease;
-}
-.tl-event.is-passed {
-  opacity: 1;
-  transform: none;
-}
-.tl-pad {
-  position: absolute;
-  left: -2.25rem;
-  top: 0.2rem;
-  width: 14px;
-  height: 14px;
-  margin-left: 0.55rem;
-  transform: translateX(-6px);
-  border-radius: 50%;
-  border: 2px solid var(--color-border);
-  background: var(--color-bg);
-  transition: border-color 0.3s ease;
-}
-.tl-pad::after {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  border-radius: 50%;
-  background: var(--color-border);
-  transition: background 0.3s ease;
-}
-.tl-event.is-passed .tl-pad {
-  border-color: var(--color-gold);
-}
-.tl-event.is-passed .tl-pad::after {
-  background: var(--color-gold);
-}
-.tl-date {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin: 0 0 0.15rem;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-}
-.tl-glyph {
-  color: var(--color-gold-text);
-  letter-spacing: 0;
-}
-.tl-tag {
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  padding: 0.05rem 0.4rem;
-  font-size: 0.62rem;
-}
-.tl-title {
-  margin: 0;
-  font-size: var(--fs-md);
-  font-weight: 600;
-  line-height: 1.35;
-}
-.tl-title a {
-  color: inherit;
-  text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
-}
-.tl-title a:hover {
-  border-bottom-color: var(--color-gold);
-}
-.tl-detail {
-  margin: 0.3rem 0 0;
-  font-size: var(--fs-sm);
-  color: var(--color-text-dim);
-  line-height: 1.55;
-}
-/* Board names in detail lines link their product pages; same gold-tinted
-   underline vocabulary as the receipt link in .tl-title a. */
-.tl-detail a {
-  color: inherit;
-  text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
-}
-.tl-detail a:hover {
-  color: var(--color-text);
-  border-bottom-color: var(--color-gold);
-}
-.tl-empty {
-  font-family: var(--font-mono);
-  color: var(--color-text-dim);
-  padding: var(--sp-5) 0;
-}
-@media (prefers-reduced-motion: reduce) {
-  .tl-event {
-    opacity: 1;
-    transform: none;
-  }
-  .tl-trace::after {
-    height: 100%;
-    transition: none;
-  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -14205,124 +11133,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   color: var(--color-text-muted);
 }
 
-/* Counts strip: how much of this dossier actually stands up. */
-.learn-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.75rem;
-  margin: 1.5rem 0 0;
-  padding-block: 0.9rem;
-  border-block: 1px solid var(--color-border);
-}
-.learn-stats div {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-.learn-stats dt {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: var(--ls-label);
-  color: var(--color-text-muted);
-}
-.learn-stats dd {
-  font-family: var(--font-mono);
-  font-size: 1.05rem;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.learn-toc {
-  margin: 2rem 0;
-  padding: 1rem 0;
-  border-block: 1px solid var(--color-border);
-}
-.learn-toc ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  columns: 2;
-  column-gap: 2rem;
-}
-.learn-toc li {
-  break-inside: avoid;
-  margin: 0 0 0.35rem;
-}
-.learn-toc a {
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-  text-decoration: none;
-}
-.learn-toc a:hover {
-  color: var(--color-gold-text);
-}
-
-.learn-section {
-  margin-top: 2.5rem;
-}
-.learn-section h2 {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  letter-spacing: -0.02em;
-  margin: 0 0 0.75rem;
-}
-.learn-section h3 {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  margin: 0 0 0.6rem;
-}
-.learn-section h4 {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: var(--ls-label);
-  color: var(--color-text-muted);
-  margin: 0 0 0.6rem;
-}
-.learn-prose,
-.learn-intro p {
-  color: var(--color-text-muted);
-  line-height: 1.7;
-}
-
-.learn-claims {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.learn-claim {
-  padding: 0.7rem 0;
-  border-bottom: 1px solid var(--color-border);
-  margin: 0;
-}
-.learn-claim-text {
-  color: var(--color-text);
-  line-height: 1.65;
-  margin: 0;
-}
-.learn-claim-text code,
-.learn-prose code,
-.learn-intro code,
-.learn-table code {
-  /* reset.css hardcodes `code { background: #ddd }` with no theme token, so a
-     bare code span is near-invisible in dark: #ddd behind #e5e5e5 text. Every
-     other long-form surface on the site overrides it; so does this one. */
-  font-family: var(--font-mono);
-  font-size: 0.85em;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
-  padding: 0.08em 0.3em;
-}
-.learn-claim-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0.4rem 0 0;
-}
-
 /* The tag carries the whole trust signal, so it must survive a greyscale
    print: weight and border do the work, colour only reinforces. The hue lives
    in the border and a soft fill rather than in the text, because --color-gold
@@ -14353,79 +11163,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
 .learn-tag-circular {
   border-color: var(--color-error);
   background: color-mix(in srgb, var(--color-error) 12%, transparent);
-}
-
-.learn-source {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-text-muted);
-  text-decoration: none;
-  border-bottom: 1px dotted var(--color-border-strong);
-}
-.learn-source:hover {
-  color: var(--color-gold-text);
-}
-.learn-source-none {
-  color: var(--color-text-muted);
-  border-bottom: 0;
-  font-style: italic;
-}
-
-@media (max-width: 719px) {
-  .learn-toc ul {
-    columns: 1;
-  }
-  .learn-stats {
-    gap: 1.1rem;
-  }
-}
-
-/* Data tables inside a dossier (the frequency ladder, latency budgets). They
-   are wide by nature, so the table scrolls inside its own box rather than
-   pushing the page sideways. */
-.learn-table-wrap {
-  overflow-x: auto;
-  margin: 1rem 0;
-  border: 1px solid var(--color-border);
-  /* The prose column is 680px and these tables carry five or six columns, so
-     inside it every cell wraps to three lines. Break out wider, centred on the
-     column, never past the viewport. The rail gutter is repeated literally
-     rather than reused from --rail-width: that token is a percentage of its
-     containing block, so inside the 680px column it resolves NARROWER than the
-     column itself. */
-  width: min(1080px, calc(100vw - 2 * clamp(2.5rem, 5.5vw, 7rem)));
-  margin-left: 50%;
-  transform: translateX(-50%);
-}
-.learn-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 0.85rem;
-}
-.learn-table th,
-.learn-table td {
-  text-align: left;
-  padding: 0.45rem 0.7rem;
-  border-bottom: 1px solid var(--color-border);
-  vertical-align: top;
-}
-.learn-table th {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: var(--ls-label);
-  color: var(--color-text-muted);
-  white-space: nowrap;
-  background: var(--color-bg-elevated);
-}
-.learn-table td {
-  color: var(--color-text-muted);
-}
-.learn-table tr:last-child td {
-  border-bottom: 0;
-}
-.learn-table code {
-  font-size: 0.9em;
 }
 .add-to-cart-form {
   display: contents;
@@ -14544,19 +11281,10 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   font-size: var(--fs-md);
   color: var(--color-text-dim);
 }
-.cart-summary-page .cart-checkout-cta {
-  min-height: 48px;
-}
 @media (min-width: 768px) {
   .cart-summary-page .cart-checkout-cta {
     max-width: 360px;
     margin-left: auto;
-  }
-}
-@media (max-width: 640px) {
-  .cart-line-quantity--sheet button {
-    min-width: 44px;
-    min-height: 44px;
   }
 }
 
@@ -14725,13 +11453,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   font-family: var(--font-mono);
   color: var(--color-text-muted);
 }
-.cart-parcel[open] > summary::after {
-  content: '\2212';
-}
-.cart-parcel-label {
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
 .cart-parcel-when {
   display: grid;
   gap: 2px;
@@ -14747,13 +11468,6 @@ a[target='_blank']:not(.open-source-card, .trust-chip-link)::after {
   gap: var(--sp-2);
   padding-bottom: var(--sp-3);
   color: var(--color-text-muted);
-}
-.cart-parcel-body p {
-  margin: 0;
-}
-.cart-parcel-body a {
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 .cart-parcel-items {
   display: grid;
@@ -15059,28 +11773,6 @@ a.cart-added-suggestion-name:hover {
   color: var(--color-error);
   font-size: var(--fs-xs, 0.75rem);
 }
-.cart-line-quantity[aria-busy='true'] .cart-sheet-qty-value {
-  opacity: 0.55;
-}
-
-.firmware-freedom {
-  margin: 0 0 var(--sp-4, 1.25rem);
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--color-border);
-  border-left: 3px solid var(--color-gold-fill);
-  border-radius: var(--r-sm);
-  background: var(--color-bg-elevated);
-}
-.firmware-freedom p {
-  margin: 0;
-}
-.firmware-freedom-title {
-  font-weight: 600;
-  margin-bottom: 0.25rem !important;
-}
-.firmware-freedom a {
-  text-decoration: underline;
-}
 
 /* The team, as a row of small portraits under "Who is behind it". */
 .team-strip {
@@ -15127,19 +11819,6 @@ a.cart-added-suggestion-name:hover {
 /* Launched-state home and help chrome                                   */
 /* --------------------------------------------------------------------- */
 /* Splash loader: the manifest and the slow-load escape stack in one      */
-/* column, so the "loading models" line never draws over the checklist.  */
-.hero-load-stack {
-  position: absolute;
-  left: 50%;
-  top: calc(50% + 5.5rem);
-  transform: translateX(-50%);
-  z-index: 35;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-  pointer-events: none;
-}
 
 /* ============================================
    PDP anchors and cart polish
@@ -15189,38 +11868,14 @@ a.cart-added-suggestion-name:hover {
   color: var(--color-gold-text);
   font-size: var(--fs-sm);
 }
-.cart-split-reminder {
-  margin: 0 0 var(--sp-4);
-  font-size: var(--fs-sm);
-}
-.cart-split-reminder p {
-  margin: 0;
-}
 .cart-split-reminder .cart-split-actions {
   display: flex;
   gap: var(--sp-4);
   margin-top: var(--sp-1);
 }
-.cart-mixed-note .cart-summary-note {
-  margin-top: var(--sp-2);
-}
-.cart-summary-page .cart-terms {
-  font-size: var(--fs-xs);
-}
-.cart-empty-link {
-  color: var(--color-gold-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
 
 /* Desktop PDP: the photo stays beside the buy column while it scrolls
    past, instead of leaving an empty column under it. */
-@media (min-width: 960px) {
-  .product-hero-gallery-col {
-    position: sticky;
-    top: calc(var(--header-height) + 2.5rem);
-  }
-}
 .cart-register-row dd {
   white-space: nowrap;
 }
@@ -15259,52 +11914,6 @@ a.cart-added-suggestion-name:hover {
 button[data-waiting] {
   opacity: 0.55;
   cursor: progress;
-}
-
-/* One primary button look across the product page, the dialog and the
-   cart: sans 16px/600, sentence case, gold fill. Yellow stays for the
-   primary action only. */
-.cart-checkout-cta {
-  min-height: 48px;
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-  border-radius: var(--r-md);
-  background: var(--color-gold-fill);
-  color: var(--color-on-accent);
-}
-.cart-split-link,
-.cart-summary-page .cart-split-link {
-  padding: 0;
-  border-radius: 0;
-  border: 0;
-  background: none;
-  color: var(--color-gold-text);
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  text-align: left;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
-.cart-split-link:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-/* Quantity steppers: real touch targets. */
-.cart-line-quantity--sheet .cart-sheet-stepper button {
-  min-width: 36px;
-  min-height: 36px;
-}
-@media (pointer: coarse) {
-  .cart-line-quantity--sheet .cart-sheet-stepper button {
-    min-width: 44px;
-    min-height: 44px;
-  }
 }
 
 /* Product cards: the badge says the ship state; the price sits under the
@@ -15387,29 +11996,6 @@ button[data-waiting] {
   }
 }
 
-/* The generic `.cart-summary-page button` rule (mono, uppercase, gold) is
-   more specific than the classes above: restate them inside the summary. */
-.cart-summary-page .cart-checkout-cta {
-  padding: 0.75rem 1.25rem;
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-}
-.cart-summary-page .cart-split-link,
-.cart-summary-page .cart-split-link:hover {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--color-gold-text);
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
 /* ------------------------------------------------------------------
    Short ship line on cart and dialog rows: body font, normal weight,
    the accent only on the "Funding target" label. The full condition
@@ -15444,17 +12030,6 @@ button[data-waiting] {
     width: calc(100% - 2rem);
   }
 }
-.cart-line-quantity .cart-sheet-stepper button:disabled,
-.cart-line-quantity .cart-sheet-stepper button[aria-disabled='true'] {
-  opacity: 0.4;
-  border-color: var(--color-border-strong);
-  cursor: not-allowed;
-}
-.cart-line-quantity--sheet .cart-sheet-stepper button[aria-disabled='true']:hover {
-  background: transparent;
-  color: var(--color-text-muted);
-  border-color: var(--color-border-strong);
-}
 body:has(main.cart) footer .footer-note--newsletter {
   display: none;
 }
@@ -15478,12 +12053,6 @@ html:root .trust-chip-oshwa-mark {
   padding: 0.12em 0.2em;
   border-radius: 3px;
   background: var(--od-color-neutral-surface-light);
-}
-.open-source-card-repo {
-  margin: 0.4rem 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
 }
 
 /* Gallery: the "Render" chip sits top-left, clear of the arrow/counter
@@ -15528,35 +12097,6 @@ html:root .trust-chip-oshwa-mark {
   color: var(--color-text);
   text-transform: none;
   letter-spacing: 0;
-}
-/* A link inside a sentence: gold text, underlined, no button box. */
-.text-link {
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-weight: 500;
-  color: var(--color-gold-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-.text-link:hover {
-  color: var(--color-gold-text-hover);
-}
-.text-link:disabled {
-  opacity: 0.5;
-  cursor: progress;
-}
-/* Checkout buttons: the primary button, no glow, sentence case. */
-.cart-checkout-cta {
-  min-height: 48px;
-  font-family: var(--font-sans) !important;
-  font-size: 15px !important;
-  font-weight: 600 !important;
-  letter-spacing: 0 !important;
-  text-transform: none !important;
-  box-shadow: none !important;
 }
 
 /* --- Sentences and controls are Inter in sentence case -------------- */
@@ -15643,63 +12183,6 @@ html:root .trust-chip-oshwa-mark {
   color: var(--color-text);
   border-color: var(--color-text-muted);
 }
-/* The gallery fills its frame on the photo backdrop, no inner card. */
-.product-hero-media {
-  padding: 0;
-  border: 0;
-  border-radius: var(--r-lg);
-  background: #ece9e3;
-  position: relative;
-}
-.product-hero-media .product-gallery-main {
-  border-radius: var(--r-lg);
-  background: #ece9e3;
-}
-/* Touch targets: 44 px steppers and remove button. */
-.cart-line-quantity--sheet .cart-sheet-stepper button,
-.cart-line-quantity--sheet .cart-sheet-stepper form:last-child button {
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--r-md);
-  font-size: 18px;
-  color: var(--color-text);
-}
-.cart-sheet-qty-value {
-  min-width: 44px;
-  font-size: 15px;
-}
-.cart-line-quantity form:last-child button.cart-line-remove,
-.cart-line-remove {
-  display: inline-grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  margin: 0;
-  border: 0;
-  border-radius: var(--r-md);
-  background: transparent;
-  color: var(--color-text-muted);
-}
-.cart-line-remove:hover {
-  color: var(--color-error);
-  background: color-mix(in srgb, var(--color-text) 5%, transparent);
-}
-.cart-line-quantity--sheet {
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 0.25rem 0.5rem;
-}
-.cart-line-set {
-  flex-basis: 100%;
-  margin: 0.2rem 0 0;
-  font-size: 13px;
-  color: var(--color-text-muted);
-  text-align: right;
-}
 /* Summary labels in the body face: "Subtotal", "Shipping to [country]",
    "Total (incl. VAT)" bold. */
 .cart-register dt {
@@ -15707,9 +12190,6 @@ html:root .trust-chip-oshwa-mark {
   font-size: var(--fs-sm);
   letter-spacing: 0;
   text-transform: none;
-}
-.cart-register-row.is-total dt {
-  font-weight: 600;
 }
 
 
@@ -15747,10 +12227,6 @@ html:root .trust-chip-oshwa-mark {
 @media (min-width: 960px) {
   .product-hero {
     align-items: stretch;
-  }
-  .product-hero-media {
-    width: min(100%, calc(100svh - 9.5rem));
-    margin-inline: 0;
   }
   .product-hero-copy {
     align-self: stretch;
@@ -15815,15 +12291,6 @@ html:root .trust-chip-oshwa-mark {
   color: var(--color-text);
   text-decoration: underline;
   text-underline-offset: 3px;
-}
-
-/* Mixed ship dates: the split link on its own line, the way to get the
-   earlier items sooner. */
-.cart-mixed-note .cart-split-form {
-  margin: var(--sp-2) 0 0;
-}
-.cart-mixed-note .cart-split-link {
-  line-height: 1.4;
 }
 
 /* Pinned buy bar (main's): the variant chips, price and Pre-order, shown
@@ -16057,67 +12524,6 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
     animation: none;
   }
 }
-
-/* Homepage hero, as on main. */
-.hero-size-slider {
-  position: relative;
-  display: inline-flex;
-  padding: 5px; /* PAD in HeroSizeSlider.tsx */
-  border: 1px solid var(--pod-border);
-  border-radius: var(--r-pill);
-  background: var(--pod-bg);
-  backdrop-filter: blur(var(--pod-blur));
-  -webkit-backdrop-filter: blur(var(--pod-blur));
-  touch-action: none; /* let the thumb own horizontal drag on touch */
-  user-select: none;
-}
-.hero-size-slider__thumb {
-  position: absolute;
-  z-index: 2;
-  top: 5px;
-  bottom: 5px;
-  left: 5px;
-  width: calc(50% - 5px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--r-pill);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--color-gold-fill) 88%, white) 0%,
-    var(--color-gold-fill) 55%
-  );
-  box-shadow:
-    0 2px 10px -2px color-mix(in srgb, var(--color-gold) 55%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  cursor: grab;
-  touch-action: none;
-}
-
-.hero-size-slider__thumb:active {
-  cursor: grabbing;
-}
-
-.hero-size-slider__thumb-label {
-  color: var(--color-on-accent);
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  white-space: nowrap;
-  pointer-events: none;
-}
-.hero-size-slider__spinner {
-  position: absolute;
-  right: 0.55rem;
-  width: 0.7rem;
-  height: 0.7rem;
-  border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--color-on-accent) 35%, transparent);
-  border-top-color: var(--color-on-accent);
-  animation: hero-size-spin 0.7s linear infinite;
-  pointer-events: none;
-}
 .hero-size-slider__thumb.is-busy .hero-size-slider__thumb-label {
   padding-right: 1.2rem;
 }
@@ -16126,73 +12532,6 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
   to {
     transform: rotate(360deg);
   }
-}
-
-.hero-size-slider__opt {
-  position: relative;
-  z-index: 1;
-  min-width: 8.5rem;
-  flex: 1 1 0;
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--color-text-muted);
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.hero-size-slider__opt:hover {
-  color: var(--color-text);
-}
-
-.hero-size-slider__opt:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 3px;
-}
-
-.hero-size-slider__opt:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 3px;
-}
-
-.hero-wordmark {
-  position: absolute;
-  bottom: 2.5rem;
-  left: 2.5rem;
-  z-index: 35;
-  margin: 0;
-  transform-origin: center;
-  transform: translate(calc(50vw - 2.5rem - 50%), calc(-50vh + 2.5rem + 50%))
-    scale(1.7);
-  /* Snappy S-curve, same timing as the header drop-in so they land together. */
-  transition: transform 0.65s cubic-bezier(0.72, 0, 0.28, 1);
-  pointer-events: none;
-  line-height: 0;
-}
-
-.hero-wordmark img {
-  display: block;
-  height: clamp(2.5rem, 5vw, 4.5rem);
-  width: auto;
-}
-.hero-wordmark-svg {
-  display: block;
-  height: clamp(2.5rem, 5vw, 4.5rem);
-  width: auto;
-  overflow: visible;
-}
-.hero-wordmark-svg.is-filled .hw-stroke {
-  opacity: 0 !important;
-  animation: none !important;
-}
-.hero-wordmark.is-settled {
-  transform: translate(0, 0) scale(1);
 }
 .hero-load-overflow {
   position: relative;
@@ -16214,49 +12553,8 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
   opacity: 0 !important;
 }
 
-.hero-load-overflow__text {
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.hero-load-overflow__skip {
-  pointer-events: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.95rem;
-  border: 1px solid color-mix(in srgb, var(--color-text-muted) 35%, transparent);
-  color: var(--color-text);
-  border-radius: var(--r-xs);
-  font-size: 0.7rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  transition:
-    border-color 0.2s ease,
-    color 0.2s ease,
-    background-color 0.2s ease;
-}
-
-.hero-load-overflow__skip:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
-  color: var(--color-gold);
-}
-
 @keyframes hero-overflow-in {
   to {
-    opacity: 1;
-  }
-}
-@media (max-width: 640px) {
-  .hero-load-overflow {
-    flex-direction: column;
-    gap: 0.85rem;
-    font-size: 0.7rem;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-load-overflow {
-    animation: none;
     opacity: 1;
   }
 }
@@ -16323,9 +12621,6 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
   opacity: 1;
   pointer-events: auto;
   animation: island-splash-bottom 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.hero-github:hover {
-  color: var(--color-gold);
 }
 @keyframes island-splash-left {
   0% {
@@ -16500,9 +12795,6 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
 .hero-reveal-card:hover {
   border-color: color-mix(in srgb, var(--color-gold) 50%, transparent);
 }
-.hero-scroll-fade {
-  opacity: clamp(0, calc(0.4 - var(--hero-p, 0) * 3), 0.4);
-}
 .hero-reveal-media {
   flex: 0 0 auto;
   width: 4.25rem;
@@ -16588,9 +12880,6 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
   transform: translate(-50%, -6px);
   animation: hero-drag-bob 2.4s ease-in-out 0.5s infinite;
 }
-.hero-drag-hint svg {
-  color: var(--color-gold);
-}
 @keyframes hero-drag-bob {
   0%, 100% { transform: translate(-50%, -6px); }
   50% { transform: translate(-50%, -10px); }
@@ -16623,9 +12912,6 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
 .hero-scroll-hint.is-visible {
   opacity: 1;
 }
-.hero-scroll-hint svg {
-  color: var(--color-gold);
-}
 .hero-scroll-hint.is-visible svg {
   animation: hero-scroll-bob 2.4s ease-in-out 0.5s infinite;
 }
@@ -16638,26 +12924,7 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
     animation: none;
   }
 }
-.hero-scene-glow {
-  background: radial-gradient(
-    ellipse at 50% 45%,
-    rgba(80, 65, 20, 0.3) 0%,
-    transparent 60%
-  );
-}
 @media (max-width: 640px) {
-  .hero-wordmark {
-    bottom: 1.5rem;
-    left: 1.5rem;
-    transform: translate(calc(50vw - 1.5rem - 50%), calc(-50vh + 1.5rem + 50%))
-      scale(1.5);
-  }
-  .hero-wordmark img {
-    height: clamp(2rem, 9vw, 3.25rem);
-  }
-  .hero-wordmark.is-settled {
-    transform: translate(0, 0) scale(1);
-  }
   .hero-tagline {
     top: calc(var(--header-height) + 1rem);
     left: 1.5rem;
@@ -16766,25 +13033,9 @@ html.hero-header-in .homepage-layout .site-header {
   gap: 0.75rem;
   text-align: center;
 }
-/* The build card follows the hero closer than the other bands, so it starts
-   on the first screen of a 390 x 664 phone viewport. */
-.home-mobile-hero + .home-mobile-build {
-  margin-top: -1rem;
-}
-/* Entrance: transform only, so the hero is visible in the server HTML and
-   before hydration; the stagger comes from --rise-i on each block. */
-.home-mobile-rise {
-  animation: home-mobile-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--rise-i, 0) * 90ms);
-}
 @keyframes home-mobile-rise {
   from { transform: translateY(10px); }
   to { transform: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .home-mobile-rise {
-    animation: none;
-  }
 }
 .home-mobile-stage {
   position: relative;
@@ -16793,37 +13044,12 @@ html.hero-header-in .homepage-layout .site-header {
   display: grid;
   place-items: center;
 }
-.home-mobile-glow {
-  position: absolute;
-  inset: -8% -4%;
-  background: radial-gradient(
-    circle at 50% 50%,
-    color-mix(in srgb, var(--color-gold) 34%, transparent) 0%,
-    color-mix(in srgb, var(--color-gold) 11%, transparent) 38%,
-    transparent 70%
-  );
-  filter: blur(2px);
-  pointer-events: none;
-}
 .home-mobile-board {
   display: block;
   width: clamp(104px, 30vw, 150px);
   height: auto;
   border-radius: var(--r-md);
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.45));
-}
-.home-mobile-board-float {
-  position: absolute;
-  will-change: transform;
-}
-.home-mobile-board-float--rear {
-  transform: translate(15%, 9%) rotate(8deg) scale(0.85);
-  opacity: 0.8;
-  animation: home-board-float-rear 7s ease-in-out infinite;
-}
-.home-mobile-board-float--front {
-  transform: translate(-13%, -4%) rotate(-6deg);
-  animation: home-board-float-front 6s ease-in-out infinite;
 }
 @keyframes home-board-float-front {
   0%, 100% { transform: translate(-13%, -4%) rotate(-6deg); }
@@ -16832,21 +13058,6 @@ html.hero-header-in .homepage-layout .site-header {
 @keyframes home-board-float-rear {
   0%, 100% { transform: translate(15%, 9%) rotate(8deg) scale(0.85); }
   50% { transform: translate(15%, 12%) rotate(8deg) scale(0.85); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .home-mobile-board-float--front,
-  .home-mobile-board-float--rear {
-    animation: none;
-  }
-}
-
-.home-mobile-wordmark {
-  margin: 0;
-  display: block;
-}
-
-.home-mobile-wordmark .hero-wordmark-svg {
-  height: clamp(2.25rem, 10.5vw, 3.25rem);
 }
 
 .home-mobile-tagline {
@@ -16881,18 +13092,6 @@ html.hero-header-in .homepage-layout .site-header {
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease,
     background 0.18s ease, color 0.18s ease;
 }
-.home-mobile-cta-btn:active {
-  transform: translateY(1px);
-}
-.home-mobile-cta-secondary {
-  background: var(--color-bg-card);
-  color: var(--color-text);
-  border: 1px solid var(--color-border-strong);
-}
-.home-mobile-cta-secondary:hover {
-  border-color: var(--color-gold);
-  color: var(--color-gold);
-}
 @media (min-width: 1024px) {
   .home-mobile-footer {
     display: none;
@@ -16917,15 +13116,6 @@ html.hero-header-in .homepage-layout .site-header {
   gap: 0.75rem;
 }
 
-.home-mobile-ledger .spec-table {
-  grid-template-columns: 1fr;
-}
-
-.home-mobile-ledger .spec-table dd {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-}
-
 .home-mobile-ledger-link {
   display: inline-flex;
   align-items: center;
@@ -16936,9 +13126,6 @@ html.hero-header-in .homepage-layout .site-header {
   text-decoration: underline;
   text-decoration-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
   text-underline-offset: 0.25em;
-}
-.home-mobile-ledger-link:hover {
-  color: var(--color-gold);
 }
 
 .home-mobile-browse {
@@ -16955,11 +13142,6 @@ html.hero-header-in .homepage-layout .site-header {
   border-bottom: 1px solid
     color-mix(in srgb, var(--color-gold) 55%, transparent);
   transition: color 0.2s ease, border-color 0.2s ease;
-}
-
-.home-mobile-browse:hover {
-  color: var(--color-gold);
-  border-color: var(--color-gold);
 }
 
 .hero-cta-primary {
@@ -17017,9 +13199,6 @@ html.hero-header-in .homepage-layout .site-header {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
-  }
-  .home-mobile-browse {
-    align-self: flex-start;
   }
   .product-hero-eyebrow,
   .product-buy-sku,
@@ -17260,22 +13439,6 @@ html.hero-header-in .homepage-layout .site-header {
     display: none;
   }
 }
-.hero-load-manifest {
-  position: relative;
-  z-index: 26;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.28rem;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.62rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  pointer-events: none;
-  animation: hero-load-manifest-in 0.5s ease both;
-}
 @keyframes hero-load-manifest-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -17286,10 +13449,6 @@ html.hero-header-in .homepage-layout .site-header {
   gap: 0.6rem;
   color: color-mix(in srgb, var(--color-text-dim) 45%, transparent);
   transition: color 0.3s ease;
-}
-.hero-load-piece__mark {
-  width: 1em;
-  text-align: center;
 }
 .hero-load-piece.is-active {
   color: var(--color-text-muted);
@@ -17309,7 +13468,6 @@ html.hero-header-in .homepage-layout .site-header {
   50% { opacity: 0.35; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hero-load-manifest { animation: none; }
   .hero-load-piece.is-active .hero-load-piece__mark { animation: none; }
 }
 
@@ -17367,31 +13525,12 @@ html.hero-header-in .homepage-layout .site-header {
   max-width: 64ch;
   margin: var(--sp-4) 0 0;
 }
-.provenance-links a {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.55rem 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
-  border-radius: 999px;
-  font-weight: 600;
-  color: var(--color-gold-text);
-  text-decoration: none;
-  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-}
 .provenance-foot {
   margin: 1rem 0 0;
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.55;
   color: var(--color-text-muted);
-}
-.spec-table dt {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  white-space: nowrap;
 }
 .board-art-skeleton-label {
   font-family: var(--font-mono);
@@ -17401,63 +13540,10 @@ html.hero-header-in .homepage-layout .site-header {
   color: var(--color-text-muted);
   animation: latest-commit-pulse 1.4s ease-in-out infinite;
 }
-.board-art.is-swap-ready {
-  transition: translate 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.board-art.is-swap-ready .board-folder-rail {
-  transition: opacity 0.6s ease, transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-@media (prefers-reduced-motion: reduce) {
-  .board-art.is-swap-ready, .board-art.is-swap-ready .board-folder-rail {
-    transition: none;
-  }
-}
-.spec-table > div {
-  flex-wrap: wrap;
-}
-.spec-table dt {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.teardown-render-note {
-  margin: var(--sp-3) 0 0;
-  font-size: var(--fs-sm);
-  color: var(--color-text-muted);
-}
 .chapter#specs, .chapter#in-the-box {
   position: relative;
   z-index: 1;
   background: var(--color-bg);
-}
-.spec-table > div {
-  display: grid;
-  grid-template-columns: minmax(7rem, 9rem) 1fr;
-  column-gap: 16px;
-  align-items: baseline;
-  padding: 10px 0;
-}
-.spec-table dt {
-  font-family: var(--font-sans);
-  font-size: 13px;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--color-text-muted);
-  white-space: normal;
-}
-.spec-table dd {
-  font-size: 14px;
-  text-align: left;
-  color: var(--color-text);
-}
-.spec-table dd a {
-  /* 24px minimum target (WCAG 2.5.8) */
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  color: var(--color-gold-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 /* Plug drawings under the spec table (app/components/PlugDiagrams.tsx):
    housings and pads in the footer sheet's gold ink, contacts coloured by
@@ -17471,14 +13557,6 @@ html.hero-header-in .homepage-layout .site-header {
   --pin-motor: var(--color-green);
   --pin-nc: var(--color-text-dim);
   margin-top: var(--sp-6);
-}
-.plugs-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-2) var(--sp-4);
-  margin-bottom: var(--sp-3);
 }
 .plugs-title {
   margin: 0;
@@ -17502,11 +13580,6 @@ html.hero-header-in .homepage-layout .site-header {
 .plugs li {
   margin: 0;
 }
-.plugs-legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
 .plugs-swatch {
   width: 12px;
   height: 8px;
@@ -17522,35 +13595,6 @@ html.hero-header-in .homepage-layout .site-header {
   outline: 1px solid var(--pin-nc);
   outline-offset: -1px;
 }
-.plugs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
-  gap: var(--sp-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.plug-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-  padding: 12px 14px 12px;
-  border: 1px solid var(--ink-line);
-}
-.plug-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 2px 12px;
-}
-.plug-name {
-  font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-}
 .plug-meta {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -17558,35 +13602,6 @@ html.hero-header-in .homepage-layout .site-header {
   text-transform: uppercase;
   color: var(--ink);
   opacity: 0.85;
-}
-.plug-svg {
-  display: block;
-  height: auto;
-  margin-inline: auto;
-  overflow: visible;
-}
-.plug-line {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.25;
-  vector-effect: non-scaling-stroke;
-}
-.plug-line--thin {
-  stroke-width: 1;
-  opacity: 0.7;
-}
-.plug-line--sep {
-  stroke-width: 1;
-  opacity: 0.25;
-}
-.plug-marker {
-  fill: var(--ink);
-}
-.plug-num {
-  fill: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  text-anchor: middle;
 }
 .plug-label {
   fill: var(--color-text);
@@ -17610,122 +13625,14 @@ html.hero-header-in .homepage-layout .site-header {
   fill: none;
   stroke-dasharray: 2 2;
 }
-.plug-hatch {
-  stroke: var(--pin-nc);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
 .plug-pin--nc .plug-label {
   fill: var(--color-text-dim);
-}
-.plug-pin:hover .plug-contact {
-  stroke: var(--color-text);
-  stroke-width: 2;
-}
-.plug-pin:hover .plug-label {
-  fill: var(--ink);
-}
-.plug-rails {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.plug-rail {
-  display: grid;
-  grid-template-columns: auto auto;
-  align-items: baseline;
-  gap: 0 10px;
-  padding: 6px 12px 7px 10px;
-  border: 1px solid var(--ink-line);
-  border-left: 3px solid var(--pin-power);
-}
-.plug-rail-v {
-  grid-row: span 2;
-  font-family: var(--font-mono);
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-.plug-rail-mode,
-.plug-rail-a {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 1.35;
-  color: var(--color-text-muted);
-}
-.plug-rail-a {
-  color: var(--color-text);
-}
-.chapter-title {
-  font-size: var(--fs-xl);
-  font-weight: 600;
-  letter-spacing: -0.01em;
 }
 @media (min-width: 960px) {
   .chapter {
     padding-block: clamp(2.5rem, 5vw, 4rem);
     gap: var(--sp-6);
   }
-}
-.board-art-skeleton-preview {
-  opacity: 0.85;
-  filter: none;
-  max-width: min(70%, 520px);
-}
-.board-art-skeleton-label {
-  font-size: 12px;
-  color: var(--color-text-muted);
-}
-.provenance-links {
-  font-family: var(--font-sans);
-  font-size: 14px;
-  letter-spacing: 0;
-  text-transform: none;
-}
-.provenance-links a {
-  min-height: 44px;
-  padding: 0 16px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--r-md);
-  font-weight: 600;
-  color: var(--color-text);
-}
-.provenance-links a:hover {
-  background: color-mix(in srgb, var(--color-text) 5%, transparent);
-  color: var(--color-text);
-  border-color: var(--color-text-muted);
-}
-.open-source-story-link, .open-source-story-link a {
-  font-family: var(--font-sans);
-  font-size: 14px;
-  letter-spacing: 0;
-  text-transform: none;
-}
-.open-source-story-link a {
-  color: var(--color-gold-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.board-art-skeleton {
-  justify-content: flex-end;
-  padding-bottom: 0.75rem;
-}
-.board-art-skeleton-spinner {
-  display: none;
-}
-.board-art-skeleton-label {
-  position: relative;
-  z-index: 1;
-  padding: 4px 10px;
-  border-radius: var(--r-pill);
-  background: var(--pod-bg-strong);
-  border: 1px solid var(--pod-border);
-}
-.related-card-media {
-  background: #ece9e3;
 }
 /* Imageless tiles sit on that light photo backdrop, where the dark-theme dim
    ink was 2.79:1 (1.76:1 with the ghost's opacity). #55555b on #ece9e3 is
@@ -17743,88 +13650,16 @@ html.hero-header-in .homepage-layout .site-header {
    Hairline cards, mono labels, gold only for the one action
    that matters on each screen.
    ========================================================= */
-.sp-visually-hidden {
-  position: absolute !important;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
-}
-.sp-honeypot {display: none;}
 .sp-page {padding-bottom: 4rem;}
 .sp-page .page-header {margin-bottom: 1.75rem;}
-
-.sp-layout {
-  display: grid;
-  gap: 2rem;
-  align-items: start;
-}
-@media (min-width: 1024px) {
-  .sp-layout {grid-template-columns: minmax(0, 1fr) 20rem; gap: 3.5rem;}
-  .sp-aside {position: sticky; top: 6.5rem;}
-}
-.sp-main {min-width: 0; display: grid; gap: 1.5rem;}
-.sp-aside {display: grid; gap: 1rem;}
 .sp-narrow {max-width: 34rem;}
-
-.sp-card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-bg-card);
-  padding: 1.1rem 1.15rem;
-  display: grid;
-  gap: 0.65rem;
-  justify-items: start;
-}
-.sp-card p {margin: 0; color: var(--color-text-muted); font-size: 14px; line-height: 1.55;}
-.sp-card p a {color: var(--color-text); text-decoration: underline; text-underline-offset: 2px;}
-.sp-card-title {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--color-text);
-}
 .sp-links {list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; font-size: 14px;}
 .sp-links a {color: var(--color-text-muted); text-decoration: none;}
 .sp-links a:hover {color: var(--color-text); text-decoration: underline; text-underline-offset: 2px;}
 
 /* Steps and topic picker */
 .sp-form {display: grid; gap: 1.75rem;}
-.sp-topics {border: 0; margin: 0; padding: 0; min-width: 0;}
-.sp-step {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  margin: 0 0 0.9rem;
-  padding: 0;
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  color: var(--color-text);
-}
-.sp-step-num {
-  display: inline-grid;
-  place-items: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--color-border-strong);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--color-gold-text);
-}
 .sp-topic-grid {display: grid; gap: 0.6rem;}
-@media (min-width: 640px) {
-  .sp-topic-grid {grid-template-columns: 1fr 1fr;}
-}
 .sp-topic {
   position: relative;
   display: grid;
@@ -17836,17 +13671,6 @@ html.hero-header-in .homepage-layout .site-header {
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
-.sp-topic::before {
-  content: '';
-  position: absolute;
-  left: 1rem;
-  top: 1.15rem;
-  width: 0.9rem;
-  height: 0.9rem;
-  border-radius: var(--r-pill);
-  border: 1.5px solid var(--color-border-strong);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
 .sp-topic:hover {border-color: var(--color-border-strong);}
 .sp-topic.is-selected {
   border-color: var(--color-gold);
@@ -17856,18 +13680,6 @@ html.hero-header-in .homepage-layout .site-header {
   border-color: var(--color-gold);
   box-shadow: inset 0 0 0 3px var(--color-bg-card), inset 0 0 0 9px var(--color-gold);
 }
-.sp-topic:has(:focus-visible) {outline: 2px solid var(--color-focus); outline-offset: 2px;}
-.sp-topic-title {font-weight: 600; font-size: 15px; color: var(--color-text);}
-.sp-topic-hint {font-size: 13px; color: var(--color-text-muted); line-height: 1.4;}
-
-/* Fields */
-.sp-details {display: grid; gap: 1.1rem;}
-.sp-details > .sp-step {margin-bottom: 0;}
-.sp-row {display: grid; gap: 1.1rem;}
-@media (min-width: 640px) {
-  .sp-row {grid-template-columns: 1fr 1fr;}
-  .sp-field-half {max-width: calc(50% - 0.55rem);}
-}
 .sp-field {display: grid; gap: 0.35rem; min-width: 0; align-content: start;}
 .sp-label {
   font-family: var(--font-mono);
@@ -17876,7 +13688,6 @@ html.hero-header-in .homepage-layout .site-header {
   letter-spacing: 0.12em;
   color: var(--color-text-muted);
 }
-.sp-optional {text-transform: none; letter-spacing: 0; font-family: var(--font-sans); font-size: 12px; color: var(--color-text-dim);}
 .sp-input {
   width: 100%;
   margin: 0;
@@ -17899,58 +13710,10 @@ html.hero-header-in .homepage-layout .site-header {
 .sp-input[aria-invalid='true'],
 .sp-input[aria-invalid='true']:focus,
 .sp-input[aria-invalid='true']:focus-visible {border-color: var(--color-error);}
-.sp-textarea {resize: vertical; min-height: 7.5rem;}
 .sp-hint {margin: 0; font-size: 13px; line-height: 1.5; color: var(--color-text-muted);}
-.sp-consent {display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.5;}
-.sp-consent input {margin-top: 3px;}
 .sp-hint a {color: inherit; text-decoration: underline; text-underline-offset: 2px;}
-.sp-field-error, .sp-error {margin: 0; font-size: 13px; color: var(--color-error);}
-.sp-banner {
-  margin: 0;
-  padding: 0.8rem 1rem;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--r-sm);
-  background: var(--color-bg-card);
-  font-size: 14px;
-  line-height: 1.5;
-}
-.sp-banner-error {border-color: color-mix(in srgb, var(--color-error) 55%, var(--color-border));}
 .sp-submit-row {display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.25rem;}
 .sp-submit-row .sp-hint {flex: 1 1 14rem;}
-.sp-actions {display: flex; flex-wrap: wrap; gap: 0.75rem;}
-
-/* File picker */
-.sp-files {display: grid; gap: 0.5rem; justify-items: start;}
-.sp-files-compact {display: flex; flex-wrap: wrap; align-items: center;}
-.sp-files-add {position: relative; cursor: pointer;}
-.sp-files-add:has(:focus-visible) {outline: 2px solid var(--color-focus); outline-offset: 2px;}
-.sp-files-add[aria-disabled='true'] {opacity: 0.55; pointer-events: none;}
-.sp-file-list {list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem;}
-.sp-file-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  max-width: 100%;
-  padding: 0.3rem 0.35rem 0.3rem 0.6rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-xs);
-  background: var(--color-bg-card);
-  font-size: 13px;
-}
-.sp-file-name {overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 14rem;}
-.sp-file-size {font-family: var(--font-mono); font-size: 11px; color: var(--color-text-muted);}
-.sp-file-remove {
-  display: inline-grid;
-  place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 0;
-  border-radius: var(--r-xs);
-  background: transparent;
-  color: var(--color-text-muted);
-  cursor: pointer;
-}
-.sp-file-remove:hover {color: var(--color-text); background: var(--color-bg-elevated);}
 
 /* Status */
 .sp-status {
@@ -17972,170 +13735,18 @@ html.hero-header-in .homepage-layout .site-header {
 .sp-status-answered .sp-status-dot {background: var(--color-green);}
 .sp-status-waiting .sp-status-dot {background: var(--od-pcb-copper);}
 .sp-status-waiting {border-color: color-mix(in srgb, var(--od-pcb-copper) 60%, var(--color-border));}
-.sp-status-closed {color: var(--color-text-muted);}
-
-/* Ticket lists */
-.sp-ticket-list {list-style: none; margin: 0; padding: 0; width: 100%; display: grid;}
-.sp-ticket-list li + li {border-top: 1px solid var(--color-border);}
-.sp-ticket-link {
-  display: grid;
-  gap: 0.25rem;
-  padding: 0.65rem 0;
-  color: var(--color-text);
-  text-decoration: none;
-}
-.sp-ticket-link:hover .sp-ticket-subject {text-decoration: underline; text-underline-offset: 2px;}
-.sp-ticket-ref {font-family: var(--font-mono); font-size: 11px; color: var(--color-text-muted); letter-spacing: 0.06em;}
-.sp-ticket-subject {font-size: 14px; line-height: 1.4;}
-.sp-ticket-meta {display: flex; align-items: center; gap: 0.6rem; font-size: 12px; color: var(--color-text-muted);}
-
-/* Ticket page */
-.sp-crumbs {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--color-text-muted);
-}
-.sp-crumbs a {color: inherit; text-decoration: none;}
-.sp-crumbs a:hover {color: var(--color-text);}
-.sp-ticket-title {font-size: clamp(1.6rem, 2.6vw, 2.4rem); line-height: 1.1;}
-.sp-created {
-  display: grid;
-  gap: 0.6rem;
-  margin-bottom: 2rem;
-  padding: 1.1rem 1.15rem;
-  border: 1px solid var(--color-gold);
-  border-radius: var(--r-sm);
-  background: var(--color-gold-soft);
-}
-.sp-created p {margin: 0; font-size: 14px;}
-.sp-state {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.85rem;
-  padding-bottom: 1.1rem;
-  border-bottom: 1px solid var(--color-border);
-}
-.sp-state p {margin: 0; font-size: 14px; color: var(--color-text-muted); line-height: 1.5;}
-
-.sp-thread {list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem;}
-.sp-msg {
-  display: grid;
-  gap: 0.4rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-bg-card);
-  max-width: 44rem;
-}
-.sp-msg-you {margin-left: auto; width: min(100%, 38rem); background: var(--color-bg-elevated); border-color: transparent;}
-.sp-msg-team {border-left: 3px solid var(--color-gold); width: min(100%, 44rem);}
-.sp-msg-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  font-size: 12px;
-  color: var(--color-text-muted);
-}
-.sp-msg-author {font-weight: 600; color: var(--color-text);}
-.sp-msg-team-label {font-weight: 400; color: var(--color-text-muted);}
-.sp-msg-body {white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.6;}
-.sp-msg-files {list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; font-size: 13px;}
-.sp-msg-files li {display: flex; align-items: center; gap: 0.4rem; color: var(--color-text-muted);}
-.sp-msg-files a {color: var(--color-text); text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere;}
-.sp-event {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-}
-.sp-live {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.9rem 0 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--color-text-dim);
-}
 .sp-live-dot {width: 0.45rem; height: 0.45rem; border-radius: var(--r-pill); background: var(--color-green); animation: sp-pulse 2.4s ease-in-out infinite;}
 .sp-live-dot.is-off {background: var(--od-pcb-copper); animation: none;}
 @keyframes sp-pulse {
   0%, 100% {opacity: 1;}
   50% {opacity: 0.35;}
 }
-@media (prefers-reduced-motion: reduce) {
-  .sp-live-dot {animation: none;}
-}
-.sp-composer {
-  display: grid;
-  gap: 0.7rem;
-  padding: 1rem;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--r-sm);
-  background: var(--color-bg-card);
-}
-.sp-composer-row {display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 0.75rem;}
-.sp-solve {margin-top: -0.75rem; display: flex; justify-content: flex-end;}
-.sp-copy {display: flex; gap: 0.5rem; width: 100%;}
-.sp-copy-input {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--color-field-border);
-  border-radius: var(--r-xs);
-  background: var(--color-bg);
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  text-overflow: ellipsis;
-}
-.sp-copy-btn {flex: none;}
-.sp-reset {padding-left: 0; padding-right: 0;}
-.sp-facts {margin: 0; display: grid; gap: 0.55rem; width: 100%;}
-.sp-facts div {display: flex; justify-content: space-between; gap: 1rem; font-size: 14px;}
-.sp-facts dt {font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-muted); padding-top: 2px;}
-.sp-facts dd {margin: 0; text-align: right;}
-.sp-mono {font-family: var(--font-mono); font-size: 13px;}
-.sp-count {min-height: 1em; font-family: var(--font-mono); font-size: 11px; color: var(--color-text-muted);}
-.sp-count.is-over {color: var(--color-error);}
-.sp-ticket-preview {font-size: 13px; line-height: 1.45; color: var(--color-text-muted); overflow-wrap: anywhere;}
-.sp-ticket-head .sp-ticket-preview {font-size: 15px; margin: 0;}
-.sp-locked {
-  display: grid;
-  gap: 0.75rem;
-  justify-items: start;
-  padding: 1rem;
-  border: 1px dashed var(--color-border-strong);
-  border-radius: var(--r-sm);
-}
-.sp-locked p {margin: 0; color: var(--color-text-muted); font-size: 14px;}
-.sp-unsent {display: grid; gap: 0.5rem; width: 100%;}
-.sp-unsent .sp-textarea {opacity: 0.85; min-height: 5rem;}
-.sp-confirm {display: grid; gap: 0.5rem; width: 100%;}
-.sp-confirm p {margin: 0; font-size: 13px; color: var(--color-text);}
-.sp-banner:focus, .sp-error:focus {outline: 2px solid var(--color-focus); outline-offset: 2px;}
 /* Touch screens: every support control is at least 44 px tall. */
 @media (pointer: coarse) {
   .sp-page .od-btn,
   .sp-page .od-btn-sm,
   .sp-file-remove {min-height: 44px;}
-  .sp-file-remove {min-width: 44px;}
-  .sp-crumbs a {display: inline-flex; align-items: center; min-height: 44px;}
   .sp-links a {display: inline-flex; align-items: center; min-height: 44px;}
-  .sp-quickline a {display: inline-flex; align-items: center; min-height: 44px;}
-  .sp-chip {min-height: 44px;}
 }
 
 /* =========================================================
@@ -18152,233 +13763,7 @@ html.hero-header-in .homepage-layout .site-header {
    languages`, reachable on hover/for a screen reader). */
 .sp-header {max-width: none;}
 .sp-header .page-description {max-width: 65ch;}
-.sp-header-row {display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;}
 .sp-header-row .page-title {margin: 0;}
-.sp-lang-chip {
-  flex: none;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-pill);
-  padding: 0.3rem 0.65rem;
-}
-
-/* A one-line hint under the "Product or build" topic, offering the
-   optional ChatFPV tile before a ticket. A small text link, not a
-   button, so it never competes with the topic grid above it. */
-.sp-hint-cta {
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-size: 13px;
-  color: var(--color-gold);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-}
-.sp-try-ask {display: block; margin-top: 0.6rem;}
-
-/* "Your tickets": compact, content-height, only rendered when present. */
-.sp-mytickets {margin-top: 1.5rem;}
-
-/* Three equal tiles: whole tile clickable (Link / a / a <details>
-   summary for the optional ChatFPV tile), icon + title + one line. */
-.sp-tiles {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 1.5rem;}
-.sp-tiles-2 {grid-template-columns: repeat(2, minmax(0, 1fr));}
-@media (max-width: 640px) {
-  .sp-tiles, .sp-tiles-2 {grid-template-columns: 1fr;}
-}
-.sp-tile {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: 1rem 1.1rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-bg-card);
-  color: var(--color-text);
-  text-decoration: none;
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-}
-.sp-tile:hover {border-color: var(--color-border-strong);}
-.sp-tile-icon {color: var(--color-gold);}
-.sp-tile-title {
-  display: flex;
-  align-items: center;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--color-text);
-}
-.sp-tile-line {font-size: 13px; color: var(--color-text-muted); margin: 0;}
-
-/* The ChatFPV tile is a native <details>: no JS required to expand it,
-   and a link to `#sp-ask-tile` (on its <summary>) auto-opens it in
-   every evergreen browser. Closed, it looks exactly like the other two
-   tiles; open, it spans the full row instead of squeezing the panel
-   into a one-third column. */
-.sp-tile-ask {padding: 0; overflow: hidden;}
-.sp-tile-ask > summary {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: 1rem 1.1rem;
-  list-style: none;
-  cursor: pointer;
-}
-.sp-tile-ask > summary::-webkit-details-marker {display: none;}
-.sp-tile-ask[open] {grid-column: 1 / -1;}
-.sp-tile-ask-panel {padding: 0 1.1rem 1.1rem;}
-
-/* The ChatFPV composer: one box, the send arrow inside it, chatfpv.com
-   style. `.sp-card` is not used here - the tile's <summary> already
-   carries the heading, badge and one-line description. */
-.sp-composer {display: grid; gap: 0.6rem;}
-.sp-composer-box {
-  position: relative;
-  display: flex;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--r-md, 14px);
-  background: var(--color-bg);
-}
-.sp-composer-input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  resize: none;
-  padding: 0.75rem 3rem 0.75rem 1rem;
-  font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.4;
-  color: var(--color-text);
-}
-@media (min-width: 768px) {
-  .sp-composer-input {font-size: 15px;}
-}
-.sp-composer-input::placeholder {color: var(--color-text-dim);}
-.sp-composer-input:focus {outline: none;}
-.sp-composer-box:has(.sp-composer-input:focus-visible) {outline: 2px solid var(--color-focus); outline-offset: 1px;}
-.sp-composer-send {
-  position: absolute;
-  right: 0.5rem;
-  bottom: 0.5rem;
-  width: 2.1rem;
-  height: 2.1rem;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: var(--od-pcb-gold);
-  color: #1b1400;
-  cursor: pointer;
-  transition: background-color 0.12s ease, opacity 0.12s ease;
-}
-.sp-composer-send:hover:not([disabled]) {background: var(--od-pcb-gold-2);}
-/* Disabled (no question typed yet) is a plain outline, not a dimmed
-   gold fill, which reads as broken/loading rather than "type
-   something first". */
-.sp-composer-send[disabled] {
-  background: transparent;
-  border: 1px solid var(--color-border-strong);
-  color: var(--color-text-dim);
-  cursor: not-allowed;
-}
-
-/* Starter chips: one row always. Short labels fit without wrapping on
-   desktop; on a narrow phone whatever does not fit scrolls sideways
-   instead of wrapping a lone last chip onto its own line. No visible
-   scrollbar chrome; a soft right-edge fade hints there is more to
-   scroll to (on desktop it sits over empty space, since all four
-   chips already fit, so it has no visible effect). */
-.sp-chip-row {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.5rem;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 2px;
-  mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
-}
-.sp-chip-row::-webkit-scrollbar {display: none;}
-.sp-chip {
-  flex: 0 0 auto;
-  white-space: nowrap;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: 12.5px;
-  line-height: 1.3;
-  padding: 0.4rem 0.75rem;
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-.sp-chip:hover {border-color: var(--color-border-strong); color: var(--color-text);}
-.sp-chip:focus-visible {outline: 2px solid var(--color-focus); outline-offset: 2px;}
-.sp-chip[disabled] {opacity: 0.5; cursor: default;}
-
-.sp-badge-beta {
-  display: inline-block;
-  margin-left: 0.5rem;
-  padding: 0.15rem 0.4rem;
-  border: 1px solid var(--color-gold);
-  border-radius: var(--r-pill);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  vertical-align: middle;
-  color: var(--color-gold-text);
-  text-transform: uppercase;
-}
-
-/* The data-use disclosure toggle: "How your question is used ›", a
-   trailing chevron that rotates open, not a leading +/- marker. */
-.sp-ask-notice {font-size: 12px; color: var(--color-text-muted);}
-.sp-ask-notice summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  cursor: pointer;
-  color: var(--color-text-muted);
-  list-style: none;
-}
-.sp-ask-notice summary::-webkit-details-marker {display: none;}
-.sp-ask-notice summary::after {content: '\203A'; font-family: var(--font-mono); transition: transform 0.15s ease;}
-.sp-ask-notice[open] summary::after {transform: rotate(90deg);}
-.sp-ask-notice p {margin: 0.4rem 0 0;}
-
-.sp-ask-answer {
-  display: grid;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-border);
-}
-.sp-ask-followup {margin: 0;}
-
-/* Help / Shops: two one-line strips, not cards - the whole point is
-   that nothing here is longer than a line. */
-.sp-quicklinks {
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-border);
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.5rem 2rem;
-}
-.sp-quickline {margin: 0; font-size: 13px; color: var(--color-text-muted);}
-.sp-quickline-label {color: var(--color-text);}
-.sp-quickline a {color: var(--color-text-muted); text-decoration: underline; text-underline-offset: 2px;}
-.sp-quickline a:hover {color: var(--color-text);}
 
 /* "Ship to" country selector of the cart page and the added-to-cart dialog. */
 .ship-to {
@@ -18683,54 +14068,6 @@ summary,
 .product-hero-copy .trust-chip-link:hover {
   color: var(--color-text);
 }
-
-/* The product page's "What you need to fly" chapter: the homepage build
-   card (HeroBuildGuide) with, for a part that fits more than one build, the
-   size toggle; beside it on desktop, the gear we do not sell. */
-.build-chapter {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--sp-6);
-  align-items: start;
-}
-@media (min-width: 880px) {
-  .build-chapter {
-    grid-template-columns: minmax(0, 34rem) minmax(0, 1fr);
-    gap: var(--sp-7);
-  }
-}
-.build-chapter-bring-label {
-  margin: 0 0 0.75rem;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-gold-text);
-}
-.build-chapter-bring ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.6rem;
-  max-width: 36rem;
-}
-.build-chapter-bring li {
-  position: relative;
-  padding-left: 1.1rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-}
-.build-chapter-bring li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.62em;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-gold-fill);
-}
 .pdp-build-head {
   display: flex;
   margin-bottom: 0.6rem;
@@ -18776,410 +14113,9 @@ summary,
 }
 
 /* === Product-page testing entry: a small figure of the test report, no box === */
-.testing-card {
-  --tf-ink: var(--color-text);
-  --tf-muted: var(--color-text-muted);
-  --tf-grid: color-mix(in srgb, var(--color-text) 14%, transparent);
-  --tf-surface: transparent;
-  color-scheme: dark;
-  padding-top: 14px;
-  border-top: 1px solid var(--color-border);
-}
 /* The chapter grid leaves an empty row between the heading and the card: close it. */
-@media (min-width: 880px) {
-  .chapter-wide:has(> .testing-card) {
-    margin-top: calc(-1 * var(--sp-7));
-  }
-}
-.testing-card figure {
-  margin: 0;
-}
-.testing-card figcaption {
-  margin: 6px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
-.testing-card figcaption b {
-  font-weight: 500;
-  color: var(--color-text);
-}
-.testing-card-finding {
-  font-size: 14px;
-}
-.testing-card-svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.testing-card-svg-narrow {
-  display: none;
-}
-.testing-card-finding {
-  margin: 12px 0 0;
-  max-width: 60ch;
-  color: var(--color-text);
-}
-.testing-card-key {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 18px;
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-.testing-card-key li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.testing-card-mark {
-  display: inline-grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-size: 10px;
-  color: var(--color-text);
-}
-.testing-card-none {
-  margin: 0;
-  font-size: 14px;
-  color: var(--color-text-muted);
-}
-.testing-card-none a {
-  color: var(--color-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.testing-card-link {
-  display: inline-block;
-  margin-top: 8px;
-  font-size: 14px;
-  color: var(--color-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.testing-card-link:hover {
-  color: var(--color-gold-text-hover);
-}
-@media (max-width: 560px) {
-  .testing-card-svg-wide {
-    display: none;
-  }
-  .testing-card-svg-narrow {
-    display: block;
-  }
-}
-
-/* /account (Shopify accounts): side nav with one open panel, order cards with
-   product thumbnails and a four-column meta row. */
-.account-hub-title {
-  margin-bottom: 1.5rem;
-}
-.account-hub-layout {
-  display: grid;
-  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
-  gap: 1.5rem;
-  align-items: start;
-}
-.account-hub-side,
-.account-hub-panel {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-}
-.account-hub-side {
-  padding: 1.5rem 1.25rem 1rem;
-  position: sticky;
-  top: 6rem;
-}
-.account-hub-welcome {
-  display: grid;
-  gap: 0.2rem;
-  padding: 0 0.5rem 1.25rem;
-}
-.account-hub-welcome-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-.account-hub-welcome-email {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--color-text);
-  overflow-wrap: anywhere;
-}
-.account-hub-welcome-since {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.account-hub-nav {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.account-hub-nav > li + li {
-  border-top: 1px solid var(--color-border);
-}
-.account-hub-nav form {
-  margin: 0;
-}
-.account-hub-nav-link {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  width: 100%;
-  padding: 0.95rem 0.75rem;
-  border: 0;
-  border-radius: var(--r-sm);
-  background: none;
-  font: inherit;
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--color-text);
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 150ms ease;
-}
-.account-hub-nav-link > span {
-  flex: 1;
-}
-.account-hub-nav-link:hover {
-  background: var(--color-bg-elevated);
-}
-.account-hub-nav-link[aria-current='page'] {
-  background: var(--color-bg-elevated);
-}
-.account-hub-nav-link[aria-current='page'] > svg:first-child {
-  color: var(--color-gold-text);
-}
-.account-hub-nav-chevron {
-  color: var(--color-text-muted);
-}
-.account-hub-panel {
-  display: grid;
-  gap: 1.25rem;
-  padding: 1.5rem 1.75rem 1.75rem;
-  min-width: 0;
-}
-.account-hub-panel-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--color-text);
-}
-.account-hub-block {
-  display: grid;
-  gap: 1rem;
-  justify-items: start;
-}
-.account-hub-block .account-chatfpv,
-.account-hub-block .account-settings-delete {
-  justify-self: stretch;
-}
-.account-hub-orders {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 1rem;
-}
-.account-hub-order {
-  display: grid;
-  gap: 1.25rem;
-  padding: 1.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-}
-.account-hub-order-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-.account-hub-thumbs {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-.account-hub-thumb {
-  position: relative;
-  width: 88px;
-  height: 88px;
-  border-radius: var(--r-sm);
-  background: var(--color-bg-elevated);
-  overflow: hidden;
-}
-.account-hub-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 6px;
-}
-.account-hub-thumb-empty {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  color: var(--color-text-muted);
-}
-.account-hub-thumb-qty {
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
-  padding: 0 0.35em;
-  border-radius: var(--r-xs);
-  background: var(--color-bg-card);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-text);
-}
-.account-hub-thumb-more {
-  display: grid;
-  place-items: center;
-  font-family: var(--font-mono);
-  font-size: 0.95rem;
-  color: var(--color-text-muted);
-}
-.account-hub-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 10rem;
-  padding: 0.7rem 1.25rem;
-  border: 1px solid var(--color-text);
-  border-radius: var(--r-xs);
-  background: transparent;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text);
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 150ms ease, color 150ms ease;
-}
-.account-hub-btn:hover {
-  background: var(--color-text);
-  color: var(--color-bg-card);
-}
-.account-hub-meta {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, auto));
-  justify-content: start;
-  margin: 0;
-}
-.account-hub-meta > div {
-  display: grid;
-  gap: 0.35rem;
-  padding: 0 1.75rem;
-  border-left: 1px solid var(--color-border);
-}
-.account-hub-meta > div:first-child {
-  padding-left: 0;
-  border-left: 0;
-}
-.account-hub-meta dt {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-.account-hub-meta dd {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-}
-.account-hub-status[data-tone='shipped'] {
-  color: var(--color-green);
-}
-.account-hub-status[data-tone='preorder'] {
-  color: var(--color-gold-text);
-}
-.account-hub-status[data-tone='processing'] {
-  color: var(--color-text);
-}
-.account-hub-items {
-  margin: -0.5rem 0 0;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
-.account-hub-more {
-  justify-self: start;
-}
 @media (max-width: 860px) {
-  .account-hub-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .account-hub-side {
-    position: static;
-    padding: 1rem;
-  }
-  .account-hub-welcome {
-    padding-bottom: 0.75rem;
-  }
   /* Narrow: the nav is one scrolling row of chips, so the panel stays above the fold. */
-  .account-hub-nav {
-    display: flex;
-    gap: 0.4rem;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .account-hub-nav > li + li {
-    border-top: 0;
-  }
-  .account-hub-nav-link {
-    padding: 0.55rem 0.8rem;
-    white-space: nowrap;
-    border: 1px solid var(--color-border);
-    border-radius: var(--r-pill);
-    gap: 0.5rem;
-  }
-  .account-hub-nav-chevron {
-    display: none;
-  }
-  .account-hub-panel {
-    padding: 1.25rem 1rem;
-  }
-  .account-hub-order {
-    padding: 1rem;
-  }
-  .account-hub-thumb {
-    width: 64px;
-    height: 64px;
-  }
-  .account-hub-meta {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem 0;
-  }
-  .account-hub-meta > div:nth-child(odd) {
-    padding-left: 0;
-    border-left: 0;
-  }
-  .account-hub-meta > div {
-    padding: 0 0 0 1rem;
-  }
-  .account-hub-order-top .account-hub-btn {
-    width: 100%;
-  }
 }
 
 /* /flash step cards, hint, options and the staging notice. Unlayered on
@@ -19223,16 +14159,6 @@ summary,
   min-height: 4.5rem;
   padding: var(--sp-4) var(--sp-5);
 }
-
-/* /flash readability (2026-11-02, "quite unreadable"). Unlayered like the rest of .flash-*: the global
-   reset's `code { background: #ddd }` and the p/li resets beat utilities. Wider column, site body size,
-   brighter secondary text, dark code chips, visible secondary-button states. */
-.flash-column {
-  max-width: 780px;
-}
-.flash-page {
-  --color-text-muted: color-mix(in srgb, var(--color-text) 78%, transparent);
-}
 .flash-page :where(.flash-step) :where(p, li, dd, dt, label, summary, legend) {
   font-size: 16px;
   line-height: 1.55;
@@ -19263,9 +14189,6 @@ summary,
   width: auto;
   border: 1px solid var(--color-border-strong);
 }
-.flash-page .btn-secondary:hover:not(:disabled) {
-  border-color: var(--color-text);
-}
 .flash-page :is(.btn-secondary, .btn-primary):focus-visible {
   outline: 2px solid var(--color-gold);
   outline-offset: 2px;
@@ -19273,99 +14196,6 @@ summary,
 .flash-page .btn-primary {
   width: auto;
   white-space: nowrap;
-}
-.flash-page input[type='file'] {
-  font-size: 15px;
-  color: var(--color-text);
-}
-.flash-page input[type='file']::file-selector-button {
-  margin-right: 0.75rem;
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--r-md);
-  background: transparent;
-  color: var(--color-text);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-.flash-page input[type='file']::file-selector-button:hover {
-  border-color: var(--color-text);
-}
-.flash-filename {
-  display: block;
-  margin-top: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--color-text-muted);
-  overflow-wrap: anywhere;
-}
-
-/* /flash one-button FC flow (F). Unlayered like the other .flash-* rules. */
-.flash-lede {
-  margin: var(--sp-2) 0 0;
-  font-size: 16px;
-}
-.flash-update {
-  margin-top: var(--sp-5);
-  padding: var(--sp-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-bg-card);
-}
-@media (min-width: 768px) {
-  .flash-update {
-    padding: var(--sp-5) var(--sp-6);
-  }
-}
-.flash-update-title {
-  margin: 0 0 var(--sp-2);
-  font-size: 18px;
-}
-/* Pre-flash checklist: numbered, in the guide callout look (accent rail, soft gold surface, as InfoCallout). */
-.flash-checklist {
-  margin: 0 0 var(--sp-3);
-  padding: var(--sp-2) var(--sp-3) var(--sp-2) calc(var(--sp-3) + 1.25rem);
-  list-style: decimal;
-  border: 1px solid var(--color-border);
-  border-left: 2px solid var(--color-accent);
-  border-radius: var(--r-md);
-  background: var(--color-gold-soft);
-  font-size: 16px;
-  line-height: 1.4;
-}
-/* Tight items: item 3 (computer only) stays above the fold at 390x844. */
-.flash-checklist li {
-  margin: 0 0 4px;
-}
-.flash-note,
-.flash-stage {
-  margin: var(--sp-3) 0 0;
-  font-size: 16px;
-}
-.flash-stage {
-  font-weight: 600;
-}
-.flash-fail {
-  margin: var(--sp-3) 0 0;
-  padding: var(--sp-3);
-  border: 1px solid var(--color-error);
-  border-radius: var(--r-md);
-  font-size: 16px;
-}
-.flash-fail p {
-  margin: 0;
-}
-.flash-more {
-  margin-top: var(--sp-4);
-  font-size: 16px;
-}
-.flash-more > summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-.flash-more p {
-  margin: 0;
 }
 
 /* "In the EU? Choose your country to buy in stock": a link-styled button. */
@@ -19375,158 +14205,4 @@ summary,
   padding: 0;
   font: inherit;
   cursor: pointer;
-}
-
-/* The price line's tax wording links to /markets, styled as the plain note. */
-a.product-buy-vat-link {
-  text-decoration: none;
-}
-a.product-buy-vat-link:hover,
-a.product-buy-vat-link:focus-visible {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-/* /markets ("Where we ship"): one table, phone first. On a phone each market
-   is a block of label / value pairs (the column heading from data-label);
-   from 900 px it is a plain table. One type scale: --fs-sm body, --fs-xs labels. */
-.markets-inner {
-  max-width: 64rem;
-}
-.markets-header {
-  margin-bottom: var(--sp-6, 1.5rem);
-}
-.markets-lead {
-  margin: 0.75rem 0 0;
-  max-width: 36rem;
-  color: var(--color-text-muted);
-  font-size: var(--fs-base);
-  line-height: 1.6;
-}
-.markets-table-scroll {
-  max-width: 100%;
-}
-.markets-table-scroll:focus-visible {
-  outline: 2px solid var(--color-gold-fill);
-  outline-offset: 4px;
-}
-.markets-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-}
-.markets-table thead {
-  display: none;
-}
-.markets-table tr {
-  display: grid;
-  grid-template-columns: minmax(7rem, 38%) 1fr;
-  gap: 0.15rem 0.75rem;
-  padding: 0.9rem 0;
-  border-top: 1px solid var(--color-border);
-}
-.markets-table tr[data-current='true'] {
-  border-top-color: var(--color-gold);
-}
-.markets-table th[scope='row'] {
-  grid-column: 1 / -1;
-  margin-bottom: 0.25rem;
-  color: var(--color-text);
-  font-weight: 500;
-  text-align: left;
-}
-.markets-table td {
-  display: contents;
-  color: var(--color-text);
-}
-.markets-table td::before {
-  content: attr(data-label);
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  padding-top: 0.15rem;
-}
-.markets-you {
-  margin-left: 0.5rem;
-  padding: 0.05rem 0.4rem;
-  border: 1px solid var(--color-gold);
-  border-radius: var(--r-pill);
-  color: var(--color-gold);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  vertical-align: 0.1em;
-}
-@media (min-width: 900px) {
-  .markets-table thead {
-    display: table-header-group;
-  }
-  .markets-table tr {
-    display: table-row;
-    padding: 0;
-  }
-  .markets-table th,
-  .markets-table td {
-    display: table-cell;
-    padding: 0.75rem 1rem 0.75rem 0;
-    border-top: 1px solid var(--color-border);
-    text-align: left;
-    vertical-align: top;
-  }
-  .markets-table tr[data-current='true'] > * {
-    border-top-color: var(--color-gold);
-  }
-  .markets-table thead th {
-    color: var(--color-text-muted);
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    font-weight: 400;
-    letter-spacing: var(--ls-label);
-    text-transform: uppercase;
-    border-top: 0;
-  }
-  .markets-table td::before {
-    content: none;
-  }
-  .markets-table th[scope='row'] {
-    margin: 0;
-    width: 22%;
-  }
-}
-.markets-notes {
-  margin: var(--sp-6, 1.5rem) 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.5rem;
-  max-width: 44rem;
-  color: var(--color-text-muted);
-  font-size: var(--fs-sm);
-  line-height: 1.6;
-}
-.markets-notes a {
-  color: var(--color-text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.markets-notify {
-  margin-top: 2rem;
-  max-width: 28rem;
-}
-/* One line, then the launch-list form: no newsletter eyebrow or lede here. */
-.markets-notify-form > div > p:first-child,
-.markets-notify-form > div > h3 + p {
-  display: none;
-}
-.markets-notify-form h3 {
-  font-family: inherit;
-  font-size: var(--fs-base);
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
-  margin-bottom: 0.5rem;
 }

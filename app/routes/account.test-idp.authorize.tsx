@@ -5,6 +5,7 @@ import {IdpError} from '~/lib/accounts/idp';
 import {legacyAccountResponse} from '~/lib/accounts/legacy';
 import {issueTestCode, TEST_CUSTOMERS} from '~/lib/accounts/test-idp';
 import {supportHeaders} from '~/lib/support/server';
+import '../styles/routes/account.css';
 
 /**
  * Test identity provider form (staging E2E only). Active only with

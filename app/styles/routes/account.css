@@ -1,0 +1,400 @@
+/* Route-only rules split out of app.css by scripts: loaded with the route module, so other pages do not pay for them. */
+
+/* /account ChatFPV history: export and delete (app/lib/accounts/rights.ts).
+   Sits inside the collapsed "Settings and data" .details-toggle-body. */
+.account-chatfpv {
+  display: grid;
+  gap: 0.75rem
+}
+.account-chatfpv-title {
+  margin: 0;
+  font-size: 1.05rem;
+  /* .details-toggle-body sets a muted ambient text color for its prose;
+     headings stay full-strength regardless of where this class is used. */
+  color: var(--color-text)
+}
+.account-chatfpv-delete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem
+}
+.account-chatfpv-delete label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem
+}
+.account-dashboard-card-link {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  transition: color 150ms ease
+}
+.account-dashboard-card-link:hover {
+  color: var(--color-text)
+}
+.account-login-cta {
+  margin-bottom: 1.25rem
+}
+/* Generic collapsed-detail block: /account/login's disclosure and
+   /account's "Settings and data" (ChatFPV history, delete account) both
+   use it, so a real detail stays reachable on the page without dominating
+   it visually. */
+.details-toggle {
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm);
+  background: var(--color-bg-card)
+}
+.details-toggle-summary {
+  padding: 0.85rem 1.1rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--ls-label);
+  color: var(--color-text);
+  cursor: pointer;
+  list-style: none
+}
+.details-toggle-summary::-webkit-details-marker {
+  display: none
+}
+.details-toggle-summary::before {
+  content: '+';
+  display: inline-block;
+  width: 1em;
+  color: var(--color-gold-text)
+}
+.details-toggle[open] .details-toggle-summary::before {
+  content: '\2212'
+}
+.details-toggle-body {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0 1.1rem 1.1rem;
+  color: var(--color-text-muted);
+  font-size: 13.5px;
+  line-height: 1.6
+}
+.details-toggle-body p {
+  margin: 0
+}
+.details-toggle-body a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 2px
+}
+/* account.account-settings: two stacked subsections (ChatFPV history,
+   delete account) inside the shared .details-toggle-body; a hairline
+   separates them instead of two more full card borders. */
+.account-settings-delete {
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--color-border)
+}
+/* /account (Shopify accounts): side nav with one open panel, order cards with
+   product thumbnails and a four-column meta row. */
+.account-hub-title {
+  margin-bottom: 1.5rem
+}
+.account-hub-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start
+}
+.account-hub-side,
+.account-hub-panel {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md)
+}
+.account-hub-side {
+  padding: 1.5rem 1.25rem 1rem;
+  position: sticky;
+  top: 6rem
+}
+.account-hub-welcome {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0 0.5rem 1.25rem
+}
+.account-hub-welcome-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text)
+}
+.account-hub-welcome-email {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  overflow-wrap: anywhere
+}
+.account-hub-welcome-since {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted)
+}
+.account-hub-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0
+}
+.account-hub-nav > li + li {
+  border-top: 1px solid var(--color-border)
+}
+.account-hub-nav form {
+  margin: 0
+}
+.account-hub-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 0.95rem 0.75rem;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 150ms ease
+}
+.account-hub-nav-link > span {
+  flex: 1
+}
+.account-hub-nav-link:hover {
+  background: var(--color-bg-elevated)
+}
+.account-hub-nav-link[aria-current='page'] {
+  background: var(--color-bg-elevated)
+}
+.account-hub-nav-link[aria-current='page'] > svg:first-child {
+  color: var(--color-gold-text)
+}
+.account-hub-nav-chevron {
+  color: var(--color-text-muted)
+}
+.account-hub-panel {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.5rem 1.75rem 1.75rem;
+  min-width: 0
+}
+.account-hub-panel-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text)
+}
+.account-hub-block {
+  display: grid;
+  gap: 1rem;
+  justify-items: start
+}
+.account-hub-block .account-chatfpv,
+.account-hub-block .account-settings-delete {
+  justify-self: stretch
+}
+.account-hub-orders {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem
+}
+.account-hub-order {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md)
+}
+.account-hub-order-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem
+}
+.account-hub-thumbs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem
+}
+.account-hub-thumb {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: var(--r-sm);
+  background: var(--color-bg-elevated);
+  overflow: hidden
+}
+.account-hub-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 6px
+}
+.account-hub-thumb-empty {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text-muted)
+}
+.account-hub-thumb-qty {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 0 0.35em;
+  border-radius: var(--r-xs);
+  background: var(--color-bg-card);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text)
+}
+.account-hub-thumb-more {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--color-text-muted)
+}
+.account-hub-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 10rem;
+  padding: 0.7rem 1.25rem;
+  border: 1px solid var(--color-text);
+  border-radius: var(--r-xs);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease
+}
+.account-hub-btn:hover {
+  background: var(--color-text);
+  color: var(--color-bg-card)
+}
+.account-hub-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, auto));
+  justify-content: start;
+  margin: 0
+}
+.account-hub-meta > div {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0 1.75rem;
+  border-left: 1px solid var(--color-border)
+}
+.account-hub-meta > div:first-child {
+  padding-left: 0;
+  border-left: 0
+}
+.account-hub-meta dt {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text)
+}
+.account-hub-meta dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted)
+}
+.account-hub-status[data-tone='shipped'] {
+  color: var(--color-green)
+}
+.account-hub-status[data-tone='preorder'] {
+  color: var(--color-gold-text)
+}
+.account-hub-status[data-tone='processing'] {
+  color: var(--color-text)
+}
+.account-hub-items {
+  margin: -0.5rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-text-muted)
+}
+.account-hub-more {
+  justify-self: start
+}
+@media (max-width: 860px) {
+  .account-hub-layout {
+    grid-template-columns: minmax(0, 1fr)
+  }
+  .account-hub-side {
+    position: static;
+    padding: 1rem
+  }
+  .account-hub-welcome {
+    padding-bottom: 0.75rem
+  }
+  .account-hub-nav {
+    display: flex;
+    gap: 0.4rem;
+    overflow-x: auto;
+    scrollbar-width: none
+  }
+  .account-hub-nav > li + li {
+    border-top: 0
+  }
+  .account-hub-nav-link {
+    padding: 0.55rem 0.8rem;
+    white-space: nowrap;
+    border: 1px solid var(--color-border);
+    border-radius: var(--r-pill);
+    gap: 0.5rem
+  }
+  .account-hub-nav-chevron {
+    display: none
+  }
+  .account-hub-panel {
+    padding: 1.25rem 1rem
+  }
+  .account-hub-order {
+    padding: 1rem
+  }
+  .account-hub-thumb {
+    width: 64px;
+    height: 64px
+  }
+  .account-hub-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 0
+  }
+  .account-hub-meta > div:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0
+  }
+  .account-hub-meta > div {
+    padding: 0 0 0 1rem
+  }
+  .account-hub-order-top .account-hub-btn {
+    width: 100%
+  }
+}

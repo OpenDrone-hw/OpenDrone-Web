@@ -1,0 +1,94 @@
+/* Route-only rules split out of app.css by scripts: loaded with the route module, so other pages do not pay for them. */
+
+/* Responsive table wrapper for order detail */
+.account-order table {
+  width: 100%
+}
+.account-order table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse
+}
+.account-order tfoot th,
+.account-order tfoot td {
+  font-weight: 600
+}
+.account-dashboard-card:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 50%, transparent)
+}
+.account-dashboard-card-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--color-text);
+  margin: 0
+}
+.account-dashboard-cta:hover {
+  background: color-mix(in srgb, var(--color-gold) 18%, transparent);
+  border-color: var(--color-gold);
+  color: var(--color-gold-text-hover)
+}
+.account-dashboard-cta:disabled {
+  opacity: 0.6;
+  cursor: not-allowed
+}
+/* /early-bird order list: a card holding one bordered row per order. */
+.account-orders-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 1rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md)
+}
+.account-orders-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem
+}
+.account-order {
+  position: relative;
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  transition: border-color 200ms ease
+}
+.account-order:hover,
+.account-order:focus-within {
+  border-color: color-mix(in srgb, var(--color-gold) 50%, transparent)
+}
+.account-order-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem
+}
+.account-order-id {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.75rem
+}
+.account-order-number {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text)
+}
+.account-order-date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted)
+}

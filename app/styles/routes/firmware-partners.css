@@ -1,0 +1,113 @@
+/* Route-only rules split out of app.css by scripts: loaded with the route module, so other pages do not pay for them. */
+
+/* Partner logo on the page's art layer: outside the card, in the right
+   margin like the section sketches: but pinned to ITS card: vertically
+   centered on the box that talks about that firmware. */
+.partner-card {
+  position: relative;
+  overflow: visible
+}
+.partner-card-logo {
+  display: none;
+  position: absolute;
+  left: calc(100% + var(--sp-7));
+  top: 50%;
+  translate: 0 -50%;
+  width: 15rem;
+  aspect-ratio: var(--logo-ratio, 4);
+  background: currentColor;
+  color: color-mix(in srgb, var(--color-text-muted) 45%, transparent);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: left center;
+  mask-position: left center;
+  pointer-events: none
+}
+@media (min-width: 1120px) {
+  .partner-card-logo {
+    display: block
+  }
+}
+/* Firmware partner cards */
+.partners-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+  margin-top: 1.25rem
+}
+.partner-card {
+  padding: 1.25rem 1.5rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md)
+}
+/* The board name in the eyebrow links its product page. No rule of its own:
+   `.editorial-section p a` already gives it the site's prose-link treatment
+   (gold, tinted underline at rest, full gold on hover) in the eyebrow's own
+   mono type. */
+.partner-project {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--color-text);
+  margin: 0 0 0.6rem
+}
+.partner-blurb {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--color-text-muted);
+  margin: 0 0 0.9rem
+}
+.partner-links a {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-gold-text);
+  transition: color 0.2s ease
+}
+.partner-links a:hover {
+  color: var(--color-gold-text-hover)
+}
+/* Upstream merged-PR receipts (/firmware-partners, section hidden while
+   the MERGED_PRS array is empty). */
+.upstream-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0
+}
+.upstream-item {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent)
+}
+.upstream-item:last-child {
+  border-bottom: none
+}
+.upstream-project {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-gold-text);
+  margin: 0 0 0.3rem
+}
+.upstream-title {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  transition: color 0.2s ease
+}
+.upstream-title:hover {
+  color: var(--color-gold-text)
+}
+.upstream-what {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--color-text-muted);
+  margin: 0.3rem 0 0
+}

@@ -1,3 +1,4 @@
+import {appCss} from './test-css.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
@@ -35,7 +36,7 @@ test('newsletter: no empty h3, region always has a name', () => {
 });
 
 test('site CSS: underlined inline links, new-tab notice, field borders >= 3:1', () => {
-  const css = read('../styles/app.css');
+  const css = appCss();
   // Zero specificity, so contextual text-decoration: none wins; never inside a nav.
   assert.match(css, /:where\(main :is\(p, li, dd, td, blockquote, figcaption\) a:not\(\[class\]\):not\(nav a\), \.legal-body a\) \{\s+text-decoration: underline;/);
   // Links whose own ::after draws something keep it; they carry an sr-only notice instead.
@@ -56,7 +57,7 @@ test('route changes move focus to main and announce the title; no-op on first lo
 
 test('scroll-padding-top clears the strips and header; series rail number is full muted token at 12px', () => {
   assert.match(read('../styles/site-ui.css'), /html \{ scroll-padding-top: calc\(var\(--test-banner-h, 0px\) \+ var\(--avail-bar-h, 0px\) \+ var\(--header-height, 0px\)/);
-  assert.match(read('../styles/app.css'), /\.series-rail-num \{\s+font-size: 12px;\s+letter-spacing: 0\.1em;\s+color: var\(--color-text-muted\);/);
+  assert.match(appCss(), /\.series-rail-num \{\s+font-size: 12px;\s+letter-spacing: 0\.1em;\s+color: var\(--color-text-muted\);/);
 });
 
 test('reset.css declares Tailwind 4.3 properties layer first', () => {
@@ -82,7 +83,7 @@ test('cart: Remove moves focus only from body; copy keys for the announcements; 
   const copy = JSON.parse(read('../../content/copy/cart.json')) as Record<string, string>;
   assert.equal(copy.line_removed, 'Removed {name}');
   assert.equal(copy.line_qty_announce, 'Quantity {count}, {name}');
-  const css = read('../styles/app.css');
+  const css = appCss();
   assert.match(css, /\.country-picker\[aria-busy='true'\] \.country-picker-field/);
   assert.doesNotMatch(css, /\.country-picker-field:disabled/);
 });

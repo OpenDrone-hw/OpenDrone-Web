@@ -1,0 +1,1747 @@
+/* Route-only rules split out of app.css by scripts: loaded with the route module, so other pages do not pay for them. */
+
+.product-options-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem
+}
+.product-options-item {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center
+}
+/* An option value with a note under its name (the motor's KV per cell count). */
+.product-options-item.has-hint {
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-block: 0.5rem;
+  min-width: 5.5rem
+}
+.product-options-hint {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em
+}
+.product-gallery-main:focus-visible {
+  outline: 1px solid var(--color-gold);
+  outline-offset: 2px
+}
+.product-gallery-arrow:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-gold) 15%, transparent)
+}
+@media (prefers-reduced-motion: no-preference) {
+  .product-hero-gallery-col {
+    animation: pdp-hero-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both
+  }
+}
+.related-card-unit {
+  margin-left: 0.35em
+}
+.specs-note {
+  max-width: 40rem;
+  margin: 0 auto var(--sp-5);
+  text-align: center;
+  font-size: var(--fs-sm, 0.875rem);
+  color: var(--color-text-muted)
+}
+.product-buy-idea-repo:hover {
+  border-bottom-color: var(--color-gold)
+}
+.downloads-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))
+}
+.download-card {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  grid-template-rows: auto auto auto auto;
+  column-gap: 0.85rem;
+  row-gap: 0.25rem;
+  padding: var(--sp-3) 0 0;
+  border-top: 2px solid color-mix(in srgb, var(--color-gold) 45%, var(--color-border));
+  color: var(--color-text);
+  text-decoration: none;
+  transition: border-color 0.2s ease
+}
+.download-card:hover {
+  border-top-color: var(--color-gold)
+}
+.download-icon {
+  grid-column: 1;
+  grid-row: 1 / span 4;
+  align-self: center;
+  justify-self: center;
+  font-size: 1.2rem;
+  color: var(--color-gold-text);
+  line-height: 1
+}
+.download-label {
+  grid-column: 2;
+  grid-row: 1;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text)
+}
+.download-note {
+  grid-column: 2;
+  grid-row: 2;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--color-text-muted)
+}
+.download-size {
+  grid-column: 2;
+  grid-row: 3;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted)
+}
+.download-cta {
+  grid-column: 2;
+  grid-row: 4;
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: var(--ls-label);
+  color: var(--color-gold-text)
+}
+.spec-sheet-pick:hover {
+  color: var(--color-gold-text)
+}
+/* Related products. The element is a <section>, so reset.css adds
+   another 32px of vertical padding on top of these values - keep the
+   internal spacing modest so the row of cards doesn't sit in a stack
+   of dead space. */
+.related-products {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  padding-bottom: 0;
+  border-top: 1px solid var(--color-border)
+}
+/* Related cards - spec-forward tiles (board render, catalog-file eyebrow,
+   one-line spec, mono price) with a pointer-following gold spotlight on
+   hover. All tokens. */
+.related-grid {
+  /* Same rhythm as .products-grid so the strip reads as one catalog. */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--sp-4)
+}
+.related-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.3rem;
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  border-top: 1px solid var(--color-border)
+}
+.related-card-spec {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  margin: 0
+}
+.related-card-price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin: auto 0 0;
+  padding-top: 0.4rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-base);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text)
+}
+.related-card-from {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-dim)
+}
+/* Quick-add overlay - same reveal recipe as the browse cards; sibling of
+   the card link (a form can't nest inside an anchor). */
+.related-card-quickadd {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0.6rem;
+  pointer-events: none;
+  z-index: 4
+}
+.related-card-quickadd > * {
+  pointer-events: auto
+}
+.related-card-skeleton {
+  pointer-events: none
+}
+@media (prefers-reduced-motion: no-preference) {
+  .product-hero-eyebrow,
+  .product-hero-headline {
+    animation: pdp-hero-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both
+  }
+  .product-hero-eyebrow {
+    animation-delay: 0.04s
+  }
+  .product-hero-headline {
+    animation-delay: 0.1s
+  }
+}
+/* Roadmap status chip beside the eyebrow. Same vocabulary as /roadmap: the
+   dot inherits the kanban's [data-status] coloring, the label is the same
+   copy key, and the chip links back to the board where the legend explains
+   what the word means. Status appears ONLY via this flag, never in prose. */
+.product-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  margin-left: 0.9em;
+  padding: 0.2em 0.7em;
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  transition: border-color 0.15s ease, color 0.15s ease
+}
+.product-status-chip:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
+  color: var(--color-text)
+}
+/* Product name. Single block, refined display weight, restrained size.
+   The 3-line span pattern from product-content stays in the markup
+   (no text change) but renders inline so it reads as one engineered
+   title rather than an editorial pull-quote. */
+.product-hero-headline {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  font-size: var(--fs-3xl);
+  margin: 0;
+  color: var(--color-text)
+}
+/* Word gaps between the headline spans come from the literal space in the
+   markup, never from margins: a real space collapses at a line wrap, a
+   margin does not, and the two together rendered a double-wide gap. */
+.product-hero-headline span {
+  display: inline
+}
+/* Drop the italic. The gold-italic middle-word is the AI-slop tell;
+   keep the emphasized word visible but in roman, soft-gold, same
+   weight as the rest. */
+.product-hero-headline em {
+  font-style: normal;
+  color: var(--color-gold);
+  font-weight: 600
+}
+/* Concept plate: what /products/<handle> renders while the product is
+   planned or in-progress. Reuses the PDP eyebrow, headline, status chip and
+   idea-CTA idioms so it reads as the same family, minus everything that
+   would state a spec that can still change. */
+.concept-plate {
+  min-height: 60vh;
+  display: flex;
+  align-items: center
+}
+.concept-plate-inner {
+  width: min(100% - 2 * var(--sp-6), 40rem);
+  margin: 0 auto;
+  padding: var(--sp-8) 0
+}
+.concept-plate .product-hero-headline {
+  margin-top: var(--sp-3)
+}
+.concept-plate-body {
+  margin: var(--sp-5) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--color-text-dim)
+}
+.concept-plate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-top: var(--sp-6)
+}
+.chapter-media-frame--live::after {
+  content: none
+}
+/* Firmware project wordmark in the "The €1" chapter media slot. Sits roughly at
+ * column width, pulled a little left into the gutter so it isn't jammed against
+ * the page edge. The media frame is overflow: visible, so the bleed shows. */
+.firmware-logo {
+  width: 100%;
+  max-width: none;
+  height: auto;
+  display: block;
+  margin-left: -25%;
+  margin-right: 0
+}
+/* White-on-transparent marks (e.g. AM32) sit on a fixed dark tile that reads
+ * in both themes (like the Discord embed), rather than the transparent blow-up
+ * a multi-colour mark uses. Kept a compact square centred in the slot - a big
+ * square tile leaves dead vertical space next to the short price block. */
+.firmware-logo--tile {
+  width: 78%;
+  max-width: 340px;
+  margin-inline: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  background: #14171c;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+  padding: clamp(1.5rem, 7%, 3rem)
+}
+.board-folder {
+  overflow: visible
+}
+.board-folder-stack {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  /* Headroom above the stack so the floated-up sheet isn't clipped. */
+  margin-top: 12%;
+  perspective: 1700px;
+  transform-style: preserve-3d
+}
+.board-sheet-svg {
+  display: block;
+  width: 100%;
+  height: 100%
+}
+/* Rail and board sit side by side: the rail takes its own fixed column on the
+   left (so it can never cover the teardown text to its left), the board takes
+   the rest, and align-items centres the rail vertically against the board. */
+.board-folder-body {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1vw, 18px)
+}
+.board-stack-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Overlap the live stack and its flying-out ghost in one cell so the swap
+     lines up pixel-for-pixel. */
+  display: grid
+}
+.board-stack-wrap > .board-folder-stack {
+  grid-area: 1 / 1
+}
+.board-folder-stack {
+  flex: 1 1 auto;
+  min-width: 0
+}
+/* Variant swap (rewritten). The OUTGOING board is a real React subtree
+   (.board-swap-out), NOT an innerHTML clone - see BoardArt.tsx. The incoming
+   (live) board rides ABOVE it (z 5 > 1) so a swap reads as the NEW board sweeping
+   in from the left and SHOVING the old one off to the right. Both stacks share
+   one grid cell (.board-stack-wrap grid 1/1) and are position:relative, so the
+   z-index settles paint order regardless of DOM source order. Durations come
+   from --swap-dur / --swap-stagger / --swap-exit, set on .board-art from the JS
+   SWAP_TIMING contract (app/lib/board-swap-timing.ts) so CSS + the JS settle
+   backstop read identical numbers. The swap end is detected by COUNTING
+   board-swap-out animationend events (N per-sheet on desktop, 1 whole-board on
+   mobile), never a wall-clock timer. */
+.board-folder-stack.is-swapping {
+  z-index: 5
+}
+.board-swap-out {
+  z-index: 1;
+  pointer-events: none
+}
+/* will-change is applied (via .is-swap-ready on .board-art, set at flyDone) BEFORE
+   the first swap so the GPU layer already exists at frame 0 - promoting at swap
+   start drops the first frames. */
+.board-art.is-swap-ready .board-sheet {
+  will-change: translate
+}
+@media (min-width: 880px) {
+  .board-art.is-warm .board-sheet {
+    will-change: translate
+  }
+}
+@media (max-width: 1023px) {
+  .board-stack-wrap > .board-folder-stack.is-swapping {
+    animation: board-swap-in var(--swap-dur, 0.55s)
+      cubic-bezier(0.2, 0.8, 0.2, 1) var(--swap-in-delay, 0s) both
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-swap-out {
+    display: none
+  }
+}
+/* Layer rail crossfade - only added (BoardArt, guarded by layer-label signature)
+   when the layer SET actually changes between boards, so identical layers never
+   pulse. Reuses the parts-list dip: old tabs fade out, the set switches while
+   hidden (235ms), new fade in. */
+.board-folder-rail.is-swapping {
+  animation: teardown-pins-swap 0.52s ease both
+}
+.board-folder-rail-count,
+.schematic-rail-count {
+  color: var(--color-gold-text);
+  letter-spacing: 0.06em
+}
+.board-folder-tab-name {
+  font-size: clamp(10.5px, 0.74vw, 13px);
+  letter-spacing: var(--ls-label);
+  line-height: 1
+}
+/* The rail sizes to its longest label, so normal sheet names stay on one line.
+   Tighter tracking keeps it compact, and wrapping (rather than nowrap) is the
+   safety net for a very long sheet name (e.g. the OpenRX single sheet) - it
+   stacks onto extra lines inside the capped width instead of leaking out. */
+.schematic-rail-tabs button {
+  letter-spacing: 0.1em;
+  overflow-wrap: anywhere
+}
+@media (max-width: 1024px) {
+  .board-folder-body,
+  .schematic-body {
+    flex-direction: column;
+    align-items: stretch
+  }
+  .board-folder-rail-head,
+  .schematic-rail-head {
+    width: 100%;
+    justify-content: center;
+    gap: 0.5em
+  }
+  .board-folder-tabs button,
+  .schematic-rail-tabs button {
+    flex: 0 0 auto;
+    white-space: nowrap
+  }
+  .board-folder-tab-fn {
+    display: none
+  }
+}
+.schematic-viewer {
+  width: 100%;
+  margin-left: 0;
+  /* The lazy-load gate IntersectionObserves this box with a 0.01 threshold,
+     which NEVER fires on a zero-area target - and before the manifest loads
+     the viewer is empty. The floor gives the observer something to hit. */
+  min-height: 160px
+}
+/* Rail + sheet sit side by side, mirroring the board folder: the rail takes a
+   fixed column on the left, the sheet fills the rest, centred vertically. */
+.schematic-body {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1vw, 18px)
+}
+/* Fixed stage: at most one screen tall, so the entire sheet is visible without
+ * scrolling, and the height never changes as you page through sheets of
+ * differing proportions. Every sheet is contained + centred inside this box. */
+.schematic-page {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Short enough that pins + board + schematic read as one screenful
+     (72vh/700px pushed the schematic below the fold; maintainer, 2026-08-12). */
+  height: min(58vh, 560px)
+}
+@media (min-width: 1025px) {
+  .schematic-rail {
+    order: 2
+  }
+}
+/* Component spotlight: gold boxes over the hovered teardown part. The svg
+   shares the sheet's viewBox and letterboxes exactly like the imgs
+   (object-fit: contain ≡ xMidYMid meet), so boxes land on the symbols at
+   any size. Boxes come from the invisible <text> metadata in the export. */
+.schematic-hl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none
+}
+.schematic-hl rect {
+  fill: color-mix(in srgb, var(--color-gold) 20%, transparent);
+  stroke: var(--color-gold);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  animation: schematic-hl-in 0.16s ease both
+}
+.schematic-page.is-wiping {
+  animation: schematic-wipe 0.62s cubic-bezier(0.7, 0, 0.3, 1) both
+}
+/* The line is that SAME diagonal edge, drawn as a thin band hugging it (±0.4%),
+   in the SAME box → pixel-locked to the entering sheet's reveal edge. The
+   drop-shadow runs AFTER the clip, so the glow haloes the band. */
+.schematic-swap-line {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--color-gold-fill);
+  filter: drop-shadow(
+    0 0 10px color-mix(in srgb, var(--color-gold) 75%, transparent)
+  );
+  pointer-events: none;
+  clip-path: polygon(
+    calc(var(--wipe) * 128% - 0.4%) 0,
+    calc(var(--wipe) * 128% + 0.4%) 0,
+    calc(var(--wipe) * 128% - 28% + 0.4%) 100%,
+    calc(var(--wipe) * 128% - 28% - 0.4%) 100%
+  )
+}
+/* Mobile sheet deck - the swipe-first replacement for the sheet-tab rail (which
+   is a mouse-era button strip). Hidden on desktop, where the rail is shown;
+   shown below the page on mobile. Reuses the board explorer's tick + meta
+   chrome (.board-deck-*) so schematic and board page "the same way". */
+.schematic-deck {
+  display: none
+}
+@media (max-width: 1023px) {
+  .schematic-deck {
+    display: block;
+    margin-top: 0.6rem
+  }
+}
+@media (max-width: 879px) {
+  .schematic-viewer {
+    width: 100%;
+    margin-left: 0
+  }
+}
+/* Inspect link in the teardown's left column - sits in the gap under the pins. */
+.teardown-inspect {
+  margin-top: 1.4rem
+}
+.frame-viewer[data-loaded='true'] {
+  opacity: 1
+}
+.frame-viewer canvas {
+  display: block
+}
+/* Emphasis segments keep the title colour (2026-08-12, maintainer: gold highlights
+   in chapter heads read as cheesy); the markup keeps its <em> semantics. */
+.chapter-title em {
+  font-style: normal;
+  color: inherit;
+  font-weight: 600
+}
+/* A tier swap switches the part list to the new pins AT swap start (handleSwapStart
+   in products.$handle.tsx sets displayedPins in the same commit that adds this
+   class), so the dip just hides the old content instantly and fades the new in -
+   no mid-animation content switch to time. The class is removed by the board's
+   onSwapSettle (~1.3s later), long after this 0.45s fade has finished, so it can
+   never snap back mid-fade. Pointer-events off so a hover can't catch it mid-change. */
+.teardown-sides.is-swapping {
+  pointer-events: none;
+  /* Self-contained crossfade (0.52s): fade the OLD rows out, hold hidden through
+     the 44–56% trough while products.$handle.tsx swaps displayedPins at 235ms,
+     then fade the NEW rows in - so the content change is never visible. */
+  animation: teardown-pins-swap 0.52s ease both
+}
+@media (prefers-reduced-motion: reduce) {
+  .teardown-sides.is-swapping {
+    animation: none
+  }
+}
+.teardown-side {
+  /* zero the global `section { padding: 1rem 0 }` so rows fill the bubble edge
+     to edge (no dead space above the first row / below the last). */
+  padding: 0;
+  background: linear-gradient(
+    180deg,
+    var(--color-bg-elevated),
+    var(--color-bg-card)
+  );
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent)
+}
+.teardown-pins li:last-child {
+  border-bottom: none
+}
+/* A pin that maps to footprints on the board: interactive. Hover fills the whole
+   row (instant - no fade that looks half-painted while the cursor moves) and a
+   gold accent bar wipes in on the left for a bit of life. */
+.teardown-pin-hoverable {
+  cursor: pointer
+}
+/* The row's keyboard stop is a button filling the <li>; it carries the padding
+   so the whole row stays clickable, and shows its own ring (inset, so the
+   row's overflow never clips it). */
+.teardown-pins li.teardown-pin-hoverable {
+  padding: 0
+}
+.teardown-pin-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem 0.55rem 0.95rem;
+  cursor: pointer
+}
+.teardown-pin-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px
+}
+.teardown-pin-hoverable::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-gold-fill);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform 0.14s ease
+}
+.teardown-pin-hoverable:hover,
+.teardown-pin-hoverable:has(.teardown-pin-btn:focus-visible) {
+  background: color-mix(in srgb, var(--color-gold) 13%, transparent);
+  /* extend the tint 1px upward to fill where the divider above used to sit (the
+     :has rule below turns it transparent), so the whole row reads as one gold
+     block with no uncovered sliver at the top. */
+  box-shadow: 0 -1px 0 0 color-mix(in srgb, var(--color-gold) 13%, transparent);
+  outline: none
+}
+/* Kill the divider directly ABOVE the hovered row - it belongs to the previous
+   row, so the hovered row's fill can't reach it; left visible it reads as a dark
+   sliver at the row's top (the "dead zone"). Gone, the box-shadow fills clean
+   bubble-bg with the same gold tint → seamless, and the spotlight slides
+   row-to-row with no flicker. */
+.teardown-pins li:has(+ .teardown-pin-hoverable:hover) {
+  border-bottom-color: transparent
+}
+.teardown-io-tag {
+  flex: none;
+  font-size: 0.7rem;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted)
+}
+.teardown-io-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem
+}
+.teardown-io-chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s
+}
+.teardown-io-chip:hover,
+.teardown-io-chip:focus-visible {
+  background: color-mix(in srgb, var(--color-gold) 16%, transparent);
+  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
+  color: var(--color-gold-text);
+  outline: none
+}
+/* The active chip already wears the hover look: focus needs its own ring. */
+.teardown-io-chip:focus-visible {
+  outline: 2px solid var(--color-focus, var(--color-gold));
+  outline-offset: 2px
+}
+.teardown-pin-hoverable:hover .teardown-pin-part,
+.teardown-pin-hoverable:has(.teardown-pin-btn:focus-visible) .teardown-pin-part {
+  color: var(--color-gold-text)
+}
+.teardown-pin-hoverable:hover::before,
+.teardown-pin-hoverable:has(.teardown-pin-btn:focus-visible)::before {
+  transform: scaleY(1)
+}
+.board-hilite {
+  pointer-events: none
+}
+/* Fade in ONLY on first appearance (cursor entering the list from nothing). When
+   moving row-to-row the group is rebuilt every hover; replaying the fade then made
+   the whole spotlight flash out/in. `is-fresh` (added by BoardArt only when there
+   was no prior highlight) keeps the dim constant and just moves the bright spot. */
+.board-hilite.is-fresh {
+  animation: board-hilite-in 0.25s ease both
+}
+/* Dim veil over the board OUTSIDE the spotlight window (masked + clipped to the
+   board outline) so everything but the selected part(s) recedes. Over the board
+   face only (not the page), so it reads the same in both themes. */
+.board-hilite-dim {
+  fill: #05070a;
+  opacity: 0.62;
+  pointer-events: none
+}
+/* The face re-shown at the highlighted box, on top of the dim - nudged brighter
+   so the selected region pops out of the dimmed board. */
+.board-hilite-face {
+  filter: brightness(1.12) saturate(1.08);
+  pointer-events: none
+}
+/* The crisp gold box is the primary "this is selected" marker, drawn on top of
+   the dim. Non-scaling stroke keeps it ~2px at any board zoom. */
+.board-highlight-shape {
+  fill: color-mix(in srgb, var(--color-gold) 10%, transparent);
+  stroke: var(--color-gold);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none
+}
+/* Open source cards */
+.open-source-cards {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  /* Every card is a 16:9 bubble (set on .open-source-card / .latest-commit-card),
+     so equal-width columns give a uniform-height row. */
+  align-items: stretch
+}
+/* This chapter stacks a two-line title, a four-card row and the full-width
+   schematic. At the old 1rem the title and the cards read as one dense block;
+   the row needs to land clearly after the head, not under it. */
+.open-source-cards {
+  margin-top: var(--sp-8)
+}
+/* One quiet mono link under the card row, pointing at /open-source. Same
+   voice as .firmware-support-links: muted at rest, gold on hover. The repo
+   lead line (the next chapter's ::before) crosses this row on its way from
+   the GitHub card down to the scope outline: the label sits above the line
+   with its own background, so the line reads as passing behind a station
+   on the route rather than striking through the words. */
+.open-source-story-link {
+  margin: var(--sp-3) 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1
+}
+.open-source-story-link a {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  margin-left: -0.6rem;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  text-decoration: none
+}
+.open-source-story-link a:hover {
+  color: var(--color-gold-text)
+}
+.open-source-card--github::after {
+  -webkit-mask-image: url(/logos/github.svg);
+  mask-image: url(/logos/github.svg)
+}
+.open-source-card--cern::after {
+  -webkit-mask-image: url(/logos/cern.svg);
+  mask-image: url(/logos/cern.svg)
+}
+.open-source-card--kicad::after {
+  -webkit-mask-image: url(/logos/kicad.svg);
+  mask-image: url(/logos/kicad.svg)
+}
+.open-source-card--onshape::after {
+  -webkit-mask-image: url(/logos/onshape.svg);
+  mask-image: url(/logos/onshape.svg)
+}
+/* "Watch" bubble - the video card that replaces the issues card on products
+   with a build film. A 16:9 bubble (aspect-ratio inherited from
+   .open-source-card) showing just the YouTube thumbnail with a centred gold
+   play glyph - no caption. Clicking opens the lightbox player. */
+.watch-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--color-bg-elevated);
+  cursor: pointer;
+  font: inherit
+}
+/* The thumbnail fills the 16:9 card (object-fit cover - a 16:9 frame, so no
+   real crop on a maxres poster). */
+.watch-card-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease
+}
+.watch-card:hover .watch-card-thumb {
+  transform: scale(1.04)
+}
+/* Soft centred scrim so the gold play glyph pops without hiding the thumbnail. */
+.watch-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.42) 0%,
+    rgba(0, 0, 0, 0.16) 55%,
+    rgba(0, 0, 0, 0.26) 100%
+  )
+}
+/* Content layer: the YouTube play glyph, centred over the thumbnail. */
+.watch-card-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center
+}
+.watch-card-yt {
+  width: 48px;
+  height: auto;
+  color: var(--color-gold-text);
+  transition: transform 0.2s ease
+}
+.watch-card:hover .watch-card-yt {
+  transform: scale(1.08)
+}
+/* The play triangle reads against the gold mark via the dark accent ink. */
+.watch-card-yt-tri {
+  fill: var(--color-on-accent)
+}
+.watch-card:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 50%, var(--color-border))
+}
+/* Its own card (maintainer, 2026-08-12), in the in-the-box table idiom: label as
+   the header, hairline-divided rows, the story links as buttons along the
+   bottom. Shrink-wrapped like the other chapter cards. */
+.provenance-card {
+  margin-top: var(--sp-5);
+  width: fit-content;
+  min-width: min(24rem, 100%);
+  padding: 1rem 1.2rem 1.2rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg)
+}
+.provenance-links {
+  margin: 1rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase
+}
+/* Contributor grid + the join button on one line: the grid takes the room,
+   the button holds the right edge. Wraps below the grid when the row runs
+   out of width. */
+.contributors-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem 2.5rem;
+  flex-wrap: wrap
+}
+.contributors-row > *:first-child {
+  flex: 1 1 24rem;
+  min-width: 0
+}
+.contributors-cta-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-gold-text);
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease
+}
+.contributors-cta-btn:hover {
+  background: var(--color-gold-fill);
+  border-color: var(--color-gold-fill);
+  color: var(--color-on-accent)
+}
+/* Same button treatment as the contributors CTA, one size down, so the two
+   story links read as actions instead of body-text asides. */
+.provenance-links a {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--color-gold);
+  text-decoration: none;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease
+}
+.provenance-links a:hover {
+  background: var(--color-gold-fill);
+  border-color: var(--color-gold-fill);
+  color: var(--color-on-accent)
+}
+.provenance-rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0
+}
+.provenance-rows li {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  column-gap: 0.9rem;
+  align-items: baseline;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--color-border)
+}
+.provenance-rows li:last-child {
+  border-bottom: none
+}
+.provenance-row-value {
+  color: var(--color-text);
+  font-size: 0.92rem;
+  line-height: 1.5
+}
+/* Contributor grid: gold-ruled tiles in the downloads-card idiom.
+   Avatars stay square with a hairline border - technical file, not
+   social feed. The "+ you" tile is the standing invitation. */
+.contributor-grid {
+  list-style: none;
+  margin: var(--sp-4) 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))
+}
+.contributor-tile {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.75rem;
+  align-items: center;
+  padding: var(--sp-3) 0 0;
+  /* Per-contributor accent, hash-colored like their ticks on the commit
+     strip below; gold when no accent is set (skeleton, the "+ you" tile). */
+  border-top: 2px solid
+    color-mix(in srgb, var(--contrib-accent, var(--color-gold)) 55%, var(--color-border));
+  color: var(--color-text);
+  text-decoration: none;
+  transition: border-color 0.2s ease
+}
+.contributor-tile:hover {
+  border-top-color: var(--contrib-accent, var(--color-gold))
+}
+.contributor-avatar {
+  grid-row: 1 / span 2;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  object-fit: cover
+}
+.contributor-avatar--you {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  color: var(--color-gold-text);
+  border-style: dashed
+}
+.contributor-login {
+  align-self: end;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere
+}
+.contributor-count {
+  align-self: start;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-dim)
+}
+/* The maintainer's tile. Commit counts used to fill this slot and read as a
+   ranking, which credited whoever churned the most files; the one fact worth
+   stating is who holds the board. Gold rule at full strength, gold label. */
+.contributor-tile--lead {
+  border-top-color: var(--color-gold)
+}
+.contributor-role {
+  align-self: start;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-gold-text)
+}
+.contributor-tile.is-skeleton {
+  pointer-events: none
+}
+.contributor-tile.is-skeleton .contributor-avatar {
+  background: var(--color-border)
+}
+/* Bundle components - richer cards than the generic open-source cards
+   because this is the "what's in the box" moment on a bundle PDP. */
+.bundle-components {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
+}
+.bundle-component-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: var(--sp-3) 0 0;
+  border-top: 2px solid color-mix(in srgb, var(--color-gold) 45%, var(--color-border));
+  color: var(--color-text);
+  transition: border-color 0.2s ease
+}
+.bundle-component-card:hover {
+  border-top-color: var(--color-gold);
+  color: var(--color-text);
+  transform: translateY(-1px)
+}
+.bundle-component-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--color-text)
+}
+.bundle-component-blurb {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  margin: 0
+}
+.bundle-component-firmware span {
+  color: var(--color-gold-text)
+}
+.bundle-component-more {
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--color-gold-text)
+}
+.in-the-box-col .provenance-card {
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box
+}
+.in-the-box-figure {
+  margin: 0;
+  max-width: 60rem
+}
+/* A single part (one motor) stays object-sized instead of filling the column. */
+.in-the-box-figure[data-single] {
+  max-width: 24rem
+}
+.in-the-box-row.is-dimmed .in-the-box-row-hit {
+  opacity: 0.55
+}
+.in-the-box-row-hit:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: -2px
+}
+/* Boxes over the render, in percent of the image so they scale with it.
+   At rest: faint corner brackets and a number chip. The active row's boxes
+   take the teardown spotlight: gold outline and glow, the region brightened
+   while the rest of the render dims, the other boxes fade back. */
+.in-the-box-stage {
+  position: relative
+}
+.in-the-box-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none
+}
+.in-the-box-image {
+  transition: filter 0.2s ease
+}
+.in-the-box-figure.has-active .in-the-box-image {
+  filter: brightness(0.62)
+}
+@media (prefers-reduced-motion: reduce) {
+  .in-the-box-row-hit,
+  .in-the-box-row-hit::before,
+  .in-the-box-num,
+  .in-the-box-mark,
+  .in-the-box-mark-num,
+  .in-the-box-image {
+    transition: none
+  }
+}
+@media (min-width: 880px) {
+  .in-the-box-layout {
+    grid-template-columns: fit-content(34rem) minmax(0, 1fr);
+    column-gap: clamp(var(--sp-5), 4vw, var(--sp-7))
+  }
+  .in-the-box-layout .in-the-box-figure {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
+    align-self: center;
+    width: 100%
+  }
+  .in-the-box-layout .in-the-box-col {
+    grid-column: 1;
+    grid-row: 1
+  }
+}
+/* The signal chain, in hero-scroll order: this product's stage is lit gold,
+   stages we sell link their boards. One glance places the part; the homepage
+   hero tells the same story as a scroll. */
+.what-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0;
+  margin: 0 0 var(--sp-5)
+}
+.what-chain-step {
+  display: inline-flex;
+  align-items: center
+}
+.what-chain-arrow {
+  margin: 0 0.5rem;
+  color: var(--color-text-dim);
+  font-size: 12px
+}
+.what-home-link {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--color-gold-text)
+}
+.what-home-link:hover {
+  color: var(--color-gold-text)
+}
+.firmware-support-links a {
+  color: var(--color-text-muted);
+  text-decoration: none
+}
+.firmware-support-links a:hover {
+  color: var(--color-gold-text)
+}
+.firmware-support-links a.firmware-support-donate {
+  color: var(--color-gold-text)
+}
+.firmware-support-nodonate {
+  color: color-mix(in srgb, var(--color-text-muted) 75%, transparent);
+  text-transform: none;
+  letter-spacing: 0.04em
+}
+.product-buy-reviews:hover .product-buy-reviews-count {
+  color: var(--color-text)
+}
+.review-stars {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.12em;
+  color: var(--color-gold);
+  line-height: 1
+}
+.review-count-line {
+  margin: 1rem 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+  color: var(--color-text-dim);
+  font-variant-numeric: tabular-nums
+}
+.schematic-skeleton {
+  min-height: clamp(260px, 30vw, 420px)
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-art-skeleton-spinner {
+    animation-duration: 2.4s
+  }
+}
+@media (max-width: 1023px) {
+  .board-folder-stack {
+    perspective: none;
+    transform-style: flat;
+    margin-top: 0;
+    position: relative;
+    /* Clip the off-screen layers so the peel slides cleanly in/out. */
+    overflow: hidden;
+    /* pan-y: vertical drags scroll the page like anywhere else. The swipe hook
+       only claims a gesture once it reads as horizontal (and it's biased toward
+       horizontal, so a near-sideways drag isn't mistaken for a scroll), and it
+       preventDefaults that horizontal move so the page never slides out from
+       under a layer peel. */
+    touch-action: pan-y
+  }
+  .board-folder-rail {
+    display: none
+  }
+  .board-deck-progress {
+    margin: 0.7rem 0 0
+  }
+  .board-deck-meta {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.55rem;
+    margin: 0.5rem 0 0;
+    font-family: var(--font-mono)
+  }
+  .board-deck-count {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-gold-text);
+  letter-spacing: 0.04em
+  }
+  .board-deck-name {
+    font-size: 0.82rem;
+    color: var(--color-text);
+    text-transform: uppercase;
+    letter-spacing: 0.1em
+  }
+  .board-deck-hint {
+    margin-left: auto;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    /* muted (not dim) so the gesture cue stays legible on bright light-mode
+       displays; it's the primary "how to explore" affordance now. */
+    color: var(--color-text-muted)
+  }
+  .board-part-tour {
+    margin-top: 0.75rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--color-border)
+  }
+  .board-part-tour-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    margin: 0 0 0.5rem;
+    font-family: var(--font-mono)
+  }
+  .board-part-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    /* horizontal scroll of the chip row only - never hijack vertical page scroll */
+    touch-action: pan-x
+  }
+  .board-part-chips + .board-part-chips {
+    margin-top: 6px
+  }
+  .board-part-chips-side {
+  position: sticky;
+  left: 0;
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  padding-right: 8px;
+  background: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-dim)
+  }
+  .board-part-chips::-webkit-scrollbar {
+    display: none
+  }
+  .board-part-chip-qty {
+    font-size: 0.78em;
+    color: var(--color-text-dim)
+  }
+  .board-art.is-armed .board-folder-rail,
+  .board-art.is-flying .board-folder-rail {
+    opacity: 1
+  }
+  .schematic-page {
+    /* Out of flex sizing so aspect-ratio derives height from a definite width
+       (the sheet img is position:absolute, so flex-auto height collapses to 0). */
+    flex: none;
+    width: 100%;
+    height: auto;
+    aspect-ratio: var(--sheet-ar, 5 / 2);
+    max-height: min(52vh, 440px);
+    /* Clip the parked neighbours so the drag-peel slides cleanly; pan-y leaves
+       vertical scrolling to the page (the swipe hook claims only horizontal). */
+    overflow: hidden;
+    touch-action: pan-y
+  }
+  .schematic-sheet--leaving,
+  .schematic-sheet--entering {
+    transform: none
+  }
+  .specs-parts .teardown-pins li {
+    padding: 0.4rem 0.6rem 0.4rem 0.75rem
+  }
+  .specs-parts .teardown-pins li.teardown-pin-hoverable {
+    padding: 0
+  }
+  .specs-parts .teardown-pin-btn {
+    padding: 0.4rem 0.6rem 0.4rem 0.75rem
+  }
+}
+@media (max-width: 879px) {
+  .chapter-scope-tag {
+    display: none
+  }
+}
+/* Trust-chip link state: chips can now be clickable. */
+.trust-chip-link {
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease
+}
+@media (max-width: 1023px) {
+  .product-gallery-arrow {
+    min-width: 44px;
+    justify-content: center
+  }
+}
+@media (max-width: 1023px) {
+  .board-deck-dots {
+    display: flex;
+    gap: 0.3rem
+  }
+  .board-deck-dot {
+    position: relative
+  }
+}
+.firmware-freedom {
+  margin: 0 0 var(--sp-4, 1.25rem);
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-gold-fill);
+  border-radius: var(--r-sm);
+  background: var(--color-bg-elevated)
+}
+.firmware-freedom p {
+  margin: 0
+}
+.firmware-freedom-title {
+  font-weight: 600;
+  margin-bottom: 0.25rem !important
+}
+.firmware-freedom a {
+  text-decoration: underline
+}
+@media (min-width: 960px) {
+  .product-hero-gallery-col {
+    position: sticky;
+    top: calc(var(--header-height) + 2.5rem)
+  }
+}
+.open-source-card-repo {
+  margin: 0.4rem 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted)
+}
+/* The gallery fills its frame on the photo backdrop, no inner card. */
+.product-hero-media {
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: #ece9e3;
+  position: relative
+}
+.product-hero-media .product-gallery-main {
+  border-radius: var(--r-lg);
+  background: #ece9e3
+}
+@media (min-width: 960px) {
+  .product-hero-media {
+    width: min(100%, calc(100svh - 9.5rem));
+    margin-inline: 0
+  }
+}
+.provenance-links a {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--color-gold-text);
+  text-decoration: none;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease
+}
+.board-art.is-swap-ready {
+  transition: translate 0.55s cubic-bezier(0.2, 0.8, 0.2, 1)
+}
+.board-art.is-swap-ready .board-folder-rail {
+  transition: opacity 0.6s ease, transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1)
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-art.is-swap-ready, .board-art.is-swap-ready .board-folder-rail {
+    transition: none
+  }
+}
+.teardown-render-note {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted)
+}
+.plugs-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-4);
+  margin-bottom: var(--sp-3)
+}
+.plugs-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px
+}
+.plugs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none
+}
+.plug-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px 12px;
+  border: 1px solid var(--ink-line)
+}
+.plug-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px
+}
+.plug-name {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text)
+}
+.plug-svg {
+  display: block;
+  height: auto;
+  margin-inline: auto;
+  overflow: visible
+}
+.plug-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke
+}
+.plug-line--thin {
+  stroke-width: 1;
+  opacity: 0.7
+}
+.plug-line--sep {
+  stroke-width: 1;
+  opacity: 0.25
+}
+.plug-marker {
+  fill: var(--ink)
+}
+.plug-num {
+  fill: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-anchor: middle
+}
+.plug-hatch {
+  stroke: var(--pin-nc);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke
+}
+.plug-pin:hover .plug-contact {
+  stroke: var(--color-text);
+  stroke-width: 2
+}
+.plug-pin:hover .plug-label {
+  fill: var(--ink)
+}
+.plug-rails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none
+}
+.plug-rail {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 0 10px;
+  padding: 6px 12px 7px 10px;
+  border: 1px solid var(--ink-line);
+  border-left: 3px solid var(--pin-power)
+}
+.plug-rail-v {
+  grid-row: span 2;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text)
+}
+.plug-rail-mode,
+.plug-rail-a {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--color-text-muted)
+}
+.plug-rail-a {
+  color: var(--color-text)
+}
+.chapter-title {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em
+}
+.board-art-skeleton-preview {
+  opacity: 0.85;
+  filter: none;
+  max-width: min(70%, 520px)
+}
+.board-art-skeleton-label {
+  font-size: 12px;
+  color: var(--color-text-muted)
+}
+.provenance-links {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none
+}
+.provenance-links a {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-md);
+  font-weight: 600;
+  color: var(--color-text)
+}
+.provenance-links a:hover {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: var(--color-text);
+  border-color: var(--color-text-muted)
+}
+.open-source-story-link, .open-source-story-link a {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none
+}
+.open-source-story-link a {
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px
+}
+.board-art-skeleton {
+  justify-content: flex-end;
+  padding-bottom: 0.75rem
+}
+.board-art-skeleton-spinner {
+  display: none
+}
+.board-art-skeleton-label {
+  position: relative;
+  z-index: 1;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--pod-bg-strong);
+  border: 1px solid var(--pod-border)
+}
+.related-card-media {
+  background: #ece9e3
+}
+/* The product page's "What you need to fly" chapter: the homepage build
+   card (HeroBuildGuide) with, for a part that fits more than one build, the
+   size toggle; beside it on desktop, the gear we do not sell. */
+.build-chapter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-6);
+  align-items: start
+}
+@media (min-width: 880px) {
+  .build-chapter {
+    grid-template-columns: minmax(0, 34rem) minmax(0, 1fr);
+    gap: var(--sp-7)
+  }
+}
+.build-chapter-bring-label {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-gold-text)
+}
+.build-chapter-bring ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.6rem;
+  max-width: 36rem
+}
+.build-chapter-bring li {
+  position: relative;
+  padding-left: 1.1rem;
+  color: var(--color-text-muted);
+  line-height: 1.5
+}
+.build-chapter-bring li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-gold-fill)
+}
+.testing-card {
+  --tf-ink: var(--color-text);
+  --tf-muted: var(--color-text-muted);
+  --tf-grid: color-mix(in srgb, var(--color-text) 14%, transparent);
+  --tf-surface: transparent;
+  color-scheme: dark;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border)
+}
+@media (min-width: 880px) {
+  .chapter-wide:has(> .testing-card) {
+    margin-top: calc(-1 * var(--sp-7))
+  }
+}
+.testing-card figure {
+  margin: 0
+}
+.testing-card figcaption {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-muted)
+}
+.testing-card figcaption b {
+  font-weight: 500;
+  color: var(--color-text)
+}
+.testing-card-finding {
+  font-size: 14px
+}
+.testing-card-svg {
+  display: block;
+  width: 100%;
+  height: auto
+}
+.testing-card-svg-narrow {
+  display: none
+}
+.testing-card-finding {
+  margin: 12px 0 0;
+  max-width: 60ch;
+  color: var(--color-text)
+}
+.testing-card-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--color-text-muted)
+}
+.testing-card-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px
+}
+.testing-card-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 10px;
+  color: var(--color-text)
+}
+.testing-card-none {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted)
+}
+.testing-card-none a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 3px
+}
+.testing-card-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 3px
+}
+.testing-card-link:hover {
+  color: var(--color-gold-text-hover)
+}
+@media (max-width: 560px) {
+  .testing-card-svg-wide {
+    display: none
+  }
+  .testing-card-svg-narrow {
+    display: block
+  }
+}
+/* The price line's tax wording links to /markets, styled as the plain note. */
+a.product-buy-vat-link {
+  text-decoration: none
+}
+a.product-buy-vat-link:hover,
+a.product-buy-vat-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px
+}

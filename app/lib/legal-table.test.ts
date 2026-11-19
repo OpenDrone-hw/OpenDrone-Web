@@ -1,3 +1,4 @@
+import {appCss} from './test-css.ts';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {describe, it} from 'node:test';
@@ -7,7 +8,7 @@ import {describe, it} from 'node:test';
 // source-contract tests).
 const read = (p: string) => fs.readFileSync(new URL(p, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const legal = read('./legal.ts');
-const css = read('../styles/app.css');
+const css = appCss();
 
 describe('legal tables are keyboard-scrollable (WCAG 2.1.1)', () => {
   it('wraps each table in a named, focusable region', () => {

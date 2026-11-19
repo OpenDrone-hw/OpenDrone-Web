@@ -31,6 +31,7 @@ import {
 } from '~/lib/support/tickets';
 import {parseTicketRef} from '~/lib/support/tokens';
 import type {TicketStatus} from '~/lib/support/store';
+import '../styles/routes/support.css';
 
 /**
  * One ticket: status, the conversation with the team, a reply box and the

@@ -10,6 +10,7 @@ import {doorAllowed} from '~/lib/support/limits';
 import {originOf, sameOrigin, secureCookies, supportDeps, supportReady, supportHeaders} from '~/lib/support/server';
 import {findTickets, publicTicket, type PublicTicket} from '~/lib/support/tickets';
 import {readTicketCookie, ticketCookie} from '~/lib/support/tokens';
+import '../styles/routes/support.css';
 
 /**
  * Find my ticket: email plus the order number or ticket number. A match

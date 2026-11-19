@@ -1,0 +1,455 @@
+/* Route-only rules split out of app.css by scripts: loaded with the route module, so other pages do not pay for them. */
+
+/* Stroke layer. Two parallel animations:
+    - hw-draw-shape: backwards + forwards on stroke-dashoffset and the
+      fly-in transform: locks the drawn shape after the keyframe ends.
+    - hw-draw-opacity: backwards-only on opacity: fades the stroke in
+      during Phase A, then RELEASES so the inline `opacity: 1 - fill`
+      value takes over once Phase B (fill) starts. This is how the
+      per-letter outline-to-fill handoff stays smooth: as each letter's
+      fill ramps up, its stroke ramps down by the same amount. */
+.hw-strokes .hw-stroke {
+  fill: none;
+  stroke: currentColor;
+  /* vector-effect="non-scaling-stroke" on the path means this width is
+     interpreted in viewport pixels rather than the path's local coord
+     system, so the wireframe stays a consistent thin line regardless
+     of how the SVG is sized or how the inner group is scaled. */
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 100;
+  transform-box: fill-box;
+  transform-origin: center;
+  /* Base opacity = (1 - per-letter fill progress). The draw animation
+     uses fill-mode: backwards (not forwards/both) so the keyframes
+     control opacity ONLY during the run; afterward this calc takes
+     over and the stroke fades as the fill ramps. */
+  opacity: calc(1 - var(--fill-opacity, 0));
+  /* Letters fly in and stitch together. Curve is ease-out-cubic
+     instead of the original quart-ease: quart had so much slow-tail
+     that letters were visually done after ~190ms but the timeline
+     waited another 760ms to fire the next phase. Duration shortened
+     to match perceived motion. fill-mode: backwards so the offset
+     transform is applied BEFORE the delay window: without this the
+     letter sits at rest pose during the delay and the fly-in is
+     invisible. */
+  animation:
+    hw-draw-shape 500ms cubic-bezier(0.33, 1, 0.68, 1) backwards,
+    hw-draw-opacity 500ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--letter-index, 0) * 65ms);
+  will-change: transform, stroke-dashoffset, opacity;
+  transition: opacity 280ms ease-out
+}
+/* Phase 2: fill layer. Each glyph has its own per-letter opacity set
+  inline from the React side, computed as a ramp around its progress
+  threshold (letter-index / N). No SVG mask: the letters fade in one at
+  a time as `progress` advances. CSS transition smooths the per-frame
+  jumps coming from the parent's JS lerp. */
+.hw-fills .hw-fill {
+  transition: opacity 70ms ease-out
+}
+@media (prefers-reduced-motion: reduce) {
+  .hw-strokes .hw-stroke {
+    animation: none;
+    opacity: 0;
+    transform: none
+  }
+  .hw-fills .hw-fill {
+    opacity: 1 !important;
+    transition: none
+  }
+}
+/* Spec table */
+.spec-table {
+  display: grid;
+  column-gap: 2.5rem;
+  row-gap: 0;
+  grid-template-columns: 1fr;
+  border-top: 1px solid var(--color-border);
+  margin: 0
+}
+@media (min-width: 720px) {
+  .spec-table {
+    grid-template-columns: 1fr 1fr
+  }
+}
+.spec-table > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--color-border)
+}
+.spec-table dt {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  white-space: nowrap
+}
+.spec-table dd {
+  color: var(--color-text);
+  font-size: 0.9rem;
+  margin: 0;
+  text-align: right
+}
+/* column, so the "loading models" line never draws over the checklist. */
+.hero-load-stack {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 5.5rem);
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  pointer-events: none
+}
+/* Homepage hero, as on main. */
+.hero-size-slider {
+  position: relative;
+  display: inline-flex;
+  padding: 5px; /* PAD in HeroSizeSlider.tsx */
+  border: 1px solid var(--pod-border);
+  border-radius: var(--r-pill);
+  background: var(--pod-bg);
+  backdrop-filter: blur(var(--pod-blur));
+  -webkit-backdrop-filter: blur(var(--pod-blur));
+  touch-action: none; /* let the thumb own horizontal drag on touch */
+  user-select: none
+}
+.hero-size-slider__thumb {
+  position: absolute;
+  z-index: 2;
+  top: 5px;
+  bottom: 5px;
+  left: 5px;
+  width: calc(50% - 5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-gold-fill) 88%, white) 0%,
+    var(--color-gold-fill) 55%
+  );
+  box-shadow:
+    0 2px 10px -2px color-mix(in srgb, var(--color-gold) 55%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  cursor: grab;
+  touch-action: none
+}
+.hero-size-slider__thumb:active {
+  cursor: grabbing
+}
+.hero-size-slider__thumb-label {
+  color: var(--color-on-accent);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  pointer-events: none
+}
+.hero-size-slider__spinner {
+  position: absolute;
+  right: 0.55rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--color-on-accent) 35%, transparent);
+  border-top-color: var(--color-on-accent);
+  animation: hero-size-spin 0.7s linear infinite;
+  pointer-events: none
+}
+.hero-size-slider__opt {
+  position: relative;
+  z-index: 1;
+  min-width: 8.5rem;
+  flex: 1 1 0;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.2s ease
+}
+.hero-size-slider__opt:hover {
+  color: var(--color-text)
+}
+.hero-size-slider__opt:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px
+}
+.hero-size-slider__opt:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px
+}
+.hero-wordmark {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 2.5rem;
+  z-index: 35;
+  margin: 0;
+  transform-origin: center;
+  transform: translate(calc(50vw - 2.5rem - 50%), calc(-50vh + 2.5rem + 50%))
+    scale(1.7);
+  /* Snappy S-curve, same timing as the header drop-in so they land together. */
+  transition: transform 0.65s cubic-bezier(0.72, 0, 0.28, 1);
+  pointer-events: none;
+  line-height: 0
+}
+.hero-wordmark img {
+  display: block;
+  height: clamp(2.5rem, 5vw, 4.5rem);
+  width: auto
+}
+.hero-wordmark-svg {
+  display: block;
+  height: clamp(2.5rem, 5vw, 4.5rem);
+  width: auto;
+  overflow: visible
+}
+.hero-wordmark-svg.is-filled .hw-stroke {
+  opacity: 0 !important;
+  animation: none !important
+}
+.hero-wordmark.is-settled {
+  transform: translate(0, 0) scale(1)
+}
+.hero-load-overflow__text {
+  letter-spacing: 0.18em;
+  text-transform: uppercase
+}
+.hero-load-overflow__skip {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--color-text-muted) 35%, transparent);
+  color: var(--color-text);
+  border-radius: var(--r-xs);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    background-color 0.2s ease
+}
+.hero-load-overflow__skip:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
+  color: var(--color-gold)
+}
+@media (max-width: 640px) {
+  .hero-load-overflow {
+    flex-direction: column;
+    gap: 0.85rem;
+    font-size: 0.7rem
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-load-overflow {
+    animation: none;
+    opacity: 1
+  }
+}
+.hero-github:hover {
+  color: var(--color-gold)
+}
+.hero-scroll-fade {
+  opacity: clamp(0, calc(0.4 - var(--hero-p, 0) * 3), 0.4)
+}
+.hero-drag-hint svg {
+  color: var(--color-gold)
+}
+.hero-scroll-hint svg {
+  color: var(--color-gold)
+}
+.hero-scene-glow {
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    rgba(80, 65, 20, 0.3) 0%,
+    transparent 60%
+  )
+}
+@media (max-width: 640px) {
+  .hero-wordmark {
+    bottom: 1.5rem;
+    left: 1.5rem;
+    transform: translate(calc(50vw - 1.5rem - 50%), calc(-50vh + 1.5rem + 50%))
+      scale(1.5)
+  }
+  .hero-wordmark img {
+    height: clamp(2rem, 9vw, 3.25rem)
+  }
+  .hero-wordmark.is-settled {
+    transform: translate(0, 0) scale(1)
+  }
+}
+/* The build card follows the hero closer than the other bands, so it starts
+   on the first screen of a 390 x 664 phone viewport. */
+.home-mobile-hero + .home-mobile-build {
+  margin-top: -1rem
+}
+/* Entrance: transform only, so the hero is visible in the server HTML and
+   before hydration; the stagger comes from --rise-i on each block. */
+.home-mobile-rise {
+  animation: home-mobile-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--rise-i, 0) * 90ms)
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-mobile-rise {
+    animation: none
+  }
+}
+.home-mobile-glow {
+  position: absolute;
+  inset: -8% -4%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--color-gold) 34%, transparent) 0%,
+    color-mix(in srgb, var(--color-gold) 11%, transparent) 38%,
+    transparent 70%
+  );
+  filter: blur(2px);
+  pointer-events: none
+}
+.home-mobile-board-float {
+  position: absolute;
+  will-change: transform
+}
+.home-mobile-board-float--rear {
+  transform: translate(15%, 9%) rotate(8deg) scale(0.85);
+  opacity: 0.8;
+  animation: home-board-float-rear 7s ease-in-out infinite
+}
+.home-mobile-board-float--front {
+  transform: translate(-13%, -4%) rotate(-6deg);
+  animation: home-board-float-front 6s ease-in-out infinite
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-mobile-board-float--front,
+  .home-mobile-board-float--rear {
+    animation: none
+  }
+}
+.home-mobile-wordmark {
+  margin: 0;
+  display: block
+}
+.home-mobile-wordmark .hero-wordmark-svg {
+  height: clamp(2.25rem, 10.5vw, 3.25rem)
+}
+.home-mobile-cta-btn:active {
+  transform: translateY(1px)
+}
+.home-mobile-cta-secondary {
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  border: 1px solid var(--color-border-strong)
+}
+.home-mobile-cta-secondary:hover {
+  border-color: var(--color-gold);
+  color: var(--color-gold)
+}
+.home-mobile-ledger .spec-table {
+  grid-template-columns: 1fr
+}
+.home-mobile-ledger .spec-table dd {
+  font-family: var(--font-mono);
+  font-size: 0.85rem
+}
+.home-mobile-ledger-link:hover {
+  color: var(--color-gold)
+}
+.home-mobile-browse:hover {
+  color: var(--color-gold);
+  border-color: var(--color-gold)
+}
+@media (max-width: 1023px) {
+  .home-mobile-browse {
+    align-self: flex-start
+  }
+}
+.hero-load-manifest {
+  position: relative;
+  z-index: 26;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  pointer-events: none;
+  animation: hero-load-manifest-in 0.5s ease both
+}
+.hero-load-piece__mark {
+  width: 1em;
+  text-align: center
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-load-manifest { animation: none
+  }
+}
+.spec-table dt {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  white-space: nowrap
+}
+.spec-table > div {
+  flex-wrap: wrap
+}
+.spec-table dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem
+}
+.spec-table > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 9rem) 1fr;
+  column-gap: 16px;
+  align-items: baseline;
+  padding: 10px 0
+}
+.spec-table dt {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-muted);
+  white-space: normal
+}
+.spec-table dd {
+  font-size: 14px;
+  text-align: left;
+  color: var(--color-text)
+}
+.spec-table dd a {
+  /* 24px minimum target (WCAG 2.5.8) */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px
+}

@@ -7,6 +7,7 @@ import {startLogin} from '~/lib/accounts/signin';
 import {supportHeaders} from '~/lib/support/server';
 import {appAccountsEnabled, codeAction, readAccount, sendLinkAction} from '~/lib/commerce/app-account';
 import {SignInForm} from '~/components/commerce/account/AccountPages';
+import '../styles/routes/account.css';
 
 /**
  * GET /account/login?return_to=<path>: a notice first (signing in creates a

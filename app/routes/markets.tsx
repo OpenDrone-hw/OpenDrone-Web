@@ -6,6 +6,7 @@ import {copyText} from '~/lib/copy';
 import {MARKET_COLUMNS, marketRows} from '~/lib/markets';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {usSalesRate} from '~/lib/us-sales';
+import '../styles/routes/markets.css';
 
 /**
  * /markets, "Where we ship": one table of the markets, generated from the

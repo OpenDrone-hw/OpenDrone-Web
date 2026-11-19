@@ -22,11 +22,34 @@ import {Txt} from '~/components/Txt';
 import {copyFill, copyText} from '~/lib/copy';
 import {WHAT_IS_THIS_ID} from '~/lib/product-content';
 
+let hasGpu: boolean | undefined;
+/** False when the browser can only render WebGL in software (headless
+ *  Chrome, blocklisted drivers). Software GL runs the scene on the main thread
+ *  for tens of seconds, so those visitors get the static page instead. Two
+ *  tells: the context request fails with `failIfMajorPerformanceCaveat`, or
+ *  Chrome's forced SwiftShader reports a software renderer name. */
+const SOFTWARE_GL = /swiftshader|llvmpipe|softpipe|software/i;
+function hasHardwareWebGL() {
+  if (hasGpu !== undefined) return hasGpu;
+  try {
+    const gl = document
+      .createElement('canvas')
+      .getContext('webgl2', {failIfMajorPerformanceCaveat: true});
+    const info = gl?.getExtension('WEBGL_debug_renderer_info');
+    const renderer = gl && info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    hasGpu = !!gl && !SOFTWARE_GL.test(renderer);
+  } catch {
+    hasGpu = false;
+  }
+  return hasGpu;
+}
+
 function shouldLoad3D() {
   if (typeof window === 'undefined') return false;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
   if (window.innerWidth < 768) return false;
-  return true;
+  return hasHardwareWebGL();
 }
 
 // three.js and the scene are a large chunk, and mobile renders a static page

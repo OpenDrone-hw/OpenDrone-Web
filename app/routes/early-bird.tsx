@@ -18,6 +18,7 @@ import {
   type EarlyBirdOrder,
   type Ineligible,
 } from '~/lib/early-bird';
+import '../styles/routes/early-bird.css';
 
 /**
  * /early-bird: claim the Early Bird role and #early-birds on the OpenDrone

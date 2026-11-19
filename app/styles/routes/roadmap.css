@@ -1,0 +1,217 @@
+/* Route-only rules split out of app.css by scripts: loaded with the route module, so other pages do not pay for them. */
+
+.kanban-row-cards {
+  /* Four boards per line at most: 4 x 10.5rem + 3 gaps. A long stage
+     stacks; it never becomes a horizon-wide strip. */
+  max-width: min(100%, 44.7rem)
+}
+.kanban-row-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 0.75rem
+}
+.kanban-row > .kanban-col-head {
+  position: relative
+}
+.kanban-intro {
+  margin-top: 1rem;
+  max-width: 62ch
+}
+/* The stage's own one-line explanation, straight under its head: the board
+   carries the legend, there is no separate chapter to cross-reference. */
+.kanban-stage-note {
+  margin: 0.4rem 0 0;
+  max-width: 58ch;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--color-text-muted) 90%, transparent)
+}
+.kanban-vote {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-muted)
+}
+.kanban-vote-bar {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--color-border) 80%, transparent);
+  overflow: hidden
+}
+.kanban-vote-fill {
+  display: block;
+  height: 100%;
+  background: var(--color-gold)
+}
+.kanban-gate-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.4
+}
+/* The board-first hero: just the eyebrow and title, tightened so the board
+   still owns the first screen. */
+.kanban-hero {
+  margin-bottom: 0
+}
+.kanban-band > .kanban-lead {
+  margin-top: 0
+}
+.kanban-col-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text)
+}
+.kanban-count {
+  color: color-mix(in srgb, var(--color-text-muted) 75%, transparent)
+}
+.kanban-card {
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--r-md);
+  padding: 0.85rem 0.95rem;
+  display: grid;
+  gap: 0.55rem
+}
+/* The whole card is the link; the render is the content. */
+.kanban-card.is-linked {
+  transition: border-color 0.15s ease, transform 0.2s ease
+}
+.kanban-card.is-linked:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
+  transform: translateY(-2px)
+}
+.kanban-media {
+  display: block;
+  aspect-ratio: 1;
+  padding: 0.4rem
+}
+.kanban-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block
+}
+.kanban-name {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--color-text)
+}
+.kanban-empty {
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border: 1px dashed color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--r-md);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text-muted) 60%, transparent)
+}
+/* Community vote standings (/roadmap). Same mono register as the kanban:
+   a name, a hairline track, a share figure. The fill is gold because the
+   bars ARE the community's voice, the one loud element the section gets. */
+.vote-board {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 0.8rem
+}
+.vote-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 14rem) 1fr minmax(6ch, auto);
+  align-items: center;
+  gap: 0.9rem
+}
+.vote-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--color-text);
+  overflow: hidden
+}
+.vote-name > span:first-child {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+.vote-bar {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-border) 70%, transparent);
+  overflow: hidden
+}
+.vote-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-gold);
+  transition: width 0.6s ease
+}
+.vote-share {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap
+}
+.vote-added,
+.vote-count {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--color-text-muted) 65%, transparent)
+}
+.vote-graduated {
+  margin-top: 1.1rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--r-md);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted)
+}
+.vote-graduated p {
+  margin: 0 0 0.4rem;
+  color: var(--color-gold-text);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: var(--ls-label)
+}
+.vote-graduated ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem
+}
+.vote-foot,
+.vote-empty {
+  margin: 0.9rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--color-text-muted) 80%, transparent)
+}
+.vote-empty {
+  padding: 0.85rem 0.95rem;
+  border: 1px dashed color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--r-md)
+}

@@ -1,3 +1,4 @@
+import {appCss} from './test-css.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
@@ -89,7 +90,7 @@ test('the guide pages, the index and the flasher read the gate from the same hel
 });
 
 test('guide pages reuse the firmware page\'s dark code chip (no light-on-light code)', () => {
-  const css = read('../styles/app.css');
+  const css = appCss();
   assert.match(css, /\.flash-page code,\s*\.guide-page code \{\s*background: color-mix\(in srgb, var\(--color-text\) 10%, var\(--color-bg-card\)\);\s*color: var\(--color-text\);/);
   assert.match(css, /\.guide-page pre code \{\s*background: none;/);
   assert.match(read('../routes/guides.$family.$step.tsx'), /<article className="page-shell guide-page">/);
@@ -122,7 +123,7 @@ test('firmware page: numbered 4-item pre-flash checklist directly above Update f
   const between = fc.slice(olEnd, btn);
   assert.match(between, /<button/);
   assert.doesNotMatch(between, /<p|<h\d|<details|<div/, 'nothing but the backup checkbox between checklist and button');
-  const css = read('../styles/app.css');
+  const css = appCss();
   const rule = /\.flash-checklist \{([^}]*)\}/.exec(css)![1];
   assert.match(rule, /list-style: decimal/);
   assert.match(rule, /border-left: 2px solid var\(--color-accent\)/);

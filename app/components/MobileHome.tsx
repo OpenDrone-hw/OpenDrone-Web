@@ -307,6 +307,9 @@ function FeaturedGrid({items: all}: {items: CollectionItemFragment[]}) {
             // Below the fold on a phone: an eager image here was preloaded
             // at high priority and held back the first paint.
             loading="lazy"
+            // One column on a phone: the card is the rail wide, not the
+            // viewport, so 100vw made the browser pick the 800px file.
+            imageSizes="(min-width: 45em) 400px, calc(100vw - 2.5rem)"
           />
         ))}
       </div>

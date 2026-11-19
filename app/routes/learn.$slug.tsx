@@ -15,6 +15,7 @@ import {
 } from '~/lib/learn';
 import {Txt} from '~/components/Txt';
 import {copyFill, copyText} from '~/lib/copy';
+import '../styles/routes/learn-slug.css';
 
 /**
  * /learn/<slug> - one research dossier, rendered claim by claim.

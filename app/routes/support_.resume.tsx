@@ -6,6 +6,7 @@ import {clientIp} from '~/lib/rate-limit';
 import {resumeRateLimit} from '~/lib/support/limits';
 import {originOf, secureCookies, supportDeps, supportReady, supportHeaders} from '~/lib/support/server';
 import {readTicketCookie, verifyResumeToken, withTicket} from '~/lib/support/tokens';
+import '../styles/routes/support.css';
 
 /**
  * A private link: `/support/resume?t=<token>`. A valid token for the

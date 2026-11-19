@@ -2,6 +2,7 @@ import {redirect} from 'react-router';
 import type {Route} from './+types/account.$';
 import {legacyAccountResponse} from '~/lib/accounts/legacy';
 import {appCommerceEnabled} from '~/lib/commerce/app-api';
+import '../styles/routes/account.css';
 
 /**
  * Legacy account URLs go to the configured Shopify customer account root

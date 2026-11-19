@@ -1,3 +1,4 @@
+import {appCss} from './test-css.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {describe, it} from 'node:test';
@@ -5,7 +6,7 @@ import {describe, it} from 'node:test';
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const cart = read('../routes/cart.$.tsx');
 const shipTo = read('../components/CountryPicker.tsx');
-const css = read('../styles/app.css');
+const css = appCss();
 
 describe('cart steppers', () => {
   it('use aria-disabled, never the disabled attribute, at the min and max', () => {

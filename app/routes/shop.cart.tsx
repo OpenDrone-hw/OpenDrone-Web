@@ -37,6 +37,7 @@ import {expressConfig, type ExpressResult} from '~/lib/commerce/payment-provider
 import {cartCompatAlert, compatLocale} from '~/lib/cart-compat';
 import {readLocaleCookie} from '~/lib/i18n';
 import {CompatAlert} from '~/components/commerce/CompatAlert';
+import '../styles/routes/cart.css';
 
 export const meta: Route.MetaFunction = () => [{title: 'Checkout'}, {name: 'robots', content: 'noindex, nofollow'}];
 

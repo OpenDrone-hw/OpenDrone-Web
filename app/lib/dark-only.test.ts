@@ -1,3 +1,4 @@
+import {appCss} from './test-css.ts';
 import {describe, it} from 'node:test';
 import assert from 'node:assert/strict';
 import {existsSync, readFileSync, readdirSync} from 'node:fs';
@@ -38,7 +39,7 @@ describe('dark only', () => {
   });
 
   it('declares color-scheme: dark on html', () => {
-    const s = strip(readFileSync(join(APP, 'styles/app.css'), 'utf8'));
+    const s = strip(appCss());
     assert.match(s, /\nhtml\s*\{[^}]*color-scheme:\s*dark/);
   });
 

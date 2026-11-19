@@ -1,0 +1,215 @@
+/* Route-only rules split out of app.css by scripts: loaded with the route module, so other pages do not pay for them. */
+
+/* /releases/<handle> ---------------------------------------------- */
+.rn-post-page {
+  max-width: 920px;
+  margin: 0 auto
+}
+.rn-post-crumb {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--od-ink-dim);
+  margin-bottom: 28px
+}
+.rn-post-crumb a {
+  color: inherit;
+  text-decoration: none
+}
+.rn-post-crumb a:hover {
+  color: var(--od-pcb-gold-2)
+}
+.rn-post-crumb .rn-sep {
+  color: var(--od-ink-faint);
+  margin: 0 8px
+}
+.rn-post-meta {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--od-ink-dim);
+  margin-bottom: 14px
+}
+.rn-post-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(36px, 4.6vw, 60px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 18px;
+  text-wrap: pretty
+}
+.rn-post-title em {
+  font-style: normal;
+  color: var(--od-pcb-gold-2)
+}
+.rn-post-deck {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--od-ink-dim);
+  max-width: 64ch;
+  margin: 0 0 36px
+}
+.rn-post-hero {
+  aspect-ratio: 16 / 9;
+  margin: 0 0 40px;
+  border: 1.5px solid var(--od-line-strong);
+  border-radius: var(--r-xs);
+  background: var(--od-bg-2);
+  overflow: hidden
+}
+.rn-post-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block
+}
+.rn-post-body {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--od-ink)
+}
+.rn-post-body > * + * {
+  margin-top: 18px
+}
+.rn-post-body h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 56px 0 14px;
+  padding-top: 22px;
+  border-top: 1.5px solid var(--od-line-strong)
+}
+.rn-post-body h2:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0
+}
+.rn-post-body h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.3;
+  margin: 28px 0 10px
+}
+.rn-post-body p {
+  margin: 0 0 14px;
+  max-width: 70ch
+}
+.rn-post-body a {
+  color: var(--od-pcb-gold-2);
+  text-decoration: underline
+}
+.rn-post-body ul,
+.rn-post-body ol {
+  margin: 0 0 14px;
+  padding-left: 22px;
+  max-width: 70ch
+}
+.rn-post-body li {
+  margin-bottom: 6px
+}
+.rn-post-body code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1px 6px;
+  border-radius: var(--r-2xs);
+  color: var(--od-pcb-green-glow);
+  border: 1px solid var(--od-line)
+}
+.rn-post-body pre {
+  background: #06080a;
+  border: 1.5px solid var(--od-pcb-green-2);
+  border-radius: var(--r-xs);
+  padding: 14px 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--od-pcb-green-glow);
+  line-height: 1.7;
+  overflow-x: auto
+}
+.rn-post-body pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit
+}
+.rn-post-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-top: 1.5px solid var(--od-line-strong)
+}
+.rn-post-body th,
+.rn-post-body td {
+  padding: 9px 12px 9px 0;
+  border-bottom: 1px solid var(--od-line);
+  text-align: left;
+  vertical-align: top
+}
+.rn-post-body th {
+  color: var(--od-ink-dim);
+  font-weight: 600;
+  letter-spacing: 0.04em
+}
+.rn-post-body img {
+  max-width: 100%;
+  height: auto;
+  border: 1.5px solid var(--od-line-strong);
+  border-radius: var(--r-xs)
+}
+.rn-post-body blockquote {
+  margin: 0 0 14px;
+  padding-left: 14px;
+  border-left: 2px solid var(--od-pcb-gold);
+  color: var(--od-ink-dim)
+}
+.rn-post-footer {
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1.5px solid var(--od-line-strong);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px
+}
+@media (max-width: 768px) {
+  .rn-post-footer {
+    grid-template-columns: 1fr
+  }
+}
+.rn-pn:hover {
+  border-color: var(--od-pcb-gold);
+  background: var(--rn-gold-tint)
+}
+.rn-pn.rn-next {
+  text-align: right;
+  align-items: flex-end
+}
+@media (max-width: 768px) {
+  .rn-pn.rn-next {
+    text-align: left;
+    align-items: flex-start
+  }
+}
+.rn-pn .rn-pn-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.3
+}
+.rn-pn .rn-pn-date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--od-ink-faint)
+}
