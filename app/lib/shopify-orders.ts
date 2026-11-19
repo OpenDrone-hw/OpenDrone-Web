@@ -43,6 +43,13 @@ import {grandfatheredPaidLine, lineAllocationRegion, preorderChoiceLine, regionO
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
 const FRESH_MS = 60_000;
+/** With a `waitUntil`, counts older than this (and still FRESH_MS-fresh) are
+ *  served as they are while a background read replaces them, so the read
+ *  finishes before the minute lapses and no visitor waits on it. The counts a
+ *  page shows are never older than FRESH_MS, as before. The floor keeps busy
+ *  traffic from reading the Admin API back to back (one read in flight per
+ *  isolate, one start per 5 s). */
+const REFRESH_AHEAD_MS = 5_000;
 /** The oldest counts a failed read may fall back to. A paid batch can oversell by
  *  the units paid in this window, which the batch cap absorbs better than a
  *  closed shop. */
@@ -122,6 +129,8 @@ function isThrottled(errors: unknown[] | undefined): boolean {
 type MemoEntry = {units: Record<string, UnitRuns>; fetchedAt: number};
 const memo = new Map<string, MemoEntry>();
 const failedAt = new Map<string, number>();
+/** Keys with a refresh-ahead read running in this isolate, by start time. */
+const refreshing = new Map<string, number>();
 
 function adminEndpoint(env: OrdersEnv): {url: string; token: string} {
   const domain = env.SHOPIFY_STORE_DOMAIN?.trim().toLowerCase()
@@ -271,15 +280,45 @@ export async function paidUnitRuns(
   fetcher: typeof fetch = fetch,
   now: () => number = Date.now,
   config?: Pick<CampaignConfig, 'skus' | 'shipsWith' | 'choiceFrom'>,
+  waitUntil?: (p: Promise<unknown>) => void,
 ): Promise<Record<string, UnitRuns>> {
   // The key names the rule, so a result counted before it never serves a read that applies it.
   const key = `${env.SHOPIFY_STORE_DOMAIN ?? ''}|${countFrom}|${[...skus].sort().join(',')}|${config ? 'b1only' : 'plain'}`;
+  // Refresh ahead: a still-fresh result past REFRESH_AHEAD_MS is answered now
+  // and replaced behind the response by this request's own waitUntil (never a
+  // shared promise). One refresh per key per isolate; a failure only starts
+  // the usual cooldown, the kept counts keep serving until they lapse.
+  const refreshAhead = (entry: MemoEntry) => {
+    if (!waitUntil || now() - entry.fetchedAt < REFRESH_AHEAD_MS) return;
+    const started = refreshing.get(key);
+    if (started !== undefined && now() - started < FRESH_MS) return;
+    const failed = failedAt.get(key);
+    if (failed !== undefined && now() - failed < FAILURE_COOLDOWN_MS) return;
+    refreshing.set(key, now());
+    waitUntil(
+      fetchPaidUnitRuns(env, countFrom, skus, fetcher, config)
+        .then(async (units) => {
+          const next = {units, fetchedAt: now()};
+          memo.set(key, next);
+          failedAt.delete(key);
+          await writeShared(key, next);
+        })
+        .catch(() => void failedAt.set(key, now()))
+        .finally(() => void refreshing.delete(key)),
+    );
+  };
   const cached = memo.get(key);
-  if (cached && now() - cached.fetchedAt < FRESH_MS) return cached.units;
+  if (cached && now() - cached.fetchedAt < FRESH_MS) {
+    refreshAhead(cached);
+    return cached.units;
+  }
   const shared = await readShared(key);
   if (shared && (!cached || shared.fetchedAt > cached.fetchedAt)) memo.set(key, shared);
   const best = memo.get(key);
-  if (best && now() - best.fetchedAt < FRESH_MS) return best.units;
+  if (best && now() - best.fetchedAt < FRESH_MS) {
+    refreshAhead(best);
+    return best.units;
+  }
   const stale = () => {
     if (best && now() - best.fetchedAt < STALE_MS) return best.units;
     return null;
@@ -347,4 +386,5 @@ async function writeShared(key: string, entry: MemoEntry): Promise<void> {
 export function resetPaidUnitsMemo(): void {
   memo.clear();
   failedAt.clear();
+  refreshing.clear();
 }

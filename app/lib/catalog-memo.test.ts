@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {beforeEach, describe, it} from 'node:test';
-import {CATALOG_TTL_MS, clearCatalogMemo, memoCatalog} from './catalog-memo.ts';
+import {CATALOG_STALE_MS, CATALOG_TTL_MS, clearCatalogMemo, memoCatalog} from './catalog-memo.ts';
 import type {Catalog} from './catalog.ts';
 
 const catalog = (tag: string) => ({currency: 'EUR', products: [{handle: tag}]}) as unknown as Catalog;
@@ -54,5 +54,23 @@ describe('memoCatalog', () => {
     await assert.rejects(memoCatalog('default', failing, () => 0));
     await assert.rejects(memoCatalog('default', failing, () => 0));
     assert.equal(calls, 2);
+  });
+
+  it('serves a stale catalog and refreshes behind the response with waitUntil', async () => {
+    let calls = 0;
+    let t = 0;
+    const load = async () => catalog(`read-${++calls}`);
+    const pending: Promise<unknown>[] = [];
+    const waitUntil = (p: Promise<unknown>) => void pending.push(p);
+    await memoCatalog('default', load, () => t, waitUntil);
+    t = CATALOG_TTL_MS + 1;
+    const stale = await memoCatalog('default', load, () => t, waitUntil);
+    assert.equal(stale.products[0].handle, 'read-1');
+    await Promise.all(pending);
+    const next = await memoCatalog('default', load, () => t, waitUntil);
+    assert.equal(next.products[0].handle, 'read-2');
+    t = CATALOG_TTL_MS + 1 + CATALOG_STALE_MS;
+    const old = await memoCatalog('default', load, () => t, waitUntil);
+    assert.equal(old.products[0].handle, 'read-3');
   });
 });
