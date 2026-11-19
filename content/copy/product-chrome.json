@@ -633,6 +633,7 @@
   "buy_cta_buy_now": "Buy now",
   "offer_cta_preorder_stack": "Pre-order the stack",
   "offer_cta_stack": "Buy the stack now",
+  "offer_cta_stack_add": "Add the stack to cart",
   "offer_stack_total": "Stack total",
   "build_total": "Total",
   "offer_status_buy_now_wholesale": "In stock in {{stock_from}}, wholesale order, ships by courier, import charges on delivery",

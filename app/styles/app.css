@@ -3818,6 +3818,15 @@ button.reset {
   flex: 1 1 0;
   min-width: 0;
 }
+/* In-stock card: Add to cart shares the row with the stepper, Buy now is
+   the full-width second button under it. */
+.product-buy .product-form > .express-buy > .express-secondary,
+.product-buy .product-form:has(> .product-qty) > .product-qty ~ .add-to-cart-form > button.express-secondary {
+  flex: 1 1 100%;
+}
+.buy-rail.is-pinned .express-secondary {
+  display: none;
+}
 /* The per-order cap under the buy row, once the stepper reaches it. */
 .product-buy .product-form:has(> .product-qty) > .product-qty-note {
   flex: 1 1 100%;

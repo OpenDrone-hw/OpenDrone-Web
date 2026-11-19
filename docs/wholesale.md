@@ -56,7 +56,7 @@ Percentages are stored with 4 decimals (0.1667). Every unit still lands on 75% o
 
 The opendrone.be session is not passed to checkout: the cart is created without buyer identity and the sign-in keeps no Shopify token (`app/lib/accounts/shopify-idp.ts`, data minimisation, kept on purpose). So:
 
-1. The retailer adds to cart and enters the code in the cart's "Wholesale code" field (with `BATCH_CHOICE` on it shows only on /cart?wholesale=1, the "Have a wholesale code?" link at the foot of /wholesale, or once a code is applied). The cart holds pre-orders only. For in-stock boards the retailer then presses Buy now on the product page: that checkout is a cart of its own, and the code applied in the session cart goes onto it (`wholesaleExpressCodes`, EU and outside the EU, not the US).
+1. The retailer adds to cart and enters the code in the cart's "Wholesale code" field (with `BATCH_CHOICE` on it shows only on /cart?wholesale=1, the "Have a wholesale code?" link at the foot of /wholesale, or once a code is applied). In the EU the cart takes in-stock boards too, so the code covers both lanes. Buy now skips the cart; the code applied in the session cart goes onto that checkout as well (`wholesaleExpressCodes`, EU and outside the EU, not the US).
 2. At Shopify checkout the retailer signs in with the approved email (Shopify mails a code). Shopify's help says exempt customers "need to check out using the same email address as the one listed on their customer account"; the customer-limited codes apply to a signed-in customer.
 3. Pay at checkout.
 

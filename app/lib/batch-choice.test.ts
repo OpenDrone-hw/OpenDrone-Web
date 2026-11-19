@@ -9,6 +9,7 @@ import {assignBatches, batchPromiseMismatch, batchTag, type PreorderOrder} from 
 import {
   CART_CHECK,
   EXPRESS_INTENT,
+  KEEP_TOGETHER_INTENT,
   EXPRESS_PARAM,
   EXPRESS_REFUSED,
   batchChoiceConflict,
@@ -304,13 +305,11 @@ async function run(values: Record<string, string | string[]>, deps: Partial<Shop
   }
 }
 
-describe('cart: an old cart with an in-stock board, and one currency', () => {
-  it('EU: a Buy now line moves to the Pre-order variant of the same board, same quantity; other lines stay', () => {
+describe('cart: an in-stock board line, and one currency', () => {
+  it('EU with stock left: a Buy now line stays in stock; nothing moves', () => {
     const catalog = live();
     assert.equal(sellsBuyNow(catalog), true);
-    assert.deepEqual(buyNowToPreorder(cart([buyNowLine(1, 3), preorderLine(2), motorLine(3)]), catalog), [
-      {id: buyNowLine(1).id, quantity: 3, merchandiseId: CHOICE_IDS[FC].preorder},
-    ]);
+    assert.deepEqual(buyNowToPreorder(cart([buyNowLine(1, 3), preorderLine(2), motorLine(3)]), catalog), []);
   });
   it('outside the EU, or batch 1 gone: the same move (the region sells no in-stock boards)', () => {
     for (const catalog of [live({}, 'US'), live({[FC]: 215})]) {
@@ -329,8 +328,8 @@ describe('cart: an old cart with an in-stock board, and one currency', () => {
   });
 });
 
-describe('cart: the pre-order lane takes pre-orders only', () => {
-  it('an add of a board puts its Pre-order variant in the cart, never its Buy now variant', async () => {
+describe('cart: a board goes in as the card the buyer chose', () => {
+  it('an add of a board without offer=buy_now puts its Pre-order variant in the cart', async () => {
     const created: CartLineInput[][] = [];
     const deps = {getCartId: () => undefined, createCart: async (lines: CartLineInput[]) => { created.push(lines); return cart([]); }};
     await run({sku: FC, qty: '1'}, deps);
@@ -345,15 +344,29 @@ describe('cart: the pre-order lane takes pre-orders only', () => {
     }
   });
 
-  it('refuses a Buy now variant at add: offer=buy_now, or a board whose only open offer is Buy now', async () => {
-    assert.equal((await run({sku: FC, qty: '1', offer: 'buy_now'}, {getCartId: () => undefined})).status, 400);
+  it('offer=buy_now in the EU puts the Buy now variant in the cart, tagged batch 1', async () => {
+    const created: CartLineInput[][] = [];
+    await run({sku: FC, qty: '2', offer: 'buy_now'}, {getCartId: () => undefined, createCart: async (lines) => { created.push(lines); return cart([]); }});
+    assert.equal(created[0][0].merchandiseId, CHOICE_IDS[FC].buyNow);
+    assert.equal(created[0][0].quantity, 2);
+    assert.equal(created[0][0].attributes?.find((a) => a.key === '_batch')?.value, `${FC}:1`);
+  });
+
+  it('offer=buy_now beyond the units left in batch 1 is refused, not moved', async () => {
+    const response = await run({sku: FC, qty: '3', offer: 'buy_now'}, {fetchCatalog: async () => live({[FC]: 213}), getCartId: () => undefined, createCart: async () => cart([])});
+    assert.notEqual(response.status, 303);
+  });
+
+  it('an unknown offer is refused', async () => {
     assert.equal((await run({sku: FC, qty: '1', offer: 'cheap'}, {})).status, 400);
+  });
+
+  it('a board whose only open offer is Buy now: added in stock in the EU', async () => {
     const noPreorder = live();
-    const board = bySku(noPreorder, FC)!.variant;
-    delete board.preorder_offer;
-    const refused = await run({sku: FC, qty: '1'}, {fetchCatalog: async () => noPreorder, getCartId: () => undefined});
-    assert.equal(refused.status, 409);
-    assert.match(await refused.text(), /product page/);
+    delete bySku(noPreorder, FC)!.variant.preorder_offer;
+    const created: CartLineInput[][] = [];
+    await run({sku: FC, qty: '1'}, {fetchCatalog: async () => noPreorder, getCartId: () => undefined, createCart: async (lines) => { created.push(lines); return cart([]); }});
+    assert.equal(created[0][0].merchandiseId, CHOICE_IDS[FC].buyNow);
   });
 
   it('a product with one offer adds that offer; pre-orders are not capped by batch 1', async () => {
@@ -371,7 +384,7 @@ describe('cart: the pre-order lane takes pre-orders only', () => {
     assert.equal(created[0].attributes?.[0].key, 'Shipping');
   });
 
-  it('the server still refuses a checkout that somehow holds a Buy now board and a March item', async () => {
+  it('a checkout holding a Buy now board and a March item goes to the cart choice first', async () => {
     const info = (c: ShopifyCart) => cartLineInfo(c, live());
     const conflict = (lines: ShopifyCartLine[]) => { const c = cart(lines); return batchChoiceConflict(c, info(c)); };
     assert.equal(conflict([buyNowLine()]), false);
@@ -826,5 +839,17 @@ describe('decisions 2026-11-11: where stock ships, and who buys it outside the E
   it('decision 3: the footer drops "Early bird role on Discord" in the ordinary shop (source guard)', () => {
     const footer = fs.readFileSync(new URL('../components/Footer.tsx', import.meta.url), 'utf8');
     assert.match(footer, /const shopLinks = batchChoice && !root\?\.ordinaryShop \? \[\.\.\.baseLinks, \{to: '\/early-bird'/);
+  });
+});
+
+describe('cart: keep a mixed cart together', () => {
+  it('moves every in-stock board line to its Pre-order variant, same quantity; other lines stay', async () => {
+    const updates: Array<Array<{id: string; quantity: number; merchandiseId?: string}>> = [];
+    const response = await run({intent: KEEP_TOGETHER_INTENT}, {
+      getCart: async () => cart([buyNowLine(1, 2), motorLine(3)]),
+      updateCartLines: async (_id, lines) => { updates.push(lines); return cart([]); },
+    });
+    assert.equal(response.headers.get('Location'), '/cart');
+    assert.deepEqual(updates, [[{id: buyNowLine(1).id, quantity: 2, merchandiseId: CHOICE_IDS[FC].preorder}]]);
   });
 });

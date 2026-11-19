@@ -40,9 +40,10 @@ export function ProductForm({
   addUrl?: string;
   /** A small slot beside the buy button (the stack total). */
   buyAside?: React.ReactNode;
-  /** The Buy now lane: the button goes straight to a checkout of these
-   *  in-stock lines (times the quantity) instead of adding to the cart. */
-  express?: {lines: ReadonlyArray<{sku: string; quantity: number}>; label: string} | null;
+  /** The in-stock card is chosen: the main button adds these in-stock lines
+   *  (times the quantity) to the cart, and a second button buys them now,
+   *  straight to a checkout of their own. */
+  express?: {lines: ReadonlyArray<{sku: string; quantity: number}>; label: string; addLabel: string} | null;
   productOptions: MappedProductOptions[];
   selectedVariant: ProductVariantFragment | null;
   /** Option names already handled elsewhere (e.g. the comparison ladder
@@ -260,9 +261,19 @@ export function ProductForm({
         </div>
       ) : null}
       {express ? (
-        <ExpressBuy lines={express.lines} quantity={qty} product={selectedVariant?.product?.handle} disabled={disabled}>
-          {express.label}
-        </ExpressBuy>
+        <>
+          <AddToCartButton
+            href={inStockAddHref(selectedVariant?.cartAddUrl ?? '', express.lines, qty)}
+            disabled={disabled}
+            product={selectedVariant?.product?.handle}
+            revenue={null}
+          >
+            {express.addLabel}
+          </AddToCartButton>
+          <ExpressBuy lines={express.lines} quantity={qty} product={selectedVariant?.product?.handle} disabled={disabled} className="btn-secondary express-secondary">
+            {express.label}
+          </ExpressBuy>
+        </>
       ) : (
       <AddToCartButton
         href={href}
@@ -291,6 +302,24 @@ export function ProductForm({
       )}
     </div>
   );
+}
+
+/** The add link for in-stock lines: the hand-off path of `cartAddUrl` with
+ *  these lines (times `qty`) and `offer=buy_now`, so the cart takes the
+ *  in-stock variant instead of the pre-order. */
+export function inStockAddHref(cartAddUrl: string, lines: ReadonlyArray<{sku: string; quantity: number}>, qty: number): string {
+  const [path] = cartAddUrl.split('?');
+  if (!path || !lines.length) return '';
+  const params = new URLSearchParams();
+  if (lines.length === 1) {
+    params.set('sku', lines[0].sku);
+    params.set('qty', String(lines[0].quantity * qty));
+  } else {
+    params.set('lines', lines.map((l) => `${l.sku}:${l.quantity * qty}`).join(','));
+  }
+  params.set('offer', 'buy_now');
+  params.set('next', 'cart');
+  return `${path}?${params.toString()}`;
 }
 
 /** The hand-off link with its `qty` field set; other links pass through. */

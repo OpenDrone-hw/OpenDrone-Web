@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {createCart, fetchShopifyCatalog, getCart, productRating, storefrontEndpoint, storefrontRequest} from './shopify-storefront.ts';
+import {addCartLines, createCart, fetchShopifyCatalog, getCart, productRating, storefrontEndpoint, storefrontRequest} from './shopify-storefront.ts';
 
 const ENV = {
   SHOPIFY_STORE_DOMAIN: 'open-drone-test.myshopify.com',
@@ -234,6 +234,24 @@ describe('Shopify hosted checkout handoff', () => {
       createCart(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
       /cartCreate failed/,
     );
+  });
+});
+
+describe('discount code warnings', () => {
+  it('a dealer code slot that matches no line is not a cart failure; a line warning still is', async () => {
+    const cartWith = (warnings: Array<{code: string; message: string}>) => async () => response({
+      cartLinesAdd: {
+        cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc', totalQuantity: 0, cost: {subtotalAmount: {amount: '0.0', currencyCode: 'EUR'}, totalAmount: {amount: '0.0', currencyCode: 'EUR'}}, lines: {pageInfo: {hasNextPage: false}, nodes: []}},
+        userErrors: [], warnings,
+      },
+    });
+    const lines = [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}];
+    const id = 'gid://shopify/Cart/test?key=secret';
+    await addCartLines(ENV, id, lines, cartWith([
+      {code: 'DISCOUNT_NOT_FOUND', message: 'Enter a valid discount code'},
+      {code: 'DISCOUNT_NO_ENTITLED_LINE_ITEMS', message: 'The WS25-X-G3 discount code is not valid for the items in your cart'},
+    ]) as typeof fetch);
+    await assert.rejects(addCartLines(ENV, id, lines, cartWith([{code: 'MERCHANDISE_NOT_ENOUGH_STOCK', message: 'Quantity adjusted'}]) as typeof fetch), /cartLinesAdd failed/);
   });
 });
 
