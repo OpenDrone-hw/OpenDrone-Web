@@ -1,5 +1,6 @@
 import {data, Link, useLoaderData} from 'react-router';
 import type {Route} from './+types/early-bird';
+import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {accountHeaders, accountsEnabled, redirectTo, sameOrigin} from '~/lib/accounts/config';
 import {readSession} from '~/lib/accounts/sessions';
 import {formatOrderDate} from '~/lib/accounts/order-display';
@@ -46,10 +47,12 @@ const NOTICE_TEXT: Record<Notice, string> = {
   closed: 'Early Bird claims are not open yet.',
 };
 
-export const meta: Route.MetaFunction = () => [
-  {title: 'Early Bird on Discord | OpenDrone'},
-  {name: 'description', content: 'Every paid OpenDrone preorder unlocks the Early Bird role and the private #early-birds channel on the OpenDrone Discord.'},
-];
+export const meta: Route.MetaFunction = () =>
+  buildSeoMeta({
+    title: 'Early Bird on Discord',
+    description: 'Every paid OpenDrone preorder unlocks the Early Bird role and the private #early-birds channel on the OpenDrone Discord.',
+    canonical: `${SITE_ORIGIN}/early-bird`,
+  });
 
 export function headers() {
   return accountHeaders();

@@ -45,6 +45,8 @@ export function WatchCard({
         className="watch-card-thumb"
         src={poster}
         alt=""
+        width={640}
+        height={480}
         loading="lazy"
         onError={() =>
           setPoster(`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`)
