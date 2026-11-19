@@ -1,0 +1,121 @@
+/* Route-only rules split out of app.css by scripts: loaded with the route module, so other pages do not pay for them. */
+
+/* Drawn as a graphic, not a list: hairline spine, well-separated nodes
+   (gap ~4x the title size so the line reads as a drawn element), the next
+   rung marked by fill + ring, brightness stepping down toward the far
+   rungs, and the line fading out past the last node into the future. */
+.ladder-rungs {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 2.5rem 1.6rem;
+  position: relative
+}
+.ladder-rungs::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0.45rem;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-border) 90%, transparent)
+      calc(100% - 3rem),
+    transparent
+  )
+}
+.ladder-rung {
+  position: relative;
+  display: grid;
+  gap: 0.35rem;
+  padding-bottom: 3.5rem
+}
+.ladder-rung:last-child {
+  padding-bottom: 0
+}
+/* Hollow node punched through the hairline: page-background fill so the
+   line does not run through it. */
+.ladder-rung::before {
+  content: '';
+  position: absolute;
+  left: -1.6rem;
+  top: 0.35rem;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  border: 1px solid color-mix(in srgb, var(--color-text-muted) 55%, transparent)
+}
+/* The next rung up: filled, with a static glow ring. The one place the
+   accent appears inside the graphic. */
+.ladder-rung:first-child::before {
+  left: calc(-1.6rem - 1px);
+  width: 9px;
+  height: 9px;
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-gold) 25%, transparent)
+}
+.ladder-when {
+  font-size: 10px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text-muted) 80%, transparent)
+}
+.ladder-title {
+  font-size: 13px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted)
+}
+.ladder-rung:first-child .ladder-title {
+  color: var(--color-text)
+}
+.ladder-body {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.83rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--color-text-muted) 90%, transparent)
+}
+.ladder-meter-row {
+  margin: 0 0 0.25rem
+}
+.ladder-rung[data-kind='next'] .goal-meter-fill {
+  opacity: 0.45
+}
+.ladder-note {
+  margin: 1.4rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  font-size: 10px;
+  line-height: 1.7;
+  color: color-mix(in srgb, var(--color-text-muted) 80%, transparent)
+}
+.goal-meter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 0.2rem
+}
+.goal-meter {
+  display: block;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-border) 70%, transparent);
+  overflow: hidden
+}
+.goal-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-gold);
+  transition: width 0.6s ease
+}
+.goal-target {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  white-space: nowrap
+}

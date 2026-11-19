@@ -2,6 +2,7 @@ import {redirect} from 'react-router';
 import type {Route} from './+types/account.profile';
 import {requireAppAccounts} from '~/lib/commerce/app-account';
 import {profileRoute} from '~/lib/commerce/app-account-manage';
+import '../styles/routes/account.css';
 
 /** POST /account/profile (app mode): save the name, or change the email address with a code to the new one. */
 export async function action({request, context}: Route.ActionArgs) {

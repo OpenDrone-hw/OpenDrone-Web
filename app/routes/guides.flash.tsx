@@ -35,6 +35,7 @@ import {buildBreadcrumbJsonLd, buildSeoMeta} from '~/lib/seo';
 import {jsonLd} from '~/lib/guides';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
+import '../styles/routes/guides-flash.css';
 
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({

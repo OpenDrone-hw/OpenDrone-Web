@@ -1,3 +1,4 @@
+import {appCss} from '../lib/test-css.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {describe, it} from 'node:test';
@@ -33,7 +34,7 @@ describe('panelTransformOrigin', () => {
 });
 
 describe('launcher layering and placement (app.css)', () => {
-  const css = readFileSync(new URL('../styles/app.css', import.meta.url), 'utf8');
+  const css = appCss();
   const rule = (sel: string) => css.match(new RegExp(`^${sel.replace(/\./g, '\\.')} \\{([^}]*)\\}`, 'm'))?.[1] ?? '';
   it('sits under the drawer overlay (40) and dialogs while closed, above the pinned rail (60) while open', () => {
     assert.match(rule('.chatfpv-widget'), /z-index:\s*39;/);
@@ -46,7 +47,7 @@ describe('launcher layering and placement (app.css)', () => {
 });
 
 describe('no floating launcher on phones (audit round 3 A4)', () => {
-  const css = readFileSync(new URL('../styles/app.css', import.meta.url), 'utf8');
+  const css = appCss();
   const widget = readFileSync(new URL('./ChatFpvWidget.tsx', import.meta.url), 'utf8');
   const entry = readFileSync(new URL('./ChatFpvEntry.tsx', import.meta.url), 'utf8');
   const layout = readFileSync(new URL('./PageLayout.tsx', import.meta.url), 'utf8');

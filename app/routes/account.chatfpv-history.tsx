@@ -4,6 +4,7 @@ import {legacyAccountResponse} from '~/lib/accounts/legacy';
 import {accountHistory} from '~/lib/accounts/rights';
 import {appAccountsEnabled} from '~/lib/commerce/app-account';
 import {appHistory} from '~/lib/commerce/app-chatfpv';
+import '../styles/routes/account.css';
 
 /** POST /account/chatfpv-history: export or delete the signed-in customer's ChatFPV history (same Origin). */
 export function action({request, context}: Route.ActionArgs) {

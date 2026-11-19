@@ -1,3 +1,4 @@
+import {appCss} from './test-css.ts';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {describe, it} from 'node:test';
@@ -161,7 +162,7 @@ describe('accessibility of the notice and the availability bar (WCAG 2.2 AA)', (
     return (hi! + 0.05) / (lo! + 0.05);
   };
   const tokens = read('../styles/opendrone-tokens.css');
-  const app = read('../styles/app.css');
+  const app = appCss();
   it('bar text on the gold and notice text on the card reach 4.5:1', () => {
     const gold = hex(tokens, '--od-color-brand-gold')!;
     const onAccent = hex(tokens, '--od-color-neutral-surface-dark')!;

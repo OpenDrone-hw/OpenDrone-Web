@@ -1,6 +1,7 @@
 import {Link} from 'react-router';
 import type {Route} from './+types/account.verify';
 import {requireAppAccounts, verifyRoute} from '~/lib/commerce/app-account';
+import '../styles/routes/account.css';
 
 export const meta: Route.MetaFunction = () => [{title: 'Sign in'}, {name: 'robots', content: 'noindex, nofollow'}];
 

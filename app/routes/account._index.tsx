@@ -16,6 +16,7 @@ import {pilotMapEnabled, readOwnPin} from '~/lib/pilot-map-data';
 import {supportHeaders} from '~/lib/support/server';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {Bird, ChevronRight, LifeBuoy, LogOut, Mail, MapPin, Package, Settings, type LucideIcon} from 'lucide-react';
+import '../styles/routes/account.css';
 
 /**
  * GET /account with ACCOUNTS_ENABLED "1": the signed-in dashboard.

@@ -70,6 +70,7 @@ import {
   type SplitItem,
 } from '~/lib/cart-client';
 import {fillSalesTokens, SALES, salesDay} from '~/lib/sales-model';
+import '../styles/routes/cart.css';
 
 const CART_KEY = 'shopifyCartId';
 const BUILDS = parseBuilds(buildsJson);

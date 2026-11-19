@@ -1,5 +1,6 @@
 import type {Route} from './+types/account.reorder';
 import {reorderRoute, requireAppAccounts} from '~/lib/commerce/app-account';
+import '../styles/routes/account.css';
 
 /** POST /account/reorder: put a past order's available lines in the cart (app mode). */
 export function action({request, context}: Route.ActionArgs) {

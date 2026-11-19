@@ -1,0 +1,186 @@
+/* Route-only rules split out of app.css by scripts: loaded with the route module, so other pages do not pay for them. */
+
+/* Counts strip: how much of this dossier actually stands up. */
+.learn-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.75rem;
+  margin: 1.5rem 0 0;
+  padding-block: 0.9rem;
+  border-block: 1px solid var(--color-border)
+}
+.learn-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem
+}
+.learn-stats dt {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--ls-label);
+  color: var(--color-text-muted)
+}
+.learn-stats dd {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  color: var(--color-text);
+  margin: 0
+}
+.learn-toc {
+  margin: 2rem 0;
+  padding: 1rem 0;
+  border-block: 1px solid var(--color-border)
+}
+.learn-toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: 2;
+  column-gap: 2rem
+}
+.learn-toc li {
+  break-inside: avoid;
+  margin: 0 0 0.35rem
+}
+.learn-toc a {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  text-decoration: none
+}
+.learn-toc a:hover {
+  color: var(--color-gold-text)
+}
+.learn-section {
+  margin-top: 2.5rem
+}
+.learn-section h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.75rem
+}
+.learn-section h3 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  margin: 0 0 0.6rem
+}
+.learn-section h4 {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: var(--ls-label);
+  color: var(--color-text-muted);
+  margin: 0 0 0.6rem
+}
+.learn-prose,
+.learn-intro p {
+  color: var(--color-text-muted);
+  line-height: 1.7
+}
+.learn-claims {
+  list-style: none;
+  margin: 0;
+  padding: 0
+}
+.learn-claim {
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--color-border);
+  margin: 0
+}
+.learn-claim-text {
+  color: var(--color-text);
+  line-height: 1.65;
+  margin: 0
+}
+.learn-claim-text code,
+.learn-prose code,
+.learn-intro code,
+.learn-table code {
+  /* reset.css hardcodes `code { background: #ddd }` with no theme token, so a
+     bare code span is near-invisible in dark: #ddd behind #e5e5e5 text. Every
+     other long-form surface on the site overrides it; so does this one. */
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 0.08em 0.3em
+}
+.learn-claim-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.4rem 0 0
+}
+.learn-source {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--color-border-strong)
+}
+.learn-source:hover {
+  color: var(--color-gold-text)
+}
+.learn-source-none {
+  color: var(--color-text-muted);
+  border-bottom: 0;
+  font-style: italic
+}
+@media (max-width: 719px) {
+  .learn-toc ul {
+    columns: 1
+  }
+  .learn-stats {
+    gap: 1.1rem
+  }
+}
+/* Data tables inside a dossier (the frequency ladder, latency budgets). They
+   are wide by nature, so the table scrolls inside its own box rather than
+   pushing the page sideways. */
+.learn-table-wrap {
+  overflow-x: auto;
+  margin: 1rem 0;
+  border: 1px solid var(--color-border);
+  /* The prose column is 680px and these tables carry five or six columns, so
+     inside it every cell wraps to three lines. Break out wider, centred on the
+     column, never past the viewport. The rail gutter is repeated literally
+     rather than reused from --rail-width: that token is a percentage of its
+     containing block, so inside the 680px column it resolves NARROWER than the
+     column itself. */
+  width: min(1080px, calc(100vw - 2 * clamp(2.5rem, 5.5vw, 7rem)));
+  margin-left: 50%;
+  transform: translateX(-50%)
+}
+.learn-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85rem
+}
+.learn-table th,
+.learn-table td {
+  text-align: left;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top
+}
+.learn-table th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--ls-label);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  background: var(--color-bg-elevated)
+}
+.learn-table td {
+  color: var(--color-text-muted)
+}
+.learn-table tr:last-child td {
+  border-bottom: 0
+}
+.learn-table code {
+  font-size: 0.9em
+}

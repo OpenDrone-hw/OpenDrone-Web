@@ -31,6 +31,7 @@ import {publicTicket, type FieldError, type NewTicketInput} from '~/lib/support/
 import type {FileProblem} from '~/lib/support/uploads';
 import {readTicketCookie} from '~/lib/support/tokens';
 import {TOPIC_FIELDS, TOPICS, type TicketTopic} from '~/lib/support/form';
+import '../styles/routes/support.css';
 
 /**
  * The support front door. The ticket topic picker is the hero (founder:

@@ -12,6 +12,7 @@ import {EditorialShell} from '~/components/EditorialShell';
 import {Txt} from '~/components/Txt';
 import {CONTRIBUTING_URL} from '~/lib/company';
 import {copyText} from '~/lib/copy';
+import '../styles/routes/timeline.css';
 
 /**
  * Every word on this page comes from `content/copy/timeline.json`, edited in

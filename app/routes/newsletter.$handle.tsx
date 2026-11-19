@@ -8,6 +8,7 @@ import {PrevNextNav} from '~/components/release-notes/PrevNextNav';
 import {FILTER_TAGS, type FilterTag} from '~/components/release-notes/TagFilter';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
+import '../styles/routes/newsletter-handle.css';
 
 export const meta: Route.MetaFunction = ({data, params}) =>
   buildSeoMeta({

@@ -20,6 +20,7 @@ import {comingSoonFlag} from '~/lib/coming-soon';
 import {shopShownOpen} from '~/lib/shopify-cart-action';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {assetUrl} from '~/lib/asset-url';
+import '../styles/routes/roadmap.css';
 
 // roadmap-data points at /boards/<handle>/front.png (the 1568 px render);
 // the kanban card is 10.5rem wide, so serve the WebP thumbnails written next to

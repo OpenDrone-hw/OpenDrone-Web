@@ -5,6 +5,7 @@ import {EditorialShell} from '~/components/EditorialShell';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 import {FIRMWARE_PARTNERS} from '~/lib/firmware-partners';
+import '../styles/routes/firmware-partners.css';
 
 /**
  * Every word on this page comes from `content/copy/firmware-partners.json`,

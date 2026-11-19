@@ -1,6 +1,7 @@
 import {redirect} from 'react-router';
 import type {Route} from './+types/account.addresses';
 import {addressRoute, requireAppAccounts} from '~/lib/commerce/app-account';
+import '../styles/routes/account.css';
 
 /** The addresses are a section of My account. */
 export function loader({context}: Route.LoaderArgs) {

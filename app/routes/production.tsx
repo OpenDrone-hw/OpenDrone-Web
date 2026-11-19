@@ -5,6 +5,7 @@ import {EditorialShell} from '~/components/EditorialShell';
 import {ProductionLadder} from '~/components/ProductionLadder';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
+import '../styles/routes/production.css';
 
 /**
  * Words live in `content/copy/production.json`; this file holds the section

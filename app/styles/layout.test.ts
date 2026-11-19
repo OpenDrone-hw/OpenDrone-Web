@@ -4,9 +4,14 @@
  */
 import {describe, it} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync, readdirSync} from 'node:fs';
 
-const CSS = readFileSync(new URL('./app.css', import.meta.url), 'utf8');
+// app.css plus the route-only files split out of it: a rule may live in either.
+const ROUTE_CSS = new URL('./routes/', import.meta.url);
+const CSS = [
+  readFileSync(new URL('./app.css', import.meta.url), 'utf8'),
+  ...readdirSync(ROUTE_CSS).map((f) => readFileSync(new URL(f, ROUTE_CSS), 'utf8')),
+].join('\n');
 
 /** Every declaration block whose selector list names `selector`. */
 function blocksFor(selector: string): string[] {

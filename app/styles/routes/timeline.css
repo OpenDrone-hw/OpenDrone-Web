@@ -1,0 +1,155 @@
+/* Route-only rules split out of app.css by scripts: loaded with the route module, so other pages do not pay for them. */
+
+.tl-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: var(--sp-4)
+}
+.tl-root {
+  --tl-progress: 0;
+  position: relative;
+  padding-left: 2.25rem;
+  max-width: 46rem
+}
+.tl-trace {
+  position: absolute;
+  left: 0.55rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-border)
+}
+.tl-trace::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  height: calc(var(--tl-progress) * 100%);
+  background: var(--color-gold);
+  transition: height 0.15s linear
+}
+.tl-year {
+  position: relative;
+  padding-top: var(--sp-5)
+}
+.tl-year-label {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: clamp(2rem, 5vw, 3rem);
+  letter-spacing: 0.06em;
+  line-height: 1;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+  margin: 0 0 var(--sp-4)
+}
+.tl-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-4)
+}
+.tl-event {
+  position: relative;
+  /* No opacity fade: 0.35 dropped the date and detail text to 1.7:1. The pad
+     and trace already mark passed events. */
+  transform: translateY(6px);
+  transition: transform 0.4s ease
+}
+.tl-event.is-passed {
+  opacity: 1;
+  transform: none
+}
+.tl-pad {
+  position: absolute;
+  left: -2.25rem;
+  top: 0.2rem;
+  width: 14px;
+  height: 14px;
+  margin-left: 0.55rem;
+  transform: translateX(-6px);
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: var(--color-bg);
+  transition: border-color 0.3s ease
+}
+.tl-pad::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--color-border);
+  transition: background 0.3s ease
+}
+.tl-event.is-passed .tl-pad {
+  border-color: var(--color-gold)
+}
+.tl-event.is-passed .tl-pad::after {
+  background: var(--color-gold)
+}
+.tl-date {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.15rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-dim)
+}
+.tl-glyph {
+  color: var(--color-gold-text);
+  letter-spacing: 0
+}
+.tl-tag {
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm);
+  padding: 0.05rem 0.4rem;
+  font-size: 0.62rem
+}
+.tl-title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: 1.35
+}
+.tl-title a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent)
+}
+.tl-title a:hover {
+  border-bottom-color: var(--color-gold)
+}
+.tl-detail {
+  margin: 0.3rem 0 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text-dim);
+  line-height: 1.55
+}
+/* Board names in detail lines link their product pages; same gold-tinted
+   underline vocabulary as the receipt link in .tl-title a. */
+.tl-detail a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent)
+}
+.tl-detail a:hover {
+  color: var(--color-text);
+  border-bottom-color: var(--color-gold)
+}
+.tl-empty {
+  font-family: var(--font-mono);
+  color: var(--color-text-dim);
+  padding: var(--sp-5) 0
+}
+@media (prefers-reduced-motion: reduce) {
+  .tl-event {
+    opacity: 1;
+    transform: none
+  }
+  .tl-trace::after {
+    height: 100%;
+    transition: none
+  }
+}

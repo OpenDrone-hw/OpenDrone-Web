@@ -6,6 +6,7 @@ import {Txt} from '~/components/Txt';
 import {copy, copyText, editAttrs} from '~/lib/copy';
 import {getCompanyIdentity} from '~/lib/company';
 import {VISIT_MAP} from '~/lib/visit-map.generated';
+import '../styles/routes/visit.css';
 
 /**
  * The makerspace page: where Incutec works, the 3D walkthrough of the lab,

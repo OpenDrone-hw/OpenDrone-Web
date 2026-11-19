@@ -31,6 +31,7 @@ import {copyText} from '~/lib/copy';
 import {CommunitySection} from '~/components/Discord';
 import {fetchDiscordCounts, type DiscordCounts} from '~/lib/discord-community';
 import {stockShipsTo} from '~/lib/sales-model';
+import '../styles/routes/home.css';
 
 /**
  * The homepage's words live in `content/copy/home.json`, shared with

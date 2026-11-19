@@ -1,0 +1,135 @@
+/* Route-only rules split out of app.css by scripts: loaded with the route module, so other pages do not pay for them. */
+
+/* De-boxed: an empty state is a moment for direction, not a card. Centered
+   text with intentional whitespace reads calmer than a bordered box. */
+.empty-state {
+  padding: var(--sp-7) var(--sp-4);
+  margin: 0 auto;
+  max-width: 32rem;
+  color: var(--color-text-muted);
+  text-align: center
+}
+@media (prefers-reduced-motion: no-preference) {
+  .products-grid > * {
+    animation: grid-card-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: 0.24s
+  }
+  .products-grid > *:nth-child(1) { animation-delay: 0.02s
+  }
+  .products-grid > *:nth-child(2) { animation-delay: 0.06s
+  }
+  .products-grid > *:nth-child(3) { animation-delay: 0.1s
+  }
+  .products-grid > *:nth-child(4) { animation-delay: 0.14s
+  }
+  .products-grid > *:nth-child(5) { animation-delay: 0.18s
+  }
+  .products-grid > *:nth-child(6) { animation-delay: 0.22s
+  }
+}
+.collection-sort select:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-field-border))
+}
+.collection-sort select:focus-visible {
+  outline: 1px solid var(--color-gold);
+  outline-offset: 2px
+}
+@media (max-width: 899px) {
+  .catalog-filter-list {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px
+  }
+}
+.catalog-term {
+  color: var(--color-text);
+  /* A long query is cut with an ellipsis, so the count and Clear stay on
+     screen instead of pushing the page sideways. */
+  display: inline-block;
+  max-width: min(24ch, 40vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom
+}
+.catalog-term-clear {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0 0.2rem;
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--color-gold-text);
+  cursor: pointer
+}
+.catalog-term-clear:hover {
+  color: var(--color-gold-text)
+}
+/* Sort control dims + shows progress while the re-sorted page loads. */
+.collection-sort[data-pending] {
+  opacity: 0.6
+}
+.collection-sort[data-pending] select {
+  cursor: progress
+}
+/* Empty state */
+.empty-state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--color-gold) 12%, transparent);
+  color: var(--color-gold-text)
+}
+.empty-state-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.5rem;
+  color: var(--color-text)
+}
+.empty-state-body {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  max-width: 32rem;
+  margin: 0 auto 1.25rem
+}
+.empty-state-actions {
+  display: inline-flex;
+  gap: 0.75rem;
+  justify-content: center
+}
+.search-input {
+  flex: 1 1 18rem
+}
+@media (max-width: 1023px) {
+  .collection-sort,
+  .collection-sort select {
+    min-width: 0;
+    max-width: 100%
+  }
+  .catalog-layout {
+    grid-template-columns: minmax(0, 1fr)
+  }
+  .catalog-sidebar,
+  .catalog-filter-group,
+  .catalog-filter-list,
+  .catalog-main {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box
+  }
+}
+@media (max-width: 640px) {
+  .catalog-main .products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem
+  }
+}

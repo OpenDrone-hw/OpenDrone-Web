@@ -31,6 +31,7 @@ import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {Txt} from '~/components/Txt';
 import {copyText, editAttrs} from '~/lib/copy';
 import {helpText, normalise, sizes, termWords} from '~/lib/catalog-search';
+import '../styles/routes/plp.css';
 
 /**
  * The term-bearing meta string carries a `{term}` token rather than being

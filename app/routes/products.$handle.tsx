@@ -130,6 +130,7 @@ import type {
   DownloadAsset,
   DownloadKind,
 } from '~/lib/product-content';
+import '../styles/routes/pdp.css';
 
 /** The new-tab notice for links whose ::after is taken (app.css excludes them
  *  from the generic a[target=_blank]::after notice). */
