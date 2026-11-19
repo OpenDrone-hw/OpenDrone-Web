@@ -309,7 +309,7 @@ function FeaturedGrid({items: all}: {items: CollectionItemFragment[]}) {
             loading="lazy"
             // One column on a phone: the card is the rail wide, not the
             // viewport, so 100vw made the browser pick the 800px file.
-            imageSizes="(min-width: 45em) 400px, calc(100vw - 2.5rem)"
+            imageSizes="(min-width: 45em) 400px, calc(100vw - 3.6rem)"
           />
         ))}
       </div>

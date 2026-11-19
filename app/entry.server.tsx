@@ -174,6 +174,9 @@ export default async function handleRequest(
         if (!el.getAttribute('crossorigin')) {
           el.setAttribute('crossorigin', 'anonymous');
         }
+        // Route chunks are hydration-only: below the render-blocking CSS and the
+        // LCP image, so ~50 of them don't starve those on a slow mobile link.
+        el.setAttribute('fetchpriority', 'low');
       },
     })
     .on('script[type="module"]', {
