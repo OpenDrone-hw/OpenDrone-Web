@@ -821,7 +821,7 @@ function writeVersionFile() {
 // WebP cover every phone at 40-80 KB. Needs cwebp on PATH (brew install
 // webp). Alpha is kept lossless (-alpha_q 100) so the drop-shadow edge is
 // identical to the PNG. Runs on every build and on --derivatives-only.
-const FACE_DERIVATIVE_WIDTHS = [528, 800];
+const FACE_DERIVATIVE_WIDTHS = [320, 400, 528, 800];
 function writeFaceDerivatives() {
   const base = resolve(here, '..', 'public', 'boards');
   let n = 0;
