@@ -18,7 +18,6 @@ import {
 import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
 import interVarWoff2 from '~/assets/fonts/inter-var.woff2';
-import jetbrainsMonoWoff2 from '~/assets/fonts/jetbrains-mono-Regular.woff2';
 import {comingSoonFlag, resolveAllStatuses, roadmapStatusMap} from '~/lib/coming-soon';
 import {shopShownOpen} from '~/lib/shopify-cart-action';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
@@ -137,18 +136,12 @@ export function links() {
     // resolves its url() against that origin, so only an identical hashed
     // URL on both sides makes the preload actually satisfy the font request.
     // - Inter: body text.
-    // - JetBrains Mono: NOT just spec tables - it renders the header nav,
-    //   prices and SKUs sitewide, all above the fold.
+    // JetBrains Mono is deliberately NOT preloaded: its 64 KB competes with the
+    // LCP image on slow mobile links, and app.css has a metric-matched
+    // fallback + font-display: swap, so the swap causes no layout shift.
     {
       rel: 'preload',
       href: interVarWoff2,
-      as: 'font',
-      type: 'font/woff2',
-      crossOrigin: 'anonymous',
-    },
-    {
-      rel: 'preload',
-      href: jetbrainsMonoWoff2,
       as: 'font',
       type: 'font/woff2',
       crossOrigin: 'anonymous',
