@@ -22,6 +22,16 @@ export const REPLAN_REUSE_MS = 15_000;
  *  the page waits for a fresh read. */
 export const CATALOG_STALE_MS = 2 * CATALOG_TTL_MS;
 
+/** A copy of the catalog kept outside the isolate (Cache API, per location),
+ *  so a cold isolate answers from it instead of waiting on Shopify. */
+export type CatalogPersist = {
+  read: (market: string) => Promise<{catalog: Catalog; fetchedAt: number} | null>;
+  write: (market: string, catalog: Catalog, fetchedAt: number) => Promise<void>;
+};
+
+/** The oldest persisted catalog a cold isolate may show (refreshed behind). */
+export const CATALOG_PERSIST_MAX_MS = 5 * 60_000;
+
 const catalogMemo = new Map<string, {catalog: Catalog; fetchedAt: number}>();
 
 /** The Shopify catalog for `market`, from the memo while it is younger than
@@ -34,24 +44,38 @@ export async function memoCatalog(
   load: () => Promise<Catalog>,
   now: () => number = Date.now,
   waitUntil?: (p: Promise<unknown>) => void,
+  persist?: CatalogPersist,
 ): Promise<Catalog> {
-  const hit = catalogMemo.get(market);
+  let hit = catalogMemo.get(market);
+  let staleMs = CATALOG_STALE_MS;
+  if (!hit && persist && waitUntil) {
+    const kept = await persist.read(market).catch(() => null);
+    if (kept && now() - kept.fetchedAt < CATALOG_PERSIST_MAX_MS) {
+      rememberCatalog(market, kept.catalog, kept.fetchedAt);
+      hit = catalogMemo.get(market);
+      staleMs = CATALOG_PERSIST_MAX_MS;
+    }
+  }
   const age = hit ? now() - hit.fetchedAt : Infinity;
   if (hit && age < CATALOG_TTL_MS) return structuredClone(hit.catalog);
   const startedAt = now();
-  if (hit && waitUntil && age < CATALOG_STALE_MS) {
+  if (hit && waitUntil && age < staleMs) {
     // Stale but recent: answer now, refresh behind the response. The read is
     // owned by this request's waitUntil (never shared), and a failure keeps
     // the older catalog until the next request retries.
     waitUntil(
       load()
-        .then((fresh) => rememberCatalog(market, fresh, startedAt))
+        .then((fresh) => {
+          rememberCatalog(market, fresh, startedAt);
+          return persist?.write(market, fresh, startedAt);
+        })
         .catch(() => undefined),
     );
     return structuredClone(hit.catalog);
   }
   const catalog = await load();
   rememberCatalog(market, catalog, startedAt);
+  if (persist && waitUntil) waitUntil(persist.write(market, catalog, startedAt).catch(() => undefined));
   return structuredClone(catalog);
 }
 

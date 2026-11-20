@@ -16,7 +16,7 @@
 import {withoutBuyNow, type Catalog} from './catalog.ts';
 import {resolveRegion} from './region.ts';
 import {fetchShopifyCatalog} from './shopify-storefront.ts';
-import {REPLAN_REUSE_MS, memoCatalog, readAndRemember, recentCatalog} from './catalog-memo.ts';
+import {REPLAN_REUSE_MS, memoCatalog, type CatalogPersist, readAndRemember, recentCatalog} from './catalog-memo.ts';
 import {appCommerceEnabled} from './commerce/app-api.ts';
 import {appCatalogClient} from './commerce/app-catalog.ts';
 import {
@@ -97,6 +97,26 @@ export async function warmPaidCounts(env: Env, waitUntil: (p: Promise<unknown>) 
   );
 }
 
+/** Catalog copy in this location's Cache API (JSON, `fetchedAt` in a header),
+ *  shared by every isolate there. Best effort: any failure reads as a miss. */
+const catalogPersist: CatalogPersist = {
+  async read(market) {
+    const store = (globalThis as {caches?: {default?: Cache}}).caches?.default;
+    const res = await store?.match(`https://catalog.opendrone.internal/${market}`);
+    if (!res) return null;
+    return {fetchedAt: Number(res.headers.get('x-fetched-at')), catalog: (await res.json()) as Catalog};
+  },
+  async write(market, catalog, fetchedAt) {
+    const store = (globalThis as {caches?: {default?: Cache}}).caches?.default;
+    await store?.put(
+      `https://catalog.opendrone.internal/${market}`,
+      new Response(JSON.stringify(catalog), {
+        headers: {'cache-control': 'max-age=300', 'x-fetched-at': String(fetchedAt)},
+      }),
+    );
+  },
+};
+
 /**
  * `dealer`: the session carries an applied wholesale code (`DEALER_SESSION_KEY`).
  * Outside the EU (and outside the US, which has its own partner) such a buyer
@@ -120,6 +140,7 @@ export function createCatalogClient({
       () => (market === 'default' ? fetchShopifyCatalog(env) : fetchShopifyCatalog(env, fetch, market)),
       Date.now,
       waitUntil,
+      catalogPersist,
     ),
     waitUntil,
   );
