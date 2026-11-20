@@ -9,6 +9,7 @@ describe('shopify images', () => {
     const u = new URL(shopifyImageUrl(CDN, 320));
     assert.equal(u.searchParams.get('width'), '320');
     assert.equal(u.searchParams.get('format'), 'webp');
+    assert.equal(u.searchParams.get('quality'), '75');
     assert.equal(u.searchParams.get('v'), '17');
   });
 
