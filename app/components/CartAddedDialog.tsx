@@ -35,7 +35,11 @@ import {DATES_SEEN_FIELD, hasMixedShipGroups, latestDeliveryBy, type CartSummary
 import {trackEvent} from '~/lib/growth/plausible';
 import {CART_ADDED_EVENT, postCartAdd, withCountry, type CartAddedDetail} from '~/lib/cart-client';
 import {CountryPicker} from './CountryPicker';
-import '../styles/cart-checkout-bar.css';
+
+// Loaded on demand, not imported statically: this component mounts site-wide
+// via PageLayout, so a static import put the bar CSS in every page's
+// render-blocking stylesheets for a drawer most visits never open.
+const loadBarCss = () => import('../styles/cart-checkout-bar.css');
 
 const CART_ACTION = '/api/shopify/cart';
 const BUILDS = parseBuilds(buildsJson);
@@ -76,11 +80,18 @@ export function CartAddedDialog() {
       const next = (event as CustomEvent<CartAddedDetail>).detail;
       const active = document.activeElement as HTMLElement | null;
       returnFocus.current = next.returnFocus ?? (active && active !== document.body ? active : null);
-      setDetail(next);
-      setSummary(next.summary);
-      setFailed(null);
+      // Open once the bar CSS is in (already prefetched below), so the
+      // drawer never paints unstyled.
+      void loadBarCss().catch(() => {}).then(() => {
+        setDetail(next);
+        setSummary(next.summary);
+        setFailed(null);
+      });
     };
     window.addEventListener(CART_ADDED_EVENT, open);
+    // Warm the CSS after first paint so the open path is instant.
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 2000));
+    idle(() => void loadBarCss().catch(() => {}));
     return () => window.removeEventListener(CART_ADDED_EVENT, open);
   }, []);
 
