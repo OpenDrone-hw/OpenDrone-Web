@@ -20,10 +20,11 @@ import {CommunitySection} from '~/components/Discord';
 import type {DiscordCounts} from '~/lib/discord-community';
 
 // Downscaled WebP thumbnails written by scripts/export-board-art.mjs next to
-// front.png. The stage slot is at most 264 CSS px, so 528 (2x) and 800 (3x)
-// cover every phone at a tenth of the 1568 px PNG. Same ?v= cache-bust as
+// front.png. The boards render at most 150 CSS px (30vw on phones), so 320
+// covers ~1.75x-2.5x phones, 400 the 2.75x-3x ones, 528/800 the rest, each a fraction of the
+// 1568 px PNG. Same ?v= cache-bust as
 // BoardArt so a regenerated render is refetched.
-const boardThumb = (handle: string, w: 528 | 800) =>
+const boardThumb = (handle: string, w: 320 | 400 | 528 | 800) =>
   assetUrl(
     `/boards/${handle}/front-w${w}.webp${BOARD_ART_VERSION ? `?v=${BOARD_ART_VERSION}` : ''}`,
   );
@@ -127,7 +128,7 @@ export function MobileHome({
             <img
               className="home-mobile-board"
               src={boardThumb('openesc', 800)}
-              srcSet={`${boardThumb('openesc', 528)} 528w, ${boardThumb('openesc', 800)} 800w`}
+              srcSet={`${boardThumb('openesc', 320)} 320w, ${boardThumb('openesc', 400)} 400w, ${boardThumb('openesc', 528)} 528w, ${boardThumb('openesc', 800)} 800w`}
               sizes={BOARD_THUMB_SIZES}
               alt=""
               width={520}
@@ -141,7 +142,7 @@ export function MobileHome({
             <img
               className="home-mobile-board"
               src={boardThumb('openfc-lite', 800)}
-              srcSet={`${boardThumb('openfc-lite', 528)} 528w, ${boardThumb('openfc-lite', 800)} 800w`}
+              srcSet={`${boardThumb('openfc-lite', 320)} 320w, ${boardThumb('openfc-lite', 400)} 400w, ${boardThumb('openfc-lite', 528)} 528w, ${boardThumb('openfc-lite', 800)} 800w`}
               sizes={BOARD_THUMB_SIZES}
               alt=""
               width={520}
