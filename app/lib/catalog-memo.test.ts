@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {beforeEach, describe, it} from 'node:test';
-import {CATALOG_STALE_MS, CATALOG_TTL_MS, clearCatalogMemo, memoCatalog} from './catalog-memo.ts';
+import {CATALOG_PERSIST_MAX_MS, CATALOG_STALE_MS, CATALOG_TTL_MS, clearCatalogMemo, memoCatalog} from './catalog-memo.ts';
 import type {Catalog} from './catalog.ts';
 
 const catalog = (tag: string) => ({currency: 'EUR', products: [{handle: tag}]}) as unknown as Catalog;
@@ -72,5 +72,26 @@ describe('memoCatalog', () => {
     t = CATALOG_TTL_MS + 1 + CATALOG_STALE_MS;
     const old = await memoCatalog('default', load, () => t, waitUntil);
     assert.equal(old.products[0].handle, 'read-3');
+  });
+
+  it('a cold isolate answers from the persisted copy and refreshes behind', async () => {
+    const written: string[] = [];
+    const persist = {
+      read: async () => ({catalog: catalog('kept'), fetchedAt: 0}),
+      write: async (_m: string, c: Catalog) => void written.push(c.products[0].handle),
+    };
+    const bg: Promise<unknown>[] = [];
+    let calls = 0;
+    const load = async () => catalog(`read-${++calls}`);
+    const got = await memoCatalog('default', load, () => CATALOG_STALE_MS + 1, (p) => bg.push(p), persist);
+    assert.equal(got.products[0].handle, 'kept');
+    await Promise.all(bg);
+    assert.deepEqual(written, ['read-1']);
+  });
+
+  it('ignores a persisted copy older than the limit and reads Shopify', async () => {
+    const persist = {read: async () => ({catalog: catalog('old'), fetchedAt: 0}), write: async () => {}};
+    const got = await memoCatalog('default', async () => catalog('new'), () => CATALOG_PERSIST_MAX_MS, () => {}, persist);
+    assert.equal(got.products[0].handle, 'new');
   });
 });
