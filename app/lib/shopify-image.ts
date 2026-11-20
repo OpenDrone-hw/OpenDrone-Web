@@ -6,6 +6,10 @@
  * Bundler-free so node:test can load it.
  */
 
+// Shopify's WebP default is q85. q75 is visually indistinguishable on these
+// product photos (checked 1:1 at 800w) and ~40% smaller.
+const QUALITY = 75;
+
 const WIDTHS = [160, 320, 480, 640, 960, 1280, 1600] as const;
 
 function isShopifyCdn(url: string): boolean {
@@ -22,6 +26,7 @@ export function shopifyImageUrl(url: string, width: number): string {
   const u = new URL(url);
   u.searchParams.set('width', String(Math.round(width)));
   u.searchParams.set('format', 'webp');
+  u.searchParams.set('quality', String(QUALITY));
   return u.toString();
 }
 
