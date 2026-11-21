@@ -1,4 +1,3 @@
-import {useId} from 'react';
 import {Link} from 'react-router';
 import {copyFill, copyText} from '~/lib/copy';
 import {laneShipping} from '~/lib/sales-model';
@@ -152,54 +151,5 @@ export function OfferStatus({
       </span>
       {extra ? <span className="offer-status-row-extra">{extra}</span> : null}
     </p>
-  );
-}
-
-/**
- * "Buy now" or "Pre-order" as two cards: a native radio group, so Tab
- * reaches it once, the arrow keys move the choice, and a screen reader
- * announces each card as one radio with its price, ship date and area.
- * Side by side where two fit, stacked on a phone.
- */
-export function OfferChoice({
-  buyNow,
-  preorder,
-  mode,
-  onChange,
-}: {
-  buyNow: Pick<ProductVariantFragment, 'price' | 'campaign'>;
-  preorder: ProductVariantFragment;
-  mode: BatchOffer;
-  onChange: (mode: BatchOffer) => void;
-}) {
-  const name = useId();
-  return (
-    <fieldset className="offer-choice" data-offer-choice>
-      <legend className="sr-only">{copyText('product-chrome.offer_legend') ?? 'Buy now or pre-order'}</legend>
-      {offerCards(buyNow, preorder).map((card) => (
-        <label key={card.offer} className={`offer-card${mode === card.offer ? ' is-selected' : ''}`} data-offer={card.offer}>
-          <input
-            type="radio"
-            className="offer-card-input"
-            name={name}
-            value={card.offer}
-            checked={mode === card.offer}
-            onChange={() => onChange(card.offer)}
-          />
-          <span className="offer-card-head">
-            <span className="offer-card-title">{card.title}</span>
-            <span className="offer-card-pin">{card.pin}</span>
-            <span className="offer-card-pinprice">{card.pinPrice}</span>
-            {card.price ? <span className="offer-card-price">{card.price}</span> : null}
-          </span>
-          <span className="offer-card-line">{card.ships}</span>
-          <span className="offer-card-line is-muted">{card.where}</span>
-          {/* Always the slot, so a size without a saving keeps the card's height. */}
-          <span className={`offer-card-line offer-card-extra is-${card.offer}`} aria-hidden={card.extra ? undefined : true}>
-            {card.extra ?? '\u00a0'}
-          </span>
-        </label>
-      ))}
-    </fieldset>
   );
 }

@@ -33,9 +33,8 @@ import {
   thirdPartyBrand,
   toCard,
   toProduct,
-  type BatchOffer,
 } from '~/lib/catalog';
-import {AddonRow, OfferChoice, OfferStatus} from '~/components/OfferChoice';
+import {AddonRow, OfferStatus} from '~/components/OfferChoice';
 import {buyUrl, commerceHandoff} from '~/lib/shop-links';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
@@ -938,13 +937,11 @@ function ProductPage() {
       product.selectedOrFirstAvailableVariant
     );
   }, [searchKey, product]);
-  // Buy now or pre-order: a board with both offers opens on "Buy now"; the
-  // choice swaps the whole selected variant (price, ship line, hand-off), so
-  // everything below reads the chosen offer. Without the choice this is the
-  // picked variant, unchanged.
-  const [offerMode, setOfferMode] = useState<BatchOffer>('buy_now');
+  // A board with both offers is sold from stock: the buyer is not asked to
+  // choose, Buy now wins while it is available. Pre-order is the lane only
+  // when nothing is in stock (`soloPreorder`).
   const offerChoice = pickedVariant?.preorderOffer ? {buyNow: pickedVariant, preorder: pickedVariant.preorderOffer} : null;
-  const selectedVariant = offerChoice && offerMode === 'preorder' ? offerChoice.preorder : pickedVariant;
+  const selectedVariant = pickedVariant;
   // The Buy now lane sells this board. The stack (this board and its
   // partner of the same size) is an optional add-on, unticked by default,
   // offered only while both are in stock for this buyer. Either way it is
@@ -958,14 +955,12 @@ function ProductPage() {
   // The build this part belongs to (the home block's), for the partner
   // board's tick row and the "See the full build" link.
   const build = useMemo(() => buildForPart(builds, pickedVariant?.sku, product.handle), [builds, pickedVariant?.sku, product.handle]);
-  // A size of this page with two offers: a one-offer size keeps that height.
-  const pageHasChoice = product.variants.nodes.some((variant) => Boolean(variant.preorderOffer));
   // A new size starts on this part alone.
   useEffect(() => {
     setWithStack(false);
   }, [pickedVariant?.id]);
   // The stack is bought only from Buy now, with the box ticked.
-  const stackOn = Boolean(withStack && stack && offerMode === 'buy_now' && offerChoice);
+  const stackOn = Boolean(withStack && stack && offerChoice);
   const expressRefusal = useExpressRefusal();
   // Buy now or pre-order on (BATCH_CHOICE): one page for every region.
   const choiceOn = Boolean(useRouteLoaderData<RootLoader>('root')?.batchChoice);
@@ -1795,7 +1790,7 @@ function ProductPage() {
         activeValue={activeTier}
         onSelect={selectTier}
         showPrices={!soon}
-        offer={offerChoice ? offerMode : undefined}
+        offer={offerChoice ? 'buy_now' : undefined}
       />
     ) : null;
   // A Specs column header selects its version the way a ladder button does:
@@ -1910,9 +1905,7 @@ function ProductPage() {
   const maxQuantity =
     stackOn && stack
       ? Math.max(1, Math.min(MAX_LINE_QUANTITY, stack.max))
-      : offerChoice && offerMode === 'preorder'
-        ? MAX_LINE_QUANTITY
-        : paidLeft != null ? Math.max(1, Math.min(MAX_LINE_QUANTITY, paidLeft)) : MAX_LINE_QUANTITY;
+      : paidLeft != null ? Math.max(1, Math.min(MAX_LINE_QUANTITY, paidLeft)) : MAX_LINE_QUANTITY;
   // The buy module's quantity, reset whenever the variant changes.
   // A product sold singly but used in sets (4 motors per quad) starts at
   // one set; the stepper still moves by one.
@@ -1959,7 +1952,7 @@ function ProductPage() {
   // One offer, in stock (nothing to pre-order for this product): the status
   // row says so, in the slot the cards use.
   const inStockOnly = Boolean(choiceOn && !offerChoice && !soloPreorder && !isBundle && !campaign && !notDirect && selectedVariant?.availableForSale);
-  const preorderLane = Boolean(soloPreorder) || Boolean(offerChoice && offerMode === 'preorder');
+  const preorderLane = Boolean(soloPreorder);
   const lane = preorderLane ? 'preorder' : 'buy_now';
   const partner = build && (offerChoice || soloPreorder) ? partnerBoard(build, pickedVariant?.sku, lane) : null;
   // Only with Buy now or pre-order on: with the flag off the page is the one it was before.
@@ -2102,22 +2095,13 @@ function ProductPage() {
         ) : null}
       </div>
       {offerChoice && !notDirect ? (
-        <OfferChoice
-          buyNow={offerChoice.buyNow}
-          preorder={offerChoice.preorder}
-          mode={offerMode}
-          onChange={setOfferMode}
-        />
+        <div className="offer-slot">
+          <OfferStatus offer="buy_now" buyNow={offerChoice.buyNow} preorder={offerChoice.preorder} />
+        </div>
       ) : null}
       {soloPreorder && !notDirect ? (
-        // One offer: a status row, no selectable card. On a page whose other
-        // size has two offers, an invisible copy of the cards keeps the height.
-        <div className={`offer-slot${pageHasChoice ? ' has-ghost' : ''}`}>
-          {pageHasChoice ? (
-            <div className="offer-slot-ghost" aria-hidden="true" inert>
-              <OfferChoice buyNow={soloPreorder.preorder} preorder={soloPreorder.preorder} mode="preorder" onChange={() => undefined} />
-            </div>
-          ) : null}
+        // Nothing in stock: a status row for the pre-order.
+        <div className="offer-slot">
           <OfferStatus buyNow={soloPreorder.retail} preorder={soloPreorder.preorder} />
         </div>
       ) : null}
@@ -2158,7 +2142,7 @@ function ProductPage() {
         addUrl={buildAdd?.url}
         addLabel={buildAdd ? say('product-chrome.offer_cta_preorder_stack', 'Pre-order the stack') : undefined}
         express={
-          offerChoice && offerMode === 'buy_now' && pickedVariant?.sku
+          offerChoice && pickedVariant?.sku
             ? {
                 lines: boardExpressLines(pickedVariant.sku, stack, stackOn),
                 label: stackOn
@@ -2223,11 +2207,11 @@ function ProductPage() {
           // ships, once; under the button only the terms that go with it.
           <p className="product-buy-ship offer-status" data-offer-status>
             {/* A wholesale export order adds what the lane card does not say. */}
-            {offerChoice && offerMode === 'buy_now' && (rootData as {wholesaleExport?: boolean} | undefined)?.wholesaleExport ? (
+            {offerChoice && (rootData as {wholesaleExport?: boolean} | undefined)?.wholesaleExport ? (
               <span>{say('product-chrome.offer_status_buy_now_wholesale', 'In stock in {{stock_from}}, wholesale order, ships by courier, import charges on delivery')}</span>
             ) : null}
-            <Link prefetch="intent" to={offerChoice && offerMode === 'buy_now' ? '/terms' : '/preorder'} className="product-buy-terms-link">
-              {offerChoice && offerMode === 'buy_now'
+            <Link prefetch="intent" to={offerChoice ? '/terms' : '/preorder'} className="product-buy-terms-link">
+              {offerChoice
                 ? say('product-chrome.offer_terms_buy_now', 'Terms of sale')
                 : say('product-chrome.buy_terms_link', 'Pre-order terms')}
             </Link>
