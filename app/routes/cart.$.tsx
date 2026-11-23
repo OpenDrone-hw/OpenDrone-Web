@@ -10,7 +10,8 @@ import {
   CART_CHECK,
   DATES_SEEN_FIELD,
   batchChoiceConflict,
-  buyNowToPreorder,
+  regionForDestination,
+  settleSessionCart,
   cartCurrencyMisses,
   cartLineInfo,
   sellsBuyNow,
@@ -145,7 +146,7 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   let info: Record<string, CartLineInfo> = {};
   let replanned: string | null = null;
   let payments: string[] = [];
-  let movedToPreorder: 'stock-region' | 'elsewhere' | null = null;
+  let movedToPreorder: 'elsewhere' | null = null;
   let notPriced: {currency: string; lines: string[]} | null = null;
   const country = shipCountryForRequest(request);
   if (cart?.lines.length) {
@@ -166,18 +167,21 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
       logError: (message: string, error?: unknown) => console.error(`[shopify-cart] ${message}`, error instanceof Error ? error.message : 'unknown error'),
     };
     let plan = await planCartPage(cart, destination, context.env, cartReplannedFor(request.headers.get('Cookie')), planDependencies);
-    // A cart from before the two lanes: its in-stock boards move to the
-    // pre-order variant of the same board, then the cart is planned again
-    // (ship promise, batch) for that variant.
-    const moves = batchChoiceOn(context.env) && plan.catalog ? buyNowToPreorder(plan.cart, plan.catalog) : [];
-    if (moves.length && plan.catalog) {
+    // In-stock boards ship now unless something in the cart waits for the
+    // March batch; then the whole order ships together and the boards take
+    // their pre-order price (settleOffers). The add and remove actions do the
+    // same; this catches a cart from before, or a Ship to switch.
+    if (batchChoiceOn(context.env) && plan.catalog) {
       try {
-        const sellsNow = sellsBuyNow(plan.catalog);
-        const updated = await updateCartLines(context.env, plan.cart.id, moves);
-        plan = await planCartPage(updated, destination, context.env, null, planDependencies);
-        movedToPreorder = sellsNow ? 'stock-region' : 'elsewhere';
+        const region = regionForDestination(destination);
+        const settled = await settleSessionCart(plan.cart, plan.catalog, region, false, planDependencies.euStockKnown, (id, lines) => updateCartLines(context.env, id, lines));
+        if (settled.to) {
+          plan = await planCartPage(settled.cart, destination, context.env, null, planDependencies);
+          // Outside a stock region the boards cannot ship now: say so once.
+          if (settled.to === 'preorder' && plan.catalog && !sellsBuyNow(plan.catalog)) movedToPreorder = 'elsewhere';
+        }
       } catch (error) {
-        console.error('[shopify-cart] moving in-stock boards to pre-order failed', error instanceof Error ? error.message : 'unknown error');
+        console.error('[shopify-cart] settling in-stock boards failed', error instanceof Error ? error.message : 'unknown error');
       }
     }
     cart = plan.cart;
@@ -269,14 +273,7 @@ export default function CartPage() {
       {/* Every cart message: at the top, in the site's notice. */}
       {movedToPreorder ? (
         <Notice dismissible>
-          {movedToPreorder === 'stock-region' ? (
-            <>
-              {t('moved_to_preorder', 'Your in-stock boards were moved to pre-order so everything ships together.')}{' '}
-              {t('moved_to_preorder_now', 'Want them now? Buy them from the product page.')}
-            </>
-          ) : (
-            t('moved_to_preorder_short', 'Your in-stock boards were moved to pre-order.')
-          )}
+          {t('moved_elsewhere', 'In-stock boards ship to EU addresses only, so for this country they ship with the pre-order batch.')}
         </Notice>
       ) : null}
       {notPriced ? (
@@ -622,7 +619,7 @@ function PopulatedCart({
   choice = false,
   wholesaleField = true,
 }: {
-  /** Buy now or pre-order is on: the cart holds pre-orders only. */
+  /** Buy now or pre-order is on: each in-stock board is Buy now or Pre-order (`settleOffers`). */
   choice?: boolean;
   /** Show the "Wholesale code" field (`wholesaleFieldShown`). */
   wholesaleField?: boolean;
@@ -658,6 +655,12 @@ function PopulatedCart({
   // Pre-order lane: the cart holds pre-orders, and with any March line the
   // whole order ships together by the batch's date. Said once, at the top.
   const together = choice && cart.lines.some((line) => info[line.id]?.ships === 'preorder');
+  // The March lines a buyer takes out to get the in-stock boards now: once
+  // they are out, the boards move back to stock (settleOffers).
+  const stockLater = together && cart.lines.some((line) => info[line.id]?.stockBoard)
+    ? cart.lines.filter((line) => !info[line.id]?.stockBoard).map((line) => line.id)
+    : [];
+  const allStock = choice && cart.lines.every((line) => info[line.id]?.ships === 'now');
   // UK, CH, NO: "Import VAT and duties: paid by you on delivery, unless collected at checkout."
   const dutiesNote = useGeoDutiesNote();
   const wholesale = cartWholesaleCode(cart.discountCodes);
@@ -707,8 +710,20 @@ function PopulatedCart({
           ) : null}
           {choiceOpen ? <Notice tone="warn">{CHECK_NOTICES[CART_CHECK.batchChoice]()}</Notice> : null}
           {together ? (
+            <div className="cart-together" data-cart-together>
+              <p>{t('together', 'Everything in this cart ships together by {date}.', {date: SHIP_BY})}</p>
+              {stockLater.length && stockLater.length < cart.lines.length ? (
+                <SplitButton
+                  cart={cart}
+                  later={stockLater}
+                  label={t('split_stock', 'Want the in-stock boards in a few days? Order them separately.')}
+                  onSplit={onSplit}
+                />
+              ) : null}
+            </div>
+          ) : allStock ? (
             <p className="cart-together" data-cart-together>
-              {t('together', 'Everything in this cart ships together by {date}.', {date: SHIP_BY})}
+              {t('in_stock_all', 'Everything in this cart is in stock and ships in a few working days.')}
             </p>
           ) : null}
           <div className="cart-sheet-head" aria-hidden="true">
@@ -962,24 +977,56 @@ function MixedNote({
   info: Record<string, CartLineInfo>;
   onSplit: (items: Removed) => void;
 }) {
+  const plan = splitPlan(cart, info);
+  // The month of the lines the buyer would get sooner by splitting.
+  const sooner = plan ? soonerMonth(cart.lines.map((l) => l.shipPromise)) : null;
+  return (
+    <div className="cart-mixed-note" role="note">
+      <p className="cart-summary-note">{t('parcel_note', 'Your order ships in one parcel, when its last item is ready.')}</p>
+      {plan ? (
+        <SplitButton
+          cart={cart}
+          later={plan.later}
+          label={sooner
+            ? t('split_link', 'Want the {month} items sooner? Order them separately.', {month: sooner})
+            : t('split_link_plain', 'Want the earlier items sooner? Order them separately.')}
+          onSplit={onSplit}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Takes `later` out of this order and remembers it (SplitReminder), so the
+ * rest ships on its own date and the buyer orders those lines afterwards.
+ */
+function SplitButton({
+  cart,
+  later,
+  label,
+  onSplit,
+}: {
+  cart: ShopifyCart;
+  later: string[];
+  label: string;
+  onSplit: (items: Removed) => void;
+}) {
   const revalidator = useRevalidator();
   const onPending = useContext(PendingContext);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-  const plan = splitPlan(cart, info);
-  // The month of the lines the buyer would get sooner by splitting.
-  const sooner = plan ? soonerMonth(cart.lines.map((l) => l.shipPromise)) : null;
   const split = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!plan || busy) return;
+    if (busy) return;
     setBusy(true);
     setFailed(false);
     onPending(1);
     try {
-      await postCart('/api/shopify/cart', [['intent', 'remove'], ...plan.later.map((id): [string, string] => ['lineId', id])]);
+      await postCart('/api/shopify/cart', [['intent', 'remove'], ...later.map((id): [string, string] => ['lineId', id])]);
       onSplit(
         cart.lines
-          .filter((l) => plan.later.includes(l.id))
+          .filter((l) => later.includes(l.id))
           .map((l) => ({
             id: l.id,
             name: lineName(l),
@@ -996,34 +1043,21 @@ function MixedNote({
       void revalidator.revalidate();
     }
   };
-
   return (
-    <div className="cart-mixed-note" role="note">
-      <p className="cart-summary-note">{t('parcel_note', 'Your order ships in one parcel, when its last item is ready.')}</p>
-      {plan ? (
-        <Form
-          method="post"
-          action="/api/shopify/cart"
-          onSubmit={(event) => void split(event)}
-          className="cart-split-form"
-        >
-          <input type="hidden" name="intent" value="remove" />
-          {plan.later.map((id) => <input key={id} type="hidden" name="lineId" value={id} />)}
-          <button type="submit" className="cart-split-link" disabled={busy}>
-            {busy
-              ? t('split_busy', 'Removing…')
-              : sooner
-                ? t('split_link', 'Want the {month} items sooner? Order them separately.', {month: sooner})
-                : t('split_link_plain', 'Want the earlier items sooner? Order them separately.')}
-          </button>
-        </Form>
-      ) : null}
+    <>
+      <Form method="post" action="/api/shopify/cart" onSubmit={(event) => void split(event)} className="cart-split-form">
+        <input type="hidden" name="intent" value="remove" />
+        {later.map((id) => <input key={id} type="hidden" name="lineId" value={id} />)}
+        <button type="submit" className="cart-split-link" disabled={busy}>
+          {busy ? t('split_busy', 'Removing…') : label}
+        </button>
+      </Form>
       {failed ? (
         <small className="cart-line-error" role="alert">
           {copyText('cart.line_update_failed') ?? 'Could not update. Try again.'}
         </small>
       ) : null}
-    </div>
+    </>
   );
 }
 

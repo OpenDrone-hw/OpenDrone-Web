@@ -39,6 +39,8 @@
   "parcel_note": "Your order ships in one parcel, when its last item is ready.",
   "split_link": "Want the {month} items sooner? Order them separately.",
   "split_link_plain": "Want the earlier items sooner? Order them separately.",
+  "split_stock": "Want the in-stock boards in a few days? Order them separately.",
+  "in_stock_all": "Everything in this cart is in stock and ships in a few working days.",
   "split_dialog_link": "Want the {month} items sooner? Order them separately in your cart.",
   "split_title": "Second order:",
   "split_add_back": "Add to cart",

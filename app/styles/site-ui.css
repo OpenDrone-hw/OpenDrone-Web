@@ -2948,3 +2948,5 @@ body:has(.avail-bar) #site-mobile-drawer aside .aside-body {
   cursor: pointer;
 }
 .notice-close:hover { color: var(--color-text); }
+.cart-together p { margin: 0; }
+.cart-together .cart-split-form { margin-top: var(--sp-1); }

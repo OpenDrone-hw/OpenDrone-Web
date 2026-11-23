@@ -12,7 +12,7 @@ import {
   EXPRESS_PARAM,
   EXPRESS_REFUSED,
   batchChoiceConflict,
-  buyNowToPreorder,
+  settleOffers,
   cartCurrencyMisses,
   cartLineInfo,
   sellsBuyNow,
@@ -260,7 +260,7 @@ describe('paid units: each variant counts as what it sold', () => {
 const APPROVED = Object.fromEntries(['BE', 'NL'].map((c) => [c, {saleApproved: true}]));
 const handleShopifyCartAction: typeof actualCartAction = (request, env, deps) =>
   actualCartAction(request, env, {registrations: APPROVED, ...deps});
-const ENV = {SHOPIFY_CHECKOUT_WRITE_ENABLED: '1', PUBLIC_COMING_SOON: '0'} as const;
+const ENV = {SHOPIFY_CHECKOUT_WRITE_ENABLED: '1', PUBLIC_COMING_SOON: '0', BATCH_CHOICE: '1'} as const;
 const CHECKOUT = 'https://checkout.opendrone.be/checkouts/cn/ok';
 const STOCK_PROMISE = 'in stock in Belgium, ships to EU addresses in a few working days';
 const MARCH = 'ships by 31 March 2027';
@@ -304,22 +304,56 @@ async function run(values: Record<string, string | string[]>, deps: Partial<Shop
   }
 }
 
-describe('cart: an old cart with an in-stock board, and one currency', () => {
-  it('EU: a Buy now line moves to the Pre-order variant of the same board, same quantity; other lines stay', () => {
+describe('cart: in-stock boards ship now unless the cart waits for March', () => {
+  const moves = (lines: ShopifyCartLine[], catalog: Catalog) => settleOffers(cart(lines), catalog);
+  it('EU, with a March item: a Buy now board moves to its pre-order, same quantity; other lines stay', () => {
     const catalog = live();
     assert.equal(sellsBuyNow(catalog), true);
-    assert.deepEqual(buyNowToPreorder(cart([buyNowLine(1, 3), preorderLine(2), motorLine(3)]), catalog), [
-      {id: buyNowLine(1).id, quantity: 3, merchandiseId: CHOICE_IDS[FC].preorder},
-    ]);
+    assert.deepEqual(moves([buyNowLine(1, 3), preorderLine(2), motorLine(3)], catalog), {
+      moves: [{id: buyNowLine(1).id, quantity: 3, merchandiseId: CHOICE_IDS[FC].preorder}],
+      to: 'preorder',
+    });
   });
-  it('outside the EU, or batch 1 gone: the same move (the region sells no in-stock boards)', () => {
+  it('EU, in-stock boards only: a pre-order board moves to Buy now and ships from stock', () => {
+    assert.deepEqual(moves([preorderLine(2, 2)], live()), {
+      moves: [{id: preorderLine(2).id, quantity: 2, merchandiseId: CHOICE_IDS[FC].buyNow}],
+      to: 'buy_now',
+    });
+  });
+  it('EU, in-stock boards only: a cart already on Buy now moves nothing', () => {
+    assert.deepEqual(moves([buyNowLine(1, 2)], live()), {moves: [], to: null});
+  });
+  it('EU, more boards than the stock left: the board stays a pre-order', () => {
+    assert.deepEqual(moves([preorderLine(2, 3)], live({[FC]: 213})), {moves: [], to: null});
+  });
+  it('outside the EU, or batch 1 gone: a Buy now board moves to pre-order (no in-stock boards there)', () => {
     for (const catalog of [live({}, 'US'), live({[FC]: 215})]) {
-      assert.deepEqual(buyNowToPreorder(cart([buyNowLine(1, 2)]), catalog), [{id: buyNowLine(1).id, quantity: 2, merchandiseId: CHOICE_IDS[FC].preorder}]);
+      assert.deepEqual(moves([buyNowLine(1, 2)], catalog), {moves: [{id: buyNowLine(1).id, quantity: 2, merchandiseId: CHOICE_IDS[FC].preorder}], to: 'preorder'});
     }
     assert.equal(sellsBuyNow(live({}, 'US')), false);
   });
-  it('a cart of pre-orders only moves nothing', () => {
-    assert.deepEqual(buyNowToPreorder(cart([preorderLine(2), motorLine(3)]), live()), []);
+  it('add: an FC alone goes in as Buy now (ships in days), even from a card that adds its pre-order', async () => {
+    const updates: unknown[][] = [];
+    const response = await run({sku: FC, qty: '2', response: 'summary'}, {
+      getCartId: () => undefined,
+      createCart: async () => cart([preorderLine(2, 2)]),
+      updateCartLines: async (_id, lines) => { updates.push(lines); return cart([buyNowLine(2, 2)]); },
+    });
+    assert.ok(response.status < 400, `add refused: ${response.status}`);
+    assert.deepEqual(updates[0], [{id: preorderLine(2).id, quantity: 2, merchandiseId: CHOICE_IDS[FC].buyNow}]);
+  });
+  it('remove: taking the last March item out puts the in-stock board back on Buy now', async () => {
+    const updates: unknown[][] = [];
+    const response = await run({intent: 'remove', lineId: motorLine(3).id, response: 'summary'}, {
+      getCart: async () => cart([preorderLine(2), motorLine(3)]),
+      removeCartLines: async () => cart([preorderLine(2)]),
+      updateCartLines: async (_id, lines) => { updates.push(lines); return cart([buyNowLine(2)]); },
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(updates[0], [{id: preorderLine(2).id, quantity: 1, merchandiseId: CHOICE_IDS[FC].buyNow}]);
+  });
+  it('a pre-order board with a March item stays a pre-order', () => {
+    assert.deepEqual(moves([preorderLine(2), motorLine(3)], live()), {moves: [], to: null});
   });
   it('names a line Shopify did not price in the destination currency', () => {
     const usd = (l: ShopifyCartLine) => ({...l, total: {amount: '1.00', currencyCode: 'USD'}});
@@ -662,7 +696,7 @@ describe('the day batch 2 lands: every product in stock, no pre-order left', () 
     assert.equal(created[0][0].quantity, 2);
     assert.doesNotMatch(JSON.stringify(created), /Preorder|March|2027/);
     // An in-stock line stays in stock: nothing to move to pre-order.
-    assert.deepEqual(buyNowToPreorder(cart([buyNowLine(1, 2)]), catalog), []);
+    assert.deepEqual(settleOffers(cart([buyNowLine(1, 2)]), catalog).moves, []);
     assert.equal(sellsBuyNow(catalog), false);
   });
 

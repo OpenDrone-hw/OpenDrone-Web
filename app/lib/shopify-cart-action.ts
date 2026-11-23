@@ -1,4 +1,4 @@
-import {bySku, catalogHasPreorders, preorderView, variantByMerchandise, type Catalog, type CatalogVariant} from './catalog.ts';
+import {bySku, catalogHasPreorders, preorderView, variantByMerchandise, type BatchOffer, type Catalog, type CatalogVariant} from './catalog.ts';
 import {appCommerceEnabled} from './commerce/app-api.ts';
 import {campaignDate, promiseBatchMonth, stockPromise, internationalRegion, isInternationalRegion, mixedShipPromise, regionOf, shipGroupKey, shipLabelFromPromise, shipOrderDay, type Region} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
@@ -22,6 +22,7 @@ import {
   SHIP_PROMISE_ATTRIBUTE,
   SHIP_REGION_ATTRIBUTE,
   SHIPPING_ATTRIBUTE,
+  batchChoiceOn,
   storefrontRequest,
   type CartLineInput,
   type CartLineUpdate,
@@ -35,7 +36,7 @@ export {PREORDER_ATTRIBUTE};
 type CartEnv = Pick<
   Env,
   'SHOPIFY_CHECKOUT_WRITE_ENABLED' | 'PUBLIC_COMING_SOON' | 'PUBLIC_US_SALES'
-> & Partial<Pick<Env, 'SHOPIFY_STORE_DOMAIN' | 'SHOPIFY_ADMIN_API_TOKEN' | 'SHOPIFY_ADMIN_API_VERSION'>>;
+> & Partial<Pick<Env, 'SHOPIFY_STORE_DOMAIN' | 'SHOPIFY_ADMIN_API_TOKEN' | 'SHOPIFY_ADMIN_API_VERSION' | 'BATCH_CHOICE'>>;
 export type ShopifyCartDependencies = {
   /** An explicit destination fixture for isolated tests; runtime uses committed approvals. */
   registrations?: RegistrationsFile;
@@ -661,9 +662,8 @@ export const CART_CHECK = {
   /** Lines ship on different dates and the buyer has not seen the cart's
    *  notice (one parcel, the whole order waits for the last item). */
   mixedDates: 'mixed-dates',
-  /** A board bought as "Buy now" shares the cart with a March item: the
-   *  cart takes pre-orders only, so this is a cart built outside the site;
-   *  checkout is refused until the in-stock board is removed. */
+  /** A board bought as "Buy now" shares the cart with a March item that
+   *  `settleOffers` could not move; checkout is refused until it is resolved. */
   batchChoice: 'batch-choice',
   /** A US destination with a line that ships to the EU only. */
   usEuOnly: 'us-eu-only',
@@ -678,9 +678,9 @@ export const OFFER_FIELD = 'offer';
 export const BUY_NOW_NOT_IN_CART = 'In-stock boards are bought now from their product page and do not go in the cart.';
 /**
  * True when a board bought as "Buy now" (retail, batch 1 stock) shares the
- * cart with a line of the March batch. The cart takes pre-orders only, so
- * only a cart built outside the site gets here; checkout refuses it, because
- * such an order would ship whole in March and nobody pays retail for that.
+ * cart with a line of the March batch. `settleOffers` prevents it, so only
+ * a cart it could not settle gets here; checkout refuses it, because such an
+ * order would ship whole in March and nobody pays retail for that.
  */
 export function batchChoiceConflict(
   cart: Pick<ShopifyCart, 'lines'>,
@@ -693,8 +693,7 @@ export function batchChoiceConflict(
 /**
  * The express purchase of in-stock boards (the "Buy now" lane): a Shopify
  * cart of its own, made for this one checkout and never stored as the
- * session cart, so nothing else can join that order and the session cart
- * holds pre-orders only.
+ * session cart, so nothing else can join that order.
  */
 export const EXPRESS_INTENT = 'buy-now';
 /** The query parameter an express purchase that cannot go ahead returns with. */
@@ -704,24 +703,86 @@ export const EXPRESS_REFUSED = {region: 'eu-only', stock: 'sold-out'} as const;
 export type ExpressRefusal = (typeof EXPRESS_REFUSED)[keyof typeof EXPRESS_REFUSED];
 
 /**
- * A cart from before the two lanes may hold a Buy now (in-stock) board. The
- * cart is the pre-order lane, so each such line moves to the Pre-order
- * variant of the same board, same quantity, instead of asking the buyer to
- * remove it by hand. Lines whose board has no pre-order variant in this
- * catalog are left alone.
+ * The catalog entry of a board this buyer can have now from stock: Buy now
+ * with a pre-order twin of the same SKU (the EU while batch 1 lasts). Null
+ * for anything else, and for every board outside a stock region.
  */
-export function buyNowToPreorder(cart: Pick<ShopifyCart, 'lines'>, catalog: Catalog): CartLineUpdate[] {
-  const moves: CartLineUpdate[] = [];
-  // An ordinary shop (nothing is pre-order): in-stock lines stay as they are.
-  if (!catalogHasPreorders(catalog)) return moves;
+function stockBoard(catalog: Catalog, sku: string | null | undefined): CatalogVariant | null {
+  const variant = bySku(catalog, sku)?.variant;
+  return variant?.offer === 'buy_now' && variant.merchandise_id && variant.preorder_offer?.merchandise_id ? variant : null;
+}
+
+/** A line that ships with a batch still to be produced, whatever else the
+ *  cart holds: not an in-stock board and not sold from stock. */
+function waitsForBatch(line: Pick<ShopifyCartLine, 'sku' | 'merchandiseId'>, catalog: Catalog): boolean {
+  if (stockBoard(catalog, line.sku)) return false;
+  const variant = catalogVariant(catalog, line.merchandiseId);
+  if (variant?.campaign) return !variant.campaign.paidStock;
+  return variant?.availability !== 'in_stock';
+}
+
+/**
+ * Which offer each in-stock board in the cart takes, so the cart always
+ * reads the way a buyer expects (founder 2026-11-23):
+ * - only stock in the cart: the boards are Buy now and the order ships from
+ *   stock in a few working days;
+ * - anything in the cart waits for the March batch: the whole order ships
+ *   together then, so the boards take their pre-order (early bird) offer.
+ * A board stays a pre-order when the stock left cannot cover its quantity.
+ * `to` names the direction of the moves, null when nothing moves. Lines the
+ * catalog does not know leave the cart as it is.
+ */
+export function settleOffers(
+  cart: Pick<ShopifyCart, 'lines'>,
+  catalog: Catalog,
+): {moves: CartLineUpdate[]; to: BatchOffer | null} {
+  const none = {moves: [], to: null};
+  if (!catalogHasPreorders(catalog)) return none;
+  // No stock for this buyer (outside the EU, or batch 1 sold out): a Buy now
+  // board moves to the pre-order offer the catalog sells under its SKU.
+  const unstocked: CartLineUpdate[] = [];
   for (const line of cart.lines) {
-    if (line.offer !== 'buy_now') continue;
-    const variant = bySku(catalog, line.sku)?.variant;
-    if (!variant) continue;
-    const target = variant.offer === 'buy_now' ? variant.preorder_offer?.merchandise_id : variant.merchandise_id;
-    if (target && target !== line.merchandiseId) moves.push({id: line.id, quantity: line.quantity, merchandiseId: target});
+    if (line.offer !== 'buy_now' || stockBoard(catalog, line.sku)) continue;
+    const target = bySku(catalog, line.sku)?.variant.merchandise_id;
+    if (target && target !== line.merchandiseId) unstocked.push({id: line.id, quantity: line.quantity, merchandiseId: target});
   }
-  return moves;
+  if (unstocked.length) return {moves: unstocked, to: 'preorder'};
+  if (cart.lines.some((line) => !catalogVariant(catalog, line.merchandiseId))) return none;
+  const batch = cart.lines.some((line) => waitsForBatch(line, catalog));
+  const moves: CartLineUpdate[] = [];
+  for (const line of cart.lines) {
+    const board = stockBoard(catalog, line.sku);
+    if (!board) continue;
+    const target = batch ? board.preorder_offer!.merchandise_id! : board.merchandise_id!;
+    if (target === line.merchandiseId) continue;
+    if (!batch) {
+      const left = paidBatchLeft(board);
+      const wanted = cart.lines.filter((l) => l.sku === line.sku).reduce((n, l) => n + l.quantity, 0);
+      if (left !== null && wanted > left) continue;
+    }
+    moves.push({id: line.id, quantity: line.quantity, merchandiseId: target});
+  }
+  return {moves, to: moves.length ? (batch ? 'preorder' : 'buy_now') : null};
+}
+
+/**
+ * Apply `settleOffers` to the session cart, then write each moved line's
+ * ship promise for its new offer. Returns the cart as Shopify holds it.
+ */
+export async function settleSessionCart(
+  cart: ShopifyCart,
+  catalog: Catalog,
+  region: Region,
+  globalComingSoon: boolean,
+  euStockKnown: boolean,
+  updateLines: (id: string, lines: CartLineUpdate[]) => Promise<ShopifyCart>,
+): Promise<{cart: ShopifyCart; to: BatchOffer | null}> {
+  const {moves, to} = settleOffers(cart, catalog);
+  if (!moves.length) return {cart, to: null};
+  let updated = await updateLines(cart.id, moves);
+  const {refresh} = rederiveLines(updated, catalog, region, globalComingSoon, euStockKnown);
+  if (refresh.length) updated = await updateLines(cart.id, refresh);
+  return {cart: updated, to};
 }
 
 /** True when this catalog sells in-stock boards to its buyer (the EU while batch 1 lasts). */
@@ -881,6 +942,8 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
   // EU stock wording only where the site shows it: the same country source
   // as the root loader's `geo` (no `Accept-Language` guess).
   const euStockKnown = geoCountryForRequest(request) != null;
+  // Buy now or pre-order on: in-stock boards settle after every add and remove.
+  const settleUpdate = batchChoiceOn(env) ? dependencies.updateCartLines : undefined;
 
   try {
     const existingId = dependencies.getCartId?.();
@@ -959,6 +1022,16 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         }
         if (!dependencies.updateCartLines) throw new Error('shopify: update dependency missing');
         updated = await dependencies.updateCartLines(existingId, [{id: target.id, quantity}]);
+      }
+      // Removing the last March item puts the in-stock boards back on stock.
+      // Best effort: the cart page settles again on its next load.
+      if (intent === 'remove' && updated.lines.length && settleUpdate) {
+        try {
+          const catalog = await dependencies.fetchCatalog(region, destination?.country);
+          updated = (await settleSessionCart(updated, catalog, region, globalComingSoon, euStockKnown, settleUpdate)).cart;
+        } catch (error) {
+          dependencies.logError?.(`settling the cart after a remove failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+        }
       }
       return wantsSummary
         ? Response.json(cartSummary(updated), {headers: NO_STORE})
@@ -1082,8 +1155,8 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       throw fail(destinationMessage(destination.kind, true), 403);
     }
     const requested = requestedLines(form);
-    // The cart holds pre-orders only: a board in stock is bought now through
-    // its own express checkout (EXPRESS_INTENT), never added here.
+    // A board goes in as its pre-order; `settleSessionCart` below moves it to
+    // Buy now when nothing in the cart waits for the March batch.
     const offer = form.get(OFFER_FIELD);
     if (offer !== null && offer !== 'preorder') throw fail('Invalid cart offer.', 400);
     const catalog = await dependencies.fetchCatalog(region, destination?.country);
@@ -1135,7 +1208,10 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
           }
         }
         checkPaidBatches(catalog, lines, quantities);
-        const updated = await addLinesVerified(existingId, lines, quantities, dependencies);
+        let updated = await addLinesVerified(existingId, lines, quantities, dependencies);
+        if (settleUpdate) {
+          updated = (await settleSessionCart(updated, catalog, region, globalComingSoon, euStockKnown, settleUpdate)).cart;
+        }
         await recordAttribution(form, updated, dependencies);
         return wantsSummary
           ? Response.json(await withShippingFrom(cartSummary(updated, catalog), updated, destination, env), {headers: NO_STORE})
@@ -1145,8 +1221,11 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       dependencies.unsetCartId?.();
     }
     checkPaidBatches(catalog, lines, new Map());
-    const cart = await dependencies.createCart(lines, cartCountryFor(destination?.country ?? null, dependencies.registrations, usRate));
+    let cart = await dependencies.createCart(lines, cartCountryFor(destination?.country ?? null, dependencies.registrations, usRate));
     dependencies.setCartId?.(cart.id);
+    if (settleUpdate) {
+      cart = (await settleSessionCart(cart, catalog, region, globalComingSoon, euStockKnown, settleUpdate)).cart;
+    }
     await recordAttribution(form, cart, dependencies);
     return wantsSummary
       ? Response.json(await withShippingFrom(cartSummary(cart, catalog), cart, destination, env), {headers: NO_STORE})
@@ -1294,6 +1373,8 @@ export type CartLineInfo = {
   month: string | null;
   /** The line's price is under the board's retail price: an early bird price. */
   early: boolean;
+  /** An in-stock board: it ships in days on an order of stock items only. */
+  stockBoard: boolean;
 };
 
 /**
@@ -1336,6 +1417,7 @@ export function cartLineInfo(
           : line.shipPromise ? 'preorder' : null,
       month: stockPromise(line.shipPromise) ? null : promiseBatchMonth(line.shipPromise),
       early: variant?.compare_price != null && variant.compare_price > variant.price,
+      stockBoard: Boolean(catalog && stockBoard(catalog, line.sku)),
     };
   }
   return out;
