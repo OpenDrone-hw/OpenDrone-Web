@@ -60,6 +60,12 @@ PUBLIC_US_SALES = "1"
 BATCH_CHOICE = "1"
 # Wholesale applications: mailed to the company inbox, reply-to the applicant.
 TRADE_MAIL_ENABLED = "1"
+# Wholesale codes follow the price steps (app/lib/wholesale-sync.ts): "1"
+# re-points every retailer's price-group codes in Shopify after a price step
+# and hourly; anything else plans and logs only. Turning it on needs the
+# founder's go and an Admin token with read_customers, read_discounts and
+# write_discounts.
+WHOLESALE_SYNC_WRITE_ENABLED = "0"
 # Newsletter welcome sender (src app/lib/growth/welcome-email.ts). opendrone.be is a
 # verified Resend domain; without this the welcome goes from sales@incutec.eu.
 NEWSLETTER_FROM_EMAIL = "hello@opendrone.be"

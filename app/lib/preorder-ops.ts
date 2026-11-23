@@ -15,6 +15,11 @@
  *    (staging shares the production store) or with `PREORDER_HOLDS_ENABLED`
  *    "0" (`preorderHoldsEnabled`).
  *
+ * 3. Wholesale codes, right after step 1 wrote a price change: re-point
+ *    every retailer's price-group codes to the new prices
+ *    (`wholesale-sync.ts`; writes only while `WHOLESALE_SYNC_WRITE_ENABLED`
+ *    is `1`). It never throws and never undoes steps 1 or 2.
+ *
  * A failure in either step is logged, recorded (`preorder-ops-status.ts`)
  * and returned; the pass itself never throws.
  */
@@ -24,8 +29,9 @@ import {syncPreorderHolds} from './preorder-fulfilment.ts';
 import {recordOps} from './preorder-ops-status.ts';
 import {fetchPaidUnitRuns} from './shopify-orders.ts';
 import {priceTierWritesEnabled, syncPriceTiers, type TierChange} from './shopify-price-tier.ts';
+import {runWholesaleSync, type WholesaleEnv, type WholesaleSyncResult} from './wholesale-sync.ts';
 
-type OpsEnv = Parameters<typeof syncPriceTiers>[0] & Partial<Pick<Env, 'STAGING_PASSWORD' | 'PREORDER_HOLDS_ENABLED'>>;
+type OpsEnv = Parameters<typeof syncPriceTiers>[0] & Partial<Pick<Env, 'STAGING_PASSWORD' | 'PREORDER_HOLDS_ENABLED'>> & WholesaleEnv;
 
 export type ReconcileResult = {
   changed: TierChange[];
@@ -36,6 +42,8 @@ export type ReconcileResult = {
   held: string[];
   /** Order name to error, or `_` when the hold pass itself failed. */
   holdErrors: Record<string, string>;
+  /** The wholesale code sync after a price step, or null when none ran or it failed. */
+  wholesale: WholesaleSyncResult | null;
 };
 
 /** Holds run on every Worker but staging, which shares the production
@@ -79,6 +87,8 @@ export async function reconcilePreorders(
     }
     if (priceError) console.error('[preorders] price steps not synced', priceError);
   }
+  // Prices moved: the wholesale codes follow at once (the hourly run is the catch-up).
+  const wholesale = changed.length ? await runWholesaleSync(env, {fetcher, reason: 'price step'}) : null;
 
   let held: string[] = [];
   let holdErrors: Record<string, string> = {};
@@ -102,5 +112,5 @@ export async function reconcilePreorders(
       console.error('[preorders] hold pass incomplete', JSON.stringify(holdErrors));
     }
   }
-  return {changed, skipped, priceError, held, holdErrors};
+  return {changed, skipped, priceError, held, holdErrors, wholesale};
 }
