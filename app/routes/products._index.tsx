@@ -9,7 +9,7 @@ import type {RootLoader} from '~/root';
 import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
 import {EarlyBirdNote, anyEarlyPrice} from '~/components/EarlyPriceCue';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
-import {cartOffer, toCards} from '~/lib/catalog';
+import {toCards} from '~/lib/catalog';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {campaignSkus} from '~/lib/preorder-campaign';
 import {FAMILIES} from '~/lib/families';
@@ -408,9 +408,10 @@ export default function ProductsIndex() {
       if (axis && liveTiers.length > 0 && !announced) {
         for (const [value] of liveTiers) {
           const sv = variantFor(p, axis, value);
-          // The card's cart button adds a board's pre-order (the cart is the
-          // pre-order lane), so the card shows that offer's price and date.
-          const offer = cartOffer(sv);
+          // The card shows the offer its cart button sells: an in-stock board
+          // at its in-stock price; the cart moves it to the pre-order when the
+          // order also holds a March item (settleOffers).
+          const offer = sv;
           const price = offer?.price ?? p.priceRange.minVariantPrice;
           out.push({
             key: `${p.handle}:${value}`,
@@ -442,7 +443,7 @@ export default function ProductsIndex() {
         // multi-option accessory must send the buyer to the PDP to choose.
         const onlyVariant =
           p.variants.nodes.length === 1 ? p.variants.nodes[0] : undefined;
-        const firstVariant = cartOffer(onlyVariant);
+        const firstVariant = onlyVariant;
         out.push({
           key: p.handle,
           product: p,

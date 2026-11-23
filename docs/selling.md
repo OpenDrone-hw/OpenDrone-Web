@@ -283,11 +283,11 @@ Both variants carry the board's one SKU string, under a Shopify option named `Ba
 
 | Surface | What shows |
 | --- | --- |
-| Board product page | two cards, one button named after the chosen card; the saving is stated only where pre-ordering is cheaper |
+| Board product page | in stock: a status row, Buy now (straight to checkout) and Add to cart; nothing in stock: the pre-order |
 | Home and product page build block | one block per drone size: "Buy now" is the FC and ESC stack, "Pre-order" the full build with every line added as a pre-order (`offer=preorder`) |
-| Cart | each line says "Ships now" or "Pre-order, <month>" |
+| Cart | one line at the top: "Everything in this cart is in stock and ships in a few working days", or "Everything in this cart ships together by <date>" with "Want the in-stock boards in a few days? Order them separately." |
 
-The cart rule (`batchChoiceConflict` in `app/lib/shopify-cart-action.ts`): a Buy now board together with a March item cannot be checked out. The cart offers "Keep everything in one order" (intent `keep-together`: each board line moves to its Pre-order variant, so Shopify charges the pre-order price) or "Check out the in-stock items first" (the March lines are set aside). Shopify binds the price to the variant, so no cart edit gets a ships-now board at the pre-order price.
+The cart rule (`settleOffers` in `app/lib/shopify-cart-action.ts`, applied after every add and remove and on each cart page load): a cart of stock items only holds its boards as Buy now (retail, ships in days, up to the units left in batch 1). Once anything in the cart waits for the March batch, the whole order ships together then, so its boards move to their Pre-order variant (pre-order price). Taking the March items out moves them back. Outside the EU every board is a pre-order. Shopify binds the price to the variant, so no cart edit gets a ships-now board at the pre-order price; `batchChoiceConflict` still refuses a checkout of a Buy now board with a March item.
 
 Counting: from `choiceFrom` in `content/preorders.json` on, an order line whose recorded variant title names `Pre-order` is a March unit and makes its whole order a March order (`preorderChoiceLine`); `Buy now` lines and every earlier order take batch 1 as before. The hold pass writes the same `batch:<sku>:<n>` tags, so the shipping tool needs no change. The price-step writer skips `Buy now` variants.
 
