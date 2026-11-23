@@ -132,8 +132,16 @@ export function HowOrdering({data}: {data: HowOrderingData}) {
           </section>
         ) : null}
         <section className="ho-lane" aria-labelledby="ho-preorder">
-          <h3 id="ho-preorder" className="ho-lane-title">{say('lane_preorder_title', 'Pre-order: everything')}</h3>
-          <p className="ho-line">{say('lane_preorder_line', 'Every product, {{stock_lines}} included. Ships by {date}, worldwide.', {date: shipBy})}</p>
+          {/* With an in-stock lane beside it, an FC or ESC ordered alone ships
+              from stock; with anything else in the order it ships with it. */}
+          <h3 id="ho-preorder" className="ho-lane-title">
+            {data.stacks.length ? say('lane_preorder_title_rest', 'Pre-order: the rest of the build') : say('lane_preorder_title', 'Pre-order: everything')}
+          </h3>
+          <p className="ho-line">
+            {data.stacks.length
+              ? say('lane_preorder_line_rest', 'Motors, frames, receivers and props. One order ships together by {date}, so an FC or ESC in it waits too, at the early bird price.', {date: shipBy})
+              : say('lane_preorder_line', 'Every product, {{stock_lines}} included. Ships by {date}, worldwide.', {date: shipBy})}
+          </p>
           <div className="ho-actions">
             <Link to="/products" prefetch="intent" className="hero-build-add">
               <span className="btn-label">{say('lane_preorder_cta', 'Pre-order from the products')}</span>

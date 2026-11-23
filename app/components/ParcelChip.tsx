@@ -1,6 +1,7 @@
 import {copyText} from '~/lib/copy';
 import {datedShipParts} from '~/lib/preorder-campaign';
 import {ShipChip, parcelPromise, shipChipText} from './ShipChip';
+import {delaysStockParcel} from '~/lib/stock-parcel';
 
 function t(key: string, fallback: string, vars: Record<string, string>): string {
   return (copyText(`cart.${key}`) ?? fallback).replace(/\{(\w+)\}/g, (m, k: string) => vars[k] ?? m);
@@ -30,6 +31,11 @@ export function parcelDelay(
   cartPromises: Array<string | null | undefined>,
   candidate: string | null | undefined,
 ): {from: string; to: string} | null {
+  // A cart that ships from stock: a March item makes the whole order wait.
+  if (delaysStockParcel(cartPromises, candidate)) {
+    const to = whenPhrase(candidate, true);
+    return to ? {from: t('stock_when', 'in a few working days', {}), to} : null;
+  }
   const now = parcelPromise(cartPromises);
   if (!now || !candidate) return null;
   const next = parcelPromise([...cartPromises, candidate]);
