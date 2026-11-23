@@ -3,6 +3,7 @@
  * access, pricing or customer record is created by this module. */
 import {sha256Hex} from './accounts/crypto.ts';
 import {getCompanyIdentity} from './company.ts';
+import {titleWithoutBatch} from './catalog.ts';
 
 /** Any country may apply; staff decide per application. ISO 3166-1 alpha-2
  *  plus Kosovo (XK), named in English and sorted by name. */
@@ -38,14 +39,37 @@ export function tradeCountry(code: string): TradeCountry | undefined {
 }
 
 
-/** Product lines a shop can ask for; the form posts `qty_<key>`. Motors count per motor. */
-export const TRADE_PRODUCTS = [
-  {key: 'openfc-lite', name: 'OpenFC Lite'},
-  {key: 'openesc', name: 'OpenESC'},
-  {key: 'openrx', name: 'OpenRX'},
-  {key: 'openmotor', name: 'OpenMotor'},
-  {key: 'openframe', name: 'OpenFrame'},
-] as const;
+/** One orderable SKU on the form: the live catalog's OpenDrone variants, the
+ *  SKUs the wholesale codes cover (`sku:OPEN*`, `scripts/wholesale_lib.py`).
+ *  The form posts `qty_<sku>`. Motors count per motor. */
+export type TradeProduct = {sku: string; product: string; variant: string};
+export type TradeProductGroup = {product: string; items: TradeProduct[]};
+
+const WHOLESALE_SKU = /^OPEN[A-Z0-9-]*$/;
+
+/** The SKUs a retailer can ask for, grouped per product in catalog order. One
+ *  entry per SKU: the Buy now and Pre-order lanes of a board share it. */
+export function tradeProducts(catalog: {products: ReadonlyArray<{title: string; variants: ReadonlyArray<{sku: string; title: string}>}>}): TradeProductGroup[] {
+  const seen = new Set<string>();
+  const groups: TradeProductGroup[] = [];
+  for (const product of catalog.products) {
+    const items: TradeProduct[] = [];
+    for (const variant of product.variants) {
+      const sku = variant.sku?.trim().toUpperCase();
+      if (!sku || !WHOLESALE_SKU.test(sku) || seen.has(sku)) continue;
+      seen.add(sku);
+      const title = variant.title && variant.title !== 'Default Title' ? titleWithoutBatch(variant.title) : '';
+      items.push({sku, product: product.title, variant: title});
+    }
+    if (items.length) groups.push({product: product.title, items});
+  }
+  return groups;
+}
+
+export function tradeProductName(item: TradeProduct): string {
+  return item.variant ? `${item.product} ${item.variant}` : item.product;
+}
+
 export const SHOP_TYPES = ['online', 'physical', 'both', 'distributor'] as const;
 export const ORDER_RHYTHMS = ['once', 'monthly', 'quarterly', 'unsure'] as const;
 const SHOP_TYPE_LABEL: Record<(typeof SHOP_TYPES)[number], string> = {
@@ -66,15 +90,15 @@ export type TradeApplication = {
   taxId: string;
   shopType: (typeof SHOP_TYPES)[number];
   rhythm: (typeof ORDER_RHYTHMS)[number] | '';
-  /** Estimated units per order, only for products with a quantity above zero. */
-  quantities: Array<{name: string; qty: number}>;
+  /** Estimated units per order, only for SKUs with a quantity above zero. */
+  quantities: Array<{sku: string; name: string; qty: number}>;
 };
 export type TradeField = 'company' | 'contactName' | 'email' | 'country' | 'website' | 'note' | 'taxId' | 'shopType' | 'quantities' | 'rhythm';
 export type TradeValidation =
   | {ok: true; application: TradeApplication}
   | {ok: false; errors: Partial<Record<TradeField, string>>};
 
-export function validateTradeApplication(form: Pick<FormData, 'get'>): TradeValidation {
+export function validateTradeApplication(form: Pick<FormData, 'get'>, products: readonly TradeProductGroup[]): TradeValidation {
   const errors: Partial<Record<TradeField, string>> = {};
   const read = (name: string) => typeof form.get(name) === 'string' ? String(form.get(name)).trim() : '';
   const company = read('company');
@@ -105,11 +129,11 @@ export function validateTradeApplication(form: Pick<FormData, 'get'>): TradeVali
   const rhythm = rhythmValue ? ORDER_RHYTHMS.find((value) => value === rhythmValue) : '';
   if (rhythm === undefined) errors.rhythm = 'Choose how often you expect to order.';
   const quantities: TradeApplication['quantities'] = [];
-  for (const product of TRADE_PRODUCTS) {
-    const raw = read(`qty_${product.key}`);
+  for (const item of products.flatMap((group) => group.items)) {
+    const raw = read(`qty_${item.sku}`);
     if (!raw) continue;
     if (!/^\d+$/.test(raw) || Number(raw) > MAX_QTY) { errors.quantities = 'Enter whole numbers for quantities.'; continue; }
-    if (Number(raw) > 0) quantities.push({name: product.name, qty: Number(raw)});
+    if (Number(raw) > 0) quantities.push({sku: item.sku, name: tradeProductName(item), qty: Number(raw)});
   }
   if (!errors.quantities && !quantities.length) errors.quantities = 'Enter a quantity for at least one product.';
   if (Object.keys(errors).length || !country || !shopType || rhythm === undefined) return {ok: false, errors};
@@ -128,6 +152,20 @@ export function tradeConfigured(env: TradeEnv): boolean {
 
 export type ApplicationResult = {ok: true} | {ok: false; reason: 'not_configured' | 'unavailable'};
 
+/** Single-quoted for a POSIX shell: the applicant's text can never break out. */
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+/** The staff command that onboards this applicant (`docs/wholesale.md`). */
+export function onboardCommand(application: TradeApplication): string {
+  const parts = ['python3 scripts/wholesale-onboard.py', '--email', shellQuote(application.email), '--country', application.country.code];
+  const vat = application.taxId.replace(/[\s.\-/]/g, '');
+  if (vat) parts.push('--vat', shellQuote(vat));
+  parts.push('--company', shellQuote(application.company));
+  return parts.join(' ');
+}
+
 export function applicationMail(application: TradeApplication): {subject: string; text: string} {
   return {
     subject: `Wholesale application: ${application.company} (${application.country.code}, ${application.quantities.reduce((sum, {qty}) => sum + qty, 0)} units)`,
@@ -144,9 +182,12 @@ export function applicationMail(application: TradeApplication): {subject: string
       application.website ? `Shop website: ${application.website}` : '',
       '',
       'Estimated quantity per order:',
-      ...application.quantities.map(({name, qty}) => `  ${name}: ${qty}`),
+      ...application.quantities.map(({sku, name, qty}) => `  ${qty} x ${name} (${sku})`),
       application.rhythm ? `Order rhythm: ${RHYTHM_LABEL[application.rhythm]}` : '',
       application.note ? `\nMessage:\n${application.note}` : '',
+      '',
+      'Onboard after approval (dry run first, then add --apply):',
+      `  ${onboardCommand(application)}`,
     ].filter(Boolean).join('\n'),
   };
 }

@@ -31,8 +31,8 @@ Today: variants at the 10% step get 16.6667% off, variants at the 20% step 6.25%
 
 ## Onboard one retailer
 
-1. Approve the application (founder). Check the shop, contact and country.
-2. Dry run, nothing is written:
+1. Approve the application (founder). Check the shop, contact and country. The form on /wholesale lists the live catalog's OpenDrone SKUs (`tradeProducts` in `app/lib/trade.ts`, the `sku:OPEN*` variants the codes cover), so the mail names each SKU and its quantity, and ends with the onboarding command for this applicant.
+2. Dry run, nothing is written (the command from the application mail):
 
 ```bash
 python3 scripts/wholesale-onboard.py --email buyer@example.eu --country ES --vat ESY1234567X --company "Example SL"

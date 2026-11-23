@@ -10,15 +10,27 @@ import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/turnstile';
 import {useTurnstile} from '~/lib/use-turnstile';
 import {sameOrigin} from '~/lib/accounts/config';
-import {ORDER_RHYTHMS, SHOP_TYPES, TRADE_COUNTRIES, TRADE_PRODUCTS, submitTradeApplication, tradeConfigured, validateTradeApplication, type TradeField} from '~/lib/trade';
+import {ORDER_RHYTHMS, SHOP_TYPES, TRADE_COUNTRIES, submitTradeApplication, tradeConfigured, tradeProducts, validateTradeApplication, type TradeField, type TradeProductGroup} from '~/lib/trade';
 
 const t = (key: string) => copyText(`wholesale.${key}`) ?? '';
 export const meta: Route.MetaFunction = () => buildSeoMeta({title: t('meta_title'), description: t('meta_description'), canonical: `${SITE_ORIGIN}/wholesale`});
 
 // Form results contain personal details; never let an edge cache retain them.
 export const headers: Route.HeadersFunction = () => ({'Cache-Control': 'private, no-store'});
+/** The form lists the live catalog's SKUs; the action validates against the
+ *  same list, so only real products reach the application mail. */
+async function loadTradeProducts(context: Route.LoaderArgs['context']): Promise<TradeProductGroup[]> {
+  try {
+    return tradeProducts(await context.catalog.forBuyer());
+  } catch {
+    console.warn('[wholesale] catalog unavailable');
+    return [];
+  }
+}
+
 export async function loader({context}: Route.LoaderArgs) {
-  return {email: getCompanyIdentity(context.env as unknown as Record<string, string | undefined>).email, ready: tradeConfigured(context.env)};
+  const products = await loadTradeProducts(context);
+  return {email: getCompanyIdentity(context.env as unknown as Record<string, string | undefined>).email, ready: tradeConfigured(context.env) && products.length > 0, products};
 }
 
 type TradeResult = {
@@ -33,7 +45,9 @@ export async function action({request, context}: Route.ActionArgs) {
   if (String(form.get('website') || '')) return data<TradeResult>({ok: false, failure: 'rejected'}, {status: 400});
   const ip = clientIp(request);
   if (!checkRateLimit(`trade:${ip}`, 5, 60 * 60 * 1000).allowed) return data<TradeResult>({ok: false, failure: 'rate_limited'}, {status: 429});
-  const valid = validateTradeApplication(form);
+  const products = await loadTradeProducts(context);
+  if (!products.length) return data<TradeResult>({ok: false, failure: 'unavailable'}, {status: 503});
+  const valid = validateTradeApplication(form, products);
   if (!valid.ok) return data<TradeResult>({ok: false, errors: valid.errors}, {status: 400});
   const human = await verifyTurnstile(context.env, String(form.get('cf-turnstile-response') ?? ''), ip);
   if (!human.ok) return data<TradeResult>({ok: false, failure: 'turnstile_failed'}, {status: 400});
@@ -52,7 +66,7 @@ function FieldError({message, id}: {message?: string; id: string}) {
 }
 
 function ApplicationForm() {
-  const {email, ready} = useLoaderData<typeof loader>();
+  const {email, ready, products} = useLoaderData<typeof loader>();
   const rootData = useRouteLoaderData<RootLoader>('root');
   const result = useActionData<TradeResult>();
   const navigation = useNavigation();
@@ -127,11 +141,18 @@ function ApplicationForm() {
       <div role="group" aria-labelledby="quantities-label" aria-describedby={errors.quantities ? 'quantities-error' : 'quantities-hint'} className="min-w-0">
         <span id="quantities-label" className={label}>{t('quantities')}</span>
         <span id="quantities-hint" className="mt-1 block font-sans text-[12px] text-[var(--color-text-muted)]">{t('quantities_hint')}</span>
-        <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {TRADE_PRODUCTS.map(product => (
-            <label key={product.key} className={label}>{product.name}
-              <input name={`qty_${product.key}`} type="number" min={0} max={100000} step={1} inputMode="numeric" placeholder="0" className={field} aria-invalid={!!errors.quantities} />
-            </label>
+        <div className="mt-3 grid gap-4">
+          {products.map(group => (
+            <fieldset key={group.product} className="m-0 min-w-0 border-0 p-0">
+              <legend className="mb-1 p-0 font-sans text-[13px] font-medium text-[var(--color-text)]">{group.product}</legend>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {group.items.map(item => (
+                  <label key={item.sku} className={label}>{item.variant || group.product}
+                    <input name={`qty_${item.sku}`} type="number" min={0} max={100000} step={1} inputMode="numeric" placeholder="0" className={field} aria-invalid={!!errors.quantities} />
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           ))}
         </div>
         <FieldError id="quantities-error" message={errors.quantities} />
