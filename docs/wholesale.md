@@ -11,7 +11,7 @@ flowchart LR
   D --> E["Mail the retailer<br/>one code"]
   E --> F["Cart: enter code<br/>checkout: sign in, pay"]
   F --> G["Paid unit in its batch"]
-  S["wholesale-sync.py daily<br/>after every price step"] -.-> D
+  S["Worker sync<br/>after every price step, hourly catch-up"] -.-> D
 ```
 
 ## The rule
