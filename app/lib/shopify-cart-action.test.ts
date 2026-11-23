@@ -1378,6 +1378,11 @@ describe('Shopify cart action: wholesale code', () => {
       ...base, setDiscountCodes: async (_id, codes) => codes.map((code, i) => ({code, applicable: i === 0})),
     });
     assert.equal(taken.headers.get('Location'), '/cart');
+    // A cart of in-stock boards only sits in one companion's price group.
+    const companion = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
+      ...base, setDiscountCodes: async (_id, codes) => codes.map((code, i) => ({code, applicable: i === 1})),
+    });
+    assert.equal(companion.headers.get('Location'), '/cart');
   });
   it('declares every discount code list non-null, as the Storefront schema requires', async () => {
     const {CART_DISCOUNT_CODES_UPDATE_MUTATION} = await import('./shopify-storefront.ts');

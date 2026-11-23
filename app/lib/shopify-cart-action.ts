@@ -820,7 +820,7 @@ export function expressLines(
   region: Region,
   globalComingSoon: boolean,
   euStockKnown = true,
-  /** A verified wholesale export (`exportWholesaleCodes`): outside the EU allowed. */
+  /** A verified wholesale export (`wholesaleExpressCodes` outside the EU): outside the EU allowed. */
   dealer = false,
 ): {lines: CartLineInput[]} | {refused: ExpressRefusal} {
   if (region !== 'EU' && !(dealer && isInternationalRegion(region))) return {refused: EXPRESS_REFUSED.region};
@@ -838,16 +838,18 @@ export function expressLines(
 }
 
 /**
- * The wholesale codes of a retailer buying stock for outside the EU, or null
- * for anyone else: the session cart must carry a wholesale main code that
- * Shopify applies. The US is left out (its stock goes through the US partner).
+ * The wholesale codes of a retailer buying stock, in the EU or outside it, or
+ * null for anyone else: the session cart must carry a wholesale main code
+ * that Shopify applies. The Buy now checkout is a cart of its own, so without
+ * this an EU retailer paid retail for in-stock boards. The US is left out
+ * (its stock goes through the US partner).
  */
-export async function exportWholesaleCodes(
+export async function wholesaleExpressCodes(
   region: Region,
   cartId: string | undefined,
   dependencies: Pick<ShopifyCartDependencies, 'getCart' | 'setDiscountCodes'>,
 ): Promise<string[] | null> {
-  if (!isInternationalRegion(region) || !cartId || !dependencies.getCart || !dependencies.setDiscountCodes) return null;
+  if ((region !== 'EU' && !isInternationalRegion(region)) || !cartId || !dependencies.getCart || !dependencies.setDiscountCodes) return null;
   const cart = await dependencies.getCart(cartId);
   const code = cartWholesaleCode(cart?.discountCodes);
   return code?.applicable ? wholesaleCodes(code.code.toUpperCase()) : null;
@@ -963,7 +965,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         dependencies.logError?.(`wholesale code not applied: ${error instanceof Error ? error.message : 'unknown error'}`);
         return redirect(wholesaleCartPath(CART_CHECK.codeFailed));
       }
-      if (main && applied && !applied.some((c) => c.code.toUpperCase() === main && c.applicable)) {
+      if (main && applied && !cartWholesaleCode(applied)?.applicable) {
         return redirect(wholesaleCartPath(CART_CHECK.codeNotApplied));
       }
       // Applied or cleared: the field shows with the applied code, or not at all.
@@ -1043,14 +1045,16 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       if (!destination || destination.kind !== 'direct') {
         return redirect(expressReturn(form, EXPRESS_REFUSED.region));
       }
-      // Consumers: EU addresses only. A retailer outside the EU (and the US)
+      // Consumers: EU addresses only. A retailer outside the EU (not the US)
       // whose session cart carries an applied wholesale code buys from the
-      // same stock, shipped by courier (founder 2026-11-11).
-      const dealerCodes = region === 'EU' ? null : await exportWholesaleCodes(region, existingId, dependencies);
-      if (region !== 'EU' && !dealerCodes) return redirect(expressReturn(form, EXPRESS_REFUSED.region));
+      // same stock, shipped by courier (founder 2026-11-11). A retailer in
+      // the EU gets the same codes on this checkout.
+      const dealerCodes = await wholesaleExpressCodes(region, existingId, dependencies);
+      const exporting = region !== 'EU' && Boolean(dealerCodes);
+      if (region !== 'EU' && !exporting) return redirect(expressReturn(form, EXPRESS_REFUSED.region));
       const requested = requestedLines(form);
-      const catalog = await dependencies.fetchCatalog(region, destination.country, Boolean(dealerCodes));
-      const plan = expressLines(catalog, requested, region, globalComingSoon, euStockKnown, Boolean(dealerCodes));
+      const catalog = await dependencies.fetchCatalog(region, destination.country, exporting);
+      const plan = expressLines(catalog, requested, region, globalComingSoon, euStockKnown, exporting);
       if ('refused' in plan) return redirect(expressReturn(form, plan.refused));
       const express = await dependencies.createCart(plan.lines, cartCountryFor(destination.country, dependencies.registrations, usRate));
       // The retailer's price: the same codes on the express cart.
