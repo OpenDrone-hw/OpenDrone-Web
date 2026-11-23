@@ -281,7 +281,7 @@ export function batchChoiceOn(env: {BATCH_CHOICE?: string} | null | undefined): 
   return env?.BATCH_CHOICE === '1';
 }
 
-type GraphqlResult<T> = {data?: T; errors?: Array<{message?: string}>};
+type GraphqlResult<T> = {data?: T; errors?: Array<{message?: string; extensions?: {code?: string}}>};
 
 function required(env: StorefrontEnv, key: keyof StorefrontEnv): string {
   const value = env[key]?.trim();
@@ -341,7 +341,13 @@ export async function storefrontRequest<T>(
   }
   const result = (await response.json()) as GraphqlResult<T>;
   if (result.errors?.length || !result.data) {
-    throw new Error('shopify: Storefront API rejected the operation');
+    // Codes and messages only (no variables): enough to tell an access,
+    // throttling or schema problem apart in the Worker log.
+    const detail = (result.errors ?? [])
+      .map((e) => [e.extensions?.code, e.message].filter(Boolean).join(': '))
+      .join(' | ')
+      .slice(0, 300);
+    throw new Error(`shopify: Storefront API rejected the operation${detail ? ` (${detail})` : ''}`);
   }
   return result.data;
 }
