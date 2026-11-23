@@ -18,5 +18,7 @@ Validate: `npm run typecheck && npm run lint && npm test` (add `npm run build` w
 
 ## Pointers
 
-- `README.md`: run, campaign, order and support procedures
+- `README.md`: run it locally, docs index
+- `docs/selling.md`: shop gates, campaign and order procedures
+- `docs/support.md`: support procedures
 - `docs/product-status.md`: roadmap display and checkout gates

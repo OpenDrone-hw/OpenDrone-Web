@@ -20,4 +20,4 @@ only the storefront evidence a release review must inspect.
 Evidence is attached to the existing release tasks, not copied into a second
 checklist here. A local build does not establish payment-provider acceptance,
 carrier service or product conformity. Configuration and commands are in the
-[README](../README.md#run-a-preorder-campaign).
+[selling.md](selling.md#run-a-preorder-campaign).
