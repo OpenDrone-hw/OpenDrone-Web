@@ -3,7 +3,9 @@
 
 Checks the VAT number in VIES, finds or creates the Shopify customer by email,
 tags it `wholesale`, sets the EU reverse charge tax exemption only when VIES says
-the number is valid and the country is an EU member other than BE, and creates
+the number is valid and the country is an EU member other than BE, stores the VAT
+number and company name in the customer metafields wholesale.vat_number and
+wholesale.company (for the invoicing app), and creates
 the retailer's personal codes: WS<rate>-<NAME> plus one companion per extra
 price group (see wholesale_lib.py), each limited to this customer.
 
@@ -16,7 +18,8 @@ nothing. `--apply` writes, then reads everything back and checks it.
 
 Reads SHOPIFY_STORE_DOMAIN, SHOPIFY_ADMIN_API_TOKEN, SHOPIFY_ADMIN_API_VERSION
 from .env (or the environment). Needs read/write_customers and
-read/write_discounts. The token is never printed. After a price step changes,
+read/write_discounts. The token is never printed. The fallback of the one-click
+approval in the Worker (app/lib/wholesale-approve.ts). After a price step changes,
 `wholesale-sync.py` re-points the groups.
 """
 import argparse, json, re, sys, urllib.error, urllib.request
@@ -29,6 +32,9 @@ from wholesale_lib import (EU, EXEMPTION, GROUPS, WHOLESALE_PERCENT, GroupsDoNot
                            user_errors)
 
 VIES = "https://ec.europa.eu/taxation_customs/vies/rest-api/ms/{cc}/vat/{num}"
+# VIES answers these when it could not ask the member state: not an answer about the number (same set in app/lib/wholesale-approve.ts)
+VIES_DOWN = {"SERVICE_UNAVAILABLE", "MS_UNAVAILABLE", "TIMEOUT", "GLOBAL_MAX_CONCURRENT_REQ", "GLOBAL_MAX_CONCURRENT_REQ_TIME",
+             "MS_MAX_CONCURRENT_REQ", "MS_MAX_CONCURRENT_REQ_TIME", "IP_BLOCKED"}
 
 
 def vies_check(country, vat):
@@ -44,6 +50,8 @@ def vies_check(country, vat):
             VIES.format(cc=prefix, num=num), headers={"Accept": "application/json"}), timeout=30).read())
     except (urllib.error.URLError, ValueError, TimeoutError) as e:
         return False, {"error": f"VIES unreachable: {e}"}
+    if d.get("isValid") is not True and d.get("userError") in VIES_DOWN:
+        return False, {"error": f"VIES unreachable: {d['userError']}"}
     return d.get("isValid") is True, {k: d.get(k) for k in ("isValid", "userError", "name", "address", "requestDate")} | {"queried": f"{prefix}{num}"}
 
 
@@ -57,7 +65,9 @@ def find_customer(env, email):
 
 
 def read_customer(env, cid):
-    return gql(env, 'query($id:ID!){customer(id:$id){id email tags taxExempt taxExemptions note}}', {"id": cid})["customer"]
+    return gql(env, 'query($id:ID!){customer(id:$id){id email tags taxExempt taxExemptions note'
+               ' vat:metafield(namespace:"wholesale",key:"vat_number"){value} company:metafield(namespace:"wholesale",key:"company"){value}}}',
+               {"id": cid})["customer"]
 
 
 def main_code(percent, slug, company, email):
@@ -110,6 +120,9 @@ def main():
         lines.append(f"Wholesale: {o.company}")
     if lines != ([old_note] if old_note else []):
         cust_input["note"] = "\n".join(lines)
+    # For the invoicing app: the VAT number (as queried in VIES for an EU country) and the company name.
+    vat_value = (vies or {}).get("queried") or re.sub(r"[\s.\-/]", "", o.vat).upper()
+    metafields = [{"key": k, "value": v} for k, v in (("vat_number", vat_value), ("company", o.company)) if v]
 
     main = o.code.strip().upper() or main_code(o.percent, o.slug, o.company, email)
     div = divisor(cc, exempt)  # reverse charge: price base is net of the retailer's VAT (wholesale_lib.divisor)
@@ -126,12 +139,15 @@ def main():
         want = gs[n - 1] if n <= len(gs) else None
         existing = read_code(env, code)
         slots.append((n, code, want, existing, plan_slot(existing, want, cids) if cust else ("create" if want else "none")))
+        if existing and existing["customers"] and not (cust and cust["id"] in existing["customers"]):
+            raise SystemExit(f"refusing: code {code} already exists for another customer; pass --slug or --code")
 
     print(f"mode: {'APPLY' if o.apply else 'DRY RUN (no writes)'}")
     print(f"VIES: {json.dumps(vies)}")
     print(f"tax exemption: {'SET ' + EXEMPTION if exempt else 'NOT set'} ({why})")
     print(f"customer: {'found ' + cust['id'] if cust else 'will be created'} (tags {(cust or {}).get('tags')}, exemptions {(cust or {}).get('taxExemptions')})")
     print(f"planned write 1: {'customerUpdate' if cust else 'customerCreate'} {json.dumps(cust_input)}")
+    print(f"planned metafields: {json.dumps(metafields)}")
     print(f"price base: {'NET of ' + str(round((div - 1) * 100, 1)) + '% ' + cc + ' VAT (reverse charge)' if exempt else cc + ' market retail'}"
           + (f"; WARNING tax pricing: {tax_problem}" if tax_problem else "")
           + (f"; WARNING base price: {base_problem}" if base_problem else ""))
@@ -158,19 +174,26 @@ def main():
                 {"i": cust_input})["customerCreate"]
     user_errors(r)
     cid = r["customer"]["id"]
+    if metafields:
+        m = gql(env, 'mutation($m:[MetafieldsSetInput!]!){metafieldsSet(metafields:$m){metafields{key} userErrors{field message}}}',
+                {"m": [{"ownerId": cid, "namespace": "wholesale", "key": x["key"], "type": "single_line_text_field", "value": x["value"]}
+                       for x in metafields]})["metafieldsSet"]
+        user_errors(m)
     for n, code, want, existing, _ in slots:
         action = plan_slot(existing, want, [cid])
         apply_slot(env, action, existing, f"Wholesale {o.company or email} G{n}", code, want, [cid], now)
 
     # By the id the write returned: the customer search index lags a new customer.
     c = read_customer(env, cid)
-    ok = bool(c and "wholesale" in c["tags"] and (EXEMPTION in c["taxExemptions"]) == exempt)
+    got_meta = {"vat_number": (c.get("vat") or {}).get("value"), "company": (c.get("company") or {}).get("value")} if c else {}
+    ok = bool(c and "wholesale" in c["tags"] and (EXEMPTION in c["taxExemptions"]) == exempt
+              and all(got_meta.get(x["key"]) == x["value"] for x in metafields))
     for n, code, want, _, _ in slots:
         got = read_code(env, code)
         good = (plan_slot(got, want, [c["id"]]) == "none") if got or want else True
         print(f"read back slot {n} {code}: {'OK' if good else 'MISMATCH'}")
         ok = ok and good
-    print(f"read back customer {c['id']} tags={c['tags']} exemptions={c['taxExemptions']}")
+    print(f"read back customer {c['id']} tags={c['tags']} exemptions={c['taxExemptions']} metafields={json.dumps(got_meta)}")
     print("read back OK" if ok else "READ BACK MISMATCH")
     sys.exit(0 if ok else 1)
 

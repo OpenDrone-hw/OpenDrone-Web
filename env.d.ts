@@ -157,6 +157,16 @@ declare global {
     // price step and hourly (app/lib/wholesale-sync.ts). Anything else plans
     // and logs only. Never writes on staging.
     WHOLESALE_SYNC_WRITE_ENABLED?: string;
+    // Signs the "Review and approve" link in a wholesale application mail
+    // (app/lib/wholesale-approve-token.ts), HMAC-SHA256, at least 16
+    // characters (32 random bytes recommended). A Worker secret. Without it
+    // the mail carries the onboarding command only and every link is refused.
+    WHOLESALE_APPROVE_SECRET?: string;
+    // "1" lets the Approve button on /wholesale/approve write the customer,
+    // its exemption, metafields and codes, and mail the retailer
+    // (app/lib/wholesale-approve.ts). Anything else shows the plan only.
+    // Never writes on staging.
+    WHOLESALE_APPROVE_WRITE_ENABLED?: string;
     // Per-SKU sale policy, {"SKU": {"saleMode": "in_stock" | "preorder" |
     // "sold_out", "shipPromise": string | null}}, one entry for every
     // storefront SKU or the catalog refuses to load. A Worker secret; the

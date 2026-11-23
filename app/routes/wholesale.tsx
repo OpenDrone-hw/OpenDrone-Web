@@ -53,7 +53,7 @@ export async function action({request, context}: Route.ActionArgs) {
   if (!human.ok) return data<TradeResult>({ok: false, failure: 'turnstile_failed'}, {status: 400});
   // Local development never mails the company inbox.
   if (import.meta.env.DEV) return data<TradeResult>({ok: false, failure: 'not_configured'}, {status: 503});
-  const result = await submitTradeApplication(context.env, valid.application);
+  const result = await submitTradeApplication(context.env, valid.application, fetch, new URL(request.url).origin);
   if (!result.ok) return data<TradeResult>({ok: false, failure: result.reason}, {status: 503});
   return data<TradeResult>({ok: true});
 }
