@@ -80,7 +80,26 @@ Checkout re-checks the customer limit against the signed-in address. Shop Pay ca
 
 The script sets the exemption only when VIES answers `isValid: true` and the country is not BE, so a typed VAT number alone gives nothing. The VIES answer is noted on the customer.
 
-What the shop charges (read from the paid orders of the Shopify store, 29 Oct 2026): EU consumers pay the VAT of their own country (OSS), for example DE 19%, NL 21%, IT 22%, HU would be 27%; Belgium 21%. So an EU shop without an accepted VAT number pays its destination VAT, not Belgian VAT. Non-EU orders (CH, NO, GB, CA, ...) carry no tax line and pay the International price without EU VAT; US orders pay the USD price (list +25%, duties included). The 25% comes off that market price. Import duties and local taxes are the buyer's. Whether Shopify strips VAT from a tax-inclusive price for a reverse-charge customer is still unverified: the test order checks it.
+What the shop charges (read from the paid orders of the Shopify store, 29 Oct 2026): EU consumers pay the VAT of their own country (OSS), for example DE 19%, NL 21%, IT 22%, HU would be 27%; Belgium 21%. So an EU shop without an accepted VAT number pays its destination VAT, not Belgian VAT. Non-EU orders (CH, NO, GB, CA, ...) carry no tax line and pay the International price without EU VAT; US orders pay the USD price (list +25%, duties included). The 25% comes off that market price. Import duties and local taxes are the buyer's. For a reverse-charge customer Shopify keeps the tax-inclusive price and drops the VAT line (draftOrderCalculate for a DE customer with the exemption: EUR 39.00, no tax line), which is why the codes price the net retail.
+
+## Invoice
+
+Every paid order of a customer tagged `wholesale` gets one sales invoice in Kyte, in the company's name, dated on the payment date and marked paid. Consumer orders get none (B2C in Belgium and OSS distance sales need no invoice). Kyte has no API, so the invoice is typed by hand from what the script prints:
+
+```bash
+python3 scripts/wholesale-invoice.py                      # paid retailer orders without the tag `invoiced`
+python3 scripts/wholesale-invoice.py 1507                 # company, VAT number, net lines, VAT, text to add
+python3 scripts/wholesale-invoice.py 1507 --done 20260005 --apply   # tag `invoiced`, note the Kyte number
+```
+
+| Retailer | VAT on the invoice | Sent | Extra |
+|---|---|---|---|
+| Belgium | 21% | Peppol (Kyte) | |
+| Other EU, VIES valid | 0%, the reverse charge text the script prints, both VAT numbers | e-mail (PDF) | intra-community listing (accountant, from Kyte) |
+| Other EU, no valid VAT number | the destination VAT the order carried (OSS) | e-mail (PDF) | |
+| Outside the EU | 0%, export text | e-mail (PDF) | the customs papers describe each product by its function |
+
+The lines come from the order after discounts and order edits, so the invoice total equals what the retailer paid; the script warns when they differ. A refund on an invoiced order becomes a credit note in Kyte. The company name and VAT number come from the customer (metafields `wholesale.company` and `wholesale.vat_number`, else the checkout company and the VIES line in the customer note); the script says MISSING when it has none.
 
 ## Shipping rate names
 
