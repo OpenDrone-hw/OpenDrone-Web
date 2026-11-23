@@ -91,7 +91,13 @@ def main():
            "non-EU: export, no exemption needed" if cc not in EU else
            "no VAT number given" if not o.vat else "VIES did not confirm the number")
 
+    if vies and "error" in vies:
+        raise SystemExit(f"refusing: {vies['error']}. Nothing written; run again when VIES answers.")
     cust = find_customer(env, email)
+    if cust and EXEMPTION in (cust.get("taxExemptions") or []) and not exempt:
+        # the codes would be repriced on gross retail while Shopify keeps the exemption: the retailer pays VAT-inclusive prices without VAT
+        raise SystemExit("refusing: the customer has the reverse charge exemption but this run does not confirm it "
+                         f"({why}). Pass --vat with a number VIES confirms, or remove the exemption in Shopify admin first.")
     # country-xx on every retailer: its codes are computed on its own market's prices (wholesale_lib.market_country)
     tags = sorted(set((cust or {}).get("tags") or []) | {"wholesale", f"country-{cc.lower()}"} | ({"reverse-charge"} if exempt else set()))
     exemptions = sorted(set((cust or {}).get("taxExemptions") or []) | ({EXEMPTION} if exempt else set()))
