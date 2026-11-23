@@ -16,6 +16,7 @@ import {purgeOldPins} from '~/lib/pilot-map-data';
 import {parseCampaignConfig} from '~/lib/preorder-campaign';
 import {countryLinkRedirect, queryCountryCookie} from '~/lib/shipping-rates';
 import {preorderHoldsEnabled, reconcilePreorders} from '~/lib/preorder-ops';
+import {runWholesaleSync, wholesaleCatchUpDue} from '~/lib/wholesale-sync';
 import {priceTierWritesEnabled} from '~/lib/shopify-price-tier';
 import {mailIntakeReady, runMailIntake} from '~/lib/support/mail';
 import {supportDeps, supportReady} from '~/lib/support/server';
@@ -205,6 +206,10 @@ export default {
    * - Owners map (app/lib/owner-map-data.ts): recompute the published
    *   aggregate snapshot when it is missing or 30 days old. One D1 read per
    *   run otherwise; needs SUPPORT_DB and the Shopify Admin token.
+   * - Wholesale codes (app/lib/wholesale-sync.ts): the first run of each
+   *   hour re-points every retailer's price-group codes to the live prices,
+   *   after the reconcile (which already does so right after a price step).
+   *   Writes only while WHOLESALE_SYNC_WRITE_ENABLED is "1", never on staging.
    * Pilot map (app/lib/pilot-map-data.ts): delete pins 24 months after their
    *   consent, whatever PILOT_MAP_ENABLED says.
    */
@@ -214,24 +219,32 @@ export default {
     const waitUntil = (p: Promise<unknown>) => executionContext.waitUntil(p);
     executionContext.waitUntil(warmPaidCounts(env, waitUntil));
     if ((event as {cron?: string} | null)?.cron === WARM_CRON) return;
-    if (priceTierWritesEnabled(env) || preorderHoldsEnabled(env)) {
+    const wholesaleDue = wholesaleCatchUpDue((event as {scheduledTime?: number} | null)?.scheduledTime);
+    if (priceTierWritesEnabled(env) || preorderHoldsEnabled(env) || wholesaleDue) {
       executionContext.waitUntil(
         (async () => {
-          try {
-            const config = parseCampaignConfig(preordersJson);
-            const result = await reconcilePreorders(env, config);
-            if (result.changed.length) {
-              console.log('preorder price steps written', JSON.stringify(result.changed));
+          let wholesaleRan = false;
+          if (priceTierWritesEnabled(env) || preorderHoldsEnabled(env)) {
+            try {
+              const config = parseCampaignConfig(preordersJson);
+              const result = await reconcilePreorders(env, config);
+              wholesaleRan = result.wholesale !== null;
+              if (result.changed.length) {
+                console.log('preorder price steps written', JSON.stringify(result.changed));
+              }
+              if (result.priceError) {
+                console.error('preorder price step reconcile failed', result.priceError);
+              }
+              if (result.held.length) {
+                console.log('preorder orders held', JSON.stringify(result.held));
+              }
+            } catch (error) {
+              console.error('preorder reconcile failed', error);
             }
-            if (result.priceError) {
-              console.error('preorder price step reconcile failed', result.priceError);
-            }
-            if (result.held.length) {
-              console.log('preorder orders held', JSON.stringify(result.held));
-            }
-          } catch (error) {
-            console.error('preorder reconcile failed', error);
           }
+          // Hourly catch-up for price changes no step made (a script, the admin), after the reconcile so it reads
+          // the prices that pass wrote. Never throws.
+          if (wholesaleDue && !wholesaleRan) await runWholesaleSync(env, {reason: 'hourly'});
         })(),
       );
     }

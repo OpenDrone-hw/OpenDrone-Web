@@ -46,9 +46,16 @@ Needs `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN` (`read/write_customers`,
 
 ## Automation
 
-The workspace job `wholesale-intake` (operations repo, `tools/jobs/wholesale.py`) turns a form application into a founder card (Approve / Decline, VIES pre-checked, code proposed); an Approve runs `wholesale-onboard.py --apply` and saves the reply as a Gmail draft (EN or NL). Nothing is sent. The job `wholesale-sync` runs hourly: `wholesale-sync.py --apply` re-points the groups after a price step (no hook fires on a step, so the hourly pass bounds the gap), then `wholesale-sync.py --health` reports to the it-admin desk: a tagged customer without codes, codes without the tag, orphan group codes, price drift, and `wholesale-check.py` failures.
+| What | Where | Writes |
+|---|---|---|
+| Re-point every retailer's codes right after a price step | Worker, `app/lib/preorder-ops.ts` (orders/paid webhook and the five-minute reconcile) calls `app/lib/wholesale-sync.ts` | only while `WHOLESALE_SYNC_WRITE_ENABLED` is `"1"` (`wrangler.production.toml`), never on staging |
+| Catch-up for any other price change (a script, the Shopify admin) | Worker, first scheduled run of each hour (`server.ts`) | same switch |
+| Outcome | `lastRuns.wholesaleSync` in `/api/status/campaign` (with the status token): counts only, no codes or customers | none |
+| Application to retailer | no job: an agent searches Gmail for subject "Wholesale application", runs `wholesale-onboard.py` as a dry run, and after the founder's yes runs it with `--apply` and saves the reply as a Gmail draft. Nothing is sent | Shopify only through the script |
 
-By hand: `python3 scripts/wholesale-sync.py` (dry run, `--apply`, `--health`) and `python3 scripts/wholesale-check.py WS25-NAME`, which builds a throwaway Storefront cart with every live variant plus the code and its companions and asserts each line costs 75% of retail to the cent. Customer eligibility is enforced only at checkout, so the check proves the prices, not the customer limit.
+`app/lib/wholesale-sync.ts` is a port of `scripts/wholesale_lib.py` and `scripts/wholesale-sync.py`; `app/lib/wholesale-sync.test.ts` holds the same fixtures and expected percentages as `scripts/test_wholesale_lib.py`, so a change to the maths changes both. With the switch off the Worker only logs the slots that differ (`[wholesale] dry run`). The Worker's Admin token needs `read_customers`, `read_discounts` and `write_discounts`.
+
+By hand, and as the fallback: `python3 scripts/wholesale-sync.py` (dry run, `--apply`, `--health`) and `python3 scripts/wholesale-check.py WS25-NAME`, which builds a throwaway Storefront cart with every live variant plus the code and its companions and asserts each line costs 75% of retail to the cent. Customer eligibility is enforced only at checkout, so the check proves the prices, not the customer limit. `--health` also reports a tagged customer without codes, codes without the tag, orphan group codes and price drift.
 
 Percentages are stored with 4 decimals (0.1667). Every unit still lands on 75% of retail to the cent; a line of N units is up to about N x 0.18 cent cheaper (9 cents on 50 units) because 0.9 x (1 - 0.1667) is 0.74997.
 

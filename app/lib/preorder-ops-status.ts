@@ -1,6 +1,7 @@
 /**
  * The last outcome of each preorder background job in this Worker isolate:
- * the paid-count read, the price step sync and the preorder hold sync.
+ * the paid-count read, the price step sync, the preorder hold sync and the
+ * wholesale code sync (counts only).
  *
  * Cloudflare runs the scheduled reconcile, the webhook and a status request
  * in whichever isolate is free, so this is a best-effort trace, never the
@@ -8,7 +9,7 @@
  * the libraries' own error text, never a token or a request body.
  */
 
-export type OpsJob = 'paidCounts' | 'priceSync' | 'holdSync';
+export type OpsJob = 'paidCounts' | 'priceSync' | 'holdSync' | 'wholesaleSync';
 
 export type OpsRun = {
   at: string;

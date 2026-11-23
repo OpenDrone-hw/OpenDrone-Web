@@ -8,7 +8,8 @@ retail. Customers come from the existing main code; nothing else is read.
 
 Dry run by default: prints the planned writes. `--apply` writes, then runs the
 comparison again and exits non-zero if anything still differs. Idempotent, safe
-to run daily (operations/tools/jobs.json "wholesale-sync").
+to run by hand; the Worker runs the same logic after each price step and hourly
+(app/lib/wholesale-sync.ts).
 """
 import argparse, importlib.util, json, sys
 from datetime import datetime, timezone

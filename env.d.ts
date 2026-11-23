@@ -153,6 +153,10 @@ declare global {
     // "0" turns off the preorder fulfillment holds and batch tags (webhook
     // and cron). Unset or anything else leaves them on.
     PREORDER_HOLDS_ENABLED?: string;
+    // "1" lets the Worker re-point the wholesale price-group codes after a
+    // price step and hourly (app/lib/wholesale-sync.ts). Anything else plans
+    // and logs only. Never writes on staging.
+    WHOLESALE_SYNC_WRITE_ENABLED?: string;
     // Per-SKU sale policy, {"SKU": {"saleMode": "in_stock" | "preorder" |
     // "sold_out", "shipPromise": string | null}}, one entry for every
     // storefront SKU or the catalog refuses to load. A Worker secret; the
