@@ -49,7 +49,10 @@ export function BuildBundle({
   const currency = parts[0].variant.price.currencyCode;
   const total = parts.reduce((sum, p) => sum + Number(p.variant.price.amount) * p.quantity, 0);
   // The latest part decides the parcel's date once they are all in.
-  const delay = parts.reduce<ReturnType<typeof parcelDelay>>(
+  // A cart that ships from stock: any March part holds it (compared with the
+  // cart alone, since the bundle's own dates would hide the stock parcel).
+  const fromStock = parts.map((p) => parcelDelay(cartPromises, p.variant.shipPromise)).find(Boolean) ?? null;
+  const delay = fromStock ?? parts.reduce<ReturnType<typeof parcelDelay>>(
     (found, p) => parcelDelay([...cartPromises, ...parts.map((x) => x.variant.shipPromise)], p.variant.shipPromise) ?? found,
     null,
   );
