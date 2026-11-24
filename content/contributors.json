@@ -1,13 +1,13 @@
 {
   "$comment": "Contributor roster per product handle. Written by scripts/sync-contributors.mjs from the GitHub API; read by app/lib/contributors-snapshot.ts as the fallback when the live fetch is rate-limited.",
-  "updated": "2026-11-09",
+  "updated": "2026-11-23",
   "products": {
     "openesc": [
       {
         "login": "Just4Stan",
         "avatarUrl": "https://avatars.githubusercontent.com/u/120202504?v=4",
         "htmlUrl": "https://github.com/Just4Stan",
-        "contributions": 260
+        "contributions": 264
       },
       {
         "login": "Vishal01Mehra",
@@ -21,7 +21,7 @@
         "login": "Just4Stan",
         "avatarUrl": "https://avatars.githubusercontent.com/u/120202504?v=4",
         "htmlUrl": "https://github.com/Just4Stan",
-        "contributions": 257
+        "contributions": 268
       },
       {
         "login": "bastian2001",
@@ -41,7 +41,7 @@
         "login": "Just4Stan",
         "avatarUrl": "https://avatars.githubusercontent.com/u/120202504?v=4",
         "htmlUrl": "https://github.com/Just4Stan",
-        "contributions": 68
+        "contributions": 70
       }
     ],
     "openmotor": [],
@@ -50,7 +50,7 @@
         "login": "Just4Stan",
         "avatarUrl": "https://avatars.githubusercontent.com/u/120202504?v=4",
         "htmlUrl": "https://github.com/Just4Stan",
-        "contributions": 545
+        "contributions": 558
       },
       {
         "login": "bastian2001",
