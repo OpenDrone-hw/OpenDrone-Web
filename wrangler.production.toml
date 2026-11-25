@@ -65,7 +65,7 @@ TRADE_MAIL_ENABLED = "1"
 # and hourly; anything else plans and logs only. Turning it on needs the
 # founder's go and an Admin token with read_customers, read_discounts and
 # write_discounts.
-WHOLESALE_SYNC_WRITE_ENABLED = "0"
+WHOLESALE_SYNC_WRITE_ENABLED = "1"
 # One-click retailer approval (/wholesale/approve, app/lib/wholesale-approve.ts):
 # "1" lets Approve create the customer, exemption, metafields and codes and
 # mail the retailer; anything else shows the plan only. Turning it on needs
