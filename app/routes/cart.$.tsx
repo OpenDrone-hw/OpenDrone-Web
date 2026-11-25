@@ -59,7 +59,7 @@ import {usePendingShipTo} from '~/lib/pending-ship-to';
 import {cartReplannedFor, planCartPage} from '~/lib/cart-replan';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
-import {cartWholesaleCode, wholesaleFieldShown, wholesaleVisit} from '~/lib/wholesale-codes';
+import {cartWholesaleCode, wholesaleCartPath, wholesaleFieldShown, wholesaleVisit} from '~/lib/wholesale-codes';
 import {Notice} from '~/components/Notice';
 import type {RootLoader} from '~/root';
 import {
@@ -831,7 +831,13 @@ function PopulatedCart({
               </label>
               <button type="submit" className="mt-2 text-[13px] underline underline-offset-4">{t('wholesale_code_apply', 'Apply code')}</button>
             </Form>
-            ) : null}
+            ) : (
+            // Hidden field, but findable: a retailer who reaches the cart by
+            // the cart icon has lost ?wholesale=1 from the welcome mail.
+            <p className="cart-code text-[13px]">
+              <Link to={wholesaleCartPath()} preventScrollReset className="underline underline-offset-4">{t('wholesale_code_link', 'Retailer? Enter your wholesale code')}</Link>
+            </p>
+            )}
             <Form
               id={CHECKOUT_FORM_ID}
               method="post"
