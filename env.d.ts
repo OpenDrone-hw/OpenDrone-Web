@@ -123,6 +123,12 @@ declare global {
     // '1' mails /wholesale applications to the company inbox through Resend.
     TRADE_MAIL_ENABLED?: string;
     SHOPIFY_STOREFRONT_TOKEN?: string;
+    // Secret: the headless channel's private Storefront token. When set, server
+    // calls use it with the buyer's IP, so Shopify rate-limits per visitor
+    // instead of per Cloudflare egress IP (THROTTLED on cartCreate otherwise).
+    SHOPIFY_STOREFRONT_PRIVATE_TOKEN?: string;
+    // Per request, never configured: the visitor's CF-Connecting-IP (server.ts).
+    SHOPIFY_STOREFRONT_BUYER_IP?: string;
     SHOPIFY_STOREFRONT_API_VERSION?: string;
     SHOPIFY_CHECKOUT_DOMAIN?: string;
     // Exact account destination copied from Shopify's customer-account

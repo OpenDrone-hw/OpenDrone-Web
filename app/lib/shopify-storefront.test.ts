@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {addCartLines, createCart, fetchShopifyCatalog, getCart, productRating, storefrontEndpoint, storefrontRequest} from './shopify-storefront.ts';
+import {addCartLines, createCart, fetchShopifyCatalog, getCart, productRating, storefrontEndpoint, storefrontHeaders, storefrontRequest, withStorefrontBuyerIp} from './shopify-storefront.ts';
 
 const ENV = {
   SHOPIFY_STORE_DOMAIN: 'open-drone-test.myshopify.com',
@@ -312,3 +312,30 @@ describe('storefrontRequest timeout', () => {
   });
 });
 
+
+describe('storefront auth headers', () => {
+  it('uses the public token when no private token is set', () => {
+    const h = storefrontHeaders({...ENV, SHOPIFY_STOREFRONT_BUYER_IP: '203.0.113.7'});
+    assert.equal(h['X-Shopify-Storefront-Access-Token'], ENV.SHOPIFY_STOREFRONT_TOKEN);
+    assert.equal(h['Shopify-Storefront-Private-Token'], undefined);
+    assert.equal(h['Shopify-Storefront-Buyer-IP'], undefined);
+  });
+  it('uses the private token with the buyer IP when set', () => {
+    const h = storefrontHeaders({...ENV, SHOPIFY_STOREFRONT_PRIVATE_TOKEN: 'shpat_private', SHOPIFY_STOREFRONT_BUYER_IP: '203.0.113.7'});
+    assert.equal(h['Shopify-Storefront-Private-Token'], 'shpat_private');
+    assert.equal(h['Shopify-Storefront-Buyer-IP'], '203.0.113.7');
+    assert.equal(h['X-Shopify-Storefront-Access-Token'], undefined);
+  });
+  it('omits the buyer IP header outside a request (cron)', () => {
+    const h = storefrontHeaders({...ENV, SHOPIFY_STOREFRONT_PRIVATE_TOKEN: 'shpat_private'});
+    assert.equal(h['Shopify-Storefront-Buyer-IP'], undefined);
+  });
+  it('copies the env per request and leaves the shared one untouched', () => {
+    const shared = {...ENV};
+    const req = new Request('https://opendrone.be/', {headers: {'CF-Connecting-IP': '198.51.100.4'}});
+    const scoped = withStorefrontBuyerIp(shared, req);
+    assert.equal((scoped as {SHOPIFY_STOREFRONT_BUYER_IP?: string}).SHOPIFY_STOREFRONT_BUYER_IP, '198.51.100.4');
+    assert.equal((shared as {SHOPIFY_STOREFRONT_BUYER_IP?: string}).SHOPIFY_STOREFRONT_BUYER_IP, undefined);
+    assert.equal(withStorefrontBuyerIp(shared, new Request('https://opendrone.be/')), shared);
+  });
+});
