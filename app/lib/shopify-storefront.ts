@@ -269,6 +269,8 @@ type StorefrontEnv = Pick<
   Env,
   | 'SHOPIFY_STORE_DOMAIN'
   | 'SHOPIFY_STOREFRONT_TOKEN'
+  | 'SHOPIFY_STOREFRONT_PRIVATE_TOKEN'
+  | 'SHOPIFY_STOREFRONT_BUYER_IP'
   | 'SHOPIFY_STOREFRONT_API_VERSION'
   | 'SHOPIFY_CHECKOUT_DOMAIN'
   | 'SHOPIFY_PRICES_INCLUDE_VAT'
@@ -313,6 +315,30 @@ export function storefrontEndpoint(env: StorefrontEnv): string {
 
 const STOREFRONT_TIMEOUT_MS = 10_000;
 
+/** Shopify throttles server-side Storefront calls per client IP. All Worker
+ *  calls leave from Cloudflare, so with the public token every visitor shares
+ *  one bucket and cartCreate answers THROTTLED. The private token plus
+ *  Shopify-Storefront-Buyer-IP gives each visitor their own bucket
+ *  (shopify.dev, Storefront API authentication). Without the private token
+ *  the public one is used as before. */
+export function storefrontHeaders(env: StorefrontEnv): Record<string, string> {
+  const privateToken = env.SHOPIFY_STOREFRONT_PRIVATE_TOKEN?.trim();
+  if (!privateToken) {
+    return {'Content-Type': 'application/json', 'X-Shopify-Storefront-Access-Token': required(env, 'SHOPIFY_STOREFRONT_TOKEN')};
+  }
+  const headers: Record<string, string> = {'Content-Type': 'application/json', 'Shopify-Storefront-Private-Token': privateToken};
+  const buyerIp = env.SHOPIFY_STOREFRONT_BUYER_IP?.trim();
+  if (buyerIp) headers['Shopify-Storefront-Buyer-IP'] = buyerIp;
+  return headers;
+}
+
+/** The Worker env for one request, carrying the visitor's IP for
+ *  storefrontHeaders. A copy, so concurrent requests never share it. */
+export function withStorefrontBuyerIp<E extends object>(env: E, request: Request): E {
+  const ip = request.headers.get('CF-Connecting-IP')?.trim();
+  return ip ? {...env, SHOPIFY_STOREFRONT_BUYER_IP: ip} : env;
+}
+
 export async function storefrontRequest<T>(
   env: StorefrontEnv,
   query: string,
@@ -321,13 +347,7 @@ export async function storefrontRequest<T>(
 ): Promise<T> {
   const response = await fetcher(storefrontEndpoint(env), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Shopify-Storefront-Access-Token': required(
-        env,
-        'SHOPIFY_STOREFRONT_TOKEN',
-      ),
-    },
+    headers: storefrontHeaders(env),
     body: JSON.stringify({query, variables}),
     // Workers supports follow/manual only. Manual plus the response status
     // check below preserves the fail-closed redirect policy.

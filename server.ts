@@ -17,6 +17,7 @@ import {parseCampaignConfig} from '~/lib/preorder-campaign';
 import {countryLinkRedirect, queryCountryCookie} from '~/lib/shipping-rates';
 import {preorderHoldsEnabled, reconcilePreorders} from '~/lib/preorder-ops';
 import {runWholesaleSync, wholesaleCatchUpDue} from '~/lib/wholesale-sync';
+import {withStorefrontBuyerIp} from '~/lib/shopify-storefront';
 import {priceTierWritesEnabled} from '~/lib/shopify-price-tier';
 import {mailIntakeReady, runMailIntake} from '~/lib/support/mail';
 import {supportDeps, supportReady} from '~/lib/support/server';
@@ -137,7 +138,7 @@ async function handleFetch(
 
     const context = await createAppLoadContext(
       request,
-      env,
+      withStorefrontBuyerIp(env, request),
       executionContext,
     );
     let response = await handleRequest(request, context);
