@@ -14,7 +14,7 @@ Validate: `npm run typecheck && npm run lint && npm test` (add `npm run build` w
 - Legal text in `app/content/legal/` is copied unchanged from `operations/documents/storefront-legal/` in one PR; never a legal draft or review PR here.
 - Public appearance of opendrone.be does not change unless the task says so; use only real product photos and renders.
 - `public/testing/` and `public/lab-visit/` change only through `npm run sync:testing` and `npm run sync:lab-visit`.
-- No support email address on pages or chrome. The Worker never sends mail.
+- No support email address on pages or chrome. The support mail client writes Gmail drafts only and never sends; other Worker mail goes out through Resend.
 
 ## Pointers
 
