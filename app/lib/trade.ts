@@ -4,6 +4,7 @@
 import {sha256Hex} from './accounts/crypto.ts';
 import {getCompanyIdentity} from './company.ts';
 import {titleWithoutBatch} from './catalog.ts';
+import {approveUrl, normaliseVat, signApproval} from './wholesale-approve-token.ts';
 
 /** Any country may apply; staff decide per application. ISO 3166-1 alpha-2
  *  plus Kosovo (XK), named in English and sorted by name. */
@@ -145,6 +146,8 @@ export type TradeEnv = {
   RESEND_API_KEY?: string;
   SUPPORT_FROM_EMAIL?: string;
   PUBLIC_COMPANY_EMAIL?: string;
+  /** Signs the "Review and approve" link (wholesale-approve-token.ts); without it the mail has the command only. */
+  WHOLESALE_APPROVE_SECRET?: string;
 };
 export function tradeConfigured(env: TradeEnv): boolean {
   return env.TRADE_MAIL_ENABLED === '1' && Boolean(env.RESEND_API_KEY);
@@ -160,13 +163,22 @@ function shellQuote(value: string): string {
 /** The staff command that onboards this applicant (`docs/wholesale.md`). */
 export function onboardCommand(application: TradeApplication): string {
   const parts = ['python3 scripts/wholesale-onboard.py', '--email', shellQuote(application.email), '--country', application.country.code];
-  const vat = application.taxId.replace(/[\s.\-/]/g, '');
+  const vat = normaliseVat(application.taxId);
   if (vat) parts.push('--vat', shellQuote(vat));
   parts.push('--company', shellQuote(application.company));
   return parts.join(' ');
 }
 
-export function applicationMail(application: TradeApplication): {subject: string; text: string} {
+/** The signed staff link for this applicant, or null without WHOLESALE_APPROVE_SECRET. */
+export async function approveLink(env: TradeEnv, application: TradeApplication, origin: string, now = new Date()): Promise<string | null> {
+  const token = await signApproval(env.WHOLESALE_APPROVE_SECRET, {
+    email: application.email, country: application.country.code, vat: application.taxId,
+    company: application.company, contact: application.contactName,
+  }, now);
+  return token ? approveUrl(origin, token) : null;
+}
+
+export function applicationMail(application: TradeApplication, approve: string | null = null): {subject: string; text: string} {
   return {
     subject: `Wholesale application: ${application.company} (${application.country.code}, ${application.quantities.reduce((sum, {qty}) => sum + qty, 0)} units)`,
     text: [
@@ -186,7 +198,8 @@ export function applicationMail(application: TradeApplication): {subject: string
       application.rhythm ? `Order rhythm: ${RHYTHM_LABEL[application.rhythm]}` : '',
       application.note ? `\nMessage:\n${application.note}` : '',
       '',
-      'Onboard after approval (dry run first, then add --apply):',
+      approve ? `Review and approve (staff only, link valid 30 days, opening it writes nothing):\n  ${approve}\n` : '',
+      approve ? 'Fallback by hand (dry run first, then add --apply):' : 'Onboard after approval (dry run first, then add --apply):',
       `  ${onboardCommand(application)}`,
     ].filter(Boolean).join('\n'),
   };
@@ -199,33 +212,52 @@ export async function submitTradeApplication(
   env: TradeEnv,
   application: TradeApplication,
   fetcher: typeof fetch = fetch,
+  origin = 'https://opendrone.be',
 ): Promise<ApplicationResult> {
   if (!tradeConfigured(env)) return {ok: false, reason: 'not_configured'};
   const key = `wholesale-${await sha256Hex(JSON.stringify([
     application.email, application.company.toLowerCase().replace(/\s+/g, ' '), application.country.code,
   ]))}`;
-  const mail = applicationMail(application);
+  const mail = applicationMail(application, await approveLink(env, application, origin));
+  const sent = await sendTradeMail(env, {
+    to: [companyInbox(env)], replyTo: application.email, subject: mail.subject, text: mail.text, key,
+  }, fetcher);
+  if (!sent) console.warn('[wholesale] application mail not sent');
+  return sent ? {ok: true} : {ok: false, reason: 'unavailable'};
+}
+
+export function companyInbox(env: TradeEnv): string {
+  return getCompanyIdentity(env as Record<string, string | undefined>).email;
+}
+
+/** One plain-text mail through Resend from the wholesale sender. The
+ *  idempotency key makes a retry within 24 hours a no-op at Resend. True when
+ *  Resend accepted it. */
+export async function sendTradeMail(
+  env: TradeEnv,
+  mail: {to: string[]; replyTo: string; bcc?: string[]; subject: string; text: string; key: string},
+  fetcher: typeof fetch = fetch,
+): Promise<boolean> {
   try {
     const res = await fetcher('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${env.RESEND_API_KEY}`,
         'Content-Type': 'application/json',
-        'Idempotency-Key': key,
+        'Idempotency-Key': mail.key,
       },
       body: JSON.stringify({
         from: `OpenDrone wholesale <${env.SUPPORT_FROM_EMAIL || 'support@opendrone.be'}>`,
-        to: [getCompanyIdentity(env as Record<string, string | undefined>).email],
-        reply_to: application.email,
+        to: mail.to,
+        reply_to: mail.replyTo,
+        ...(mail.bcc?.length ? {bcc: mail.bcc} : {}),
         subject: mail.subject,
         text: mail.text,
       }),
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) console.warn('[wholesale] application mail not sent', res.status);
-    return res.ok ? {ok: true} : {ok: false, reason: 'unavailable'};
+    return res.ok;
   } catch {
-    console.warn('[wholesale] application mail failed');
-    return {ok: false, reason: 'unavailable'};
+    return false;
   }
 }

@@ -98,6 +98,22 @@ export function worstUnitCents(gs: Group[], ratePercent: number, div = 1): numbe
   return worst;
 }
 
+/** (worst per unit, worst per line up to maxQty) deviation in cents from rate x retail (wholesale_lib.rounding_check). */
+export function roundingCheck(group: Group, ratePercent: number, maxQty = 50, div = 1): [number, number] {
+  let unit = 0;
+  let lineWorst = 0;
+  for (const v of group.variants) {
+    const wantUnit = (v.retail * (1 - ratePercent / 100)) / div;
+    unit = Math.max(unit, Math.abs(unitDeviation(v, group.pct, ratePercent, div)) * 100);
+    for (let q = 1; q <= maxQty; q++) {
+      const line = pyRound(q * v.price, 2);
+      const final = line - pyRound(line * group.pct + 1e-9, 2);
+      lineWorst = Math.max(lineWorst, Math.abs(final - q * wantUnit) * 100);
+    }
+  }
+  return [unit, lineWorst];
+}
+
 type Wanted = [number, LiveVariant];
 
 function groupPct(items: Wanted[]): [number, number] {
@@ -231,9 +247,9 @@ export function wholesaleConfigured(env: WholesaleEnv): boolean {
   return Boolean(env.SHOPIFY_STORE_DOMAIN?.trim() && env.SHOPIFY_ADMIN_API_TOKEN?.trim());
 }
 
-type Admin = <T>(query: string, variables?: Record<string, unknown>) => Promise<T>;
+export type Admin = <T>(query: string, variables?: Record<string, unknown>) => Promise<T>;
 
-function adminClient(env: WholesaleEnv, fetcher: typeof fetch): Admin {
+export function adminClient(env: WholesaleEnv, fetcher: typeof fetch): Admin {
   const domain = env.SHOPIFY_STORE_DOMAIN?.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/+$/, '');
   const token = env.SHOPIFY_ADMIN_API_TOKEN?.trim();
   if (!domain || !token || !/^[a-z0-9][a-z0-9.-]*\.myshopify\.com$/.test(domain)) {
@@ -263,7 +279,7 @@ function adminClient(env: WholesaleEnv, fetcher: typeof fetch): Admin {
   };
 }
 
-function userErrors(payload: {userErrors?: Array<{message: string}>}): void {
+export function userErrors(payload: {userErrors?: Array<{message: string}>}): void {
   if (payload.userErrors?.length) throw new Error(`wholesale sync: ${payload.userErrors[0].message}`);
 }
 
@@ -281,6 +297,30 @@ type CodeNode = {
   } | null;
 };
 
+function toExisting(n: CodeNode, code: string): ExistingCode | null {
+  const cd = n.codeDiscount;
+  if (!cd) return null;
+  return {
+    id: n.id,
+    code,
+    status: cd.status ?? '',
+    customers: (cd.context?.customers ?? []).map((c) => c.id).sort(),
+    pct: cd.customerGets?.value?.percentage ?? null,
+    variants: (cd.customerGets?.items?.productVariants?.nodes ?? []).map((v) => v.id).sort(),
+  };
+}
+
+/** One code by its exact text (wholesale_lib.read_code), or null. */
+export async function readCode(admin: Admin, code: string): Promise<ExistingCode | null> {
+  const d = await admin<{codeDiscountNodeByCode: CodeNode | null}>(
+    `query($c:String!){codeDiscountNodeByCode(code:$c){id codeDiscount{... on DiscountCodeBasic{status codes(first:1){nodes{code}}
+  context{... on DiscountCustomers{customers{id}}}
+  customerGets{value{... on DiscountPercentage{percentage}} items{... on DiscountProducts{productVariants(first:100){nodes{id}}}}}}}}}`,
+    {c: code},
+  );
+  return d.codeDiscountNodeByCode ? toExisting(d.codeDiscountNodeByCode, code) : null;
+}
+
 /** Every wholesale code (main and group slots), keyed by code. */
 async function wholesaleCodes(admin: Admin): Promise<Map<string, ExistingCode>> {
   const found = new Map<string, ExistingCode>();
@@ -289,17 +329,9 @@ async function wholesaleCodes(admin: Admin): Promise<Map<string, ExistingCode>> 
     const d: {codeDiscountNodes: {pageInfo: {hasNextPage: boolean; endCursor: string | null}; nodes: CodeNode[]}} =
       await admin(CODES_QUERY, {a: after});
     for (const n of d.codeDiscountNodes.nodes) {
-      const cd = n.codeDiscount;
-      const code = cd?.codes?.nodes[0]?.code;
-      if (!cd || !code || !CODE_RE.test(code)) continue;
-      found.set(code, {
-        id: n.id,
-        code,
-        status: cd.status ?? '',
-        customers: (cd.context?.customers ?? []).map((c) => c.id).sort(),
-        pct: cd.customerGets?.value?.percentage ?? null,
-        variants: (cd.customerGets?.items?.productVariants?.nodes ?? []).map((v) => v.id).sort(),
-      });
+      const code = n.codeDiscount?.codes?.nodes[0]?.code;
+      if (!code || !CODE_RE.test(code)) continue;
+      found.set(code, toExisting(n, code)!);
     }
     if (!d.codeDiscountNodes.pageInfo.hasNextPage) break;
     after = d.codeDiscountNodes.pageInfo.endCursor;
@@ -318,13 +350,46 @@ async function customers(admin: Admin, ids: string[]): Promise<Map<string, Custo
   return out;
 }
 
-async function liveVariants(admin: Admin, country: string | null): Promise<LiveVariant[]> {
+export async function liveVariants(admin: Admin, country: string | null): Promise<LiveVariant[]> {
   if (country && !/^[A-Z]{2}$/.test(country)) throw new Error('wholesale sync: bad country');
   const ctx = country ? ` ctx:contextualPricing(context:{country:${country}}){price{amount} compareAtPrice{amount}}` : '';
   const d = await admin<{productVariants: {nodes: Parameters<typeof toLiveVariants>[0]}}>(
     `{productVariants(first:100,query:"sku:OPEN*"){nodes{id sku title price compareAtPrice product{status}${ctx}}}}`,
   );
   return toLiveVariants(d.productVariants.nodes, country);
+}
+
+/** The International market's base-price list (-17.3554%), as wholesale_lib.base_price_problem. */
+const BASE_DECREASE_PCT = 17.3554;
+const BASE_DECREASE_TOLERANCE = 0.01; // Shopify stores the adjustment with two decimals
+const INTERNATIONAL_HANDLE = 'international';
+
+/** null when the International market carries the base-price list, else the reason (wholesale_lib.base_price_problem). */
+export async function basePriceProblem(admin: Admin): Promise<string | null> {
+  type Catalog = {priceList?: {currency?: string; parent?: {adjustment?: {type?: string; value?: number | string} | null} | null} | null};
+  const d = await admin<{markets: {nodes: Array<{handle: string; catalogs: {nodes: Catalog[]}}>}}>(
+    '{markets(first:50){nodes{handle catalogs(first:5){nodes{... on MarketCatalog{priceList{currency parent{adjustment{type value}}}}}}}}}',
+  );
+  const m = d.markets.nodes.find((x) => x.handle === INTERNATIONAL_HANDLE);
+  if (!m) return 'no International market';
+  for (const c of m.catalogs.nodes) {
+    const adj = c.priceList?.parent?.adjustment ?? {};
+    if (c.priceList?.currency === 'EUR' && adj.type === 'PERCENTAGE_DECREASE' && Math.abs(Number(adj.value ?? 0) - BASE_DECREASE_PCT) <= BASE_DECREASE_TOLERANCE) return null;
+  }
+  return `International market has no -${BASE_DECREASE_PCT}% base-price list: non-EU retailers pay 75% of a VAT-inclusive price`;
+}
+
+/** null when every market keeps a constant tax-inclusive price, else the reason (wholesale_lib.tax_pricing_problem). */
+export async function taxPricingProblem(admin: Admin): Promise<string | null> {
+  const d = await admin<{shop: {taxesIncluded: boolean}; markets: {nodes: Array<{name: string; priceInclusions?: {inclusiveTaxPricingStrategy?: string | null} | null}>}}>(
+    '{shop{taxesIncluded} markets(first:50){nodes{name priceInclusions{inclusiveTaxPricingStrategy}}}}',
+  );
+  if (!d.shop.taxesIncluded) return 'shop prices exclude tax';
+  for (const m of d.markets.nodes) {
+    const strategy = m.priceInclusions?.inclusiveTaxPricingStrategy ?? null;
+    if (strategy !== null && strategy !== 'INCLUDES_TAXES_IN_PRICE') return `market ${m.name} uses ${strategy}`;
+  }
+  return null;
 }
 
 function codeInput(title: string, code: string, pct: number, variantIds: string[], customerIds: string[], startsAt: string) {
@@ -337,7 +402,7 @@ function codeInput(title: string, code: string, pct: number, variantIds: string[
   };
 }
 
-async function applySlot(
+export async function applySlot(
   admin: Admin, action: SlotAction, existing: ExistingCode | null, title: string, code: string,
   want: Group | null, customerIds: string[], startsAt: string,
 ): Promise<void> {

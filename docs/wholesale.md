@@ -4,11 +4,11 @@ How a retailer goes from application to a paid order. Staff only; the page copy 
 
 ```mermaid
 flowchart LR
-  A["Application on /wholesale<br/>mail to the company inbox"] --> B{"Approve?<br/>founder"}
+  A["Application on /wholesale<br/>mail to the company inbox<br/>with a signed link"] --> R["/wholesale/approve<br/>dry run, writes nothing"]
+  R --> B{"Approve?<br/>founder"}
   B -->|no| X["Reply by mail"]
-  B -->|yes| C["wholesale-onboard.py<br/>dry run"]
-  C --> D["--apply<br/>customer, tag, exemption, codes"]
-  D --> E["Mail the retailer<br/>one code"]
+  B -->|yes| D["Approve button: Worker writes<br/>customer, tags, exemption,<br/>metafields, codes, reads back"]
+  D --> E["Welcome mail to the retailer<br/>bcc the company inbox"]
   E --> F["Cart: enter code<br/>checkout: sign in, pay"]
   F --> G["Paid unit in its batch"]
   S["Worker sync<br/>after every price step, hourly catch-up"] -.-> D
@@ -31,18 +31,22 @@ Today: variants at the 10% step get 16.6667% off, variants at the 20% step 6.25%
 
 ## Onboard one retailer
 
-1. Approve the application (founder). Check the shop, contact and country. The form on /wholesale lists the live catalog's OpenDrone SKUs (`tradeProducts` in `app/lib/trade.ts`, the `sku:OPEN*` variants the codes cover), so the mail names each SKU and its quantity, and ends with the onboarding command for this applicant.
-2. Dry run, nothing is written (the command from the application mail):
+1. The application mail (`applicationMail` in `app/lib/trade.ts`) names each SKU and its quantity and carries a "Review and approve" link: the application (email, country, VAT number, company, contact, mail language) signed with HMAC-SHA256 under `WHOLESALE_APPROVE_SECRET`, valid 30 days (`app/lib/wholesale-approve-token.ts`). Check the shop, contact and country.
+2. Open the link. `/wholesale/approve` runs the dry run of `wholesale-onboard.py` and writes nothing (mail scanners open links): VIES answer, exemption and why, customer found or to create, tags, note, metafields, price base, each code slot with its percentage and worst rounding, and the welcome mail it will send. An unsigned or altered link answers 403, an expired one 410.
+3. After the founder's go, press Approve. The Worker (`app/lib/wholesale-approve.ts`) re-plans and refuses without writing when VIES is unreachable, when the customer has the reverse charge exemption and this run does not confirm it, when a code of the same name belongs to another customer, when the prices do not fit four codes, or on the tax-pricing and International base-price checks of The rule. Otherwise it writes what the script writes (customer by email, tags `wholesale`, `country-xx` and `reverse-charge` when exempt, the exemption, the VIES note line, the codes), plus the customer metafields `wholesale.vat_number` and `wholesale.company` (single line text, for the invoicing app), then reads everything back. Existing codes are kept, so approving twice is safe.
+4. With a clean read back it mails the retailer through Resend, reply-to and bcc the company inbox: Dutch for BE and NL, English otherwise (`welcomeMail` in `app/lib/wholesale-approve.ts`, one text per VAT case below). The page shows "Approved" with what was read back. Without Resend, or on a mismatch, the page shows the text to send by hand.
+
+Approve writes only while `WHOLESALE_APPROVE_WRITE_ENABLED` is `"1"` (`wrangler.production.toml`), never on staging; otherwise the button only shows the plan. It needs the Worker secret `WHOLESALE_APPROVE_SECRET` (32 random bytes), `TRADE_MAIL_ENABLED` and `RESEND_API_KEY` for the mail, and an Admin token with `read_customers`, `write_customers`, `read_discounts`, `write_discounts` and `read_markets`.
+
+### By hand (fallback)
+
+The application mail also carries the command for this applicant. Dry run, nothing is written:
 
 ```bash
 python3 scripts/wholesale-onboard.py --email buyer@example.eu --country ES --vat ESY1234567X --company "Example SL"
 ```
 
-It checks the VAT number in VIES, finds or plans the Shopify customer by email, and prints the planned writes per slot.
-3. After the founder's go, the same command with `--apply`. It tags the customer `wholesale`, sets the EU reverse charge exemption when allowed, creates the codes, then reads everything back and exits non-zero on a mismatch. Existing codes are kept, so a rerun is safe. `--code WS25-FPV24` recreates a code that was already mailed; `--slug` names the code.
-4. Mail the retailer (text below).
-
-Needs `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN` (`read/write_customers`, `read/write_discounts`) in `.env`. Never print the token.
+After the founder's go, the same command with `--apply`: same checks, same writes and read back as Approve. `--code WS25-FPV24` recreates a code that was already mailed; `--slug` names the code (also the way out when Approve refuses a name that belongs to another customer). Then mail the retailer the welcome text (the review page shows it). Needs `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN` (`read/write_customers`, `read/write_discounts`, `read_markets`) in `.env`. Never print the token.
 
 ## Automation
 
@@ -51,7 +55,7 @@ Needs `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN` (`read/write_customers`,
 | Re-point every retailer's codes right after a price step | Worker, `app/lib/preorder-ops.ts` (orders/paid webhook and the five-minute reconcile) calls `app/lib/wholesale-sync.ts` | only while `WHOLESALE_SYNC_WRITE_ENABLED` is `"1"` (`wrangler.production.toml`), never on staging |
 | Catch-up for any other price change (a script, the Shopify admin) | Worker, first scheduled run of each hour (`server.ts`) | same switch |
 | Outcome | `lastRuns.wholesaleSync` in `/api/status/campaign` (with the status token): counts only, no codes or customers | none |
-| Application to retailer | no job: an agent searches Gmail for subject "Wholesale application", runs `wholesale-onboard.py` as a dry run, and after the founder's yes runs it with `--apply` and saves the reply as a Gmail draft. Nothing is sent | Shopify only through the script |
+| Application to retailer | Worker, `/wholesale/approve` from the signed link in the application mail (Onboard one retailer); the welcome mail goes out after a clean read back | only on Approve and while `WHOLESALE_APPROVE_WRITE_ENABLED` is `"1"`, never on staging |
 
 `app/lib/wholesale-sync.ts` is a port of `scripts/wholesale_lib.py` and `scripts/wholesale-sync.py`; `app/lib/wholesale-sync.test.ts` holds the same fixtures and expected percentages as `scripts/test_wholesale_lib.py`, so a change to the maths changes both. With the switch off the Worker only logs the slots that differ (`[wholesale] dry run`). The Worker's Admin token needs `read_customers`, `read_discounts` and `write_discounts`.
 
@@ -123,14 +127,4 @@ Refund or cancel in Shopify as usual: the unit leaves the batch count and the pr
 
 ## Mail text for a retailer
 
-English:
-
-```
-Your application is approved. How it works: order in our shop at opendrone.be. Put your products in the cart, open opendrone.be/cart?wholesale=1, enter your personal code WS25-NAME in the Wholesale code field, and sign in with this email address at checkout (Shopify sends you a code). You pay 25% off retail. Belgian shops pay 21% VAT. Shops in another EU country with a valid VAT number pay no Belgian VAT (reverse charge); we check the number in VIES. Outside the EU we confirm VAT and shipping per country. You pay at checkout and shipping is charged as normal. Every order ships with its batch. Current prices and dates are on each product page.
-```
-
-Nederlands:
-
-```
-Je aanvraag is goedgekeurd. Zo werkt het: bestel in onze shop op opendrone.be. Leg je producten in de winkelwagen, open opendrone.be/cart?wholesale=1, vul je persoonlijke code WS25-NAAM in bij Wholesale code en meld je bij het afrekenen aan met dit e-mailadres (Shopify stuurt je een code). Je betaalt 25% korting op de adviesprijs. Belgische winkels betalen 21% btw. Winkels in een ander EU-land met een geldig btw-nummer betalen geen Belgische btw (verlegging); wij controleren het nummer in VIES. Buiten de EU bevestigen we btw en verzending per land. Je betaalt bij het afrekenen en verzending wordt normaal aangerekend. Elke bestelling wordt verzonden met haar batch. Actuele prijzen en data staan op elke productpagina.
-```
+The welcome mail is `welcomeMail` in `app/lib/wholesale-approve.ts`, plain text, Dutch for BE and NL and English otherwise: 25% off retail on all OpenDrone products with no minimum; the code; how to order (cart, opendrone.be/cart?wholesale=1 or "Have a wholesale code?", sign in at checkout with the approved email, sign out of Shop Pay when it signs in another address); the VAT of the retailer's case (VAT per case); the company name at checkout; an invoice in the company's name by email after every order (Belgian companies through Peppol); prices and batch dates on each product page. `app/lib/wholesale-approve.test.ts` checks each case and language. The review page shows the exact text for one retailer.
