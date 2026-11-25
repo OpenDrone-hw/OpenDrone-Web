@@ -32,11 +32,17 @@ export function wholesaleCodes(main: string): string[] {
 }
 
 /** The retailer's main code among a cart's discount codes (companions
- *  `-G2` to `-G4` are left out), with whether Shopify applies it. */
+ *  `-G2` to `-G4` are not returned), with whether the dealer price applies:
+ *  the main code or any of its companions. A cart whose lines all sit in one
+ *  companion's price group (in-stock boards only, say) leaves the main code
+ *  itself unused. */
 export function cartWholesaleCode(
   codes: ReadonlyArray<{code: string; applicable: boolean}> | undefined,
 ): {code: string; applicable: boolean} | null {
-  return codes?.find((c) => wholesaleMainCode(c.code) === c.code.toUpperCase()) ?? null;
+  const main = codes?.find((c) => wholesaleMainCode(c.code) === c.code.toUpperCase());
+  if (!main) return null;
+  const family = new Set(wholesaleCodes(main.code.toUpperCase()));
+  return {code: main.code, applicable: codes!.some((c) => c.applicable && family.has(c.code.toUpperCase()))};
 }
 
 /** The link parameter that opens the cart's "Wholesale code" field:

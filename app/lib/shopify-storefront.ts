@@ -93,7 +93,7 @@ export const CART_CREATE_MUTATION = `#graphql
     cartCreate(input: $input) {
       cart { ...OpenDroneCartFields }
       userErrors { field message }
-      warnings { message }
+      warnings { code message }
     }
   }
 `;
@@ -111,7 +111,7 @@ export const CART_LINES_ADD_MUTATION = `#graphql
     cartLinesAdd(cartId: $cartId, lines: $lines) {
       cart { ...OpenDroneCartFields }
       userErrors { field message }
-      warnings { message }
+      warnings { code message }
     }
   }
 `;
@@ -122,7 +122,7 @@ export const CART_LINES_UPDATE_MUTATION = `#graphql
     cartLinesUpdate(cartId: $cartId, lines: $lines) {
       cart { ...OpenDroneCartFields }
       userErrors { field message }
-      warnings { message }
+      warnings { code message }
     }
   }
 `;
@@ -133,7 +133,7 @@ export const CART_LINES_REMOVE_MUTATION = `#graphql
     cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
       cart { ...OpenDroneCartFields }
       userErrors { field message }
-      warnings { message }
+      warnings { code message }
     }
   }
 `;
@@ -145,7 +145,7 @@ export const CART_ATTRIBUTES_UPDATE_MUTATION = `#graphql
     cartAttributesUpdate(cartId: $cartId, attributes: $attributes) {
       cart { id }
       userErrors { field message }
-      warnings { message }
+      warnings { code message }
     }
   }
 `;
@@ -635,7 +635,7 @@ type CartWire = {
 type CartPayload = {
   cart: CartWire | null;
   userErrors: Array<{field?: string[]; message: string}>;
-  warnings: Array<{message: string}>;
+  warnings: Array<{code?: string; message: string}>;
 };
 
 function validatedCart(
@@ -729,7 +729,11 @@ function payloadCart(
   operation: string,
   expectedId?: string,
 ): ShopifyCart {
-  if (payload.userErrors.length || payload.warnings.length || !payload.cart) {
+  // A discount code warning (a dealer's unused price-group slot, a code no
+  // line is entitled to) says nothing about the lines: the cart shows the
+  // code's own state. Any other warning means Shopify changed a line.
+  const lineWarnings = payload.warnings.filter((w) => !w.code?.startsWith('DISCOUNT_'));
+  if (payload.userErrors.length || lineWarnings.length || !payload.cart) {
     throw new Error(`shopify: ${operation} failed`);
   }
   return validatedCart(env, payload.cart, expectedId);
@@ -809,7 +813,7 @@ export const CART_DISCOUNT_CODES_UPDATE_MUTATION = `#graphql
     cartDiscountCodesUpdate(cartId: $cartId, discountCodes: $discountCodes) {
       cart { id discountCodes { code applicable } }
       userErrors { field message }
-      warnings { message }
+      warnings { code message }
     }
   }
 `;
