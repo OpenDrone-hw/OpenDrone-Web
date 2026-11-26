@@ -22,6 +22,7 @@ import {
   type ShopifyCartDependencies,
 } from './shopify-cart-action.ts';
 import {fetchPaidUnitRuns} from './shopify-orders.ts';
+import {handleCartCountry} from './shopify-cart-country.ts';
 import {batchChoiceOn, mapShopifyCatalog, type CartLineInput, type ShopifyCart, type ShopifyCartLine} from './shopify-storefront.ts';
 import {choiceCatalogData, CHOICE_IDS, CHOICE_POLICY} from './batch-choice-fixture.ts';
 
@@ -837,6 +838,53 @@ describe('decisions 2026-11-11: where stock ships, and who buys it outside the E
       assert.equal(dealer.offer, 'buy_now');
       assert.equal(dealer.merchandise_id, CHOICE_IDS[FC].buyNow);
       assert.ok(dealer.preorder_offer, 'the pre-order stays beside it');
+    });
+
+    it('a dealer in the International market keeps its in-stock boards in the cart; a consumer gets the pre-order', () => {
+      const intlDealer = applyCampaign(map(true), CONFIG, {}, NOW, 'INT', true);
+      assert.deepEqual(settleOffers(cart([buyNowLine(1, 2)]), intlDealer), {moves: [], to: null});
+      assert.deepEqual(settleOffers(cart([preorderLine(2, 2)]), intlDealer), {
+        moves: [{id: preorderLine(2).id, quantity: 2, merchandiseId: CHOICE_IDS[FC].buyNow}],
+        to: 'buy_now',
+      });
+      const intlConsumer = applyCampaign(map(true), CONFIG, {}, NOW, 'INT');
+      assert.deepEqual(settleOffers(cart([buyNowLine(1, 2)]), intlConsumer), {
+        moves: [{id: buyNowLine(1).id, quantity: 2, merchandiseId: CHOICE_IDS[FC].preorder}],
+        to: 'preorder',
+      });
+    });
+
+    it('Ship to outside the EU: a consumer\'s Buy now board moves to its pre-order before the cart changes market', async () => {
+      const order: string[] = [];
+      let held = cart([buyNowLine(1, 2)]);
+      const res = await handleCartCountry(new Request('https://shop.test/api/shopify/cart-country', {
+        method: 'POST',
+        headers: {Origin: 'https://shop.test', 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({country: 'GB'}),
+      }), {SHOPIFY_CHECKOUT_WRITE_ENABLED: '1', PUBLIC_COMING_SOON: '0'}, {
+        getCartId: () => held.id,
+        getCart: async () => held,
+        fetchCatalog: async (region) => applyCampaign(map(true), CONFIG, {}, NOW, region),
+        updateCartLines: async (_id, lines) => {
+          order.push(`update ${lines.map((l) => l.merchandiseId ?? 'attributes').join(',')}`);
+          held = cart(held.lines.map((l) => {
+            const u = lines.find((x) => x.id === l.id);
+            return u?.merchandiseId ? {...l, merchandiseId: u.merchandiseId, offer: 'preorder'} : l;
+          }));
+          return held;
+        },
+        setCountry: async (_id, code) => {
+          order.push(`country ${code}`);
+        },
+      });
+      assert.equal(res.status, 200);
+      assert.equal(order[0], `update ${CHOICE_IDS[FC].preorder}`);
+      assert.equal(order[1], 'country GB');
+    });
+
+    it('every surface that plans for a region gives a dealer the export stock (source guard)', () => {
+      const client = fs.readFileSync(new URL('./catalog-client.ts', import.meta.url), 'utf8');
+      assert.match(client, /exportStock = dealer && isInternationalRegion\(target\)/);
     });
 
     it('applying a code remembers the dealer in the session; clearing forgets it', async () => {

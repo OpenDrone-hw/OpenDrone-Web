@@ -7,6 +7,7 @@ import {
   checkoutOpen,
   regionForDestination,
   rederiveLines,
+  settleOffers,
   type CartSummary,
 } from './shopify-cart-action.ts';
 import type {CartLineUpdate, ShopifyCart} from './shopify-storefront.ts';
@@ -114,16 +115,27 @@ export async function handleCartCountry(
   if (!cartId) return remember({country: quote.country, applied: false});
   // The country the cart has now, to put back if the switch half-applies.
   let previous: string | null = null;
+  let current: ShopifyCart | null = null;
   try {
-    previous = (await dependencies.getCart?.(cartId))?.country ?? null;
+    current = (await dependencies.getCart?.(cartId)) ?? null;
+    previous = current?.country ?? null;
   } catch {
     previous = null;
   }
   let changed = false;
   try {
+    // A Buy now board the new destination cannot take from stock moves to its
+    // pre-order first. In a market whose shipping profile does not serve the
+    // Buy now variant Shopify empties the line, and the board would be lost.
+    let target: Catalog | null = null;
+    if (current?.lines.length && dependencies.fetchCatalog && dependencies.updateCartLines) {
+      target = await dependencies.fetchCatalog(regionForDestination(quote), quote.country);
+      const {moves, to} = settleOffers(current, target);
+      if (to === 'preorder' && moves.length) await dependencies.updateCartLines(cartId, moves);
+    }
     await dependencies.setCountry(cartId, quote.country);
     changed = true;
-    const summary = await repriceCart(cartId, regionForDestination(quote), env, dependencies, quote.country);
+    const summary = await repriceCart(cartId, regionForDestination(quote), env, dependencies, quote.country, target);
     const response = remember({country: quote.country, applied: true, ...(summary ? {summary} : {})});
     // The cart was just re-planned on a fresh catalog: the cart loader that
     // React Router runs next may re-plan on that read (cart-replan.ts).
@@ -153,13 +165,14 @@ async function repriceCart(
   env: CartCountryEnv,
   dependencies: CartCountryDependencies,
   country?: string,
+  read: Catalog | null = null,
 ): Promise<CartSummary | null> {
   if (!dependencies.getCart) return null;
   let cart = await dependencies.getCart(cartId);
   if (!cart) return null;
   let catalog: Catalog | null = null;
   if (dependencies.fetchCatalog && dependencies.updateCartLines && cart.lines.length) {
-    catalog = await dependencies.fetchCatalog(region, country);
+    catalog = read ?? await dependencies.fetchCatalog(region, country);
     const {refresh} = rederiveLines(cart, catalog, region, env.PUBLIC_COMING_SOON !== '0');
     if (refresh.length) cart = await dependencies.updateCartLines(cartId, refresh);
   }

@@ -53,6 +53,7 @@ export function loader({request, context}: Route.LoaderArgs) {
     getCartId: () => context.session.get(CART_KEY) as string | undefined,
     unsetCartId: () => context.session.unset(CART_KEY),
     getCart: (id) => getCart(context.env, id),
+    removeCartLines: (id, lineIds) => removeCartLines(context.env, id, lineIds),
     logError: (message) => console.error('[shopify-cart] cart read failed', message),
   });
 }

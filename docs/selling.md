@@ -276,10 +276,12 @@ On (`BATCH_CHOICE = "1"`), each of the four boards (OpenFC Lite and OpenESC, 20x
 
 | Offer | Shopify variant | Price | Ships | Where | Limit |
 | --- | --- | --- | --- | --- | --- |
-| Buy now | `<Model> / Buy now` | retail | in a few working days from Belgium | EU only | units left in batch 1 (`paidLeft`), and Shopify denies the sale at zero stock |
+| Buy now | `<Model> / Buy now` | retail | in a few working days from Belgium | EU; retailers everywhere except the US | units left in batch 1 (`paidLeft`), and Shopify denies the sale at zero stock |
 | Pre-order | `<Model> / Pre-order` (the variant the board always had) | the pre-order price | with the March batch | every region | none |
 
-Both variants carry the board's one SKU string, under a Shopify option named `Batch`. `mapShopifyCatalog` folds the pair into one catalog entry and still throws on any other duplicate, unpaired or unknown SKU. `applyCampaign` makes Buy now the entry's offer for an EU buyer while stock is left (with the pre-order beside it as `preorder_offer`); for everyone else the board is a pre-order from the March batch.
+Both variants carry the board's one SKU string, under a Shopify option named `Batch`. `mapShopifyCatalog` folds the pair into one catalog entry and still throws on any other duplicate, unpaired or unknown SKU. `applyCampaign` makes Buy now the entry's offer for an EU buyer while stock is left (with the pre-order beside it as `preorder_offer`), and for a retailer outside the EU and the US whose session carries an applied wholesale code (`DEALER_SESSION_KEY`, read by `catalog-client.ts` on every surface: pages, cart, add, Ship to, checkout, express). For everyone else the board is a pre-order from the March batch.
+
+Shopify enforces the same: the four Buy now variants sit in the delivery profile "Buy now (EU and retailers)", whose zones are the EU and the International market's countries, not the US. A market without a zone in that profile cannot sell the variant, and Shopify then holds the cart line at quantity 0; the cart leaves such a line out and removes it (`zeroLineIds`), and the Ship to switch moves a board to its pre-order before the cart changes market.
 
 | Surface | What shows |
 | --- | --- |
@@ -287,7 +289,7 @@ Both variants carry the board's one SKU string, under a Shopify option named `Ba
 | Home and product page build block | one block per drone size: "Buy now" is the FC and ESC stack, "Pre-order" the full build with every line added as a pre-order (`offer=preorder`) |
 | Cart | one line at the top: "Everything in this cart is in stock and ships in a few working days", or "Everything in this cart ships together by <date>" with "Want the in-stock boards in a few days? Order them separately." |
 
-The cart rule (`settleOffers` in `app/lib/shopify-cart-action.ts`, applied after every add and remove and on each cart page load): a cart of stock items only holds its boards as Buy now (retail, ships in days, up to the units left in batch 1). Once anything in the cart waits for the March batch, the whole order ships together then, so its boards move to their Pre-order variant (pre-order price). Taking the March items out moves them back. Outside the EU every board is a pre-order. Shopify binds the price to the variant, so no cart edit gets a ships-now board at the pre-order price; `batchChoiceConflict` still refuses a checkout of a Buy now board with a March item.
+The cart rule (`settleOffers` in `app/lib/shopify-cart-action.ts`, applied after every add and remove and on each cart page load): a cart of stock items only holds its boards as Buy now (retail, ships in days, up to the units left in batch 1). Once anything in the cart waits for the March batch, the whole order ships together then, so its boards move to their Pre-order variant (pre-order price). Taking the March items out moves them back. Outside the EU every board is a pre-order, except for a retailer with an applied code (above). Shopify binds the price to the variant, so no cart edit gets a ships-now board at the pre-order price; `batchChoiceConflict` still refuses a checkout of a Buy now board with a March item.
 
 Counting: from `choiceFrom` in `content/preorders.json` on, an order line whose recorded variant title names `Pre-order` is a March unit and makes its whole order a March order (`preorderChoiceLine`); `Buy now` lines and every earlier order take batch 1 as before. The hold pass writes the same `batch:<sku>:<n>` tags, so the shipping tool needs no change. The price-step writer skips `Buy now` variants.
 

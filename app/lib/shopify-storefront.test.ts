@@ -170,6 +170,29 @@ describe('Shopify hosted checkout handoff', () => {
       /invalid lines/,
     );
   });
+  it('leaves a line Shopify emptied out of the cart and names it for removal', async () => {
+    const id = 'gid://shopify/Cart/test?key=secret';
+    const node = (n: number, quantity: number) => ({
+      id: `gid://shopify/CartLine/${n}?cart=a`,
+      quantity,
+      attributes: [],
+      cost: {totalAmount: {amount: '1.00', currencyCode: 'EUR'}},
+      merchandise: {
+        id: `gid://shopify/ProductVariant/${n}`, title: 'Default Title', sku: 'A', image: null,
+        selectedOptions: [], product: {title: 'A', handle: 'a'},
+      },
+    });
+    const cart = (await getCart(ENV, id, async () => response({cart: {
+      id,
+      checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc',
+      totalQuantity: 1,
+      cost: {subtotalAmount: {amount: '1.00', currencyCode: 'EUR'}, totalAmount: {amount: '1.00', currencyCode: 'EUR'}},
+      lines: {pageInfo: {hasNextPage: false}, nodes: [node(1, 1), node(2, 0)]},
+    }})))!;
+    assert.deepEqual(cart.lines.map((l) => l.id), ['gid://shopify/CartLine/1?cart=a']);
+    assert.deepEqual(cart.zeroLineIds, ['gid://shopify/CartLine/2?cart=a']);
+  });
+
   it('sends only server-resolved merchandise ids and accepts an allowed checkout origin', async () => {
     let variables: Record<string, unknown> | undefined;
     const fetcher: typeof fetch = async (_input, init) => {

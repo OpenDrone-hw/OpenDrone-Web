@@ -163,7 +163,10 @@ function catalogReader(
   const region = buyerRegion(request, env);
   const country = request ? shipCountryForRequest(request) ?? undefined : undefined;
   const get = async () => withCampaign(env, await load('default'), 'EU', false, waitUntil);
-  const forRegion = async (target: Region, destination = country, exportStock = false): Promise<Catalog> => {
+  // A wholesale buyer (`dealer`) outside the EU and the US buys from Belgian
+  // stock too, on every surface that plans for a region: the cart page, the
+  // add, the Ship to switch and checkout, not only the express Buy now.
+  const forRegion = async (target: Region, destination = country, exportStock = dealer && isInternationalRegion(target)): Promise<Catalog> => {
     if (target === 'EU') return get();
     if (isInternationalRegion(target) && !destination) throw new Error('catalog: international destination missing');
     const [catalog, market] = await Promise.all([

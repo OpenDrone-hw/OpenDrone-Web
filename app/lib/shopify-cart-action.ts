@@ -1269,14 +1269,23 @@ async function recordAttribution(form: FormData, cart: ShopifyCart, dependencies
  */
 export async function loadSessionCart(
   env: CartEnv,
-  dependencies: Pick<ShopifyCartDependencies, 'getCartId' | 'unsetCartId' | 'getCart' | 'logError'>,
+  dependencies: Pick<ShopifyCartDependencies, 'getCartId' | 'unsetCartId' | 'getCart' | 'removeCartLines' | 'logError'>,
 ): Promise<ShopifyCart | null> {
   if (!shopShownOpen(env)) throw fail('Checkout is closed.', 410);
   const id = dependencies.getCartId?.();
   if (!id || !dependencies.getCart) return null;
   try {
-    const cart = await dependencies.getCart(id);
+    let cart = await dependencies.getCart(id);
     if (!cart) dependencies.unsetCartId?.();
+    // Lines Shopify emptied (sold out, or not sold in the cart's market)
+    // leave the cart, so it never carries a line checkout cannot take.
+    if (cart?.zeroLineIds?.length && dependencies.removeCartLines) {
+      try {
+        cart = await dependencies.removeCartLines(id, cart.zeroLineIds);
+      } catch (error) {
+        dependencies.logError?.(`emptied lines not removed: ${error instanceof Error ? error.message : 'unknown error'}`);
+      }
+    }
     return cart;
   } catch (error) {
     dependencies.logError?.(error instanceof Error ? error.message : 'unknown error');
@@ -1349,7 +1358,7 @@ export async function replanCart(
 export async function handleShopifyCartLoader(
   request: Request,
   env: CartEnv,
-  dependencies: Pick<ShopifyCartDependencies, 'getCartId' | 'unsetCartId' | 'getCart' | 'logError'> = {},
+  dependencies: Pick<ShopifyCartDependencies, 'getCartId' | 'unsetCartId' | 'getCart' | 'removeCartLines' | 'logError'> = {},
 ): Promise<Response> {
   if (!shopShownOpen(env)) throw fail('Checkout is closed.', 410);
   if (new URL(request.url).searchParams.get('summary') !== '1') return redirect('/cart');

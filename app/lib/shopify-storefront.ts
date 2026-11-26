@@ -244,6 +244,9 @@ export type ShopifyCart = {
   /** The cart's `buyerIdentity.countryCode`: the market Shopify prices it
    *  in and checkout opens in. Absent or null when none was set. */
   country?: string | null;
+  /** Lines Shopify holds at quantity 0 (not for sale in this market any
+   *  more): left out of `lines`, to be removed from the cart. */
+  zeroLineIds?: string[];
   lines: ShopifyCartLine[];
 };
 
@@ -675,11 +678,17 @@ function validatedCart(
         !line.id ||
         !line.merchandise.id ||
         !Number.isSafeInteger(line.quantity) ||
-        line.quantity < 1,
+        line.quantity < 0,
     )
   ) {
     throw new Error('shopify: cart response has invalid lines');
   }
+  // Shopify keeps a line at quantity 0 when its market can no longer sell
+  // the variant (sold out under the deny policy, or a Buy now board in a
+  // market its shipping profile does not serve). Such a line is not bought
+  // and must not lock the cart: it is left out and named for removal.
+  const zeroLineIds = cart.lines.nodes.filter((line) => line.quantity === 0).map((line) => line.id);
+  const nodes = cart.lines.nodes.filter((line) => line.quantity > 0);
   const checkout = new URL(cart.checkoutUrl);
   const allowed = new Set(
     [required(env, 'SHOPIFY_STORE_DOMAIN'), env.SHOPIFY_CHECKOUT_DOMAIN]
@@ -703,7 +712,8 @@ function validatedCart(
     ...(cart.buyerIdentity?.countryCode ? {country: cart.buyerIdentity.countryCode.toUpperCase()} : {}),
     ...(cart.attributes ? {attributes: cart.attributes} : {}),
     ...(cart.discountCodes ? {discountCodes: cart.discountCodes} : {}),
-    lines: cart.lines.nodes.map((line) => {
+    ...(zeroLineIds.length ? {zeroLineIds} : {}),
+    lines: nodes.map((line) => {
       // Non-EU lines record their region; absence remains the EU default.
       const shipRegion = line.attributes.find(({key}) => key === SHIP_REGION_ATTRIBUTE)?.value;
       const preorder = line.attributes.find(({key}) => key === PREORDER_ATTRIBUTE)?.value
