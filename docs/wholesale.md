@@ -9,8 +9,10 @@ flowchart LR
   B -->|no| X["Reply by mail"]
   B -->|yes| D["Approve button: Worker writes<br/>customer, tags, exemption,<br/>metafields, codes, reads back"]
   D --> E["Welcome mail to the retailer<br/>bcc the company inbox"]
-  E --> F["Cart: enter code<br/>checkout: sign in, pay"]
-  F --> G["Paid unit in its batch"]
+  E --> F["Cart: Discount code<br/>checkout: sign in, pay"]
+  F --> G["Hold pass: tags,<br/>hold or not"]
+  G --> H["Ship: label, or release<br/>and courier for an export"]
+  H --> I["Invoice in Kyte"]
   S["Worker sync<br/>after every price step, hourly catch-up"] -.-> D
 ```
 
@@ -72,6 +74,27 @@ The opendrone.be session is not passed to checkout: the cart is created without 
 3. Pay at checkout.
 
 Checkout re-checks the customer limit against the signed-in address. Shop Pay can sign the buyer in automatically with another Shop account (a personal address): checkout then drops the code without a message and charges full price (seen 30 Oct 2026: an anonymous cart at EUR 21.75 with a code became EUR 26.10 under a Shop Pay login of another address). A retailer who sees full price at checkout signs out of Shop Pay there and signs in with the approved address. The cart shows "Code WS25-NAME applied." once the code is in.
+
+## Ship a retailer order
+
+The hold pass (`planPreorderHolds` in `app/lib/preorder-fulfilment.ts`, run by the Worker on every paid order) tags each order and decides whether it is held. What to do next depends on its tags:
+
+| Order | Hold pass | To ship it |
+|---|---|---|
+| EU, in-stock boards only | `eu-stock` and `batch:<SKU>:1`, not held | label it in the bpost plugin like any order |
+| Anything with a March item, any country | `preorder` and batch tags, held | `scripts/release-batch.mjs` when the batch lands (`docs/selling.md` "Fulfil a batch") |
+| Outside the EU and the US, in-stock boards only (the retailer exception) | `preorder` and `batch:<SKU>:1`, held | `node --experimental-strip-types scripts/release-batch.mjs --sku OPENFC-LITE-2020 --batch 1 --with OPENFC-LITE-3030:1 --with OPENESC-2020:1 --with OPENESC-3030:1` lists it under "ships now"; the same with `--apply` releases the hold. Ship it by courier with an export declaration (decision 2026-11-11: needed above EUR 1,000 as proof the sale is VAT-free); import charges are the retailer's |
+| United Kingdom | also `uk-vat-review`, held | `release-batch.mjs` never releases it (it lists the order as waiting for `uk-vat-review`): keep the gross payment, currency and payment date for the accountant, then release the hold by hand in Shopify admin and ship as the row above |
+
+Customs papers and the export declaration describe each product by its function (controller board, motor driver board), never as drone parts (workspace `AGENTS.md`). An export line reads at checkout and on the order "Shipping: In stock in Belgium, wholesale order, ships by courier, import charges on delivery"; its hidden `_ship_promise`, `_ship_region` and `_batch` let the hold pass count it in batch 1.
+
+## Shopify setup
+
+| What | Where | Keep in step |
+|---|---|---|
+| Customer | tags `wholesale`, `country-xx`, `reverse-charge` when exempt; metafields `wholesale.company`, `wholesale.vat_number` (the invoice reads them) | written by Approve or `wholesale-onboard.py` |
+| Codes | `WS25-NAME` and `-G2` to `-G4`, customer-limited, one per price group | `wholesale-sync.py` and the Worker sync re-point them after a price step |
+| In-stock boards outside the EU | delivery profile "Buy now (EU and retailers)": the four Buy now variants, the EU zones and the International market's zones, not the US. A market without a zone there cannot sell the variant | its International zones and rates are copies of the General profile's: a rate change there is made in both profiles |
 
 ## VAT per case
 
