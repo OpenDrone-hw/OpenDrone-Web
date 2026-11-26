@@ -18,6 +18,8 @@ import {
   sellsBuyNow,
   expressLines,
   handleShopifyCartAction as actualCartAction,
+  lineAttributes,
+  WHOLESALE_EXPORT_SHIPPING,
   splitPlan,
   type ShopifyCartDependencies,
 } from './shopify-cart-action.ts';
@@ -885,6 +887,17 @@ describe('decisions 2026-11-11: where stock ships, and who buys it outside the E
     it('every surface that plans for a region gives a dealer the export stock (source guard)', () => {
       const client = fs.readFileSync(new URL('./catalog-client.ts', import.meta.url), 'utf8');
       assert.match(client, /exportStock = dealer && isInternationalRegion\(target\)/);
+    });
+
+    it('a dealer export line reads as a courier shipment at checkout; the batch promise stays hidden', () => {
+      const board = bySku(applyCampaign(map(true), CONFIG, {}, NOW, 'NEAR', true), FC)!.variant;
+      const attrs = lineAttributes(board, 'NEAR')!;
+      const get = (key: string) => attrs.find((a) => a.key === key)?.value;
+      assert.equal(get('Shipping'), WHOLESALE_EXPORT_SHIPPING);
+      assert.equal(get('Preorder'), undefined, 'no pre-order wording on an in-stock export');
+      assert.equal(get('_ship_promise'), board.ship_promise);
+      assert.equal(get('_ship_region'), 'NEAR');
+      assert.equal(get('_batch'), `${FC}:1`);
     });
 
     it('applying a code remembers the dealer in the session; clearing forgets it', async () => {

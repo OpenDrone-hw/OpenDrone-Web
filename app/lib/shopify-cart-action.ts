@@ -310,6 +310,10 @@ export function shopShownOpen(env: CartEnv & Partial<Pick<Env, 'COMMERCE_SOURCE'
   return dev && env.LOCAL_SHOP_PREVIEW === '1' && env.PUBLIC_COMING_SOON === '0';
 }
 
+/** The checkout line of a retailer's export from Belgian stock, as the
+ *  product page says it (`product-chrome.offer_status_buy_now_wholesale`). */
+export const WHOLESALE_EXPORT_SHIPPING = 'In stock in Belgium, wholesale order, ships by courier, import charges on delivery';
+
 /**
  * The attributes a line of this variant carries: a preorder states its ship
  * promise, so checkout and the order confirmation show the delivery time the
@@ -337,6 +341,17 @@ export function lineAttributes(variant: CatalogVariant, destination: Region | bo
     return [
       {key: SHIPPING_ATTRIBUTE, value: GEO_AVAILABILITY_COPY.en.eu},
       {key: SHIP_PROMISE_ATTRIBUTE, value: promise},
+      ...(batch ? [{key: BATCH_ATTRIBUTE, value: batch}] : []),
+    ];
+  }
+  // A retailer's export from batch 1 stock (outside the EU and the US, the
+  // dealer lane): checkout and the order read the courier line the product
+  // page shows; the batch promise stays hidden for the cart and the hold pass.
+  if (isInternationalRegion(region) && variant.offer === 'buy_now' && euStock(variant)) {
+    return [
+      {key: SHIPPING_ATTRIBUTE, value: WHOLESALE_EXPORT_SHIPPING},
+      {key: SHIP_PROMISE_ATTRIBUTE, value: promise},
+      {key: SHIP_REGION_ATTRIBUTE, value: region},
       ...(batch ? [{key: BATCH_ATTRIBUTE, value: batch}] : []),
     ];
   }

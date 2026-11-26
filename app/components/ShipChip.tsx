@@ -52,7 +52,19 @@ export function useShipGeo() {
  */
 export function useGeoShipText(promise: string | null | undefined): string | null {
   const geo = useShipGeo();
-  return geo && promise && BATCH_ONE.has(promise) ? geoShipText(geo.region, geo.locale) : null;
+  const exportLine = useWholesaleExportLine();
+  if (!promise || !BATCH_ONE.has(promise)) return null;
+  return exportLine ?? (geo ? geoShipText(geo.region, geo.locale) : null);
+}
+
+/** A retailer outside the EU and the US with an applied code (root loader
+ *  `wholesaleExport`) buys batch 1 stock: its line in place of the region's
+ *  "Pre-order, ships March 2027", as the product page states it. */
+function useWholesaleExportLine(): string | null {
+  const root = useRouteLoaderData<RootLoader>('root') as {wholesaleExport?: boolean} | undefined;
+  if (!root?.wholesaleExport) return null;
+  return (copyText('product-chrome.offer_status_buy_now_wholesale') ?? 'In stock in {{stock_from}}, wholesale order, ships by courier, import charges on delivery')
+    .replace('{{stock_from}}', 'Belgium');
 }
 
 /**
@@ -62,7 +74,9 @@ export function useGeoShipText(promise: string | null | undefined): string | nul
  */
 export function useGeoShipLine(short = false): (promise: string | null | undefined) => string | null {
   const geo = useShipGeo();
+  const exportLine = useWholesaleExportLine();
   return (promise) => {
+    if (exportLine && promise && BATCH_ONE.has(promise)) return exportLine;
     if (!geo || !promise || !BATCH_ONE.has(promise) || geo.region === 'fallback') return null;
     return short ? GEO_BAR_SHORT[geo.locale][geo.region] : geoShipText(geo.region, geo.locale);
   };
