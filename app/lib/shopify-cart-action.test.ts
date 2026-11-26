@@ -1345,35 +1345,49 @@ describe('international cart destination handoffs', () => {
 });
 
 describe('Shopify cart action: wholesale code', () => {
-  it('sends the main code with its price-group companions, refuses other codes, clears on empty', async () => {
+  it('sends a wholesale code with its price-group companions, any other code as typed, clears on empty', async () => {
     const sent: string[][] = [];
+    const dealer: Array<string | null> = [];
     const deps: ShopifyCartDependencies = {
       fetchCatalog: async () => CATALOG,
       getCartId: () => 'cart-a',
-      setDiscountCodes: async (_id, codes) => { sent.push(codes); },
+      setDiscountCodes: async (_id, codes) => { sent.push(codes); return codes.map((code) => ({code, applicable: true})); },
+      setDealer: (code) => { dealer.push(code); },
       ...MUST_NOT,
     };
     const ok = await handleShopifyCartAction(request({intent: 'discount', code: ' ws25-fpv24 '}), ENABLED_ENV, deps);
     assert.equal(ok.headers.get('Location'), '/cart');
     assert.deepEqual(sent[0], ['WS25-FPV24', 'WS25-FPV24-G2', 'WS25-FPV24-G3', 'WS25-FPV24-G4']);
-    const bad = await handleShopifyCartAction(request({intent: 'discount', code: 'SUMMER10'}), ENABLED_ENV, deps);
-    // Back with the field open, so the retailer can correct the code.
-    assert.equal(bad.headers.get('Location'), '/cart?wholesale=1&check=code');
-    assert.equal(sent.length, 1);
+    const promo = await handleShopifyCartAction(request({intent: 'discount', code: 'summer10'}), ENABLED_ENV, deps);
+    assert.equal(promo.headers.get('Location'), '/cart');
+    assert.deepEqual(sent[1], ['SUMMER10']);
+    assert.deepEqual(dealer, ['WS25-FPV24', null], 'only a wholesale code makes the session a retailer\'s');
+    const bad = await handleShopifyCartAction(request({intent: 'discount', code: 'NO!CODE'}), ENABLED_ENV, deps);
+    assert.equal(bad.headers.get('Location'), '/cart?check=code');
+    assert.equal(sent.length, 2);
     const cleared = await handleShopifyCartAction(request({intent: 'discount', code: ''}), ENABLED_ENV, deps);
-    assert.equal(cleared.headers.get('Location'), '/cart?wholesale=1');
-    assert.deepEqual(sent[1], []);
+    assert.equal(cleared.headers.get('Location'), '/cart');
+    assert.deepEqual(sent[2], []);
+  });
+  it('takes a code Shopify does not apply out again, with a notice', async () => {
+    const sent: string[][] = [];
+    const res = await handleShopifyCartAction(request({intent: 'discount', code: 'EXPIRED'}), ENABLED_ENV, {
+      fetchCatalog: async () => CATALOG, getCartId: () => 'cart-a', ...MUST_NOT,
+      setDiscountCodes: async (_id, codes) => { sent.push(codes); return codes.map((code) => ({code, applicable: false})); },
+    });
+    assert.equal(res.headers.get('Location'), '/cart?check=code-not-applied');
+    assert.deepEqual(sent, [['EXPIRED'], []]);
   });
   it('returns to the cart with a notice when Shopify fails or does not take the code', async () => {
     const base = {fetchCatalog: async () => CATALOG, getCartId: () => 'cart-a', ...MUST_NOT};
     const failed = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
       ...base, setDiscountCodes: async () => { throw new Error('shopify: cartDiscountCodesUpdate failed'); },
     });
-    assert.equal(failed.headers.get('Location'), '/cart?wholesale=1&check=code-failed');
+    assert.equal(failed.headers.get('Location'), '/cart?check=code-failed');
     const refused = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
       ...base, setDiscountCodes: async (_id, codes) => codes.map((code) => ({code, applicable: false})),
     });
-    assert.equal(refused.headers.get('Location'), '/cart?wholesale=1&check=code-not-applied');
+    assert.equal(refused.headers.get('Location'), '/cart?check=code-not-applied');
     const taken = await handleShopifyCartAction(request({intent: 'discount', code: 'WS25-X1'}), ENABLED_ENV, {
       ...base, setDiscountCodes: async (_id, codes) => codes.map((code, i) => ({code, applicable: i === 0})),
     });

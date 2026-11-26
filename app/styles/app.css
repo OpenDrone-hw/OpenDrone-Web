@@ -7170,6 +7170,16 @@ a.what-chain-chip:hover {
   text-align: right;
 }
 
+/* A discount code lowered the line: its price before the code, struck. */
+.cart-sheet-was {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.cart-register-row.is-discount dd {
+  color: var(--color-gold);
+}
+
 .cart-sheet-total .product-price {
   font-family: var(--font-mono);
   font-weight: 600;

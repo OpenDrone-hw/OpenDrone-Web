@@ -6,8 +6,7 @@
 //   1. one currency: after the ship-to country changes to the US, every line,
 //      the subtotal and the shipping row are in US$, and the old sentence
 //      "This cart was priced for the EU..." is gone;
-//   2. the "Wholesale code" field: absent on /cart after a visit to
-//      /wholesale, present on /cart?wholesale=1;
+//   2. the "Discount code" field: always present in the cart;
 //   3. a cart holding a Buy now board from before the two lanes: on load the
 //      line is a pre-order of the same board, same quantity, with one notice
 //      at the top of the cart (dismissible), and checkout is not refused;
@@ -42,11 +41,7 @@ if (!(await page.locator('.cart-lines-scroll li').count())) fail('cart', 'no lin
 await page.goto(`${BASE}/wholesale`, {waitUntil: 'domcontentloaded'});
 if (!(await page.locator('[data-wholesale-code-link]').count())) fail('wholesale', 'no "Have a wholesale code?" link at the foot of /wholesale');
 await page.goto(`${BASE}/cart?country=BE`, {waitUntil: 'networkidle'});
-if (await page.locator('input[name="code"]:visible').count()) fail('cart after /wholesale', 'the Wholesale code field shows without the parameter');
-await page.goto(`${BASE}/cart?country=BE&wholesale=1`, {waitUntil: 'networkidle'});
-if (!(await page.locator('input[name="code"]').count())) fail('cart ?wholesale=1', 'the Wholesale code field is missing');
-await page.goto(`${BASE}/cart?country=BE`, {waitUntil: 'networkidle'});
-if (await page.locator('input[name="code"]:visible').count()) fail('cart, plain visit again', 'the Wholesale code field is remembered');
+if (!(await page.locator('input[name="code"]:visible').count())) fail('cart', 'the Discount code field is missing');
 
 // 3. A Buy now board slipped in from before the two lanes (written straight
 // into the stand-in's cart, the way an old cart would hold it).

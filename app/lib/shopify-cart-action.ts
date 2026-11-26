@@ -6,7 +6,7 @@ import {requestedLines} from './shopify-cart-input.ts';
 import {destinationForRequest, geoCountryForRequest, isInternationalQuote, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
-import {cartWholesaleCode, wholesaleCartPath, wholesaleCodes, wholesaleMainCode} from './wholesale-codes.ts';
+import {cartWholesaleCode, codesToApply, discountCodeInput, wholesaleCartPath, wholesaleCodes, wholesaleMainCode} from './wholesale-codes.ts';
 import {cartAttributesFromForm, ORDER_ATTRIBUTE} from './growth/attribution.ts';
 import {internationalShippingFrom} from './international-shipping.ts';
 import {GEO_AVAILABILITY_COPY, hasBatchOne} from './geo-availability.ts';
@@ -660,7 +660,7 @@ export function regionForDestination(destination: ShippingQuote | null): Region 
 
 /** Where the checkout intent sends the buyer back to the cart, and why. */
 export const CART_CHECK = {
-  /** The typed wholesale code is not a wholesale code. */
+  /** The typed text cannot be a discount code. */
   code: 'code',
   /** Shopify did not take the wholesale code (unknown, inactive, or no line it covers). */
   codeNotApplied: 'code-not-applied',
@@ -966,26 +966,36 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
     const existingId = dependencies.getCartId?.();
 
     if (intent === 'discount') {
-      // A retailer's personal code (README "Trade"): the main code goes in
-      // with its price-group companions; an empty field clears the codes.
+      // The cart's discount code field. A retailer's personal code (README
+      // "Trade") goes in with its price-group companions and opens the
+      // retailer lane; any other code goes to Shopify as typed. An empty
+      // field clears the codes.
       if (!existingId || !dependencies.setDiscountCodes) throw fail('Cart is empty.', 409);
       const typed = String(form.get('code') ?? '');
-      const main = wholesaleMainCode(typed);
-      if (typed.trim() && !main) return redirect(wholesaleCartPath(CART_CHECK.code));
+      const code = discountCodeInput(typed);
+      if (typed.trim() && !code) return redirect(wholesaleCartPath(CART_CHECK.code));
+      const main = code ? wholesaleMainCode(code) : null;
       // A failed apply returns to the cart with a notice, never the 503 page.
       let applied: Array<{code: string; applicable: boolean}> | void;
       try {
-        applied = await dependencies.setDiscountCodes(existingId, main ? wholesaleCodes(main) : []);
+        applied = await dependencies.setDiscountCodes(existingId, code ? codesToApply(code) : []);
       } catch (error) {
-        dependencies.logError?.(`wholesale code not applied: ${error instanceof Error ? error.message : 'unknown error'}`);
+        dependencies.logError?.(`discount code not applied: ${error instanceof Error ? error.message : 'unknown error'}`);
         return redirect(wholesaleCartPath(CART_CHECK.codeFailed));
       }
       if (main && applied && !cartWholesaleCode(applied)?.applicable) {
         return redirect(wholesaleCartPath(CART_CHECK.codeNotApplied));
       }
-      // Applied or cleared: the field shows with the applied code, or not at all.
+      if (code && !main && applied && !applied.some((c) => c.applicable)) {
+        // Shopify keeps a code it does not apply: take it out again, so the
+        // cart never shows a dead code next to the total.
+        await dependencies.setDiscountCodes(existingId, []).catch(() => undefined);
+        dependencies.setDealer?.(null);
+        return redirect(wholesaleCartPath(CART_CHECK.codeNotApplied));
+      }
+      // Only a wholesale code makes the session a retailer's.
       dependencies.setDealer?.(main);
-      return redirect(main ? '/cart' : wholesaleCartPath());
+      return redirect('/cart');
     }
 
     if (intent === 'update' || intent === 'remove') {

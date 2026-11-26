@@ -59,7 +59,7 @@ import {usePendingShipTo} from '~/lib/pending-ship-to';
 import {cartReplannedFor, planCartPage} from '~/lib/cart-replan';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
-import {cartWholesaleCode, wholesaleCartPath, wholesaleFieldShown, wholesaleVisit} from '~/lib/wholesale-codes';
+import {cartDiscountCode} from '~/lib/wholesale-codes';
 import {Notice} from '~/components/Notice';
 import type {RootLoader} from '~/root';
 import {
@@ -209,14 +209,7 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   const compat = compatForLines(cart?.lines ?? [], country, compatLocale(readLocaleCookie(request.headers.get('Cookie'))));
   // Buy now or pre-order is on: every line says which it is.
   const choice = batchChoiceOn(context.env);
-  // The "Wholesale code" field: only for a retailer's visit while the choice is on.
-  const wholesaleField = wholesaleFieldShown({
-    choice,
-    // Only this URL: nothing remembered from an earlier /wholesale visit.
-    visited: wholesaleVisit(new URL(request.url)),
-    applied: Boolean(cartWholesaleCode(cart?.discountCodes)),
-  });
-  return {cart, info, check, payments, country, shippingFrom, compat, choice, wholesaleField, movedToPreorder, notPriced};
+  return {cart, info, check, payments, country, shippingFrom, compat, choice, movedToPreorder, notPriced};
 }
 
 type Removed = SplitItem[];
@@ -226,8 +219,8 @@ type CartCheck = (typeof CART_CHECK)[keyof typeof CART_CHECK];
 /** The notice per reason the server sent a checkout back to the cart. Every
  *  reason has one: a checkout never lands here without a word. */
 const CHECK_NOTICES: Record<CartCheck, () => string> = {
-  [CART_CHECK.code]: () => t('check_code', 'That is not a wholesale code. Wholesale codes look like WS25-NAME.'),
-  [CART_CHECK.codeNotApplied]: () => t('check_code_not_applied', 'This code does not apply to your cart. Check the code, or mail contact@opendrone.be.'),
+  [CART_CHECK.code]: () => t('check_discount_code', 'That is not a valid discount code.'),
+  [CART_CHECK.codeNotApplied]: () => t('check_discount_not_applied', 'This code does not apply to your cart. Check the code, or mail contact@opendrone.be.'),
   [CART_CHECK.codeFailed]: () => t('check_code_failed', 'Your code could not be applied just now. Try again in a minute, or mail contact@opendrone.be.'),
   [CART_CHECK.paidBatch]: () => t('check_paid_batch', 'Not enough left. Lower the quantity where shown.'),
   [CART_CHECK.shipDate]: () => t('check_ship_date', 'A ship date changed. Check the dates below.'),
@@ -245,7 +238,7 @@ function checkNotice(check: string | null): string | null {
 }
 
 export default function CartPage() {
-  const {cart, info, check, payments, country, shippingFrom, compat, choice, wholesaleField, movedToPreorder, notPriced} = useLoaderData<typeof loader>();
+  const {cart, info, check, payments, country, shippingFrom, compat, choice, movedToPreorder, notPriced} = useLoaderData<typeof loader>();
   const rootData = useRouteLoaderData<RootLoader>('root');
   // Lines moved out for a second order: kept in this browser so the list
   // survives a reload and the trip through checkout.
@@ -294,7 +287,6 @@ export default function CartPage() {
         <PopulatedCart
           cart={cart}
           choice={choice}
-          wholesaleField={wholesaleField}
           info={info}
           payments={payments}
           country={cartQuoteCountry(pendingShipTo ?? country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
@@ -618,12 +610,9 @@ function PopulatedCart({
   shippingFrom,
   onSplit,
   choice = false,
-  wholesaleField = true,
 }: {
   /** Buy now or pre-order is on: each in-stock board is Buy now or Pre-order (`settleOffers`). */
   choice?: boolean;
-  /** Show the "Wholesale code" field (`wholesaleFieldShown`). */
-  wholesaleField?: boolean;
   cart: ShopifyCart;
   info: Record<string, CartLineInfo>;
   payments: string[];
@@ -664,7 +653,11 @@ function PopulatedCart({
   const allStock = choice && cart.lines.every((line) => info[line.id]?.ships === 'now');
   // UK, CH, NO: "Import VAT and duties: paid by you on delivery, unless collected at checkout."
   const dutiesNote = useGeoDutiesNote();
-  const wholesale = cartWholesaleCode(cart.discountCodes);
+  const discount = cartDiscountCode(cart.discountCodes);
+  // What the codes took off: each line's total before and after them. The
+  // subtotal Shopify reports is already after the codes.
+  const undiscounted = cart.lines.reduce((sum, line) => sum + Number((line.undiscounted ?? line.total).amount), 0);
+  const saved = Math.round((undiscounted - Number(cart.subtotal.amount)) * 100) / 100;
 
   // One parcel per order: when lines ship at different times, the early
   // ones wait for the last. Lines waiting for different funding targets do
@@ -746,6 +739,18 @@ function PopulatedCart({
             onBusy={(busy) => onPending(busy ? 1 : -1)}
           />
           <dl className="cart-register">
+            {saved > 0 ? (
+              <>
+                <div className="cart-register-row">
+                  <dt>{t('register_items', 'Items')}</dt>
+                  <dd style={pendingStyle}>{formatPrice(undiscounted, cart.subtotal.currencyCode)}</dd>
+                </div>
+                <div className="cart-register-row is-discount">
+                  <dt>{discount ? t('register_discount_code', 'Discount ({code})', {code: discount.code}) : t('register_discount', 'Discount')}</dt>
+                  <dd style={pendingStyle}>−{formatPrice(saved, cart.subtotal.currencyCode)}</dd>
+                </div>
+              </>
+            ) : null}
             <div className="cart-register-row is-total">
               <dt>
                 {vatIncluded
@@ -812,32 +817,28 @@ function PopulatedCart({
             </p>
           ) : (
             <>
-            {wholesale ? (
+            {discount ? (
             <Form method="post" action="/api/shopify/cart" className="cart-code">
               <input type="hidden" name="intent" value="discount" />
               <input type="hidden" name="code" value="" />
               <p className="text-[13px]" role="status">
-                {wholesale.applicable
-                  ? t('wholesale_code_applied', 'Code {code} applied.', {code: wholesale.code})
-                  : t('wholesale_code_inactive', 'Code {code} does not apply to this cart.', {code: wholesale.code})}
+                {discount.applicable
+                  ? t('discount_code_applied', 'Code {code} applied.', {code: discount.code})
+                  : t('discount_code_inactive', 'Code {code} does not apply to this cart.', {code: discount.code})}
               </p>
-              <button type="submit" className="mt-1 text-[13px] underline underline-offset-4">{t('wholesale_code_remove', 'Remove code')}</button>
+              <button type="submit" className="mt-1 text-[13px] underline underline-offset-4">{t('discount_code_remove', 'Remove code')}</button>
             </Form>
-            ) : wholesaleField ? (
+            ) : (
             <Form method="post" action="/api/shopify/cart" className="cart-code">
               <input type="hidden" name="intent" value="discount" />
               <label className="block text-[13px] text-[var(--color-text-muted)]">
-                {t('wholesale_code', 'Wholesale code')}
-                <input name="code" maxLength={24} autoComplete="off" spellCheck={false} placeholder="WS25-NAME" className="mt-1 block w-full rounded-[var(--r-xs)] border border-[var(--color-field-border)] bg-transparent px-3 py-2 text-[16px] uppercase text-[var(--color-text)]" />
+                {t('discount_code', 'Discount code')}
+                <span className="mt-1 flex gap-2">
+                  <input name="code" maxLength={40} autoComplete="off" spellCheck={false} className="block w-full rounded-[var(--r-xs)] border border-[var(--color-field-border)] bg-transparent px-3 py-2 text-[16px] uppercase text-[var(--color-text)]" />
+                  <button type="submit" className="shrink-0 rounded-[var(--r-xs)] border border-[var(--color-field-border)] px-3 text-[13px] text-[var(--color-text)]">{t('discount_code_apply', 'Apply')}</button>
+                </span>
               </label>
-              <button type="submit" className="mt-2 text-[13px] underline underline-offset-4">{t('wholesale_code_apply', 'Apply code')}</button>
             </Form>
-            ) : (
-            // Hidden field, but findable: a retailer who reaches the cart by
-            // the cart icon has lost ?wholesale=1 from the welcome mail.
-            <p className="cart-code text-[13px]">
-              <Link to={wholesaleCartPath()} preventScrollReset className="underline underline-offset-4">{t('wholesale_code_link', 'Retailer? Enter your wholesale code')}</Link>
-            </p>
             )}
             <Form
               id={CHECKOUT_FORM_ID}
@@ -1102,6 +1103,9 @@ function CartLine({
           />
         </div>
         <div className="cart-sheet-total" style={pending ? {opacity: 0.5} : undefined}>
+          {line.undiscounted ? (
+            <s className="cart-sheet-was">{formatPrice(line.undiscounted.amount, line.undiscounted.currencyCode)}</s>
+          ) : null}
           {formatPrice(line.total.amount, line.total.currencyCode)}
           {line.quantity > 1 ? (
             <small className="cart-sheet-unit">
