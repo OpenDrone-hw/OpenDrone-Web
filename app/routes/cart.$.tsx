@@ -5,7 +5,7 @@ import type {Route} from './+types/cart.$';
 import {compatForLines, compatLocale} from '~/lib/cart-compat';
 import {readLocaleCookie} from '~/lib/i18n';
 import {CompatAlert} from '~/components/commerce/CompatAlert';
-import {batchChoiceOn, fetchPaymentMethods, getCart, updateCartLines, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
+import {batchChoiceOn, fetchPaymentMethods, getCart, removeCartLines, updateCartLines, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
 import {
   CART_CHECK,
   DATES_SEEN_FIELD,
@@ -136,6 +136,7 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
     getCartId: () => context.session.get(CART_KEY) as string | undefined,
     unsetCartId: () => context.session.unset(CART_KEY),
     getCart: (id) => getCart(context.env, id),
+    removeCartLines: (id, lineIds) => removeCartLines(context.env, id, lineIds),
     logError: (message) => console.error('[shopify-cart] cart read failed', message),
   });
   // The destination the header shows is the cart's too: the cart moves to
