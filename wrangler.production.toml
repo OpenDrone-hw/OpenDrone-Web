@@ -72,7 +72,7 @@ WHOLESALE_SYNC_WRITE_ENABLED = "1"
 # the founder's go, the WHOLESALE_APPROVE_SECRET Worker secret and an Admin
 # token with read_customers, write_customers, read_discounts, write_discounts
 # and read_markets.
-WHOLESALE_APPROVE_WRITE_ENABLED = "0"
+WHOLESALE_APPROVE_WRITE_ENABLED = "1"
 # Newsletter welcome sender (src app/lib/growth/welcome-email.ts). opendrone.be is a
 # verified Resend domain; without this the welcome goes from sales@incutec.eu.
 NEWSLETTER_FROM_EMAIL = "hello@opendrone.be"
