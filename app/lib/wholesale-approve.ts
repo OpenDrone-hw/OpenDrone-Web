@@ -340,6 +340,12 @@ export function welcomeMail(m: {
         `3. Meld je bij het afrekenen aan met precies dit e-mailadres: ${m.email}. Shopify mailt je een inlogcode. De code werkt alleen voor dit adres: meldt Shop Pay je aan met een ander adres, dan valt de code weg en zie je de volle prijs. Meld je dan daar af bij Shop Pay en meld je aan met ${m.email}.`,
         `4. Vul bij het afrekenen je bedrijfsnaam in (${company}) en betaal. Verzending wordt normaal aangerekend.`,
         '',
+        'Wat vertrekt wanneer',
+        m.kind === 'us'
+          ? 'Alles vertrekt met de batch die op de productpagina staat.'
+          : `FC's en ESC's die in voorraad zijn in België vertrekken binnen enkele werkdagen${m.kind === 'non-eu' ? ', per koerier' : ''}. De rest vertrekt met de batch die op de productpagina staat.`,
+        "Eén bestelling vertrekt als één pakket: zit er iets in dat op een batch wacht, dan wacht de hele bestelling. Bestel de FC's en ESC's apart om ze meteen te krijgen.",
+        '',
         'Btw',
         vat[m.kind],
         '',
@@ -378,6 +384,12 @@ export function welcomeMail(m: {
       `3. At checkout, sign in with exactly this email address: ${m.email}. Shopify mails you a sign-in code. The code only works for this address: if Shop Pay signs you in with another address, the code drops and you see full price. Then sign out of Shop Pay there and sign in with ${m.email}.`,
       `4. Fill in your company name (${company}) at checkout and pay. Shipping is charged as usual.`,
       '',
+      'What ships when',
+      m.kind === 'us'
+        ? 'Everything ships with the batch shown on its product page.'
+        : `Flight controllers and ESCs in stock in Belgium ship within a few working days${m.kind === 'non-eu' ? ', by courier' : ''}. Everything else ships with the batch shown on its product page.`,
+      'One order ships as one parcel: if it holds an item that waits for a batch, the whole order waits. Order the flight controllers and ESCs on their own to get them now.',
+      '',
       'VAT',
       vat[m.kind],
       '',
@@ -385,6 +397,7 @@ export function welcomeMail(m: {
       m.country === 'BE'
         ? "An invoice in your company's name follows every order, through Peppol."
         : "An invoice in your company's name follows every order by email.",
+      ...(m.country === 'GB' ? ['For the invoice and the customs papers, reply with your VAT and EORI number.'] : []),
       '',
       'Prices and batch dates are on each product page.',
       '',

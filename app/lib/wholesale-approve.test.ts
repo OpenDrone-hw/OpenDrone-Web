@@ -367,6 +367,20 @@ describe('welcome mail', () => {
     assert.match(mail('en', 'eu-vat', 'HU').text, /You did not give a VAT number, so you pay the VAT of Hungary \(27%\)/);
   });
 
+  it('says what ships when: in-stock boards in days (by courier outside the EU), one parcel per order, EORI for the UK', () => {
+    const be = mail('nl', 'be', 'BE').text;
+    assert.match(be, /in voorraad zijn in België vertrekken binnen enkele werkdagen\. /);
+    assert.match(be, /Eén bestelling vertrekt als één pakket/);
+    const gb = mail('en', 'non-eu', 'GB').text;
+    assert.match(gb, /ship within a few working days, by courier\./);
+    assert.match(gb, /One order ships as one parcel/);
+    assert.match(gb, /VAT and EORI number/);
+    assert.doesNotMatch(mail('en', 'non-eu', 'PH').text, /EORI/);
+    const us = mail('en', 'us', 'US').text;
+    assert.match(us, /Everything ships with the batch shown on its product page/);
+    assert.doesNotMatch(us, /within a few working days/);
+  });
+
   it('outside the EU: no EU VAT, duties are the buyer\'s; the US price includes duties', () => {
     const ph = mail('en', 'non-eu', 'PH').text;
     common(ph);
