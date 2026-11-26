@@ -71,7 +71,7 @@ const CART_FIELDS = `#graphql
         id
         quantity
         attributes { key value }
-        cost { totalAmount { amount currencyCode } }
+        cost { subtotalAmount { amount currencyCode } totalAmount { amount currencyCode } }
         merchandise {
           ... on ProductVariant {
             id
@@ -229,6 +229,8 @@ export type ShopifyCartLine = {
   /** The hidden `_batch` attribute, `SKU:N`. */
   batch?: string | null;
   total: ShopifyMoney;
+  /** The line total before discount codes; set only when a code lowered it. */
+  undiscounted?: ShopifyMoney;
 };
 
 export type ShopifyCart = {
@@ -642,7 +644,7 @@ type CartWire = {
       id: string;
       quantity: number;
       attributes: Array<{key: string; value: string}>;
-      cost: {totalAmount: ShopifyMoney};
+      cost: {subtotalAmount?: ShopifyMoney; totalAmount: ShopifyMoney};
       merchandise: {
         id: string;
         title: string;
@@ -748,6 +750,10 @@ function validatedCart(
         ...(availability ? {availability} : {}),
         ...(batch ? {batch} : {}),
         total: line.cost.totalAmount,
+        // The line before its discount codes, when a code lowered it.
+        ...(line.cost.subtotalAmount && Number(line.cost.subtotalAmount.amount) > Number(line.cost.totalAmount.amount) + 0.005
+          ? {undiscounted: line.cost.subtotalAmount}
+          : {}),
       };
     }),
   };

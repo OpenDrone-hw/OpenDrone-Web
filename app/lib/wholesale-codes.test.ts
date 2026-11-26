@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it, test} from 'node:test';
-import {cartWholesaleCode, wholesaleCartPath, wholesaleCodes, wholesaleFieldShown, wholesaleMainCode, wholesaleVisit} from './wholesale-codes.ts';
+import {cartDiscountCode, cartWholesaleCode, codesToApply, discountCodeInput, wholesaleCartPath, wholesaleCodes, wholesaleMainCode} from './wholesale-codes.ts';
 
 test('a wholesale code is normalised and expands to its price groups', () => {
   assert.equal(wholesaleMainCode(' ws25-fpv24 '), 'WS25-FPV24');
@@ -34,25 +34,22 @@ describe('cartWholesaleCode', () => {
   });
 });
 
-describe('the cart shows the wholesale code field to retailers only', () => {
-  const u = (path: string) => new URL(path, 'https://opendrone.be');
-  it('only a URL with the wholesale parameter asks for the field; a visit to /wholesale is not remembered', () => {
-    assert.equal(wholesaleVisit(u('/cart?wholesale=1')), true);
-    assert.equal(wholesaleVisit(u('/products/openfc-lite?wholesale')), true);
-    assert.equal(wholesaleVisit(u('/wholesale')), false);
-    assert.equal(wholesaleVisit(u('/cart')), false);
-    assert.equal(wholesaleVisit(u('/products?q=wholesale')), false);
+describe('the cart discount code field', () => {
+  it('takes any Shopify-shaped code; a wholesale code brings its price groups', () => {
+    assert.equal(discountCodeInput(' summer 10 '), 'SUMMER10');
+    assert.equal(discountCodeInput('ws25-fpv24'), 'WS25-FPV24');
+    for (const bad of ['', ' ', 'A', 'x'.repeat(41), 'NO!CODE']) assert.equal(discountCodeInput(bad), null, bad);
+    assert.deepEqual(codesToApply('SUMMER10'), ['SUMMER10']);
+    assert.deepEqual(codesToApply('WS25-FPV24'), wholesaleCodes('WS25-FPV24'));
   });
-  it('a code apply returns to the cart with the field open', () => {
-    assert.equal(wholesaleCartPath(), '/cart?wholesale=1');
-    assert.equal(wholesaleCartPath('code'), '/cart?wholesale=1&check=code');
+  it('shows a retailer main code for its family, else the code Shopify took', () => {
+    assert.deepEqual(cartDiscountCode([{code: 'WS25-X1', applicable: false}, {code: 'WS25-X1-G2', applicable: true}]), {code: 'WS25-X1', applicable: true});
+    assert.deepEqual(cartDiscountCode([{code: 'SUMMER10', applicable: true}]), {code: 'SUMMER10', applicable: true});
+    assert.deepEqual(cartDiscountCode([{code: 'OLD', applicable: false}]), {code: 'OLD', applicable: false});
+    assert.equal(cartDiscountCode([]), null);
   });
-  it('choice on: hidden for a normal visitor, shown for a retailer visit or an applied code', () => {
-    assert.equal(wholesaleFieldShown({choice: true, visited: false, applied: false}), false);
-    assert.equal(wholesaleFieldShown({choice: true, visited: true, applied: false}), true);
-    assert.equal(wholesaleFieldShown({choice: true, visited: false, applied: true}), true);
-  });
-  it('choice off: shown as before', () => {
-    assert.equal(wholesaleFieldShown({choice: false, visited: false, applied: false}), true);
+  it('a code apply returns to the cart, with its notice', () => {
+    assert.equal(wholesaleCartPath(), '/cart');
+    assert.equal(wholesaleCartPath('code'), '/cart?check=code');
   });
 });

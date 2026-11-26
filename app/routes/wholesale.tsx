@@ -200,10 +200,10 @@ export default function WholesaleRoute() {
         </section>
         <ApplicationForm />
         <p className="wholesale-contact text-[var(--color-text-muted)]">{t('contact_lead')} <a href={`mailto:${email}`} className="text-[var(--color-text)] underline underline-offset-4">{email}</a></p>
-        {/* The only way to the cart's code field: a link that carries the parameter. */}
+        {/* The cart's discount code field takes the retailer's code. */}
         {codeLink ? (
           <p className="wholesale-code-link mt-4 text-[13px] text-[var(--color-text-muted)]">
-            <Link to="/cart?wholesale=1" className="underline underline-offset-4" data-wholesale-code-link>
+            <Link to="/cart" className="underline underline-offset-4" data-wholesale-code-link>
               {copyText('wholesale.code_link') ?? 'Have a wholesale code?'}
             </Link>
           </p>

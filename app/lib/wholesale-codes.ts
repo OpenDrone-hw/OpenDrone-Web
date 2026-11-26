@@ -45,29 +45,34 @@ export function cartWholesaleCode(
   return {code: main.code, applicable: codes!.some((c) => c.applicable && family.has(c.code.toUpperCase()))};
 }
 
-/** The link parameter that opens the cart's "Wholesale code" field:
- *  `/cart?wholesale=1` (any value), the link approved retailers are given
- *  and the one at the foot of /wholesale. */
-export const WHOLESALE_PARAM = 'wholesale';
-
-/** True when this URL asks for the wholesale field: it carries the
- *  `wholesale` parameter. Nothing is remembered: a later plain visit to
- *  /cart on the same (perhaps shared) computer shows no field. */
-export function wholesaleVisit(url: URL): boolean {
-  return url.searchParams.has(WHOLESALE_PARAM);
-}
-
-/**
- * Whether the cart shows the "Wholesale code" field. With buy now or
- * pre-order on (`choice`) only when the cart URL carries the wholesale
- * parameter, or the cart already carries a code (so it can be seen and
- * removed). Off, it shows as before.
- */
-export function wholesaleFieldShown(state: {choice: boolean; visited: boolean; applied: boolean}): boolean {
-  return !state.choice || state.visited || state.applied;
-}
-
-/** Where a code apply returns to: the cart with the field still open. */
+/** Where a code apply returns to: the cart, with its notice when there is one.
+ *  (`/cart?wholesale=1` from older mails still opens the cart; the parameter
+ *  is ignored now that the discount code field always shows.) */
 export function wholesaleCartPath(check?: string): string {
-  return `/cart?${WHOLESALE_PARAM}=1${check ? `&check=${check}` : ''}`;
+  return check ? `/cart?check=${check}` : '/cart';
+}
+
+/** A discount code as typed: trimmed, upper case, no spaces; null when it
+ *  cannot be a Shopify code (empty, too long, or other characters). */
+export function discountCodeInput(input: string): string | null {
+  const code = input.trim().toUpperCase().replace(/\s+/g, '');
+  return /^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(code) ? code : null;
+}
+
+/** The codes to send for what the buyer typed: a wholesale main code with its
+ *  price-group companions, any other code on its own. */
+export function codesToApply(code: string): string[] {
+  const main = wholesaleMainCode(code);
+  return main ? wholesaleCodes(main) : [code];
+}
+
+/** The code the cart shows as applied: a retailer's main code for its whole
+ *  family, else the first code Shopify accepted, else the first one typed. */
+export function cartDiscountCode(
+  codes: ReadonlyArray<{code: string; applicable: boolean}> | undefined,
+): {code: string; applicable: boolean} | null {
+  const wholesale = cartWholesaleCode(codes);
+  if (wholesale) return wholesale;
+  const first = codes?.find((c) => c.applicable) ?? codes?.[0];
+  return first ? {code: first.code, applicable: first.applicable} : null;
 }

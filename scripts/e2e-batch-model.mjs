@@ -419,16 +419,14 @@ for (const locale of ['nl', 'fr']) {
   });
 }
 
-// 16. Wholesale: the field only with ?wholesale=1; the wholesale route and a dealer link read.
-add('wholesale: cart field hidden by default, shown with ?wholesale=1; /wholesale reads', async () => {
+// 16. Discount code: the field always shows in the cart; the wholesale route reads.
+add('discount code: cart field shown; /wholesale reads', async () => {
   const {context, page} = await visitor('BE');
   try {
     await addPreorder(page);
     await open(page, '/cart');
     const field = () => page.locator('input[name="discountCode"], input[name="code"], input[name="wholesaleCode"]');
-    if (await field().count()) throw new Error('wholesale field shown without ?wholesale=1');
-    await open(page, '/cart?wholesale=1');
-    if (!(await field().count())) throw new Error('no wholesale field with ?wholesale=1');
+    if (!(await field().count())) throw new Error('no discount code field in the cart');
     const response = await open(page, '/wholesale');
     if (!response || response.status() >= 400) throw new Error(`/wholesale HTTP ${response?.status()}`);
     await noForbidden(page, '/wholesale');

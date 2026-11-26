@@ -323,8 +323,8 @@ describe('welcome mail', () => {
   const mail = (lang: 'en' | 'nl', kind: MailCase, country: string, vatShown = '') => welcomeMail({...base, lang, kind, country, vatShown});
   const common = (text: string) => {
     assert.match(text, /WS25-EXAMPLESHOP/);
-    assert.match(text, /https:\/\/opendrone\.be\/cart\?wholesale=1/);
-    assert.match(text, /Have a wholesale code\?/);
+    assert.match(text, /https:\/\/opendrone\.be\/cart /);
+    assert.match(text, /Discount code/);
     assert.match(text, /buyer@example\.eu/);
     assert.match(text, /Shop Pay/);
     assert.doesNotMatch(text, /\u2014|\u2013/);
