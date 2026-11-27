@@ -41,15 +41,21 @@ export function HeroBuildChoice({
   activePart?: string | null;
 }) {
   const modes = buildModes(build);
-  const [wanted, setWanted] = useState<BuildMode>('buy_now');
+  // Pre-order the full build by default; "Buy now" is the stack from stock.
+  const [wanted, setWanted] = useState<BuildMode>('preorder');
   const mode: BuildMode = wanted === 'buy_now' && modes.buy_now ? 'buy_now' : 'preorder';
   const shown = modes[mode] ?? modes.preorder;
   // Every part is listed in both modes, so the block keeps one height and
   // the buyer sees what "Buy now" leaves out: a part that is not in the
-  // chosen mode is dimmed and reads "Pre-order" where its price would be.
+  // chosen mode reads "Pre-order" where its price would be, and ticking it
+  // (or its tag) switches the block to the pre-order build.
   const inMode = new Map(shown.parts.map((part) => [part.sku, part]));
   const rows = modes.preorder.parts.map((part) => ({part: inMode.get(part.sku) ?? part, later: !inMode.has(part.sku)}));
   const [selected, setSelected] = useState(() => new Set(build.parts.map((part) => part.sku)));
+  const preorderPart = (sku: string) => {
+    setWanted('preorder');
+    setSelected((previous) => new Set(previous).add(sku));
+  };
   const status = useProductStatusResolver();
   const sellable = (handle: string) => isPurchasableStatus(status(handle));
   // Global PUBLIC_COMING_SOON gate; fail closed when root data is missing.
@@ -67,30 +73,20 @@ export function HeroBuildChoice({
   const qty = Math.min(quantity, maxQuantity);
   const say = (key: string, fallback: string, vars: Record<string, string | number> = {}) => copyFill(`home.${key}`, fallback, vars);
 
-  // One status line: where and when the chosen lane ships.
+  // One short status line, for pre-order only: the stock lane's "in stock,
+  // ships in days" is already the site banner.
   const shipBy = shortCampaignDate(salesDay(SALES.shipsBy));
   const statusLine = !selection.available
     ? null
     : ordinary
       ? say('choice_status_in_stock', 'In stock in {{stock_from}}')
-      : mode === 'buy_now'
-      ? say('choice_status_buy_now', 'In stock in {{stock_from}}, ships in days, {{stock_scope}} only')
-      : shipBy ? say('build_ship_target', 'Ships by {date}', {date: shipBy}) : null;
-  // The pre-order build's total with every part in it, for its option.
-  const fullBuild = heroBuildSelection(modes.preorder, new Set(modes.preorder.parts.map((part) => part.sku)), sellable, comingSoon);
-  const total = (amount: number | null, currency: string | undefined) => (amount !== null && currency ? formatPrice(amount.toFixed(2), currency) : null);
+      : mode === 'preorder' && shipBy
+        ? say('build_ship_target', 'Ships by {date}', {date: shipBy})
+        : null;
 
-  const options: Array<{mode: BuildMode; title: string; what: string}> = [
-    {
-      mode: 'buy_now',
-      title: say('choice_buy_now', 'Buy the stack now'),
-      what: [total(stack?.price ?? null, stack?.currency), say('choice_buy_now_what', '{{stock_lines}}')].filter(Boolean).join(' · '),
-    },
-    {
-      mode: 'preorder',
-      title: say('choice_preorder', 'Pre-order the full build'),
-      what: [total(fullBuild.total, fullBuild.currency), say('choice_preorder_what', 'All parts')].filter(Boolean).join(' · '),
-    },
+  const options: Array<{mode: BuildMode; title: string}> = [
+    {mode: 'preorder', title: say('choice_preorder_short', 'Pre-order')},
+    {mode: 'buy_now', title: say('choice_buy_now_short', 'Buy now')},
   ];
   const lineTotal = selection.total !== null ? Math.round(selection.total * 100 * qty) / 100 : null;
 
@@ -123,7 +119,6 @@ export function HeroBuildChoice({
                 onChange={() => setWanted(option.mode)}
               />
               <strong>{option.title}</strong>
-              <small>{option.what}</small>
             </label>
           ))}
         </fieldset>
@@ -148,10 +143,10 @@ export function HeroBuildChoice({
                 )}
               </span>
               <span className="hero-build-name">
-                <strong>{part.title}</strong>
-                <small>
-                  {part.quantity}× {roleLabel}
-                </small>
+                <strong>
+                  {part.quantity > 1 ? `${part.quantity}× ` : ''}
+                  {part.title}
+                </strong>
               </span>
             </>
           );
@@ -164,10 +159,11 @@ export function HeroBuildChoice({
                 <input
                   type="checkbox"
                   checked={included}
-                  disabled={later}
                   aria-label={copyFill('home.build_include_aria', 'Include {part}', {part: part.title})}
                   onChange={() =>
-                    setSelected((previous) => {
+                    later
+                      ? preorderPart(part.sku)
+                      : setSelected((previous) => {
                       const next = new Set(previous);
                       if (next.has(part.sku)) next.delete(part.sku);
                       else next.add(part.sku);
@@ -193,7 +189,9 @@ export function HeroBuildChoice({
               )}
               <span className="hero-build-price">
                 {later ? (
-                  <span className="hero-build-later">{say('choice_later', 'Pre-order')}</span>
+                  <button type="button" className="hero-build-later" onClick={() => preorderPart(part.sku)}>
+                    {say('choice_later', 'Pre-order')}
+                  </button>
                 ) : !available ? (
                   <Txt id="home.build_unavailable" />
                 ) : part.price === null || !selection.showPrices ? (
@@ -237,10 +235,7 @@ export function HeroBuildChoice({
               <ExpressBuy lines={stack.lines} quantity={qty} product={`stack-${build.id}`} className="hero-build-add" disabled={!selection.available}>
                 <ShoppingBag size={16} aria-hidden="true" />
                 {/* The block's title names the size; a phone drops it from the button. */}
-                <span>
-                  {say('choice_add_buy_now_lead', 'Buy the')} <span className="cta-size">{say('choice_add_buy_now_size', '{size}-inch', {size: build.size})} </span>
-                  {say('choice_add_buy_now_tail', 'stack now')}
-                </span>
+                <span>{say('choice_buy_now_short', 'Buy now')}</span>
                 {lineTotal !== null && selection.currency ? (
                   <span className="hero-build-total">{formatPrice(lineTotal.toFixed(2), selection.currency)}</span>
                 ) : null}
@@ -255,7 +250,7 @@ export function HeroBuildChoice({
                 revenue={lineTotal !== null && selection.currency ? {amount: lineTotal, currency: selection.currency} : null}
               >
                 <ShoppingBag size={16} aria-hidden="true" />
-                {ordinary ? say('choice_add_in_stock', 'Add the full build to cart') : say('choice_add_preorder', 'Pre-order the full build')}
+                {ordinary ? say('choice_add_in_stock', 'Add to cart') : say('choice_preorder_short', 'Pre-order')}
                 {lineTotal !== null && selection.currency ? (
                   <span className="hero-build-total">{formatPrice(lineTotal.toFixed(2), selection.currency)}</span>
                 ) : null}
