@@ -72,7 +72,8 @@ function successfulConsent(customer: Customer | null | undefined, expected: Mark
 
 /**
  * Shopify is the consent owner. An existing unsubscribe is never cleared by
- * signup.
+ * signup (`suppressed`), unless `allowResubscribe` is set: only the signed-in
+ * /account toggle sets it, where the customer explicitly opts back in.
  *
  * `subscribed` means the address actually joined on this call; an address that
  * was already SUBSCRIBED returns `already-subscribed`. Both are successes, and
@@ -89,6 +90,7 @@ export async function subscribeWithShopify(
   email: string,
   productHandle?: string,
   country?: string | null,
+  allowResubscribe = false,
 ): Promise<
   'subscribed' | 'already-subscribed' | 'suppressed' | 'disabled' | 'failed'
 > {
@@ -99,7 +101,9 @@ export async function subscribeWithShopify(
     });
     if (!found) return 'failed';
     const existing = exactCustomer(found.customers.nodes, email);
-    if (existing?.emailMarketingConsent?.marketingState === 'UNSUBSCRIBED') return 'suppressed';
+    if (!allowResubscribe && existing?.emailMarketingConsent?.marketingState === 'UNSUBSCRIBED') {
+      return 'suppressed';
+    }
     const alreadySubscribed =
       existing?.emailMarketingConsent?.marketingState === 'SUBSCRIBED';
     const consent = {

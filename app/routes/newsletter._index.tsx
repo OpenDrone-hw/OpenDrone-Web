@@ -1,7 +1,7 @@
 import {data, useLoaderData} from 'react-router';
 import type {Route} from './+types/newsletter._index';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
-import {checkRateLimit, clientIp} from '~/lib/rate-limit';
+import {checkRateLimit, clientIp, releaseRateLimit} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/turnstile';
 import {subscribeWithShopify} from '~/lib/growth/shopify-newsletter';
 import {appCommerceEnabled} from '~/lib/commerce/app-api';
@@ -212,7 +212,8 @@ export async function action({request, context}: Route.ActionArgs) {
     24 * 60 * 60 * 1000,
   );
   if (!emailLimit.allowed) {
-    // The earlier successful request already recorded consent and tags.
+    // Only successful requests keep their use (a failure releases it below),
+    // so an earlier request already recorded consent and tags.
     return data<NewsletterResult>({
       ok: true,
       message:
@@ -236,6 +237,7 @@ export async function action({request, context}: Route.ActionArgs) {
     shopifyResult === 'already-subscribed' ||
     shopifyResult === 'suppressed';
   if (!subscribed) {
+    releaseRateLimit(`newsletter:email:${email}`);
     return data<NewsletterResult>(
       {
         ok: false,

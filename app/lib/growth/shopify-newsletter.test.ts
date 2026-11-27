@@ -26,6 +26,24 @@ describe('Shopify newsletter ownership', () => {
     assert.equal(calls, 1);
   });
 
+  it('resubscribes an earlier unsubscribe when the signed-in customer opts back in', async () => {
+    const queries: string[] = [];
+    mock.method(globalThis, 'fetch', async (_input: string | URL | Request, init?: RequestInit) => {
+      const {query} = JSON.parse(String(init?.body)) as {query: string};
+      queries.push(query);
+      if (query.includes('NewsletterCustomerByEmail')) {
+        return Response.json({data: {customers: {nodes: [customer('UNSUBSCRIBED')]}}});
+      }
+      if (query.includes('NewsletterConsentUpdate')) {
+        return Response.json({data: {customerEmailMarketingConsentUpdate: {customer: customer('SUBSCRIBED'), userErrors: []}}});
+      }
+      return Response.json({data: {tagsAdd: {userErrors: []}}});
+    });
+    assert.equal(await subscribeWithShopify(ENV, 'pilot@example.com', undefined, null, true), 'subscribed');
+    assert.equal(queries.length, 3);
+    assert.match(queries[1], /NewsletterConsentUpdate/);
+  });
+
   it('never mutates the first fuzzy Shopify search result', async () => {
     const bodies: string[] = [];
     mock.method(globalThis, 'fetch', async (

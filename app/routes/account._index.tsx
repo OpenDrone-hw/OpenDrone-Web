@@ -199,7 +199,8 @@ export async function action({request, context}: Route.ActionArgs) {
   if (!account?.email) return redirectTo('/account?newsletter=unavailable', [], 303);
   const result =
     intent === 'newsletter-subscribe'
-      ? await subscribeWithShopify(env, account.email)
+      ? // The signed-in customer opts back in explicitly, so an earlier unsubscribe does not block it.
+        await subscribeWithShopify(env, account.email, undefined, null, true)
       : await unsubscribeWithShopify(env, account.email);
   const ok = result === 'subscribed' || result === 'already-subscribed' || result === 'unsubscribed';
   return redirectTo(`/account?newsletter=${ok ? 'ok' : 'unavailable'}`, [], 303);

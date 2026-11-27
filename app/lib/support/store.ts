@@ -366,6 +366,24 @@ export function createStore(db: D1Database) {
       return results.map(toTicket);
     },
 
+    /**
+     * Tickets closed since `closedSince` with a staff or community reply the
+     * customer has neither seen nor been mailed about (an answer followed by a
+     * close before the reply notice went out).
+     */
+    async closedWithUnseenReply(closedSince: number, limit: number): Promise<Ticket[]> {
+      const {results} = await db
+        .prepare(
+          `SELECT * FROM support_tickets WHERE status = 'closed' AND closed_at >= ?
+           AND MAX(COALESCE(last_staff_at, 0), COALESCE(last_community_at, 0))
+             > MAX(COALESCE(customer_seen_at, 0), COALESCE(notified_at, 0))
+           LIMIT ?`,
+        )
+        .bind(closedSince, limit)
+        .all<TicketRow>();
+      return results.map(toTicket);
+    },
+
     /** Answered or waiting tickets whose customer has been silent since `before`. */
     async staleTickets(before: number, limit: number): Promise<Ticket[]> {
       const {results} = await db
