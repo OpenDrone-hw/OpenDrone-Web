@@ -47,7 +47,7 @@ page renders as before. Open:
 | Destination | `shippingQuote` zone `us`, rate from `us-sales.json` | unchanged |
 | Prices | the US catalog's USD list price: duties included, no sales tax. The price steps list shows USD too (see "Prices outside the EU" below) | EUR incl. VAT |
 | Counter | "0 / 250 ordered for the March 2027 batch": same sentence and bar as the EU, counting the highlighted batch | "1 / 250 ordered for batch 1" |
-| Batches | one row per batch in batch order in both regions (`app/lib/availability.ts`, `app/components/Availability.tsx`): batch 1 "EU and international, not the US" first, the March 2027 batch "EU, US and more" second; the buyer's batch is highlighted (US: March 2027, with batch 1 tagged "Not available in the US"; EU: batch 1 while units remain); other products one March row | batch 1 highlighted, March 2027 batch below |
+| Batches | one row per batch in batch order in both regions (`app/lib/availability.ts`, `app/components/Availability.tsx`): batch 1 "From Belgium", "EU addresses only" first, the March 2027 batch "March 2027 batch", "Worldwide" second; the buyer's batch is highlighted (US: March 2027, with batch 1 tagged "Not available in the US"; EU: batch 1 while units remain); other products one March row | batch 1 highlighted, March 2027 batch below |
 | Refund line | "If we cannot deliver to you, you get a full refund." (terms 7ter.5, US only) | none |
 | Sells | everything for sale: campaign SKUs from their first US-serving batch, every other SKU (in stock, accessories) as a preorder of `usStock` in `content/preorders.json` (March 2027 batch). Sold out stays sold out | everything for sale |
 | Batch | first batch with room whose `regions` include US | first with room whose `regions` include EU |
@@ -75,8 +75,7 @@ batch tag.
 hand.
 
 The cart line and the checkout line property `Availability` carry the same
-words as the product page ("Batch 1 · EU and international, not the US", "March 2027 batch · EU, US and
-more"; `batchText` in `app/lib/availability.ts`, words from
+words as the product page ("From Belgium, EU addresses only", "March 2027 batch, Worldwide"; `batchText` in `app/lib/availability.ts`, words from
 `content/copy/preorder.json`). Product pages are English only; the legal terms
 (art. 7bis) are unchanged.
 

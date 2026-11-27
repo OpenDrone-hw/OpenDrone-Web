@@ -61,7 +61,7 @@ After the founder's go, the same command with `--apply`: same checks, same write
 
 `app/lib/wholesale-sync.ts` is a port of `scripts/wholesale_lib.py` and `scripts/wholesale-sync.py`; `app/lib/wholesale-sync.test.ts` holds the same fixtures and expected percentages as `scripts/test_wholesale_lib.py`, so a change to the maths changes both. With the switch off the Worker only logs the slots that differ (`[wholesale] dry run`). The Worker's Admin token needs `read_customers`, `read_discounts` and `write_discounts`.
 
-By hand, and as the fallback: `python3 scripts/wholesale-sync.py` (dry run, `--apply`, `--health`) and `python3 scripts/wholesale-check.py WS25-NAME`, which builds a throwaway Storefront cart with every live variant plus the code and its companions and asserts each line costs 75% of retail to the cent. Customer eligibility is enforced only at checkout, so the check proves the prices, not the customer limit. `--health` also reports a tagged customer without codes, codes without the tag, orphan group codes and price drift.
+By hand, and as the fallback: `python3 scripts/wholesale-sync.py` (dry run, `--apply`, `--health`) and `python3 scripts/wholesale-check.py WS25-NAME`, which builds a throwaway Storefront cart with every live variant plus the code and its companions and asserts each line costs 75% of retail to the cent. Add the retailer's country: `--net-country ES` for a reverse-charge EU retailer (75% of retail net of that country's VAT), `--country CH` for a retailer outside the EU (75% of its market's retail); without either the check compares against gross EUR retail, so a correct code for such a retailer fails. Customer eligibility is enforced only at checkout, so the check proves the prices, not the customer limit. `--health` also reports a tagged customer without codes, codes without the tag, orphan group codes and price drift.
 
 Percentages are stored with 4 decimals (0.1667). Every unit still lands on 75% of retail to the cent; a line of N units is up to about N x 0.18 cent cheaper (9 cents on 50 units) because 0.9 x (1 - 0.1667) is 0.74997.
 
@@ -142,7 +142,7 @@ One real order from a test retailer account (a founder-controlled email, tagged 
 
 ## What counts against batch caps
 
-Every paid wholesale unit is a paid customer unit: it fills its batch and moves the price step like any other order (`app/lib/shopify-orders.ts`: paid, not cancelled, not test, `currentQuantity`). Allocation follows the shipping country (`content/preorders.json` `regions`, README "Run a preorder campaign").
+Every paid wholesale unit is a paid customer unit: it fills its batch and moves the price step like any other order (`app/lib/shopify-orders.ts`: paid, not cancelled, not test, `currentQuantity`). Allocation follows the shipping country (`content/preorders.json`: `paidRegions` for the paid batch, a batch's `regions` for the others; docs/selling.md "International preorders").
 
 ## Refund or cancellation
 

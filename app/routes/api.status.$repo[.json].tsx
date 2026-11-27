@@ -19,8 +19,11 @@ import {
  * its parent's roadmap card, or a repo that ROADMAP only names via `repo`
  * while it is private) still get a badge: the ROADMAP `repo` field serves
  * the static status, and any other public OpenDrone-hw repo has its
- * `status-*` topic fetched directly, cached 10 minutes per isolate. A repo
- * with no fetchable status topic is 404.
+ * `status-*` topic fetched directly, cached 10 minutes per isolate. A failed
+ * fetch (GitHub rate limit from the Worker egress) falls back to
+ * BADGE_FALLBACK, the static status of the hub repos that carry a badge but
+ * no roadmap card; like the ROADMAP fallbacks it must lag the topic, never
+ * lead it. Any other repo with no fetchable status topic is 404.
  *
  * Cache: 600 s, the same ceiling as the feeds, so a topic flip reaches the
  * badge in the same window it reaches the shop. `cacheSeconds` tells
@@ -41,6 +44,12 @@ const LABEL: Record<ProductStatus, string> = {
   alpha: 'alpha',
   'in-progress': 'in progress',
   planned: 'planned',
+};
+
+// Badge repos without a roadmap card: the static status served when the
+// live topic cannot be fetched.
+const BADGE_FALLBACK: Record<string, ProductStatus> = {
+  OpenRX: 'alpha',
 };
 
 // Topic fetches for repos ROADMAP does not link, keyed by repo name. Same
@@ -67,7 +76,9 @@ async function fetchRepoStatus(
         signal: AbortSignal.timeout(3500),
       },
     );
-    if (res.ok) {
+    if (!res.ok) {
+      console.warn('[api.status]', repo, 'GitHub topics HTTP', res.status);
+    } else {
       const data = (await res.json()) as {names?: string[]};
       const flag = data.names
         ?.find((t) => t.startsWith('status-'))
@@ -101,7 +112,7 @@ export async function loader({params, context}: Route.LoaderArgs) {
   } else if (item) {
     status = item.status;
   } else {
-    status = await fetchRepoStatus(repo, token);
+    status = (await fetchRepoStatus(repo, token)) ?? BADGE_FALLBACK[repo];
   }
   if (!status) {
     return new Response('not found', {status: 404});

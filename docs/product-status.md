@@ -101,7 +101,7 @@ only after the topic is observed live. This changes lifecycle presentation;
 it does not replace catalog policy, checkout gates or founder approval.
 
 **Test a checkout change:** use mocked cart dependencies for local tests, then
-push the branch to `staging` (README "Hosting and deploy") and pay with
+push the branch to `staging` (docs/deploy.md "Hosting and deploy") and pay with
 Shopify's test gateway. Never use a production flag change or a JSON `live`
 override as a test shortcut.
 
@@ -120,8 +120,8 @@ Shopify is still under the step, that SKU is closed. If one stays closed,
 check `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1` and the `write_products` scope.
 
 **A funding batch's supplier order is placed:** set that batch's `ships` in
-`content/preorders.json`. With `confirmed: true` (README "Run a preorder
-campaign") the batch is produced whatever its count and the site already reads
+`content/preorders.json`. With `confirmed: true` (docs/selling.md "Run a
+preorder campaign") the batch is produced whatever its count and the site already reads
 "Batch confirmed"; without it the order is placed once the target is reached.
 Customer mail about a moved date stays a human send.
 

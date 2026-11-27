@@ -38,20 +38,20 @@ crons = ["*/5 * * * *", "* * * * *"]
 # per-environment secret set with `wrangler secret put SESSION_SECRET` and is
 # never written here.
 [vars]
-# Shop gates (README "Open or close the shop"). Closed: coming soon with the
+# Shop gates (docs/selling.md "Open or close the shop"). Closed: coming soon with the
 # newsletter signup, cart and checkout writes refused. Open: "1" and "0".
 # The Shopify domains and tokens, the per-SKU policy, the webhook secret and
 # the price-step switch are Worker secrets.
 SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
 PUBLIC_COMING_SOON = "0"
-# US consumer preorders (README "Open or close the shop"): "1" opens the US
+# US consumer preorders (docs/selling.md "Open or close the shop"): "1" opens the US
 # to campaign preorders once content/us-sales.json sets the US rate; changing
 # it needs the founder's go. "0" from 2026-11-03 (US sales on hold); "1" again
 # per the founder on 2026-11-05 and 2026-11-11: the US buys the March 2027
 # batch, Belgian stock (batch 1) stays EU only (`paidRegions` in
 # content/preorders.json). Closed, the US reads "Not shipping to the US yet."
 PUBLIC_US_SALES = "1"
-# Buy now or pre-order on the four boards (README "Buy now or pre-order"):
+# Buy now or pre-order on the four boards (docs/selling.md "Buy now or pre-order"):
 # "1" reads each board's `Buy now` Shopify variant and offers batch 1 stock at
 # retail beside the March pre-order. It changes prices shown, so it needs the
 # founder's go, and it goes to "1" only after the `Buy now` variants exist in
@@ -76,30 +76,30 @@ WHOLESALE_APPROVE_WRITE_ENABLED = "1"
 # Newsletter welcome sender (src app/lib/growth/welcome-email.ts). opendrone.be is a
 # verified Resend domain; without this the welcome goes from sales@incutec.eu.
 NEWSLETTER_FROM_EMAIL = "hello@opendrone.be"
-# Support tickets (README "Support"). Shopify writes: the `support` tag and
+# Support tickets (docs/support.md "Support tickets"). Shopify writes: the `support` tag and
 # the `support.tickets` metafield on the matched customer. Reply emails are
 # on by the founder's go of 2026-09-27.
 SUPPORT_SHOPIFY_WRITE_ENABLED = "1"
 SUPPORT_EMAIL_NOTIFY_ENABLED = "1"
 # Preorder fulfillment holds and batch tags: on unless PREORDER_HOLDS_ENABLED is
 # "0" (not set here, so on). Set it to "0" when the Shopify store closes.
-# Customer mail (README "Mail"): Gmail poll that saves a ChatFPV reply as a
+# Customer mail (docs/support.md "Mail"): Gmail poll that saves a ChatFPV reply as a
 # Gmail draft for each customer mail; a person sends it. "0" off, "dry" reports
 # counts only, "1" on. Needs the founder's go; the Gmail credentials are Worker secrets.
 SUPPORT_MAIL_INTAKE_ENABLED = "dry"
 
-# Support CRM (README "Support tickets"): the staff API under /api/staff/support
+# Support CRM (docs/support.md "Support tickets"): the staff API under /api/staff/support
 # for the internal app, and the community route to the public #help forum.
 # "0" off; each needs the founder's go. SUPPORT_CRM_API is on by the founder's
 # go of 2026-10-15. SUPPORT_STAFF_API_TOKEN is a Worker secret. The community
 # route also needs DISCORD_HELP_CHANNEL_ID and the wording marked TODO-LEGAL in
 # app/lib/support/community.ts approved.
 SUPPORT_CRM_API = "1"
-# Editorial evidence for the app (README "Editorial manifest"): GET /api/editorial/manifest and /receipt,
+# Editorial evidence for the app (docs/architecture.md "Editorial manifest"): GET /api/editorial/manifest and /receipt,
 # read only, same credential as the staff API. "0" off; needs the founder's go to turn on.
 EDITORIAL_API = "0"
 SUPPORT_COMMUNITY_ROUTE = "0"
-# ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
+# ChatFPV (docs/support.md "Support tickets"): AI ticket drafts in Discord, the
 # /support Ask box and the product/preorder widget. "1" turns each on.
 # CHATFPV_KEY is a Worker secret.
 CHATFPV_URL = "https://chatfpv.com"
@@ -108,13 +108,13 @@ CHATFPV_ASK_ENABLED = "1"
 CHATFPV_WIDGET_ENABLED = "1"
 # ChatFPV handoff (#cfh tickets on product pages); anonymous, needs no accounts.
 HANDOFF_ENABLED = "1"
-# Shared accounts (README "Shared accounts"): sign-in, /oauth/* for
+# Shared accounts (docs/accounts.md "Shared accounts"): sign-in, /oauth/* for
 # chatfpv.com and the widget assertion.
 # ACCOUNTS_TEST_IDP must never appear in this file (a unit test checks).
 ACCOUNTS_ENABLED = "1"
 CHATFPV_OAUTH_REDIRECTS = "https://chatfpv.com/auth/callback"
 CHATFPV_POST_LOGOUT_REDIRECTS = "https://chatfpv.com/"
-# Opt-in pilot map on /owners (README "Owners map"): Discord link, pins, /account card.
+# Opt-in pilot map on /owners (docs/accounts.md "Owners map"): Discord link, pins, /account card.
 # "1" needs the founder's go; DISCORD_OAUTH_CLIENT_ID and _SECRET are Worker secrets.
 PILOT_MAP_ENABLED = "0"
 # Ops alerts (app/lib/ops-alerts.ts): a failed ChatFPV erase or a data request
@@ -141,7 +141,7 @@ service = "chatfpv"
 [version_metadata]
 binding = "CF_VERSION_METADATA"
 
-# Ticket attachments of the CRM (README "Support tickets"), bucket created 2026-10-15.
+# Ticket attachments of the CRM (docs/support.md "Support tickets"), bucket created 2026-10-15.
 [[r2_buckets]]
 binding = "SUPPORT_FILES"
 bucket_name = "opendrone-support-files"

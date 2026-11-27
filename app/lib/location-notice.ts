@@ -7,7 +7,10 @@
  * CF-IPCountry), and on the cart page when the cart quotes another country
  * than that. Never on a first visit (nothing stored yet: the country is only
  * recorded), never twice for the same change (the announced key is stored),
- * never without a line (`geoFullLine` null).
+ * never without a line (`geoFullLine` null). On a cart with lines it names
+ * only the destination: the cart's own parcel line says when it ships, and
+ * the region's stock line ("In stock, ships in a few working days") would
+ * contradict a cart of pre-order lines.
  *
  * Bundler-free (no `~/` imports) so the node:test suites can load it.
  */
@@ -54,9 +57,12 @@ export function nextLastSeen(lastSeen: string | null | undefined, current: strin
   return code(current) ?? code(lastSeen);
 }
 
-/** "Shipping to {Country}: {line}" in the locale, or null when the country has no line. */
-export function noticeText(country: string, locale: Locale, usOpen = false): string | null {
+/** "Shipping to {Country}: {line}" in the locale, or null when the country has
+ *  no line. `onCart` (a cart with lines): "Shipping to {Country}." alone. */
+export function noticeText(country: string, locale: Locale, usOpen = false, onCart = false): string | null {
   const line = geoFullLine(geoAvailabilityRegion(country, usOpen), locale);
   if (!line) return null;
-  return GEO_NOTICE_COPY[locale].line.replace('{country}', countryName(country.toUpperCase(), locale)).replace('{line}', line);
+  const name = countryName(country.toUpperCase(), locale);
+  if (onCart) return GEO_NOTICE_COPY[locale].destination.replace('{country}', name);
+  return GEO_NOTICE_COPY[locale].line.replace('{country}', name).replace('{line}', line);
 }

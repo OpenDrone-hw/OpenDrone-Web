@@ -340,10 +340,10 @@ export function geoBannerLines(
 }
 
 /** The location notice (LocationNotice): "Shipping to Belgium: In stock in Belgium, ...", and its dismiss label. */
-export const GEO_NOTICE_COPY: Record<Locale, {line: string; dismiss: string}> = {
-  en: {line: 'Shipping to {country}: {line}', dismiss: 'Dismiss the shipping notice'},
-  nl: {line: 'Verzending naar {country}: {line}', dismiss: 'Melding over verzending sluiten'},
-  fr: {line: 'Livraison vers {country} : {line}', dismiss: 'Fermer l’avis de livraison'},
+export const GEO_NOTICE_COPY: Record<Locale, {line: string; destination: string; dismiss: string}> = {
+  en: {line: 'Shipping to {country}: {line}', destination: 'Shipping to {country}.', dismiss: 'Dismiss the shipping notice'},
+  nl: {line: 'Verzending naar {country}: {line}', destination: 'Verzending naar {country}.', dismiss: 'Melding over verzending sluiten'},
+  fr: {line: 'Livraison vers {country} : {line}', destination: 'Livraison vers {country}.', dismiss: 'Fermer l’avis de livraison'},
 };
 
 /**

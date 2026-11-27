@@ -89,7 +89,8 @@ export function LocationNotice() {
     const seen = nextLastSeen(lastSeen, current);
     if (seen) write(NOTICE_LAST_SEEN_KEY, seen);
     if (!notice) return;
-    const line = noticeText(notice.country, locale, usOpen);
+    // On a cart with lines only the destination: the cart's parcel line has the ship date.
+    const line = noticeText(notice.country, locale, usOpen, cartCountry != null);
     if (!line) return;
     write(NOTICE_ANNOUNCED_KEY, notice.key);
     const active = document.activeElement;

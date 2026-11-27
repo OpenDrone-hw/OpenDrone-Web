@@ -270,7 +270,7 @@
     ],
     [
       "General-purpose I/O",
-      "4 PWM-capable pads (DShot, bidirectional)"
+      "4 PWM-capable pins (GPIO28–31) on the 8-pin connector; the Betaflight target runs bidirectional DShot on them"
     ],
     [
       "RX",
@@ -329,6 +329,10 @@
         [
           "UARTs",
           "3"
+        ],
+        [
+          "General-purpose I/O",
+          "4 PWM-capable pins (GPIO22–25) on the 8-pin connector; the Betaflight target runs bidirectional DShot on them"
         ],
         [
           "Input",

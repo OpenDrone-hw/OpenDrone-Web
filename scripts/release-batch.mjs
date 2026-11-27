@@ -21,7 +21,7 @@
 // `batch:SKU:N` tags carry more units than the batch has.
 //
 // After --apply, the released orders are open for fulfilment: import them in
-// the bpost plugin and print the labels (README "Fulfil a batch").
+// the bpost plugin and print the labels (docs/selling.md "Fulfil a batch").
 //
 // Reads SHOPIFY_STORE_DOMAIN, SHOPIFY_ADMIN_API_TOKEN and
 // SHOPIFY_ADMIN_API_VERSION from the environment or .env. The token needs
