@@ -15,5 +15,4 @@ labels: "design:open"
 <!-- Link to Figma, screenshots, or sites that capture the intent. A rough sketch is fine. -->
 
 **Scope check**
-- [ ] This is not a locked or forbidden area
 - [ ] Mobile-first - I've thought about 375px

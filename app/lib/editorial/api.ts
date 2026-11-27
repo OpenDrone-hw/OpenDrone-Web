@@ -1,6 +1,6 @@
 /**
  * GET /api/editorial/manifest and GET /api/editorial/receipt: read-only evidence of the running build for the
- * company app (incutec-app docs/storefront-chatfpv.md, capabilities `editorial.manifest` v1 and
+ * company app (capabilities `editorial.manifest` v1 and
  * `publication.receipt` v1). Publishing stays a person's click (a GitHub merge or the Worker deploy); these only
  * say what is live.
  *
