@@ -14,10 +14,10 @@
     {"before": "2026-11-11T23:00:00Z", "pendingShips": "ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait", "paidShips": "ships late November 2026", "paidDeliveryBy": "2026-11-30"}
   ],
   "skus": {
-    "OPENFC-LITE-2020": {"batches": [{"units": 250, "reserved": 35, "paid": true, "inStock": true, "ships": "in stock in Belgium, ships to EU addresses in a few working days"}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
-    "OPENFC-LITE-3030": {"batches": [{"units": 250, "reserved": 35, "paid": true, "inStock": true, "ships": "in stock in Belgium, ships to EU addresses in a few working days"}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
-    "OPENESC-2020": {"batches": [{"units": 250, "reserved": 35, "paid": true, "inStock": true, "ships": "in stock in Belgium, ships to EU addresses in a few working days"}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
-    "OPENESC-3030": {"batches": [{"units": 250, "reserved": 35, "paid": true, "inStock": true, "ships": "in stock in Belgium, ships to EU addresses in a few working days"}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
+    "OPENFC-LITE-2020": {"batches": [{"units": 250, "reserved": 30, "paid": true, "inStock": true, "ships": "in stock in Belgium, ships to EU addresses in a few working days"}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
+    "OPENFC-LITE-3030": {"batches": [{"units": 250, "reserved": 30, "paid": true, "inStock": true, "ships": "in stock in Belgium, ships to EU addresses in a few working days"}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
+    "OPENESC-2020": {"batches": [{"units": 250, "reserved": 30, "paid": true, "inStock": true, "ships": "in stock in Belgium, ships to EU addresses in a few working days"}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
+    "OPENESC-3030": {"batches": [{"units": 250, "reserved": 30, "paid": true, "inStock": true, "ships": "in stock in Belgium, ships to EU addresses in a few working days"}, {"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
     "OPENRX-LITE": {"batches": [{"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
     "OPENRX-LITE-UFL": {"batches": [{"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
     "OPENRX-MONO": {"batches": [{"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30", "deliveryByINT": "2027-04-30"}]},
