@@ -24,9 +24,14 @@
 //   --apply              write the --record tag; without it the tag is only shown
 //
 // Recipients are paid, non-cancelled, non-test orders since countFrom with a
-// line of the SKU still to ship (currentQuantity above 0). Batches come from
-// the order's `batch:SKU:N` tags, or from the campaign count when the Worker
-// has not tagged it yet. After a send, the order gets the tag
+// line of the SKU still to ship (currentQuantity above 0), or, in an order
+// with no campaign SKU line, a line that ships with it (a `shipsWith`
+// accessory, or a non-EU item following `usStock`), so an accessory-only
+// order is reached under its lead SKU.
+// Batches come from the campaign allocation for an order still waiting (an
+// order tagged before the March rule keeps a stale paid-batch tag), and from
+// the order's `batch:SKU:N` tags for an eu-stock order or one the allocation
+// does not cover (`orderBatchesNow`). After a send, the order gets the tag
 // `notified-<kind>:SKU:N` (a second run skips it unless --again) and a
 // missed email records the reply deadline. Answers are recorded as
 // `preorder-refund:SKU` or `preorder-wait:SKU`; refunds themselves are made
@@ -116,14 +121,23 @@ export function addDays(isoDay, days) {
 
 /**
  * Orders to email for `sku`: counted, with a line of the SKU still to
- * ship, in `batch` when given. `batchesOf(order)` gives the order's
- * batches of the SKU (from tags, else the campaign count).
+ * ship, or, in an order with no campaign SKU line (`leadOf` gives a line's
+ * own SKU for one), a live line whose lead (`leadOf(order, line)`) is the
+ * SKU; in `batch` when given. `batchesOf(order)` gives the order's batches of
+ * the SKU (`orderBatchesNow`).
+ * @param {any[]} orders
+ * @param {{sku: string, batch: number | null, kind: string, again: boolean, isCounted: (order: any) => boolean,
+ *   batchesOf: (order: any) => number[], leadOf?: (order: any, line: any) => string | null}} opts
  */
-export function selectRecipients(orders, {sku, batch, kind, again, isCounted, batchesOf}) {
+export function selectRecipients(orders, {sku, batch, kind, again, isCounted, batchesOf, leadOf}) {
   const out = [];
   for (const order of orders) {
     if (!isCounted(order)) continue;
-    const line = order.lineItems.nodes.find((l) => l.sku?.trim() === sku && l.currentQuantity > 0);
+    const live = order.lineItems.nodes.filter((l) => l.currentQuantity > 0);
+    // An accessory line stands in only for an order with no campaign SKU line
+    // of its own: any other order gets the mail of that SKU.
+    const accessoryOnly = !live.some((l) => leadOf?.(order, l) === l.sku?.trim());
+    const line = live.find((l) => l.sku?.trim() === sku) ?? (accessoryOnly ? live.find((l) => leadOf?.(order, l) === sku) : undefined);
     if (!line) continue;
     const batches = batchesOf(order);
     const matched = batch == null ? batches : batches.filter((b) => b === batch);
@@ -358,11 +372,10 @@ async function main() {
 
   if (opts.send && !process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY is not set');
   const assigned = lib.assignBatches(orders, preorders);
-  const batchesOf = (order) => {
-    const tagged = order.tags.map(lib.parseBatchTag).filter((b) => b && b.sku === opts.sku).map((b) => b.batch);
-    if (tagged.length) return tagged;
-    return (assigned.get(order.id) ?? []).filter((b) => b.sku === opts.sku).map((b) => b.batch);
-  };
+  const batchesOf = (order) =>
+    lib.orderBatchesNow(order, assigned, preorders.shipsWith ?? {}, preorders.usStock)
+      .filter((b) => b.sku === opts.sku)
+      .map((b) => b.batch);
   const recipients = selectRecipients(orders, {
     sku: opts.sku,
     batch: opts.batch,
@@ -370,6 +383,7 @@ async function main() {
     again: opts.again,
     isCounted: lib.isCountedOrder,
     batchesOf,
+    leadOf: (order, line) => lib.leadSkuOf(order, line, preorders),
   });
 
   const today = new Date().toISOString().slice(0, 10);

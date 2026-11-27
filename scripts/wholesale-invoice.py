@@ -35,7 +35,8 @@ ORDER_FIELDS = f"""id name createdAt processedAt displayFinancialStatus cancelle
   lineItems(first:100){{nodes{{sku name quantity currentQuantity discountedUnitPriceAfterAllDiscountsSet{{{MONEY}}}
     taxLines{{rate priceSet{{{MONEY}}}}}}}}}
   shippingLines(first:10){{nodes{{title discountedPriceSet{{{MONEY}}} taxLines{{rate priceSet{{{MONEY}}}}}}}}}
-  currentTotalPriceSet{{{MONEY}}} totalRefundedSet{{{MONEY}}}"""
+  currentTotalPriceSet{{{MONEY}}} totalRefundedSet{{{MONEY}}}
+  transactions(first:50){{kind status gateway formattedGateway processedAt}}"""
 
 # What the invoice says about VAT, per case (docs/wholesale.md, VAT per case and Invoice)
 TEXT_REVERSE = ("Intracommunautaire levering van goederen, vrijgesteld van btw (art. 39bis, 1e lid, 1 WBTW; "
@@ -86,6 +87,24 @@ def find_order(env, number):
     if not nodes:
         raise SystemExit(f"order {name} not found")
     return nodes[0]
+
+
+# Shopify's gateways for a payment marked by hand in admin (the retailer paid by bank transfer)
+MANUAL_GATEWAYS = {"manual", "bank deposit", "bank_deposit"}
+
+
+def payment_of(order):
+    """(how it was paid, payment date) from the order's successful sale and capture transactions: the gateway
+    ("bank transfer" for one marked paid by hand) and the day of the last one. None when Shopify has no payment."""
+    paid = [t for t in order.get("transactions") or [] if t["status"] == "SUCCESS" and t["kind"] in ("SALE", "CAPTURE")]
+    if not paid:
+        return None
+    ways = []
+    for t in paid:
+        way = "bank transfer" if (t.get("gateway") or "").lower() in MANUAL_GATEWAYS else (t.get("formattedGateway") or t.get("gateway") or "unknown")
+        if way not in ways:
+            ways.append(way)
+    return " and ".join(ways), max(t["processedAt"] for t in paid)[:10]
 
 
 def lines_of(order):
@@ -140,7 +159,9 @@ def show(order):
     print(f"  E-mail       {c.get('email')}")
     print(f"  Send via     {'Peppol (Belgian company)' if country == 'BE' else 'e-mail (PDF)'}")
     print()
-    print(f"Invoice date  {order['processedAt'][:10]} (payment date)   VAT case: {case}")
+    payment = payment_of(order)
+    print(f"Invoice date  {payment[1] + ' (payment date)' if payment else order['processedAt'][:10] + ' (order date: no payment in Shopify)'}"
+          f"   VAT case: {case}")
     print(f"{'Description':58} {'Qty':>4} {'Unit excl.':>11} {'Total excl.':>12} {'VAT %':>6}")
     for d, q, unit, n, rate, _ in rows:
         print(f"{d[:58]:58} {q:>4} {unit:>11.4f} {n.quantize(CENT, ROUND_HALF_UP):>12} {rate.normalize():>6}")
@@ -153,7 +174,10 @@ def show(order):
         print(f"\nText on the invoice:\n  {TEXT_REVERSE}\n  Btw-nummer afnemer: {vat}")
     elif country and country not in EU:
         print(f"\nText on the invoice:\n  {TEXT_EXPORT}\n  Customs: describe each product by its function (controller board, motor driver board, ...).")
-    print(f"\nPayment: paid in full via opendrone.be, order {order['name']}. Mark the invoice as paid.")
+    if payment:
+        print(f"\nPayment: paid by {payment[0]} on {payment[1]}, order {order['name']}. Mark the invoice as paid.")
+    else:
+        print(f"\nPayment: Shopify records no payment for {order['name']} ({order['displayFinancialStatus']}): do not mark the invoice as paid.")
     if money(order["totalRefundedSet"]):
         print(f"Refunded {money(order['totalRefundedSet'])}: make a credit note in Kyte for that amount.")
 

@@ -37,7 +37,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const VARIANTS_QUERY = `#graphql
   query OpenDroneCloseRunVariants($first: Int!, $query: String!) {
     productVariants(first: $first, query: $query) {
-      nodes { id sku inventoryPolicy inventoryQuantity inventoryItem { tracked } product { id } }
+      nodes { id sku title inventoryPolicy inventoryQuantity inventoryItem { tracked } product { id } }
     }
   }
 `;
@@ -92,28 +92,37 @@ export function planClose(campaign, config, units) {
 }
 
 /** The writes for the variants of SKUs that close, grouped by product, and
- *  what the dry run reports per SKU. */
+ *  what the dry run reports per variant. Every variant of a closing SKU is
+ *  written: a board's Buy now and Pre-order variants share its one SKU. */
 export function planDeny(close, variants) {
-  const bySku = new Map(variants.filter((v) => v.sku).map((v) => [v.sku.trim(), v]));
+  const bySku = new Map();
+  for (const v of variants) {
+    const sku = v.sku?.trim();
+    if (!sku) continue;
+    bySku.set(sku, [...(bySku.get(sku) ?? []), v]);
+  }
   const writes = new Map();
   const lines = [];
   for (const sku of close) {
-    const v = bySku.get(sku);
-    if (!v) {
+    const list = bySku.get(sku);
+    if (!list) {
       lines.push(`  ${sku}: not in Shopify`);
       continue;
     }
-    const notes = [];
-    if (!v.inventoryItem?.tracked) notes.push('inventory not tracked: DENY does not stop a sale');
-    else if ((v.inventoryQuantity ?? 0) > 0) notes.push(`${v.inventoryQuantity} in stock: DENY still sells them`);
-    if (v.inventoryPolicy === 'DENY') {
-      lines.push(`  ${sku}: already DENY${notes.length ? `, ${notes.join(', ')}` : ''}`);
-      continue;
+    for (const v of list) {
+      const name = list.length > 1 ? `${sku} (${v.title ?? v.id})` : sku;
+      const notes = [];
+      if (!v.inventoryItem?.tracked) notes.push('inventory not tracked: DENY does not stop a sale');
+      else if ((v.inventoryQuantity ?? 0) > 0) notes.push(`${v.inventoryQuantity} in stock: DENY still sells them`);
+      if (v.inventoryPolicy === 'DENY') {
+        lines.push(`  ${name}: already DENY${notes.length ? `, ${notes.join(', ')}` : ''}`);
+        continue;
+      }
+      lines.push(`  ${name}: ${v.inventoryPolicy} -> DENY${notes.length ? `, ${notes.join(', ')}` : ''}`);
+      const forProduct = writes.get(v.product.id) ?? [];
+      forProduct.push({id: v.id, inventoryPolicy: 'DENY'});
+      writes.set(v.product.id, forProduct);
     }
-    lines.push(`  ${sku}: ${v.inventoryPolicy} -> DENY${notes.length ? `, ${notes.join(', ')}` : ''}`);
-    const list = writes.get(v.product.id) ?? [];
-    list.push({id: v.id, inventoryPolicy: 'DENY'});
-    writes.set(v.product.id, list);
   }
   return {writes: [...writes].map(([productId, list]) => ({productId, variants: list})), lines};
 }

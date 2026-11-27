@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from wholesale_lib import (EU, EXEMPTION, GROUPS, WHOLESALE_PERCENT, GroupsDoNotFit, apply_slot, base_price_problem, divisor, gql,  # noqa: E402
+from wholesale_lib import (EU, EXEMPTION, GROUPS, WHOLESALE_PERCENT, GroupsDoNotFit, apply_slot, base_price_problem, divisor, gql, retailer_tags,  # noqa: E402
                            groups, live_variants, load_env, plan_slot, read_code, rounding_check, slot_code, tax_pricing_problem,
                            user_errors)
 
@@ -109,7 +109,7 @@ def main():
         raise SystemExit("refusing: the customer has the reverse charge exemption but this run does not confirm it "
                          f"({why}). Pass --vat with a number VIES confirms, or remove the exemption in Shopify admin first.")
     # country-xx on every retailer: its codes are computed on its own market's prices (wholesale_lib.market_country)
-    tags = sorted(set((cust or {}).get("tags") or []) | {"wholesale", f"country-{cc.lower()}"} | ({"reverse-charge"} if exempt else set()))
+    tags = retailer_tags((cust or {}).get("tags"), cc, exempt)
     exemptions = sorted(set((cust or {}).get("taxExemptions") or []) | ({EXEMPTION} if exempt else set()))
     cust_input = {"email": email, "tags": tags, **({"taxExemptions": exemptions} if exempt else {})}
     old_note = ((cust or {}).get("note") or "").strip()

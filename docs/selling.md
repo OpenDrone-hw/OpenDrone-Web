@@ -303,13 +303,17 @@ hold is applied; a failed attempt is mailed from `notify@bpost.be` to the
 store owner's address. When a batch arrives:
 
 1. `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU> --batch <N>`
-   lists the held orders tagged `batch:<SKU>:<N>`: the ones that ship now, and
-   the ones that still wait for another batch in the same order (an order
-   ships as one parcel). Add `--with <SKU>:<N>` for any other batch that is
+   lists the held orders in `<SKU>` batch `<N>` (by the campaign allocation;
+   an `eu-stock` order, or one the allocation does not cover, by its
+   `batch:<SKU>:<N>` tags): the ones that ship now, and the ones that still
+   wait for another batch in the same order (an order ships as one parcel)
+   or for a hold placed in admin or by another app. Add `--with <SKU>:<N>` for any other batch that is
    also in stock, or settled because its item was refunded or the buyer chose
    to wait.
 2. Run it again with `--apply`. It releases the preorder hold on each order
-   that ships now. Nothing else changes.
+   that ships now and moves its "Fulfill by" from the March date to the
+   batch's promise (paid stock: three working days). An order that fails is
+   listed at the end and stays held; run it again.
 3. In the bpost plugin, import the released orders and print the labels.
 4. Pickup orders are not labelled. A buyer who chose "OpenDrone Leuven" at
    checkout gets Shopify's ready-for-pickup mail once the order is marked

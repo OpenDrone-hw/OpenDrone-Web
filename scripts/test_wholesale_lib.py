@@ -1,10 +1,15 @@
 """python3 scripts/test_wholesale_lib.py : the pure price maths of wholesale_lib.py (stdlib unittest, no network)."""
+import importlib.util
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import wholesale_lib as L  # noqa: E402
+
+_spec = importlib.util.spec_from_file_location("wholesale_invoice", Path(__file__).resolve().parent / "wholesale-invoice.py")
+INVOICE = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(INVOICE)
 
 V = [{"id": "a", "sku": "FC", "price": 35.10, "retail": 39.0},   # 10% step
      {"id": "b", "sku": "RX", "price": 16.80, "retail": 21.0},   # 20% step
@@ -48,6 +53,23 @@ class Maths(unittest.TestCase):
         self.assertEqual(L.customer_country({"tags": ["country-de"], "note": ""}), "DE")
         self.assertEqual(L.customer_country({"tags": [], "note": "VAT EL123456789 VIES valid"}), "GR")
         self.assertEqual(L.customer_divisor({"tags": ["wholesale"], "taxExemptions": [], "note": ""}), 1.0)
+
+    def test_reapproving_under_another_country_drops_the_old_country_tag(self):
+        tags = L.retailer_tags(["country-be", "vip", "wholesale"], "DE", True)
+        self.assertEqual(tags, ["country-de", "reverse-charge", "vip", "wholesale"])
+        self.assertEqual(L.customer_country({"tags": tags, "note": ""}), "DE")
+        self.assertEqual(L.retailer_tags(None, "BE", False), ["country-be", "wholesale"])
+
+    def test_invoice_payment_names_the_gateway_and_its_date(self):
+        tx = lambda kind, status, gateway, day, fmt=None: {"kind": kind, "status": status, "gateway": gateway,
+                                                          "formattedGateway": fmt or gateway, "processedAt": f"{day}T10:00:00Z"}
+        self.assertEqual(INVOICE.payment_of({"transactions": [tx("SALE", "SUCCESS", "manual", "2026-11-02", "Manual")]}),
+                         ("bank transfer", "2026-11-02"))
+        self.assertEqual(INVOICE.payment_of({"transactions": [tx("SALE", "FAILURE", "shopify_payments", "2026-10-29"),
+                                                              tx("SALE", "SUCCESS", "shopify_payments", "2026-10-30", "Shopify Payments"),
+                                                              tx("REFUND", "SUCCESS", "shopify_payments", "2026-11-05")]}),
+                         ("Shopify Payments", "2026-10-30"))
+        self.assertIsNone(INVOICE.payment_of({"transactions": []}))
 
     def test_every_eu_state_has_a_rate(self):
         self.assertEqual(set(L.EU_VAT), L.EU)

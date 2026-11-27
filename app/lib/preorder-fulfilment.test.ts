@@ -21,6 +21,10 @@ import {
   planDeadlines,
   planPreorderHolds,
   planRelease,
+  planReleaseDeadlines,
+  adminGraphql,
+  leadSkuOf,
+  orderBatchesNow,
   shipsFromEuStock,
   syncPreorderHolds,
   EU_STOCK_TAG,
@@ -415,6 +419,49 @@ describe('planRelease', () => {
     assert.equal(b.tags.includes(PROMISE_MISMATCH_TAG), false);
   });
 
+  it('releases by the allocation: an order with a stale batch 1 tag waits for the March batch it is allocated', () => {
+    const stale = order({
+      lines: [['OPENFC-LITE-2020', 1], ['OPENRX-LITE', 1]],
+      tags: ['preorder', 'batch:OPENFC-LITE-2020:1', 'batch:OPENRX-LITE:1'],
+      foStatus: 'ON_HOLD',
+      holds: hold('h5'),
+    });
+    const allocated = assignBatches([stale], CONFIG);
+    assert.deepEqual(planRelease([stale], 'OPENFC-LITE-2020', 1, new Set(), {}, undefined, allocated), []);
+    const [plan] = planRelease([stale], 'OPENFC-LITE-2020', 2, new Set(), {}, undefined, allocated);
+    assert.deepEqual(plan.waitsFor, ['batch:OPENRX-LITE:1']);
+    // An eu-stock order keeps its tags: they record the stock it took.
+    const stock = order({lines: [['OPENFC-LITE-2020', 1]], tags: [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1'], foStatus: 'ON_HOLD', holds: hold('h6')});
+    assert.equal(planRelease([stock], 'OPENFC-LITE-2020', 1, new Set(), {}, undefined, assignBatches([stock], CONFIG)).length, 1);
+  });
+
+  it('keeps an order with a hold of another handle waiting, and names it', () => {
+    const edited = order({lines: [['OPENFC-LITE-2020', 1]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1'], foStatus: 'ON_HOLD', holds: hold('h7')});
+    edited.fulfillmentOrders.nodes.push({
+      id: 'gid://shopify/FulfillmentOrder/edited',
+      status: 'ON_HOLD',
+      fulfillmentHolds: [{id: 'h8', handle: 'c21a0be4', reasonNotes: null}],
+    });
+    const [plan] = planRelease([edited], 'OPENFC-LITE-2020', 1, new Set());
+    assert.deepEqual(plan.waitsFor, ['another hold (c21a0be4), release it in Shopify admin']);
+    assert.deepEqual(plan.release, [{id: edited.fulfillmentOrders.nodes[0].id, holdIds: ['h7']}]);
+  });
+
+  it('moves a released order\'s Fulfill by from the March date to its batch promise', () => {
+    const march = '2027-03-11T23:59:59Z';
+    const paid = order({lines: [['OPENFC-LITE-2020', 1]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1'], foStatus: 'ON_HOLD', holds: hold('h9'), fulfillBy: march});
+    const early = order({lines: [['OPENFC-LITE-2020', 1]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1'], foStatus: 'ON_HOLD', holds: hold('h10'), fulfillBy: '2026-11-20T00:00:00Z'});
+    const plans = planRelease([paid, early], 'OPENFC-LITE-2020', 1, new Set());
+    // Friday 27 November: three working days on is Wednesday 2 December.
+    assert.deepEqual(planReleaseDeadlines([paid, early], plans, CONFIG, 'OPENFC-LITE-2020', 1, new Date('2026-11-27T15:00:00Z')), [
+      {deadline: '2026-12-02T23:59:59Z', ids: [paid.fulfillmentOrders.nodes[0].id]},
+    ]);
+    // Released with the funding batch: the ship-by date it already has.
+    const funding = order({lines: [['OPENRX-LITE', 1]], tags: ['preorder', 'batch:OPENRX-LITE:1'], foStatus: 'ON_HOLD', holds: hold('h11'), fulfillBy: march});
+    const fundingPlans = planRelease([funding], 'OPENRX-LITE', 1, new Set());
+    assert.deepEqual(planReleaseDeadlines([funding], fundingPlans, CONFIG, 'OPENRX-LITE', 1, new Date('2026-11-27T15:00:00Z')), []);
+  });
+
   it('ignores a batch whose line was refunded', () => {
     const refundedRx = order({
       lines: [['OPENFC-LITE-2020', 1], ['OPENRX-LITE', 0]],
@@ -508,9 +555,9 @@ describe('batch promise mismatch', () => {
     assert.equal(planPreorderHolds([first, done], SMALL).some((p) => p.orderId === done.id), false);
   });
 
-  it('reports a batch whose tags carry more units than it has', () => {
-    const a = order({lines: [['OPENFC-LITE-2020', 2]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1']});
-    const b = order({lines: [['OPENFC-LITE-2020', 1]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1']});
+  it('reports a batch whose stock tags carry more units than it has', () => {
+    const a = order({lines: [['OPENFC-LITE-2020', 2]], tags: [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1']});
+    const b = order({lines: [['OPENFC-LITE-2020', 1]], tags: [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1']});
     const c = order({lines: [['OPENFC-LITE-2020', 300]], tags: ['preorder', 'batch:OPENFC-LITE-2020:2']});
     assert.deepEqual(overfullBatches([a, b, c], SMALL), [{sku: 'OPENFC-LITE-2020', batch: 1, units: 2, tagged: 3}]);
     assert.deepEqual(overfullBatches([a], SMALL), []);
@@ -526,10 +573,18 @@ describe('batch promise mismatch', () => {
     const batches = assignBatches([a, b], reserved);
     assert.deepEqual(batches.get(a.id)!.map((x) => [x.batch, x.units]), [[1, 1]]);
     assert.deepEqual(batches.get(b.id)!.map((x) => [x.batch, x.units]), [[1, 1], [2, 1]]);
-    const t1 = order({lines: [['OPENFC-LITE-2020', 2]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1']});
-    const t2 = order({lines: [['OPENFC-LITE-2020', 1]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1']});
+    const t1 = order({lines: [['OPENFC-LITE-2020', 2]], tags: [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1']});
+    const t2 = order({lines: [['OPENFC-LITE-2020', 1]], tags: [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1']});
     assert.deepEqual(overfullBatches([t1], reserved), []);
     assert.deepEqual(overfullBatches([t1, t2], reserved), [{sku: 'OPENFC-LITE-2020', batch: 1, units: 2, tagged: 3}]);
+  });
+
+  it('counts a held order by its allocation: a stale paid-batch tag from before the March rule is not overfull', () => {
+    // Tagged batch 1 before founder 2026-11-01; its RX line makes it a March order (allocation: batch 2).
+    const stale = order({lines: [['OPENFC-LITE-2020', 2], ['OPENRX-LITE', 1]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1', 'batch:OPENRX-LITE:1']});
+    const stock = order({lines: [['OPENFC-LITE-2020', 2]], tags: [EU_STOCK_TAG, 'batch:OPENFC-LITE-2020:1']});
+    assert.deepEqual(assignBatches([stale, stock], SMALL).get(stale.id)!.map((b) => [b.sku, b.batch]), [['OPENFC-LITE-2020', 2]]);
+    assert.deepEqual(overfullBatches([stale, stock], SMALL), []);
   });
 
   it('counts the orders the planner would hold that carry no hold', () => {
@@ -1119,5 +1174,63 @@ describe('grandfathered lines: mixed orders, and the storefront count agrees wit
     }
     // FC batch 1: 4 EU + 1 grandfathered GB + 2 grandfathered CA (after the refund).
     assert.equal(batchFill(NOW.skus['OPENFC-LITE-2020'].batches, runs['OPENFC-LITE-2020'])[0], 7);
+  });
+});
+
+describe('adminGraphql', () => {
+  it('retries a THROTTLED answer after the wait its cost names, then returns the data', async () => {
+    const waits: number[] = [];
+    let calls = 0;
+    const fetcher = (async () => {
+      calls += 1;
+      if (calls < 3) {
+        return Response.json({
+          errors: [{message: 'Throttled', extensions: {code: 'THROTTLED'}}],
+          extensions: {cost: {requestedQueryCost: 290, throttleStatus: {currentlyAvailable: 90, restoreRate: 100}}},
+        });
+      }
+      return Response.json({data: {ok: true}});
+    }) as unknown as typeof fetch;
+    const data = await adminGraphql<{ok: boolean}>(ENV, 'query X { shop { id } }', {}, fetcher, async (ms) => { waits.push(ms); });
+    assert.deepEqual([data, calls, waits], [{ok: true}, 3, [2000, 2000]]);
+  });
+
+  it('gives up after a few throttled answers, and never retries another error', async () => {
+    let calls = 0;
+    const throttled = (async () => {
+      calls += 1;
+      return Response.json({errors: [{message: 'Throttled', extensions: {code: 'THROTTLED'}}]});
+    }) as unknown as typeof fetch;
+    await assert.rejects(adminGraphql(ENV, 'query X { shop { id } }', {}, throttled, async () => {}), /Throttled/);
+    assert.equal(calls, 5);
+    calls = 0;
+    const denied = (async () => {
+      calls += 1;
+      return Response.json({errors: [{message: 'Access denied'}]});
+    }) as unknown as typeof fetch;
+    await assert.rejects(adminGraphql(ENV, 'query X { shop { id } }', {}, denied, async () => {}), /Access denied/);
+    assert.equal(calls, 1);
+  });
+});
+
+describe('orderBatchesNow and leadSkuOf', () => {
+  const WITH_US = parseCampaignConfig({
+    ...CONFIG,
+    usStock: {sku: 'OPENFC-LITE-2020', batch: 2},
+    shipsWith: {'ACC-PROP-5-HQ-5X43X3-V2S': {sku: 'OPENFC-LITE-2020', batch: 2}},
+  });
+
+  it('reads an accessory-only order under its lead, by allocation, tags only as a fallback', () => {
+    const props = order({lines: [['ACC-PROP-5-HQ-5X43X3-V2S', 3]], tags: ['preorder', 'batch:OPENFC-LITE-2020:2']});
+    const line = props.lineItems.nodes[0];
+    assert.equal(leadSkuOf(props, line, WITH_US), 'OPENFC-LITE-2020');
+    assert.deepEqual(orderBatchesNow(props, assignBatches([props], WITH_US)), [{sku: 'OPENFC-LITE-2020', batch: 2}]);
+    // Not counted (no allocation): its live tags.
+    const unpaid = order({lines: [['ACC-PROP-5-HQ-5X43X3-V2S', 3]], tags: ['batch:OPENFC-LITE-2020:2'], status: 'PENDING'});
+    assert.deepEqual(orderBatchesNow(unpaid, assignBatches([unpaid], WITH_US), WITH_US.shipsWith), [{sku: 'OPENFC-LITE-2020', batch: 2}]);
+    const us = order({lines: [['ACC-OTHER', 1]], country: 'US', usPromise: true});
+    assert.equal(leadSkuOf(us, us.lineItems.nodes[0], WITH_US), 'OPENFC-LITE-2020');
+    const eu = order({lines: [['ACC-OTHER', 1]]});
+    assert.equal(leadSkuOf(eu, eu.lineItems.nodes[0], WITH_US), null);
   });
 });
