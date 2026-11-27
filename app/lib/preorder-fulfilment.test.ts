@@ -783,6 +783,20 @@ describe('US and EU orders in one campaign', () => {
     assert.equal(plans.has(reviewed.id), false);
   });
 
+  it('holds and tags us-review a US order holding a Belgian-stock (Buy now) board, however it reached checkout', () => {
+    // The Buy now boards share the General delivery profile (one shipping rate
+    // per parcel), so Shopify itself does not refuse them for the US: the site
+    // refuses them at add, and this hold is the backstop.
+    const euLine = order({lines: [['OPENFC-LITE-2020', 1]], country: 'US', promise: 'In stock in Belgium, ships in a few working days', batch: 'OPENFC-LITE-2020:1'});
+    const bare = order({lines: [['OPENFC-LITE-2020', 1, false]], country: 'US'});
+    const plans = new Map(planPreorderHolds([euLine, bare], REGIONAL).map((p) => [p.orderId, p]));
+    for (const o of [euLine, bare]) {
+      const plan = plans.get(o.id);
+      assert.ok(plan?.tags.includes(US_REVIEW_TAG), o.name);
+      assert.deepEqual(plan!.hold, [o.fulfillmentOrders.nodes[0].id]);
+    }
+  });
+
   it('gives a US line for an unlisted SKU the usStock batch and no review; without the US line property it stays under review', () => {
     const withUsStock = parseCampaignConfig({
       countFrom: '2026-09-21',
