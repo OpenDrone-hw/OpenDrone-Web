@@ -153,7 +153,7 @@ export function HeroBuildChoice({
           return (
             <li
               key={part.sku}
-              className={`hero-build-part${included ? '' : ' is-excluded'}${later ? ' is-later' : ''}${activePart === role.beat ? ' is-active' : ''}`}
+              className={`hero-build-part${included || later ? '' : ' is-excluded'}${later ? ' is-later' : ''}${activePart === role.beat ? ' is-active' : ''}`}
             >
               <label className="hero-build-check">
                 <input
