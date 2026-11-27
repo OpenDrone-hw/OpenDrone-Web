@@ -94,7 +94,7 @@ Customs papers and the export declaration describe each product by its function 
 |---|---|---|
 | Customer | tags `wholesale`, `country-xx`, `reverse-charge` when exempt; metafields `wholesale.company`, `wholesale.vat_number` (the invoice reads them) | written by Approve or `wholesale-onboard.py` |
 | Codes | `WS25-NAME` and `-G2` to `-G4`, customer-limited, one per price group | `wholesale-sync.py` and the Worker sync re-point them after a price step |
-| In-stock boards outside the EU | delivery profile "Buy now (EU and retailers)": the four Buy now variants, the EU zones and the International market's zones, not the US. A market without a zone there cannot sell the variant | its International zones and rates are copies of the General profile's: a rate change there is made in both profiles |
+| In-stock boards outside the EU | the General delivery profile, like every product (one shipping rate per parcel). The site sells Buy now outside the EU only to a retailer with an applied code, never to the US; a US order holding a Belgian-stock board is held and tagged `us-review` | keep one delivery profile: a second one charges a mixed cart a rate per profile |
 
 ## VAT per case
 
