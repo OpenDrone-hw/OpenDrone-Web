@@ -293,7 +293,9 @@ export async function approveApplication(
   const inbox = companyInbox(env);
   const sent = await sendTradeMail(env, {
     to: [plan.mail.to], replyTo: inbox, bcc: [inbox], subject: plan.mail.subject, text: plan.mail.text,
-    key: `wholesale-welcome-${await sha256Hex(`${plan.mail.to}|${plan.main}`)}`,
+    // The text is in the key: a changed welcome text is a new mail, and Resend's
+    // 409 for the same key means this exact mail was already sent.
+    key: `wholesale-welcome-${await sha256Hex(JSON.stringify([plan.mail.to, plan.main, plan.mail.subject, plan.mail.text]))}`, repeatIsSent: true,
   }, fetcher);
   return {status: 'approved', plan, readBack, mail: sent ? 'sent' : 'failed'};
 }

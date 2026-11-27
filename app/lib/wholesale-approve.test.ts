@@ -65,7 +65,7 @@ const VARIANTS = [
 ];
 const amount = (x: string | null, intl: boolean) => (x === null ? null : {amount: intl ? (Math.round((Number(x) / 1.21) * 100) / 100).toFixed(2) : x});
 
-function world({vies = {isValid: true, userError: 'VALID'} as unknown, customer = null as Cust | null, codes = [] as Code[], inclusive = 'INCLUDES_TAXES_IN_PRICE', intlDecrease = 17.36} = {}) {
+function world({vies = {isValid: true, userError: 'VALID'} as unknown, customer = null as Cust | null, codes = [] as Code[], inclusive = 'INCLUDES_TAXES_IN_PRICE', intlDecrease = 17.36, mailStatus = 200} = {}) {
   const mutations: string[] = [];
   const mails: Array<{headers: Record<string, string>; body: Record<string, unknown>}> = [];
   const customers: Cust[] = customer ? [customer] : [];
@@ -78,7 +78,7 @@ function world({vies = {isValid: true, userError: 'VALID'} as unknown, customer 
     }
     if (u.includes('api.resend.com')) {
       mails.push({headers: init?.headers as Record<string, string>, body: JSON.parse(String(init?.body)) as Record<string, unknown>});
-      return new Response('{}');
+      return new Response('{}', {status: mailStatus});
     }
     const {query: q, variables: v} = JSON.parse(String(init?.body)) as {query: string; variables: Record<string, unknown>};
     const json = (data: unknown) => new Response(JSON.stringify({data}));
@@ -294,6 +294,15 @@ describe('approve', () => {
     assert.equal(w.state.length, 3);
     assert.equal(c.note, '2026-11-23 VAT DE123456789 VIES valid'); // the note line is not repeated
     assert.equal(w.mails[1].headers['Idempotency-Key'], w.mails[0].headers['Idempotency-Key']);
+  });
+
+  it('the welcome mail key holds its text, and a 409 for that key means it was already sent', async () => {
+    const w = world({mailStatus: 409});
+    const r = await approveApplication(ON, DE, {fetcher: w.fetcher, now: NOW});
+    assert.ok(r.status === 'approved' && r.mail === 'sent');
+    const other = world();
+    await approveApplication(ON, {...DE, contact: 'Someone Else'}, {fetcher: other.fetcher, now: NOW});
+    assert.notEqual(other.mails[0].headers['Idempotency-Key'], w.mails[0].headers['Idempotency-Key']);
   });
 
   it('a new customer is created and the codes are limited to it', async () => {
