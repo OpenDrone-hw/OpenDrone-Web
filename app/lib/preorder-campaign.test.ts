@@ -1000,14 +1000,14 @@ describe('reserved units on a paid batch', () => {
     const config = parseCampaignConfig(
       JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')),
     );
-    // Batch 1 sells 215 per SKU: 35 held back for reviewers and testing
-    // (founder 2026-10-30, "we hold 35 per sku ourselves"). Order #1504 counts as a paid order once paid,
+    // Batch 1 sells 220 per SKU: 30 held back for reviewers, testing and
+    // discards (founder count 2026-11-27: 220 sellable per board). Order #1504 counts as a paid order once paid,
     // so no extra reserve for it (it would count twice); same for #1507 (paid 2026-11-02).
     const reserved: Record<string, number> = {
-      'OPENFC-LITE-2020': 35,
-      'OPENFC-LITE-3030': 35,
-      'OPENESC-2020': 35,
-      'OPENESC-3030': 35,
+      'OPENFC-LITE-2020': 30,
+      'OPENFC-LITE-3030': 30,
+      'OPENESC-2020': 30,
+      'OPENESC-3030': 30,
     };
     for (const [sku, held] of Object.entries(reserved)) {
       const [paid, funding] = config.skus[sku].batches;

@@ -113,7 +113,7 @@ describe('offers: buy now at retail, pre-order at the early price', () => {
     assert.equal(board.compare_price, null);
     assert.equal(board.campaign?.paidStock, true);
     assert.equal(board.campaign?.inStock, true);
-    assert.equal(board.campaign?.paidLeft, 65);
+    assert.equal(board.campaign?.paidLeft, 70);
     assert.equal(board.campaign?.earlyPrice, false);
     assert.equal(board.buy_now, undefined);
     const preorder = board.preorder_offer!;
@@ -136,7 +136,7 @@ describe('offers: buy now at retail, pre-order at the early price', () => {
   it('outside the EU, at zero stock, or when Shopify denies it: pre-order only, from the March batch', () => {
     const cases: Array<[string, Catalog]> = [
       ['US', live({}, 'US')],
-      ['batch 1 sold', live({[FC]: 215})],
+      ['batch 1 sold', live({[FC]: 220})],
       ['Shopify out of stock', applyCampaign(map(true, choiceCatalogData({buyNowAvailable: false})), CONFIG, {[FC]: 10}, NOW)],
     ];
     for (const [name, catalog] of cases) {
@@ -201,7 +201,7 @@ describe('paid units: each variant counts as what it sold', () => {
     );
     // 3 + 2 (sold as stock before the choice) + 4 buy now take batch 1; 5 are March units.
     assert.deepEqual(runs[FC], [{region: 'EU', units: 9}, {region: 'EU', units: 5, march: true}]);
-    assert.equal(bySku(applyCampaign(map(true), CONFIG, runs, NOW), FC)!.variant.campaign?.paidLeft, 206);
+    assert.equal(bySku(applyCampaign(map(true), CONFIG, runs, NOW), FC)!.variant.campaign?.paidLeft, 211);
   });
 
   const order = (id: number, createdAt: string, lines: Array<[string, string, number]>, attributes: Array<{key: string; value: string}> = []): PreorderOrder => ({
@@ -237,8 +237,8 @@ describe('paid units: each variant counts as what it sold', () => {
       CONFIG.countFrom, new Set([FC, 'OPENESC-2020']), fetcher, CONFIG,
     );
     const after = applyCampaign(map(true), CONFIG, runs, NOW);
-    assert.equal(bySku(after, FC)!.variant.campaign?.paidLeft, 212);
-    assert.equal(bySku(after, 'OPENESC-2020')!.variant.campaign?.paidLeft, 212);
+    assert.equal(bySku(after, FC)!.variant.campaign?.paidLeft, 217);
+    assert.equal(bySku(after, 'OPENESC-2020')!.variant.campaign?.paidLeft, 217);
   });
 
   it('an express stack order: both boards take batch 1, tagged batch:<sku>:1', () => {
@@ -327,10 +327,10 @@ describe('cart: in-stock boards ship now unless the cart waits for March', () =>
     assert.deepEqual(moves([buyNowLine(1, 2)], live()), {moves: [], to: null});
   });
   it('EU, more boards than the stock left: the board stays a pre-order', () => {
-    assert.deepEqual(moves([preorderLine(2, 3)], live({[FC]: 213})), {moves: [], to: null});
+    assert.deepEqual(moves([preorderLine(2, 3)], live({[FC]: 218})), {moves: [], to: null});
   });
   it('outside the EU, or batch 1 gone: a Buy now board moves to pre-order (no in-stock boards there)', () => {
-    for (const catalog of [live({}, 'US'), live({[FC]: 215})]) {
+    for (const catalog of [live({}, 'US'), live({[FC]: 220})]) {
       assert.deepEqual(moves([buyNowLine(1, 2)], catalog), {moves: [{id: buyNowLine(1).id, quantity: 2, merchandiseId: CHOICE_IDS[FC].preorder}], to: 'preorder'});
     }
     assert.equal(sellsBuyNow(live({}, 'US')), false);
@@ -397,7 +397,7 @@ describe('cart: the pre-order lane takes pre-orders only', () => {
     const created: CartLineInput[][] = [];
     await run({sku: 'OPENMOTOR-1604', qty: '4', offer: 'preorder'}, {getCartId: () => undefined, createCart: async (lines) => { created.push(lines); return cart([]); }});
     assert.equal(created[0][0].merchandiseId, CHOICE_IDS['OPENMOTOR-1604'].preorder);
-    await run({sku: FC, qty: '3'}, {fetchCatalog: async () => live({[FC]: 213}), getCartId: () => undefined, createCart: async (lines) => { created.push(lines); return cart([]); }});
+    await run({sku: FC, qty: '3'}, {fetchCatalog: async () => live({[FC]: 218}), getCartId: () => undefined, createCart: async (lines) => { created.push(lines); return cart([]); }});
     assert.equal(created[1][0].merchandiseId, CHOICE_IDS[FC].preorder);
   });
 
@@ -471,11 +471,11 @@ describe('buy now lane: an express checkout of in-stock boards, never the cart',
 
   it('stock ran out between page load and purchase: back to the page with a message, nothing sold', async () => {
     // 2 left of the 3-inch FC, 3 asked.
-    const short = express({lines: `${FC}:3,${ESC}:3`}, {fetchCatalog: async () => live({[FC]: 213})});
+    const short = express({lines: `${FC}:3,${ESC}:3`}, {fetchCatalog: async () => live({[FC]: 218})});
     assert.equal((await short.response).headers.get('Location'), `/products/openfc-lite?Model=20%C3%9720&${EXPRESS_PARAM}=${EXPRESS_REFUSED.stock}`);
     assert.deepEqual(short.made, []);
     // Batch 1 gone: the board is pre-order only, so the express offer is refused.
-    const gone = express({sku: FC, qty: '1'}, {fetchCatalog: async () => live({[FC]: 215})});
+    const gone = express({sku: FC, qty: '1'}, {fetchCatalog: async () => live({[FC]: 220})});
     assert.match((await gone.response).headers.get('Location') ?? '', /buy=sold-out$/);
     // Shopify's deny gate took the last units first: the checkout is never opened.
     const denied = express({sku: FC, qty: '2'}, {createCart: async (lines) => cart([line(9, {merchandiseId: lines[0].merchandiseId, quantity: 1})])});
@@ -523,7 +523,7 @@ describe('buy now lane: an express checkout of in-stock boards, never the cart',
 
     it('partner in stock at page load, sold out at purchase: back with a message, nothing created', async () => {
       const lines = boardExpressLines(FC, stackFor(live()), true);
-      const {response, made} = express({lines: expressLinesField(lines, 1)}, {fetchCatalog: async () => live({[ESC]: 215})});
+      const {response, made} = express({lines: expressLinesField(lines, 1)}, {fetchCatalog: async () => live({[ESC]: 220})});
       assert.match((await response).headers.get('Location') ?? '', /buy=sold-out$/);
       assert.deepEqual(made, []);
     });
@@ -552,20 +552,20 @@ describe('buy now lane: an express checkout of in-stock boards, never the cart',
       assert.equal(partnerBoard(us, FC, 'buy_now'), null);
       assert.equal(partnerBoard(us, FC, 'preorder')?.sku, ESC);
       // EU, ESC batch 1 gone: Buy now has no partner, pre-order still does.
-      const gone = buildForPart(resolveHeroBuilds(builds, live({[ESC]: 215}), true), FC, 'openfc-lite')!;
+      const gone = buildForPart(resolveHeroBuilds(builds, live({[ESC]: 220}), true), FC, 'openfc-lite')!;
       assert.equal(partnerBoard(gone, FC, 'buy_now'), null);
       assert.equal(partnerBoard(gone, FC, 'preorder')?.sku, ESC);
     });
 
     it('partner sold out: no stack add-on, and a ticked box still buys this board alone', () => {
-      const stack = stackFor(live({[ESC]: 215}));
+      const stack = stackFor(live({[ESC]: 220}));
       assert.equal(stack, null);
       assert.deepEqual(boardExpressLines(FC, stack, true), [{sku: FC, quantity: 1}]);
     });
   });
 
   it('the return path stays on the site', async () => {
-    const {response} = express({sku: FC, qty: '5', return: '//evil.example/x'}, {fetchCatalog: async () => live({[FC]: 213})});
+    const {response} = express({sku: FC, qty: '5', return: '//evil.example/x'}, {fetchCatalog: async () => live({[FC]: 218})});
     assert.equal((await response).headers.get('Location'), `/?${EXPRESS_PARAM}=${EXPRESS_REFUSED.stock}`);
   });
 });
@@ -589,7 +589,7 @@ describe('one page for every region: outside the EU the Buy now lane is simply a
     assert.deepEqual(stacks.map((s) => s && [s.size, s.price]).sort(), [['3', 78], ['5', 98]]);
   });
   it('EU, one board of a size sold out: no stack for that size', () => {
-    const stacks = resolveHeroBuilds(builds, live({[FC]: 215}), true).map((b) => stackOffer(b));
+    const stacks = resolveHeroBuilds(builds, live({[FC]: 220}), true).map((b) => stackOffer(b));
     assert.deepEqual(stacks.filter(Boolean).map((s) => s!.size), ['5']);
   });
 });
@@ -629,7 +629,7 @@ describe('home build block: two modes, each total is the sum of its rows', () =>
 
   it('no stack in stock for this buyer: pre-order only; flag off: no choice block', () => {
     assert.equal(buildModes(resolveHeroBuilds(builds, live({}, 'US'), true)[0]).buy_now, null);
-    assert.equal(buildModes(resolveHeroBuilds(builds, live({[FC]: 215, [FC30]: 215}), true)[0]).buy_now, null);
+    assert.equal(buildModes(resolveHeroBuilds(builds, live({[FC]: 220, [FC30]: 220}), true)[0]).buy_now, null);
     assert.equal(resolveHeroBuilds(builds, live({}, 'EU', false))[0].choice, undefined);
   });
 });
