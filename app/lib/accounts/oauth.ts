@@ -156,7 +156,7 @@ export async function token(request: Request, env: AccountsEnv, now = Date.now()
  * Shopify's end_session is needed, the target waits in a 5-minute signed
  * cookie and Shopify sends the browser back here (its registered Logout
  * URI), which then finishes the redirect. Without a parameter or cookie it
- * lands on "/".
+ * lands on "/". Without a parameter, a session still live is ended too.
  */
 export async function oauthLogout(
   request: Request,
@@ -173,6 +173,10 @@ export async function oauthLogout(
     const saved = pending ? await openBlob<{t: string; s?: string; exp: number}>(env.SESSION_SECRET, LOGOUT_LABEL, pending, nowSec) : null;
     const ok = saved && allowlist(env.CHATFPV_POST_LOGOUT_REDIRECTS).includes(saved.t);
     const next = ok ? (saved.s ? withParams(saved.t, {state: saved.s}) : saved.t) : '/';
+    // The cookie is cleared below, so a session still live here (any arrival
+    // other than the return from our own endSession) is revoked too, and
+    // ChatFPV gets the back-channel logout. No-op without a live session.
+    await endSession(request, env, null, '/', now);
     return redirectTo(next, [clearCookie(LOGOUT_COOKIE), clearSessionCookie()]);
   }
   if (!allowlist(env.CHATFPV_POST_LOGOUT_REDIRECTS).includes(target)) return badRequest('Unknown post_logout_redirect_uri.');

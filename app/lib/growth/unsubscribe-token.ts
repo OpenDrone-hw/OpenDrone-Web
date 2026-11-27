@@ -103,3 +103,14 @@ export async function verifyUnsubscribeToken(
   if (exp < Math.floor(Date.now() / 1000)) return null;
   return {email};
 }
+
+/**
+ * The token of an unsubscribe POST: the form's `t` field (the confirm button
+ * on the page) or else the `t` query parameter. An RFC 8058 one-click POST
+ * from the inbox goes to the List-Unsubscribe URL with only the body
+ * `List-Unsubscribe=One-Click`, so its token is in the URL.
+ */
+export function unsubscribeTokenFrom(formData: FormData, requestUrl: string): string {
+  const fromForm = String(formData.get('t') ?? '');
+  return fromForm || (new URL(requestUrl).searchParams.get('t') ?? '');
+}

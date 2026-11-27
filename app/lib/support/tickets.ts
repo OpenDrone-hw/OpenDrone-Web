@@ -848,6 +848,16 @@ export async function cleanupExpired(deps: Deps, opts: {dryRun?: boolean; limit?
   return done;
 }
 
+/** Mail the customer about a reply they have not seen, once it is NOTIFY_DELAY_MS old. */
+async function notifyUnseenReply(deps: Deps, ticket: Ticket, now: number): Promise<boolean> {
+  const seen = Math.max(ticket.customerSeenAt ?? 0, ticket.notifiedAt ?? 0);
+  const lastReply = Math.max(ticket.lastStaffAt ?? 0, ticket.lastCommunityAt ?? 0);
+  if (lastReply <= seen || now - lastReply < NOTIFY_DELAY_MS) return false;
+  const sent = await sendReplyNotice(deps.env, ticket.email, ticket.ref, await freshResumeUrl(deps, ticket), deps.fetcher ?? fetch);
+  if (sent) await deps.store.updateTicket(ticket.ref, {notifiedAt: now});
+  return sent;
+}
+
 export type JobReport = {synced: number; notified: number; autoClosed: string[]; deleted: string[]};
 
 export async function runScheduled(deps: Deps): Promise<JobReport> {
@@ -870,15 +880,12 @@ export async function runScheduled(deps: Deps): Promise<JobReport> {
       continue;
     }
     report.synced++;
-    const seen = Math.max(ticket.customerSeenAt ?? 0, ticket.notifiedAt ?? 0);
-    const lastReply = Math.max(ticket.lastStaffAt ?? 0, ticket.lastCommunityAt ?? 0);
-    if (ticket.status !== 'closed' && lastReply > seen && now - lastReply >= NOTIFY_DELAY_MS) {
-      const sent = await sendReplyNotice(deps.env, ticket.email, ticket.ref, await freshResumeUrl(deps, ticket), deps.fetcher ?? fetch);
-      if (sent) {
-        await deps.store.updateTicket(ticket.ref, {notifiedAt: now});
-        report.notified++;
-      }
-    }
+    if (ticket.status !== 'closed' && (await notifyUnseenReply(deps, ticket, now))) report.notified++;
+  }
+  // A reply followed by a close within NOTIFY_DELAY_MS drops the ticket out of
+  // the sync queue above; its customer still gets the reply notice.
+  for (const t of await deps.store.closedWithUnseenReply(now - DAY, 20)) {
+    if (await notifyUnseenReply(deps, t, now)) report.notified++;
   }
 
   for (const t of await deps.store.staleTickets(now - AUTO_CLOSE_MS, 20)) {

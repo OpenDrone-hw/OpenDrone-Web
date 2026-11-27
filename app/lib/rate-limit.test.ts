@@ -1,6 +1,6 @@
 import {describe, it} from 'node:test';
 import assert from 'node:assert/strict';
-import {bindingRateLimit, checkRateLimit} from './rate-limit.ts';
+import {bindingRateLimit, checkRateLimit, releaseRateLimit} from './rate-limit.ts';
 
 // Run with:
 //   node --experimental-strip-types --test app/lib/rate-limit.test.ts
@@ -14,6 +14,16 @@ describe('checkRateLimit', () => {
     const denied = checkRateLimit(key, 3, 60_000);
     assert.equal(denied.allowed, false);
     assert.equal(denied.remaining, 0);
+  });
+
+  it('a released use does not count against the limit', () => {
+    const key = `test:${Math.random()}`;
+    for (let i = 0; i < 3; i++) {
+      assert.equal(checkRateLimit(key, 3, 60_000).allowed, true);
+      releaseRateLimit(key);
+    }
+    assert.equal(checkRateLimit(key, 3, 60_000).remaining, 2);
+    releaseRateLimit('test:unknown-key');
   });
 });
 

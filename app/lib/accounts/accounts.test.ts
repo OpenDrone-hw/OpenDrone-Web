@@ -338,6 +338,22 @@ describe('logout', () => {
     assert.equal(await readSession(e.SUPPORT_DB, new Request('https://opendrone.be/', {headers: {Cookie: cookie}})), null);
   });
 
+  it('oauth/logout without a parameter ends a live session, not only its cookie', async () => {
+    const e = await env();
+    const {cookie} = await signedIn(e);
+    const calls: string[] = [];
+    const fetcher = (async (url: string) => {
+      calls.push(url);
+      return new Response('{}', {status: 200});
+    }) as unknown as typeof fetch;
+    const withChatFpv = {...e, CHATFPV_URL: 'https://chatfpv.com', CHATFPV_KEY: 'store-key', CHATFPV: {fetch: fetcher}};
+    const res = await oauthLogout(new Request('https://opendrone.be/oauth/logout', {headers: {Cookie: cookie}}), withChatFpv, null);
+    assert.equal(res.status, 302);
+    assert.equal(res.headers.get('Location'), '/');
+    assert.deepEqual(calls, ['https://chatfpv.com/v1/auth/backchannel-logout']);
+    assert.equal(await readSession(e.SUPPORT_DB, new Request('https://opendrone.be/', {headers: {Cookie: cookie}})), null);
+  });
+
   it('back-channel needs the store key', async () => {
     assert.equal(await chatFpvBackchannelLogout({CHATFPV_URL: 'https://chatfpv.com'}, 'sid'), false);
   });

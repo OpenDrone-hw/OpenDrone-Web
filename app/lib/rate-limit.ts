@@ -47,6 +47,12 @@ export function checkRateLimit(
   };
 }
 
+/** Give back one use of `key`, for a request that turned out not to count (it failed). */
+export function releaseRateLimit(key: string): void {
+  const bucket = BUCKETS.get(key);
+  if (bucket && bucket.count > 0) bucket.count--;
+}
+
 function gcExpired(now: number) {
   for (const [k, v] of BUCKETS) {
     if (v.resetAt <= now) BUCKETS.delete(k);

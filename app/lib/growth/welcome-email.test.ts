@@ -1,6 +1,7 @@
 import {describe, it, mock} from 'node:test';
 import assert from 'node:assert/strict';
 import {renderWelcomeEmail, sendWelcomeEmail} from './welcome-email.ts';
+import {unsubscribeTokenFrom, verifyUnsubscribeToken} from './unsubscribe-token.ts';
 
 // Run with:
 //   node --experimental-strip-types --test app/lib/growth/welcome-email.test.ts
@@ -53,6 +54,26 @@ describe('sendWelcomeEmail', () => {
     assert.equal(body.subject, 'Welcome to Engineering Essentials');
     assert.equal(body.headers['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click');
     assert.match(body.headers['List-Unsubscribe'], /newsletter\/unsubscribe\?t=/);
+  });
+
+  it('the RFC 8058 one-click POST to the List-Unsubscribe URL carries a valid token', async () => {
+    let body: any = null;
+    mock.method(globalThis, 'fetch', async (_i: unknown, init?: RequestInit) => {
+      body = JSON.parse(String(init?.body));
+      return Response.json({id: 'msg_1'});
+    });
+    const env = {RESEND_API_KEY: 'test', SESSION_SECRET: 'sekret'};
+    await sendWelcomeEmail(env, {email: 'pilot@example.com'});
+    mock.restoreAll();
+    const url = String(body.headers['List-Unsubscribe']).slice(1, -1);
+    // What Gmail, Outlook and Apple Mail POST: only this body, the token stays in the URL.
+    const form = new FormData();
+    form.set('List-Unsubscribe', 'One-Click');
+    const token = unsubscribeTokenFrom(form, url);
+    assert.deepEqual(await verifyUnsubscribeToken(env, token), {email: 'pilot@example.com'});
+    // The confirm button on the page posts `t` in the form, which wins.
+    form.set('t', 'from-form');
+    assert.equal(unsubscribeTokenFrom(form, url), 'from-form');
   });
 
   it('reports failure on a Resend error instead of throwing', async () => {

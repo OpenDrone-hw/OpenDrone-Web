@@ -2,7 +2,7 @@ import {data, useFetcher, useLoaderData} from 'react-router';
 import type {Route} from './+types/newsletter.unsubscribe';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
-import {verifyUnsubscribeToken} from '~/lib/growth/unsubscribe-token';
+import {unsubscribeTokenFrom, verifyUnsubscribeToken} from '~/lib/growth/unsubscribe-token';
 import {unsubscribeWithShopify} from '~/lib/growth/shopify-newsletter';
 import {appCommerceEnabled} from '~/lib/commerce/app-api';
 import {unsubscribeWithApp} from '~/lib/commerce/app-newsletter';
@@ -17,7 +17,9 @@ import {copyText} from '~/lib/copy';
 //        scanners prefetch GETs.
 // POST → does the opt-out in Shopify (the consent owner; in app mode, the app) and Resend (the
 //        delivery suppression). Both writes are gated and must succeed before
-//        confirmation. Token-authenticated POSTs skip the rate limit;
+//        confirmation. The token comes from the form or, for an RFC 8058
+//        one-click POST from the inbox, from the URL's `t`.
+//        Token-authenticated POSTs skip the rate limit;
 //        form POSTs get honeypot + per-IP limit. The response is the same
 //        generic confirmation either way, so the endpoint never confirms
 //        whether an address was subscribed.
@@ -62,7 +64,7 @@ export async function action({request, context}: Route.ActionArgs) {
     );
   }
   const formData = await request.formData();
-  const token = String(formData.get('t') ?? '');
+  const token = unsubscribeTokenFrom(formData, request.url);
   const verified = await verifyUnsubscribeToken(context.env, token);
 
   let email: string;

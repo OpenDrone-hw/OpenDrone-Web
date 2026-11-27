@@ -578,6 +578,32 @@ describe('notifications', {skip}, () => {
     assert.doesNotMatch(sent[0]!.text, /kumquat/);
   });
 
+  it('still emails the reply notice when the team answers and closes within the delay', async () => {
+    const sent: Array<{to: string[]}> = [];
+    const {deps, discord} = await setup({env: {SUPPORT_EMAIL_NOTIFY_ENABLED: '1', RESEND_API_KEY: 're_test'}});
+    const t = await createTicket(deps, input());
+    const base = deps.fetcher!;
+    deps.fetcher = (async (url: string, init: RequestInit) => {
+      if (String(url).includes('resend')) {
+        sent.push(JSON.parse(String(init.body)) as {to: string[]});
+        return new Response('{}', {status: 200});
+      }
+      return base(url, init);
+    }) as unknown as typeof fetch;
+    clock += 60_000;
+    discord.staff(t.threadId, 'Here is your answer');
+    clock += 60_000;
+    discord.staff(t.threadId, '!close');
+    clock += 60_000;
+    assert.equal((await runScheduled(deps)).notified, 0, 'not before the delay');
+    assert.equal((await deps.store.getTicket(t.ref))!.status, 'closed');
+    clock += 11 * 60_000;
+    assert.equal((await runScheduled(deps)).notified, 1);
+    assert.equal((await runScheduled(deps)).notified, 0, 'once');
+    assert.equal(sent.length, 1);
+    assert.deepEqual(sent[0]!.to, ['jan@example.com']);
+  });
+
   it('confirms a new ticket by email, with a link and no message, and records the outcome', async () => {
     const mails: Array<{to: string[]; subject: string; text: string}> = [];
     let status = 200;
