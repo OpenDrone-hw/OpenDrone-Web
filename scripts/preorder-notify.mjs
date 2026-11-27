@@ -38,6 +38,7 @@
 // (reply-to, default contact@opendrone.be). The Admin token needs read_orders
 // and write_orders. Nothing secret is printed.
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
@@ -399,7 +400,9 @@ async function main() {
       continue;
     }
     try {
-      await sendEmail(mail, `${r.order.id}:${r.notifiedTags.join(',')}:${today}`);
+      // The text is in the key: a same-day rerun with a corrected text is a new
+      // mail instead of Resend's 409, and an identical rerun is a no-op.
+      await sendEmail(mail, `preorder-${crypto.createHash('sha256').update(JSON.stringify([r.order.id, r.notifiedTags, today, mail.subject, mail.text])).digest('hex')}`);
       const tags = [...r.notifiedTags];
       if (opts.kind === 'missed') tags.push(`reply-by:${replyByDay}`);
       const data = await lib.adminGraphql(env, lib.TAGS_ADD_MUTATION, {id: r.order.id, tags});
