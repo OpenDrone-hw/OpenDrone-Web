@@ -2730,6 +2730,8 @@ body:has(.avail-bar) #site-mobile-drawer aside .aside-body {
   position: relative;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
   gap: 1px;
   min-width: 0;
   min-height: 44px;
@@ -2742,7 +2744,6 @@ body:has(.avail-bar) #site-mobile-drawer aside .aside-body {
 .hero-choice-option.is-selected { border-color: var(--color-gold); background: var(--color-gold-soft); }
 .hero-choice-option:has(input:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .hero-choice-option strong { font-size: 13px; font-weight: 600; line-height: 1.25; }
-.hero-choice-option small { font-size: 11px; line-height: 1.3; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hero-build-choice .hero-build-parts { padding: 0 8px 4px; }
 /* A part name is never cut: it wraps onto a second line instead. */
 .hero-build-choice .hero-build-name strong { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.25; }
@@ -2751,11 +2752,12 @@ body:has(.avail-bar) #site-mobile-drawer aside .aside-body {
 .hero-build-choice .hero-build-detail:hover,
 .hero-build-choice .hero-build-detail:focus-visible { opacity: 1; }
 .hero-build-choice .hero-build-status { margin: 8px 0 0; min-height: 1.4em; text-wrap: balance; }
-/* A part the chosen mode leaves out: listed, dimmed, and named for what it is. */
-.hero-build-part.is-later .hero-build-inspect { opacity: 0.55; }
-.hero-build-part.is-later .hero-build-check { cursor: default; }
-.hero-build-part.is-later .hero-build-check > span { border-style: dashed; opacity: 0.5; }
-.hero-build-later { padding: 2px 7px; border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent); border-radius: 999px; background: var(--color-gold-soft); color: var(--color-gold-text); font-size: 11px; }
+/* A part the chosen mode leaves out: listed at full strength, with a gold
+   "Pre-order" tag in the buy button's colour. Ticking it or the tag switches
+   the block to pre-order. */
+.hero-build-later { padding: 3px 9px; border: 0; border-radius: 999px; background: var(--color-gold-fill); color: var(--color-on-accent); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+.hero-build-later:hover { background: var(--color-gold-fill-hover); }
+.hero-build-later:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 /* One width for a price and for the "Pre-order" tag, so a part name wraps the same way in both modes. */
 .hero-build-choice .hero-build-price { min-width: 78px; text-align: right; font-variant-numeric: tabular-nums; }
 .hero-build-choice .hero-build-total { font-variant-numeric: tabular-nums; }
@@ -2763,9 +2765,7 @@ body:has(.avail-bar) #site-mobile-drawer aside .aside-body {
    place: right edge, bottom anchored, the same height in both modes. */
 @media (min-width: 1024px) {
   .hero-buy--guide:has(.hero-build-choice) { width: 400px; }
-  .hero-buy--guide .hero-build-choice .hero-choice-option { min-height: 52px; padding: 8px 12px; }
   .hero-buy--guide .hero-build-choice .hero-choice-option strong { font-size: 14px; }
-  .hero-buy--guide .hero-build-choice .hero-choice-option small { font-size: 12px; }
   .hero-buy--guide .hero-build-choice .hero-build-name strong { font-size: 14px; }
   .hero-buy--guide .hero-build-choice .hero-build-name small { font-size: 12px; }
   .hero-buy--guide .hero-build-choice .hero-build-price { min-width: 84px; font-size: 13px; }
