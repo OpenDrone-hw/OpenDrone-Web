@@ -259,7 +259,9 @@ export function HeroBuildChoice({
           </div>
         )}
         {refusal && mode === 'buy_now' ? <p className="hero-build-ship cart-line-error" role="alert">{refusal}</p> : null}
-        {statusLine && !selection.notify ? (
+        {/* Always rendered, so the block keeps one height in both modes and
+            nothing moves when the buyer switches. */}
+        {!selection.notify ? (
           <p className="hero-build-ship hero-build-status" role="status">{statusLine}</p>
         ) : null}
       </div>
