@@ -206,8 +206,12 @@ export function applicationMail(application: TradeApplication, approve: string |
 }
 
 /** Mails one application to the company inbox, reply-to the applicant. The
- * idempotency key makes a retry of the same application within 24 hours a
- * no-op at Resend, so an unknown result can be retried by the applicant. */
+ * idempotency key is the application as typed, so a retry of the same
+ * application within 24 hours is a no-op at Resend and an unknown result can
+ * be retried by the applicant; a changed application is a new mail. The
+ * approve link is left out of the key: its expiry differs on every submit, and
+ * Resend answers 409 when one key carries another body, which for the same
+ * application means it was already sent. */
 export async function submitTradeApplication(
   env: TradeEnv,
   application: TradeApplication,
@@ -215,12 +219,11 @@ export async function submitTradeApplication(
   origin = 'https://opendrone.be',
 ): Promise<ApplicationResult> {
   if (!tradeConfigured(env)) return {ok: false, reason: 'not_configured'};
-  const key = `wholesale-${await sha256Hex(JSON.stringify([
-    application.email, application.company.toLowerCase().replace(/\s+/g, ' '), application.country.code,
-  ]))}`;
+  const typed = applicationMail(application);
+  const key = `wholesale-${await sha256Hex(JSON.stringify([application.email.toLowerCase(), typed.subject, typed.text]))}`;
   const mail = applicationMail(application, await approveLink(env, application, origin));
   const sent = await sendTradeMail(env, {
-    to: [companyInbox(env)], replyTo: application.email, subject: mail.subject, text: mail.text, key,
+    to: [companyInbox(env)], replyTo: application.email, subject: mail.subject, text: mail.text, key, repeatIsSent: true,
   }, fetcher);
   if (!sent) console.warn('[wholesale] application mail not sent');
   return sent ? {ok: true} : {ok: false, reason: 'unavailable'};
@@ -235,7 +238,7 @@ export function companyInbox(env: TradeEnv): string {
  *  Resend accepted it. */
 export async function sendTradeMail(
   env: TradeEnv,
-  mail: {to: string[]; replyTo: string; bcc?: string[]; subject: string; text: string; key: string},
+  mail: {to: string[]; replyTo: string; bcc?: string[]; subject: string; text: string; key: string; repeatIsSent?: boolean},
   fetcher: typeof fetch = fetch,
 ): Promise<boolean> {
   try {
@@ -256,7 +259,7 @@ export async function sendTradeMail(
       }),
       signal: AbortSignal.timeout(8000),
     });
-    return res.ok;
+    return res.ok || (Boolean(mail.repeatIsSent) && res.status === 409);
   } catch {
     return false;
   }

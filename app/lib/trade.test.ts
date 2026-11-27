@@ -89,14 +89,19 @@ describe('wholesale application mail', () => {
     assert.equal(body.subject, 'Wholesale application: Test shop (BE, 30 units)');
     for (const part of ['Test Buyer', 'buyer@example.com', 'Belgium (BE)', 'https://shop.example/', 'Interested in frames.', 'Business: Online shop', 'VAT / tax ID: BE 0123.456.789', '20 x OpenFC Lite 30×30 (OPENFC-LITE-3030)', '10 x OpenESC 30×30 (OPENESC-3030)', 'wholesale-onboard.py', 'Order rhythm: Monthly']) assert.match(body.text, new RegExp(part.replace(/[.()]/g, '\\$&')));
   });
-  it('uses one idempotency key for a repeated application', async () => {
+  it('uses one idempotency key for a repeated application and a new one for a changed application', async () => {
     const {calls, api} = recorder();
     await submitTradeApplication(ENV, application(), api);
-    const retry = validateTradeApplication(form({...fields, company: ' TEST   SHOP ', email: 'BUYER@EXAMPLE.COM', note: 'Updated message'}), PRODUCTS);
-    assert.ok(retry.ok);
-    await submitTradeApplication(ENV, retry.application, api);
+    await submitTradeApplication(ENV, application(), api);
+    const changed = validateTradeApplication(form({...fields, note: 'Updated message'}), PRODUCTS);
+    assert.ok(changed.ok);
+    await submitTradeApplication(ENV, changed.application, api);
     assert.match(calls[0].headers['Idempotency-Key'], /^wholesale-[0-9a-f]{64}$/);
     assert.equal(calls[0].headers['Idempotency-Key'], calls[1].headers['Idempotency-Key']);
+    assert.notEqual(calls[0].headers['Idempotency-Key'], calls[2].headers['Idempotency-Key']);
+  });
+  it('confirms a repeat that Resend answers 409 (already sent; only the approve link expiry differs)', async () => {
+    assert.deepEqual(await submitTradeApplication(ENV, application(), recorder(409).api), {ok: true});
   });
   it('never confirms an application Resend rejected or did not answer', async () => {
     assert.deepEqual(await submitTradeApplication(ENV, application(), recorder(422).api), {ok: false, reason: 'unavailable'});
