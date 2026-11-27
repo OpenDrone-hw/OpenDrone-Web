@@ -1,4 +1,4 @@
--- The public owners map (app/lib/owner-map.ts, README "Owners map"): one
+-- The public owners map (app/lib/owner-map.ts, docs/accounts.md "Owners map"): one
 -- snapshot of already suppressed aggregate buckets, never orders or
 -- addresses. Rows:
 --   region 'DE', 'US-CA'  bucket = index 0..7 into 1-4, 5-9, 10-24, 25-49,

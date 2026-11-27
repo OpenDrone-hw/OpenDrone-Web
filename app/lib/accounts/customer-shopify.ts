@@ -8,10 +8,8 @@
  * used for one request only, never persisted.
  *
  * Reuses the Admin GraphQL client from preorder-fulfilment.ts: same token,
- * same already-granted scopes (README "Variables and secrets" /
- * "Admin API token scopes" list `read_customers` and `read_orders`
- * together, and the support flip README notes the same `read_customers`
- * scope for the customer metafield). Preorder status per order reads the
+ * same already-granted scopes (docs/support.md "Set up support" lists
+ * `read_customers` and `read_orders` together with the customer metafield). Preorder status per order reads the
  * `batch:<sku>:<n>` order tags `syncPreorderHolds` (preorder-fulfilment.ts)
  * already writes; it does not recompute batch assignment itself. An order
  * ships once, as one parcel, when every item is ready, so its preorder

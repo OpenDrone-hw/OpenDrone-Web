@@ -4,7 +4,7 @@
  * `SHOPIFY_WEBHOOK_SECRET` is set, independent of `ACCOUNTS_ENABLED`, so data
  * created while accounts were on can still be erased after a flag-off. They
  * are signed with the client secret of the custom app that holds that
- * secret (README "Shared accounts").
+ * secret (docs/accounts.md "Shared accounts").
  *
  *   customers/redact, customers/delete  erase now; a failed ChatFPV erase
  *                                       becomes a pending queue row + alert

@@ -159,7 +159,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
     : null;
   const ordersUrl = customerAccountUrl(env);
   const shopify = import.meta.env.DEV ? devMockAccount(session.shopifyGid) : await readCustomerAccount(env, session.shopifyGid, CAMPAIGN);
-  // The "Pilot map" card: shown while PILOT_MAP_ENABLED is on, says whether this customer is listed (README "Owners map").
+  // The "Pilot map" card: shown while PILOT_MAP_ENABLED is on, says whether this customer is listed (docs/accounts.md "Owners map").
   const pilot = pilotMapEnabled(env) ? {listed: Boolean(await readOwnPin(env.SUPPORT_DB!, session.shopifyGid))} : null;
   // The open panel: ?tab= when it names one, else the panel a notice belongs to, else Orders.
   const rawTab = url.searchParams.get('tab') ?? '';

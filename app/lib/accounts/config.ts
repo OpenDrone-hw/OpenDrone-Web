@@ -1,5 +1,5 @@
 /**
- * Shared accounts configuration (README "Shared accounts"). Every account
+ * Shared accounts configuration (docs/accounts.md "Shared accounts"). Every account
  * route answers 404 (or the legacy /account redirect) unless
  * ACCOUNTS_ENABLED is "1".
  */

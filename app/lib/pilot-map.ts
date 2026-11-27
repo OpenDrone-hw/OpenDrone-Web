@@ -1,5 +1,5 @@
 /**
- * The opt-in pilot map's rules, as pure functions (README "Owners map").
+ * The opt-in pilot map's rules, as pure functions (docs/accounts.md "Owners map").
  *
  * | Rule | Value |
  * |---|---|

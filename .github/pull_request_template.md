@@ -1,6 +1,5 @@
 <!--
 Thanks for contributing to OpenDrone Web! Before opening:
-- Read the "Design scope" section of README.md - confirm the change is in the "open" bucket
 - Sign off commits with `git commit -s` (DCO)
 - Run `npm run lint` and `npm run typecheck` locally
 -->
@@ -15,7 +14,6 @@ Thanks for contributing to OpenDrone Web! Before opening:
 
 ## Scope check
 
-- [ ] Change is in the "open" bucket per [Design scope](../README.md#design-scope)
 - [ ] No changes to legal routes, company footer, or compliance logic
 - [ ] No new npm dependencies (or justified in description)
 - [ ] No hardcoded credentials, API keys, or personal data

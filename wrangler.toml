@@ -27,19 +27,19 @@ directory = "dist/client"
 [vars]
 SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
 PUBLIC_COMING_SOON = "0"
-# US consumer preorders (README "Open or close the shop"): "1" opens the US
+# US consumer preorders (docs/selling.md "Open or close the shop"): "1" opens the US
 # to campaign preorders once content/us-sales.json sets the US rate; changing
 # it needs the founder's go. Same value as production, so a preview shows
 # what a US visitor will read.
 PUBLIC_US_SALES = "1"
-# Buy now or pre-order on the four boards (README "Buy now or pre-order"):
+# Buy now or pre-order on the four boards (docs/selling.md "Buy now or pre-order"):
 # "1" reads each board's `Buy now` Shopify variant and offers batch 1 stock at
 # retail beside the March pre-order. It changes prices shown, so it needs the
 # founder's go, and it goes to "1" only after the `Buy now` variants exist in
 # Shopify and `choiceFrom` is set in content/preorders.json. Any other value
 # is off: the site reads as it did before the variants existed.
 BATCH_CHOICE = "0"
-# ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
+# ChatFPV (docs/support.md "ChatFPV (AI)"): AI ticket drafts in Discord, the
 # /support Ask box and the product/preorder widget. "1" turns each on.
 # CHATFPV_KEY is a Worker secret.
 CHATFPV_URL = "https://chatfpv.sales-ee0.workers.dev"
@@ -53,22 +53,22 @@ CHATFPV_SYNTHETIC = "1"
 # ChatFPV handoff: a #cfh=<ticket> on a product page opens the widget on
 # that conversation (app/lib/accounts/handoff.ts). Production keeps it off.
 HANDOFF_ENABLED = "1"
-# Shared accounts (README "Shared accounts"). Off on staging until the
+# Shared accounts (docs/accounts.md "Shared accounts"). Off on staging until the
 # Shopify Customer Account client exists; E2E previews turn it on with
 # `--var ACCOUNTS_ENABLED:1 --var ACCOUNTS_TEST_IDP:1`.
 ACCOUNTS_ENABLED = "0"
 CHATFPV_OAUTH_REDIRECTS = "https://chatfpv.sales-ee0.workers.dev/auth/callback"
 CHATFPV_POST_LOGOUT_REDIRECTS = "https://chatfpv.sales-ee0.workers.dev/"
-# Opt-in pilot map on /owners (README "Owners map"): Discord link, pins, /account card.
+# Opt-in pilot map on /owners (docs/accounts.md "Owners map"): Discord link, pins, /account card.
 # "1" needs the founder's go; DISCORD_OAUTH_CLIENT_ID and _SECRET are Worker secrets.
 PILOT_MAP_ENABLED = "0"
 
-# Customer mail (README "Mail"): Gmail poll that saves a ChatFPV reply as a
+# Customer mail (docs/support.md "Mail"): Gmail poll that saves a ChatFPV reply as a
 # Gmail draft for each customer mail; a person sends it. "0" off, "dry" reports
 # counts only, "1" on. Needs the founder's go; the Gmail credentials are Worker secrets.
 SUPPORT_MAIL_INTAKE_ENABLED = "0"
 
-# Support CRM (README "Support tickets"): the staff API under /api/staff/support
+# Support CRM (docs/support.md "Support CRM (staff API and community route)"): the staff API under /api/staff/support
 # for the internal app, and the community route to the public #help forum.
 # "0" off; each needs the founder's go. SUPPORT_STAFF_API_TOKEN is a Worker
 # secret. The community route also needs DISCORD_HELP_CHANNEL_ID and the
@@ -76,7 +76,7 @@ SUPPORT_MAIL_INTAKE_ENABLED = "0"
 SUPPORT_CRM_API = "0"
 SUPPORT_COMMUNITY_ROUTE = "0"
 
-# Support tickets: the ticket index and conversation copy (README "Support").
+# Support tickets: the ticket index and conversation copy (docs/support.md "Support tickets").
 # Apply new migrations with `npx wrangler d1 migrations apply SUPPORT_DB
 # --remote --config wrangler.toml`. Local dev uses a local copy of
 # this database under .wrangler/ (`npm run db:migrate:local`).
@@ -92,7 +92,7 @@ migrations_dir = "migrations"
 binding = "CHATFPV"
 service = "chatfpv"
 
-# Ticket attachments of the CRM (README "Support tickets"). Declare this binding
+# Ticket attachments of the CRM (docs/support.md "Support CRM (staff API and community route)"). Declare this binding
 # only after the bucket exists, or the deploy fails:
 #   npx wrangler r2 bucket create opendrone-support-files
 # [[r2_buckets]]

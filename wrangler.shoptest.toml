@@ -15,7 +15,7 @@ directory = "dist/client"
 PUBLIC_COMING_SOON = "0"
 SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
 PUBLIC_US_SALES = "0"
-# Buy now or pre-order on the four boards (README "Buy now or pre-order"):
+# Buy now or pre-order on the four boards (docs/selling.md "Buy now or pre-order"):
 # "1" reads each board's `Buy now` Shopify variant and offers batch 1 stock at
 # retail beside the March pre-order. It changes prices shown, so it needs the
 # founder's go, and it goes to "1" only after the `Buy now` variants exist in

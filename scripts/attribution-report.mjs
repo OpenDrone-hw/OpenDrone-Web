@@ -23,7 +23,7 @@
 // Attribution comes from the order's note attributes `_ref`,
 // `_utm_source`, `_utm_medium`, `_utm_campaign` and `_landing`, written as
 // cart attributes at the visitor's first add to cart in a browser session
-// (README, "Analytics and attribution"). An order without them shows as
+// (docs/architecture.md, "Analytics and attribution"). An order without them shows as
 // `(none)` / `(direct)`: a direct visit, a visit without JavaScript, or a
 // cart filled in another browser session. Country is the order's shipping
 // country code, `(none)` without a shipping address.

@@ -1,5 +1,5 @@
 /**
- * Customer mail answered by email (README "Mail").
+ * Customer mail answered by email (docs/support.md "Mail").
  *
  * Every cron pass (server.ts `scheduled`, behind SUPPORT_MAIL_INTAKE_ENABLED)
  * asks Gmail for the last few days of mail sent to the customer addresses,

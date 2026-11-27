@@ -25,7 +25,7 @@ import {cellHalfSpan, snapToCell, type Cell, type PilotCell} from '~/lib/pilot-m
 import type {Topology} from 'topojson-specification';
 
 /**
- * The owners page is one map (README "Owners map"): countries and US states
+ * The owners page is one map (docs/accounts.md "Owners map"): countries and US states
  * with published owners filled in gold at a step per range, and, for a
  * signed-in owner, the pilot areas as gold dots. It pans by drag, zooms by
  * wheel, pinch and buttons, and sits under a single card in the /visit style.

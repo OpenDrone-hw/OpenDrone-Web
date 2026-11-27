@@ -1,5 +1,5 @@
 /**
- * Worker side of the pilot map (README "Owners map"): the pins table, the
+ * Worker side of the pilot map (docs/accounts.md "Owners map"): the pins table, the
  * Discord identify-only OAuth, and the short-lived cookies that carry a
  * half-finished sign-up. Pure rules are in pilot-map.ts.
  *

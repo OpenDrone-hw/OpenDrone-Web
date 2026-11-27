@@ -1,4 +1,4 @@
--- The opt-in pilot map (app/lib/pilot-map.ts, README "Owners map"): one row
+-- The opt-in pilot map (app/lib/pilot-map.ts, docs/accounts.md "Owners map"): one row
 -- per owner who chose to appear. Only the ~10 km grid cell is stored, never
 -- the point that was clicked. shopify_gid is the erase key: customers/redact,
 -- customers/delete and the idle-account purge delete the row by it, and a

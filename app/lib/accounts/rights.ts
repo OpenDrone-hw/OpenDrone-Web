@@ -76,7 +76,7 @@ export async function redactCustomer(
   const db = env.SUPPORT_DB;
   let accounts = 0;
   if (db) {
-    // The opt-in pilot map pin (README "Owners map") goes whether or not an account row exists.
+    // The opt-in pilot map pin (docs/accounts.md "Owners map") goes whether or not an account row exists.
     await db.prepare('DELETE FROM pilot_map_pins WHERE shopify_gid = ?').bind(gid).run();
     const row = await db.prepare('SELECT id FROM od_accounts WHERE shopify_gid = ?').bind(gid).first<{id: string}>();
     if (row) {

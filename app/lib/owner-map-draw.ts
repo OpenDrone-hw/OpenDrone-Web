@@ -10,7 +10,7 @@ import {
 } from '~/lib/owner-map-geo';
 
 /**
- * Geometry for the owners map (README "Owners map"): countries from
+ * Geometry for the owners map (docs/accounts.md "Owners map"): countries from
  * `public/geo/countries-50m.json` (Natural Earth, public domain, through
  * world-atlas) and the United States by state from `public/geo/states-10m.json`
  * (US Census, through us-atlas). Both are static files on this origin.

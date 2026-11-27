@@ -35,8 +35,9 @@ export function commerceHandoff(
  * numeric shop id the Customer Account API OIDC client already uses, see
  * accounts/shopify-idp.ts) as `https://shopify.com/<shop id>/account` - the
  * exact URL Shopify's own "Customer accounts" settings page shows once new
- * customer accounts are on (README "Create the Shopify client"). null when
- * neither is configured or the shop id is not purely numeric.
+ * customer accounts are on (docs/accounts.md "Create the Shopify client
+ * (Shopify admin)"). null when neither is configured or the shop id is not
+ * purely numeric.
  */
 export function customerAccountUrl(
   env: Pick<Env, 'SHOPIFY_CUSTOMER_ACCOUNT_URL' | 'SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID'>,

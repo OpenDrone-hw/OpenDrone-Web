@@ -20,8 +20,8 @@
  *
  * First touch wins: once a record exists for the session, later UTM hits
  * don't overwrite it. Values are trimmed, lowercased and capped at 64
- * chars to stay low-cardinality (canonical values in the README,
- * "Analytics and attribution").
+ * chars to stay low-cardinality (canonical values in
+ * docs/growth-architecture.md, "Canonical UTM values (lowercase, exactly these)").
  *
  * Creator links are `https://opendrone.be/?ref=<slug>`: `ref` is kept on
  * its own (`ref`) as well as being the `source` fallback, so a creator's
