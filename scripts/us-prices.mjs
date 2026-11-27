@@ -169,7 +169,8 @@ export function fixedInput(plan, currencyCode) {
   return plan.map((p) => ({
     variantId: p.id,
     price: {amount: p.price.toFixed(2), currencyCode},
-    ...(p.compareAt != null ? {compareAtPrice: {amount: p.compareAt.toFixed(2), currencyCode}} : {}),
+    // An explicit null clears a stale struck-through price: leaving the field out keeps it.
+    compareAtPrice: p.compareAt != null ? {amount: p.compareAt.toFixed(2), currencyCode} : null,
   }));
 }
 

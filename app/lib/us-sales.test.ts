@@ -514,7 +514,7 @@ describe('Non-EU price rule source', () => {
     const [first] = planAll(variants, [{name: 'International', list: intl, currency: 'EUR', fixed: new Map()}], rule);
     assert.deepEqual(fixedInput(first.plan, 'EUR'), [
       {variantId: 'v1', price: {amount: '21.50', currencyCode: 'EUR'}, compareAtPrice: {amount: '24.00', currencyCode: 'EUR'}},
-      {variantId: 'v2', price: {amount: '1.50', currencyCode: 'EUR'}},
+      {variantId: 'v2', price: {amount: '1.50', currencyCode: 'EUR'}, compareAtPrice: null}, // null clears a stale compare-at
     ]);
     const synced = new Map([['v1', {price: 21.5, compareAt: 24}], ['v2', {price: 1.5, compareAt: null}]]);
     assert.equal(planFixedBy(variants, synced, (eur: number) => intlPrice(eur, rule)).length, 0);
