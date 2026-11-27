@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {approveLink, applicationMail, type TradeApplication} from './trade.ts';
-import {approveApplication, mainCode, planOnboarding, welcomeMail, type Application, type MailCase} from './wholesale-approve.ts';
+import {approveApplication, mainCode, planOnboarding, retailerTags, welcomeMail, type Application, type MailCase} from './wholesale-approve.ts';
 import {APPROVE_PATH, signApproval, verifyApproval} from './wholesale-approve-token.ts';
 import {EXEMPTION, adminClient} from './wholesale-sync.ts';
 
@@ -175,6 +175,13 @@ describe('plan parity with scripts/wholesale-onboard.py', () => {
       ['WS25-BEISPIELGMBH-G4', 'none', null, '', '0.00', '0.0'],
     ]);
     assert.equal(p.mailCase, 'reverse-charge');
+  });
+
+  it('DE re-approval of a customer first onboarded as BE: the old country tag goes', async () => {
+    const w = world({customer: {...DE_CUSTOMER, tags: [...DE_CUSTOMER.tags, 'country-be', 'wholesale']}});
+    const p = await plan(w, DE);
+    assert.deepEqual((p.customerInput as {tags: string[]}).tags, ['country-de', 'newsletter', 'reverse-charge', 'wholesale']);
+    assert.deepEqual(retailerTags(['country-de', 'x'], 'BE', false), ['country-be', 'wholesale', 'x']);
   });
 
   it('HU without a valid VAT number: no exemption, gross groups', async () => {

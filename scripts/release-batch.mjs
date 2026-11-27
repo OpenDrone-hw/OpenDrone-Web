@@ -13,12 +13,22 @@
 //   --help           print this help; reads and writes nothing
 //
 // A paid preorder order is held by the Worker (app/lib/preorder-fulfilment.ts)
-// and tagged `batch:SKU:N` for every batch its units fall into. An order ships
-// as one parcel (terms 7bis.5), so this releases an order only when every
-// batch it carries is the requested one or named with --with. The dry run
-// lists every held order of the batch: the ones that ship now and the ones
-// that still wait, with what they wait for, and warns about any batch whose
-// `batch:SKU:N` tags carry more units than the batch has.
+// and tagged `batch:SKU:N` for every batch its units fall into. A held order
+// is in the batches the campaign allocation gives it now (`orderBatchesNow`:
+// an order tagged before the March rule keeps a stale paid-batch tag); an
+// eu-stock order, or one the allocation does not cover, by its tags. An order
+// ships as one parcel (terms 7bis.5), so this releases an order only when
+// every batch it carries is the requested one or named with --with, and no
+// fulfillment order carries a hold of another handle (placed in admin or by
+// another app: release that one there). The dry run lists every held order
+// of the batch: the ones that ship now and the ones that still wait, with
+// what they wait for, and warns about any batch that holds more units than
+// it has.
+//
+// --apply releases order by order: one that fails does not stop the others,
+// and the end lists the released and the failed orders. A released order's
+// "Fulfill by" moves from the March ship-by date it had while held to its
+// batch's promise: a few working days for paid stock.
 //
 // After --apply, the released orders are open for fulfilment: import them in
 // the bpost plugin and print the labels (docs/selling.md "Fulfil a batch").
@@ -66,11 +76,21 @@ export function parseArgs(argv, campaignSkus) {
   return opts;
 }
 
-/** Warnings for batches tagged past their size (`overfullBatches`). */
+/** Warnings for batches holding more units than they have (`overfullBatches`). */
 export function describeOverfull(overfull) {
   return overfull.map(
-    (b) => `Warning: ${b.sku} batch ${b.batch} has ${b.units} units but its tags carry ${b.tagged}. Settle the extra orders by hand before releasing it.`,
+    (b) => `Warning: ${b.sku} batch ${b.batch} has ${b.units} units but its orders carry ${b.tagged}. Settle the extra orders by hand before releasing it.`,
   );
+}
+
+/** The closing report of an --apply run. */
+export function describeApply(released, failed) {
+  const lines = [`Released (${released.length}): ${released.join(', ') || '-'}`];
+  if (failed.length) {
+    lines.push(`Failed (${failed.length}), still held; run again to retry:`);
+    for (const f of failed) lines.push(`  ${f.orderName}: ${f.error}`);
+  }
+  return lines;
 }
 
 /** The dry-run report, one line per order. */
@@ -135,31 +155,51 @@ async function main() {
     );
   }
   for (const line of describeOverfull(lib.overfullBatches(orders, preorders))) console.log(line);
-  const plans = lib.planRelease(orders, opts.sku, opts.batch, new Set(opts.with), preorders.shipsWith ?? {}, preorders.usStock);
+  const allocated = lib.assignBatches(orders, preorders);
+  const plans = lib.planRelease(orders, opts.sku, opts.batch, new Set(opts.with), preorders.shipsWith ?? {}, preorders.usStock, allocated);
   for (const line of describePlans(plans, opts)) console.log(line);
 
   const ready = plans.filter((p) => !p.waitsFor.length);
   if (!opts.apply) {
+    const deadlines = lib.planReleaseDeadlines(orders, ready, preorders, opts.sku, opts.batch, new Date());
+    for (const {deadline, ids} of deadlines) console.log(`  Fulfill by on release: ${ids.length} fulfillment order(s) to ${deadline.slice(0, 10)}`);
     if (ready.length) console.log(`\nRun again with --apply to release ${ready.length} order(s).`);
     return;
   }
-  let failed = 0;
+  const released = [];
+  const failed = [];
   for (const plan of ready) {
-    let ok = true;
-    for (const fo of plan.release) {
-      const data = await lib.adminGraphql(env, lib.RELEASE_MUTATION, {id: fo.id, holdIds: fo.holdIds});
-      const errors = data.fulfillmentOrderReleaseHold.userErrors;
-      if (errors.length) {
-        ok = false;
-        console.log(`  ${plan.orderName}: not released: ${errors[0].message}`);
-      } else {
-        console.log(`  ${plan.orderName}: released (${data.fulfillmentOrderReleaseHold.fulfillmentOrder?.status ?? 'status unknown'})`);
+    try {
+      for (const fo of plan.release) {
+        const data = await lib.adminGraphql(env, lib.RELEASE_MUTATION, {id: fo.id, holdIds: fo.holdIds});
+        const errors = data.fulfillmentOrderReleaseHold.userErrors;
+        if (errors.length) throw new Error(errors[0].message);
+      }
+      released.push(plan);
+      console.log(`  ${plan.orderName}: released`);
+    } catch (error) {
+      failed.push({orderName: plan.orderName, error: String(error?.message ?? error).slice(0, 200)});
+      console.log(`  ${plan.orderName}: not released: ${failed.at(-1).error}`);
+    }
+  }
+  // Released orders lose the March "Fulfill by" they had while held.
+  const deadlineFailed = [];
+  for (const {deadline, ids} of lib.planReleaseDeadlines(orders, released, preorders, opts.sku, opts.batch, new Date())) {
+    for (let i = 0; i < ids.length; i += lib.DEADLINE_CHUNK) {
+      try {
+        const data = await lib.adminGraphql(env, lib.DEADLINE_MUTATION, {ids: ids.slice(i, i + lib.DEADLINE_CHUNK), deadline});
+        const errors = data.fulfillmentOrdersSetFulfillmentDeadline.userErrors;
+        if (errors.length) throw new Error(errors[0].message);
+      } catch (error) {
+        deadlineFailed.push(`${deadline.slice(0, 10)}: ${String(error?.message ?? error).slice(0, 200)}`);
       }
     }
-    if (!ok) failed += 1;
   }
-  console.log(`\nReleased ${ready.length - failed} order(s). Next: import them in the bpost plugin and print the labels.`);
-  if (failed) process.exit(1);
+  console.log('');
+  for (const line of describeApply(released.map((p) => p.orderName), failed)) console.log(line);
+  for (const line of deadlineFailed) console.log(`Fulfill by not reset (set it in Shopify admin): ${line}`);
+  if (released.length) console.log('Next: import the released orders in the bpost plugin and print the labels.');
+  if (failed.length || deadlineFailed.length) process.exit(1);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {

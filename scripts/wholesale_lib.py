@@ -126,6 +126,13 @@ def divisor(country, exempt):
     return 1 + EU_VAT[country] / 100
 
 
+def retailer_tags(old_tags, cc, exempt):
+    """The customer tags after an approve: wholesale and country-<cc> (any other country-* tag goes, so a corrected
+    country is the one customer_country reads), reverse-charge when exempt, the rest kept."""
+    kept = {t for t in old_tags or [] if not t.startswith("country-")}
+    return sorted(kept | {"wholesale", f"country-{cc.lower()}"} | ({"reverse-charge"} if exempt else set()))
+
+
 def customer_country(customer):
     """The EU country of a reverse-charge customer: tag country-XX, else the VAT ID on the onboarding note line."""
     for t in customer.get("tags") or []:

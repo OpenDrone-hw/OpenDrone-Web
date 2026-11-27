@@ -258,22 +258,52 @@ export function adminEndpoint(env: AdminEnv): {url: string; token: string} {
   return {url: `https://${domain}/admin/api/${version}/graphql.json`, token};
 }
 
+type AdminBody<T> = {
+  data?: T;
+  errors?: Array<{message?: string; extensions?: {code?: string}}>;
+  extensions?: {cost?: {requestedQueryCost?: number; throttleStatus?: {currentlyAvailable?: number; restoreRate?: number}}};
+};
+
+/** Retries of a THROTTLED response before it fails. */
+const THROTTLE_RETRIES = 4;
+
+/** How long until the bucket holds the query's cost again
+ *  (`extensions.cost.throttleStatus`), 0.25 to 5 s; without it a growing wait. */
+export function throttleWaitMs(body: Pick<AdminBody<unknown>, 'extensions'>, attempt: number): number {
+  const cost = body.extensions?.cost;
+  const need = (cost?.requestedQueryCost ?? 0) - (cost?.throttleStatus?.currentlyAvailable ?? 0);
+  const rate = cost?.throttleStatus?.restoreRate ?? 0;
+  const ms = rate > 0 && need > 0 ? Math.ceil((need / rate) * 1000) : 1000 * (attempt + 1);
+  return Math.min(5000, Math.max(250, ms));
+}
+
+/** One Admin GraphQL call. A THROTTLED answer is retried after the wait the
+ *  cost extension names (`throttleWaitMs`); any other error throws. */
 export async function adminGraphql<T>(
   env: AdminEnv,
   query: string,
   variables: Record<string, unknown>,
   fetcher: typeof fetch = fetch,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 ): Promise<T> {
   const {url, token} = adminEndpoint(env);
-  const response = await fetcher(url, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json', 'X-Shopify-Access-Token': token},
-    body: JSON.stringify({query, variables}),
-    redirect: 'manual',
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) throw new Error(`preorder fulfilment: Admin API returned ${response.status}`);
-  const body = (await response.json()) as {data?: T; errors?: Array<{message?: string}>};
+  let body: AdminBody<T> = {};
+  for (let attempt = 0; ; attempt += 1) {
+    const response = await fetcher(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Shopify-Access-Token': token},
+      body: JSON.stringify({query, variables}),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) throw new Error(`preorder fulfilment: Admin API returned ${response.status}`);
+    body = (await response.json()) as AdminBody<T>;
+    // Shopify rejects a throttled request before running it, so a retry never
+    // runs a mutation twice.
+    const throttled = body.errors?.some((e) => e.extensions?.code === 'THROTTLED' || e.message === 'Throttled');
+    if (!throttled || attempt >= THROTTLE_RETRIES) break;
+    await sleep(throttleWaitMs(body, attempt));
+  }
   if (body.errors?.length) {
     throw new Error(`preorder fulfilment: ${String(body.errors[0]?.message ?? 'GraphQL error').slice(0, 200)}`);
   }
@@ -446,10 +476,12 @@ export type OverfullBatch = {sku: string; batch: number; units: number; tagged: 
 
 /**
  * Batches with a fixed size (every batch but an open-ended last funding
- * target) whose `batch:SKU:N` tags carry more units than the batch sells
- * (`sellableUnits`: reserved units are not for sale).
- * Tags are written once, so a late-indexed or edited order can leave them
- * out of step with `assignBatches`. An order's units of the SKU count
+ * target) that hold more units than the batch sells (`sellableUnits`:
+ * reserved units are not for sale). An order still waiting counts by the
+ * allocation (`orderBatchesNow`); an order that took stock (`eu-stock`) or
+ * one the allocation does not cover counts by its `batch:SKU:N` tags, which
+ * are written once, so stock that left while a late-indexed or edited order
+ * now takes its place shows here. Such an order's units of the SKU count
  * toward a tagged batch by the allocation when it agrees, else all of them
  * (the tag is all that is known). Accessory units never count: they add
  * nothing to the lead.
@@ -460,6 +492,14 @@ export function overfullBatches(orders: PreorderOrder[], config: CampaignConfig)
   for (const order of orders) {
     if (!isCountedOrder(order)) continue;
     const mine = allocated.get(order.id) ?? [];
+    if (allocationDecides(order, allocated)) {
+      for (const b of mine) {
+        if (b.item) continue;
+        const tag = batchTag(b.sku, b.batch);
+        tagged.set(tag, (tagged.get(tag) ?? 0) + b.units);
+      }
+      continue;
+    }
     for (const tag of new Set(order.tags)) {
       const parsed = parseBatchTag(tag);
       if (!parsed || !config.skus[parsed.sku]) continue;
@@ -723,7 +763,7 @@ export function holdHealth(orders: PreorderOrder[], config: CampaignConfig): {un
 }
 
 /** Fulfillment orders per deadline write. */
-const DEADLINE_CHUNK = 50;
+export const DEADLINE_CHUNK = 50;
 
 /** The ship-by date the order was sold under, as an end-of-day deadline. */
 function shipByDeadline(config: CampaignConfig, createdAt: string): string {
@@ -854,6 +894,55 @@ export function orderBatchesFromTags(
     .filter((b): b is {sku: string; batch: number} => b !== null && live.has(b.sku));
 }
 
+/** True when the allocation, not the tags, says which batches a counted
+ *  order is in: it covers the order and the order took no stock yet. */
+function allocationDecides(order: PreorderOrder, allocated: ReadonlyMap<string, LineBatch[]> | undefined): boolean {
+  return isCountedOrder(order) && !order.tags.includes(EU_STOCK_TAG) && Boolean(allocated?.get(order.id)?.length);
+}
+
+/**
+ * The batches an order is in now. A counted order still waiting follows the
+ * allocation (`assignBatches`): tags are written once, so an order tagged
+ * before a rule changed keeps a stale tag (founder 2026-11-01: an order with
+ * any March item ships whole with the March batch, so its boards left paid
+ * stock). An order that took stock (`eu-stock`: the tags record the stock it
+ * shipped from), or one the allocation does not cover, follows its live tags
+ * (`orderBatchesFromTags`). Without `allocated`, tags only.
+ */
+export function orderBatchesNow(
+  order: PreorderOrder,
+  allocated?: ReadonlyMap<string, LineBatch[]>,
+  shipsWith: Record<string, ShipsWith> = {},
+  usStock?: ShipsWith,
+): Array<{sku: string; batch: number}> {
+  if (!allocationDecides(order, allocated)) return orderBatchesFromTags(order, shipsWith, usStock);
+  const seen = new Set<string>();
+  const out: Array<{sku: string; batch: number}> = [];
+  for (const b of allocated!.get(order.id)!) {
+    const tag = batchTag(b.sku, b.batch);
+    if (seen.has(tag)) continue;
+    seen.add(tag);
+    out.push({sku: b.sku, batch: b.batch});
+  }
+  return out;
+}
+
+/** The campaign SKU a live line ships with, as `assignBatches` reads it:
+ *  its own, its `shipsWith` lead, or for a non-EU line of an unlisted SKU
+ *  the `usStock` lead; null for none. */
+export function leadSkuOf(
+  order: PreorderOrder,
+  line: OrderLine,
+  config: Pick<CampaignConfig, 'skus' | 'shipsWith' | 'usStock'>,
+): string | null {
+  const sku = line.sku?.trim();
+  if (!sku) return null;
+  if (config.skus[sku]) return sku;
+  if (config.shipsWith?.[sku]) return config.shipsWith[sku].sku;
+  if (lineRegion(line) === 'EU') return null;
+  return usStockRule(config as CampaignConfig, sku, orderRegion(order))?.sku ?? null;
+}
+
 export type ReleasePlan = {
   orderId: string;
   orderName: string;
@@ -864,9 +953,12 @@ export type ReleasePlan = {
 };
 
 /**
- * Orders held for `sku` batch `batch`. An order ships as one parcel, so it
- * is released only when every batch it carries is `ready` (the requested
- * batch plus any the operator names as ready or settled).
+ * Orders held for `sku` batch `batch` (`orderBatchesNow`: the allocation
+ * when `allocated` is given, else the tags). An order ships as one parcel,
+ * so it is released only when every batch it carries is `ready` (the
+ * requested batch plus any the operator names as ready or settled) and no
+ * fulfillment order carries a hold of another handle (one placed in admin
+ * or by another app), which this never lifts.
  */
 export function planRelease(
   orders: PreorderOrder[],
@@ -875,12 +967,14 @@ export function planRelease(
   ready: ReadonlySet<string>,
   shipsWith: Record<string, ShipsWith> = {},
   usStock?: ShipsWith,
+  allocated?: ReadonlyMap<string, LineBatch[]>,
 ): ReleasePlan[] {
   const covered = new Set([batchTag(sku, batch), ...ready]);
   const plans: ReleasePlan[] = [];
   for (const order of orders) {
     if (!isCountedOrder(order)) continue;
-    if (!order.tags.includes(batchTag(sku, batch))) continue;
+    const now = orderBatchesNow(order, allocated, shipsWith, usStock);
+    if (!now.some((b) => b.sku === sku && b.batch === batch)) continue;
     const release = order.fulfillmentOrders.nodes
       .map((fo) => ({
         id: fo.id,
@@ -888,10 +982,13 @@ export function planRelease(
       }))
       .filter((fo) => fo.holdIds.length > 0);
     if (!release.length) continue;
+    const otherHolds = order.fulfillmentOrders.nodes
+      .filter((fo) => HOLDABLE_STATES.has(fo.status))
+      .flatMap((fo) => fo.fulfillmentHolds.filter((h) => h.handle !== PREORDER_HOLD_HANDLE))
+      .map((h) => `another hold (${h.handle || 'no handle'}), release it in Shopify admin`);
     const waitsFor = [
-      ...orderBatchesFromTags(order, shipsWith, usStock)
-        .map((b) => batchTag(b.sku, b.batch))
-        .filter((tag) => !covered.has(tag)),
+      ...now.map((b) => batchTag(b.sku, b.batch)).filter((tag) => !covered.has(tag)),
+      ...new Set(otherHolds),
       // A US order under review is released by hand, never by a batch.
       ...(order.tags.includes(US_REVIEW_TAG) ? [US_REVIEW_TAG] : []),
       ...(order.tags.includes(INT_REVIEW_TAG) ? [INT_REVIEW_TAG] : []),
@@ -903,4 +1000,53 @@ export function planRelease(
     plans.push({orderId: order.id, orderName: order.name, release, waitsFor});
   }
   return plans;
+}
+
+/** Working days a paid batch's stock ships in once released ("ships in a
+ *  few working days" from Belgium). */
+const STOCK_SHIP_WORKING_DAYS = 3;
+
+/** The end of the day `days` working days (Monday to Friday) after `now`. */
+function workingDaysAfter(now: Date, days: number): string {
+  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  for (let left = days; left > 0; ) {
+    day.setUTCDate(day.getUTCDate() + 1);
+    if (day.getUTCDay() !== 0 && day.getUTCDay() !== 6) left -= 1;
+  }
+  return `${day.toISOString().slice(0, 10)}T23:59:59Z`;
+}
+
+/**
+ * The "Fulfill by" of the fulfillment orders a release lifts. While held,
+ * `planDeadlines` set it to the March ship-by date; released, the order
+ * keeps the promise of the released batch: a paid batch ships its stock in
+ * a few working days (`STOCK_SHIP_WORKING_DAYS` after `now`), a funding
+ * batch by the ship-by date the order was sold under. A deadline already at
+ * or before that date is left alone. `released` names the plans whose
+ * release succeeded. Grouped by date, one write each.
+ */
+export function planReleaseDeadlines(
+  orders: PreorderOrder[],
+  released: ReleasePlan[],
+  config: CampaignConfig,
+  sku: string,
+  batch: number,
+  now: Date,
+): DeadlinePlan[] {
+  const paid = config.skus[sku]?.batches[batch - 1]?.paid === true;
+  const byId = new Map(orders.map((o) => [o.id, o]));
+  const byDate = new Map<string, string[]>();
+  for (const plan of released) {
+    const order = byId.get(plan.orderId);
+    if (!order) continue;
+    const deadline = paid ? workingDaysAfter(now, STOCK_SHIP_WORKING_DAYS) : shipByDeadline(config, order.createdAt);
+    for (const {id} of plan.release) {
+      const fo = order.fulfillmentOrders.nodes.find((f) => f.id === id);
+      if (fo?.fulfillBy && Date.parse(fo.fulfillBy) <= Date.parse(deadline)) continue;
+      const ids = byDate.get(deadline) ?? [];
+      ids.push(id);
+      byDate.set(deadline, ids);
+    }
+  }
+  return [...byDate].map(([deadline, ids]) => ({deadline, ids}));
 }

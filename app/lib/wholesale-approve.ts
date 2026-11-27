@@ -128,6 +128,14 @@ function mailCase(cc: string, exempt: boolean): MailCase {
 }
 
 /** The dry run (wholesale-onboard.py without --apply). Reads VIES and Shopify, never writes. */
+/** The customer tags after an approve: `wholesale` and `country-<cc>` (any
+ *  other `country-*` tag goes, so a corrected country is the one
+ *  `customerCountry` reads), `reverse-charge` when exempt, the rest kept. */
+export function retailerTags(old: string[], cc: string, exempt: boolean): string[] {
+  const kept = old.filter((t) => !t.startsWith('country-'));
+  return [...new Set([...kept, 'wholesale', `country-${cc.toLowerCase()}`, ...(exempt ? ['reverse-charge'] : [])])].sort();
+}
+
 export async function planOnboarding(admin: Admin, app: Application, {fetcher, now}: {fetcher: typeof fetch; now: Date}): Promise<OnboardPlan> {
   const email = app.email.trim().toLowerCase();
   const cc = app.country.trim().toUpperCase();
@@ -154,7 +162,7 @@ export async function planOnboarding(admin: Admin, app: Application, {fetcher, n
     // The codes would be repriced on gross retail while Shopify keeps the exemption (wholesale-onboard.py, #870).
     return {...plan, refusal: `the customer has the reverse charge exemption but this run does not confirm it (${why}). Fix the VAT number in VIES, or remove the exemption in Shopify admin first.`};
   }
-  const tags = [...new Set([...(cust?.tags ?? []), 'wholesale', `country-${cc.toLowerCase()}`, ...(exempt ? ['reverse-charge'] : [])])].sort();
+  const tags = retailerTags(cust?.tags ?? [], cc, exempt);
   const exemptions = [...new Set([...(cust?.taxExemptions ?? []), ...(exempt ? [EXEMPTION] : [])])].sort();
   const input: Record<string, unknown> = {email, tags, ...(exempt ? {taxExemptions: exemptions} : {})};
   const oldNote = (cust?.note ?? '').trim();

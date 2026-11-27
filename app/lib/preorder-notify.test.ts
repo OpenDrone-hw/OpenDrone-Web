@@ -9,7 +9,7 @@ import {
   renderEmail,
   selectRecipients,
 } from '../../scripts/preorder-notify.mjs';
-import {parseArgs as parseReleaseArgs, describeOverfull, describePlans} from '../../scripts/release-batch.mjs';
+import {parseArgs as parseReleaseArgs, describeApply, describeOverfull, describePlans} from '../../scripts/release-batch.mjs';
 import {isCountedOrder} from './preorder-fulfilment.ts';
 
 const SKUS = ['OPENFC-LITE-2020', 'OPENRX-LITE'];
@@ -59,6 +59,28 @@ describe('preorder-notify', () => {
     assert.equal(picked[1].others, true);
     const again = selectRecipients(orders, {sku: 'OPENRX-LITE', batch: 1, kind: 'missed', again: true, isCounted: isCountedOrder, batchesOf});
     assert.equal(again.length, 3);
+  });
+
+  it('reaches an accessory-only order under its lead SKU, and prefers the lead line when both are there', () => {
+    const fc = {sku: 'OPENFC-LITE-2020', name: 'OpenFC Lite 20x20', currentQuantity: 1};
+    const prop = {sku: 'ACC-PROP', name: 'Props', currentQuantity: 3};
+    const motor = {sku: 'OPENMOTOR-1604', name: 'Motor', currentQuantity: 4};
+    const orders = [
+      order('#1430', [prop]),
+      order('#1431', [prop, fc]),
+      order('#1432', [{...prop, currentQuantity: 0}]),
+      // Reached by the motor's own mail.
+      order('#1433', [prop, motor]),
+    ];
+    const picked = selectRecipients(orders, {
+      sku: 'OPENFC-LITE-2020', batch: 2, kind: 'moved', again: false, isCounted: isCountedOrder,
+      batchesOf: () => [2],
+      leadOf: (_o: unknown, l: {sku: string}) => (l.sku === 'ACC-PROP' ? 'OPENFC-LITE-2020' : l.sku),
+    });
+    assert.deepEqual(picked.map((r: {order: {name: string}; line: {name: string}}) => [r.order.name, r.line.name]), [
+      ['#1430', 'Props'],
+      ['#1431', 'OpenFC Lite 20x20'],
+    ]);
   });
 
   it('renders the missed ship-by date email with both choices and the reply deadline', () => {
@@ -117,9 +139,18 @@ describe('release-batch', () => {
 
   it('warns about a batch tagged past its size', () => {
     assert.deepEqual(describeOverfull([{sku: 'OPENFC-LITE-2020', batch: 1, units: 250, tagged: 252}]), [
-      'Warning: OPENFC-LITE-2020 batch 1 has 250 units but its tags carry 252. Settle the extra orders by hand before releasing it.',
+      'Warning: OPENFC-LITE-2020 batch 1 has 250 units but its orders carry 252. Settle the extra orders by hand before releasing it.',
     ]);
     assert.deepEqual(describeOverfull([]), []);
+  });
+
+  it('lists the released and the failed orders after --apply', () => {
+    assert.deepEqual(describeApply(['#1001', '#1003'], [{orderName: '#1002', error: 'Throttled'}]), [
+      'Released (2): #1001, #1003',
+      'Failed (1), still held; run again to retry:',
+      '  #1002: Throttled',
+    ]);
+    assert.deepEqual(describeApply([], []), ['Released (0): -']);
   });
 
   it('says which orders ship and which wait', () => {

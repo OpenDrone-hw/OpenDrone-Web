@@ -55,4 +55,18 @@ describe('close-preorder-run', () => {
       '  E: not in Shopify',
     ]);
   });
+
+  it('writes DENY to every variant of a closing SKU: Buy now and Pre-order share it', () => {
+    const v = (id: string, title: string, policy: string) => ({
+      id, sku: 'OPENFC-LITE-2020', title, inventoryPolicy: policy, inventoryQuantity: 0, inventoryItem: {tracked: true}, product: {id: 'p1'},
+    });
+    const {writes, lines} = planDeny(['OPENFC-LITE-2020'], [v('v1', '20x20 / Buy now', 'CONTINUE'), v('v2', '20x20 / Pre-order', 'CONTINUE')]);
+    assert.deepEqual(writes, [{productId: 'p1', variants: [{id: 'v1', inventoryPolicy: 'DENY'}, {id: 'v2', inventoryPolicy: 'DENY'}]}]);
+    assert.deepEqual(lines, [
+      '  OPENFC-LITE-2020 (20x20 / Buy now): CONTINUE -> DENY',
+      '  OPENFC-LITE-2020 (20x20 / Pre-order): CONTINUE -> DENY',
+    ]);
+    const half = planDeny(['OPENFC-LITE-2020'], [v('v1', 'Buy now', 'CONTINUE'), v('v2', 'Pre-order', 'DENY')]);
+    assert.deepEqual(half.writes, [{productId: 'p1', variants: [{id: 'v1', inventoryPolicy: 'DENY'}]}]);
+  });
 });
