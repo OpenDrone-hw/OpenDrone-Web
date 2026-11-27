@@ -584,3 +584,26 @@ describe('every product is purchasable by a US ship-to', () => {
     assert.throws(() => parseCampaignConfig({...base, skus: {A: {batches: EU_FIRST}}, usStock: {sku: 'B', batch: 2}}), /usStock/);
   });
 });
+
+describe('the Worker keeps the International list on the EU price step', () => {
+  it('writes the fixed price a step moved, compare-at included, and nothing when in sync', async () => {
+    const {syncFixedPrices, parseRule} = await import('./non-eu-prices.js');
+    const rule = parseRule(JSON.parse(fs.readFileSync(new URL('../../content/us-sales.json', import.meta.url), 'utf8')));
+    const intl = {id: 'i', name: 'International', currency: 'EUR', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 17.36}}};
+    const variants = [{id: 'v1', sku: 'OPENFC-LITE-3030', title: 'Pre-order', price: '35.10', compareAtPrice: '39.00', product: {status: 'ACTIVE'}}];
+    const writes: unknown[] = [];
+    const fixed = [{variant: {id: 'v1'}, price: {amount: '32.00', currencyCode: 'EUR'}, compareAtPrice: null}];
+    const admin = async (query: string, variables: Record<string, unknown>) => {
+      if (query.includes('OpenDroneNonEuPrices')) {
+        return {priceLists: {nodes: [intl]}, markets: {nodes: [{handle: 'international', priceInclusions: {inclusiveTaxPricingStrategy: 'INCLUDES_TAXES_IN_PRICE'}}]}, productVariants: {pageInfo: {hasNextPage: false, endCursor: null}, nodes: variants}};
+      }
+      if (query.includes('OpenDroneNonEuFixed(')) return {priceList: {prices: {pageInfo: {hasNextPage: false, endCursor: null}, nodes: fixed}}};
+      if (query.includes('priceListFixedPricesAdd')) { writes.push(variables.prices); return {priceListFixedPricesAdd: {prices: [], userErrors: []}}; }
+      throw new Error(`unexpected ${query.slice(0, 40)}`);
+    };
+    assert.deepEqual(await syncFixedPrices(admin, rule), ['International OPENFC-LITE-3030']);
+    assert.deepEqual(writes, [[{variantId: 'v1', price: {amount: '29.00', currencyCode: 'EUR'}, compareAtPrice: {amount: '32.00', currencyCode: 'EUR'}}]]);
+    fixed[0] = {variant: {id: 'v1'}, price: {amount: '29.00', currencyCode: 'EUR'}, compareAtPrice: {amount: '32.00'}} as never;
+    assert.deepEqual(await syncFixedPrices(admin, rule), []);
+  });
+});

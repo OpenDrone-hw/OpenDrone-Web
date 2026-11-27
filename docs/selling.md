@@ -106,9 +106,11 @@ allow (`usdBand` in `app/lib/us-sales.ts`); a step is shown as "about US$X"
 when that band cannot fix its whole dollars, and no ladder is shown when no
 factor fits the live prices.
 
-A fixed International or UK price does not follow a preorder price step on
-its own. After every step, and after any change to `content/us-sales.json`
-(a pricing decision: the founder's go first):
+The Worker moves the fixed International and UK prices with every preorder
+price step it writes (`syncFixedPrices` in `app/lib/non-eu-prices.js`, called
+from `reconcilePreorders`; shown in `lastRuns.priceSync` of
+`/api/status/campaign`). By hand, after any change to `content/us-sales.json`
+(a pricing decision: the founder's go first) or to check the lists:
 
 1. `npm run us:prices` (dry run, changes nothing): the US adjustment and name
    against `priceUpliftPct`, and every variant on the International and UK

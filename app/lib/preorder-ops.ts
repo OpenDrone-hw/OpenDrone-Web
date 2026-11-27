@@ -28,7 +28,9 @@ import type {CampaignConfig, UnitRuns} from './preorder-campaign.ts';
 import {syncPreorderHolds} from './preorder-fulfilment.ts';
 import {recordOps} from './preorder-ops-status.ts';
 import {fetchPaidUnitRuns} from './shopify-orders.ts';
-import {priceTierWritesEnabled, syncPriceTiers, type TierChange} from './shopify-price-tier.ts';
+import {admin, priceTierWritesEnabled, syncPriceTiers, type TierChange} from './shopify-price-tier.ts';
+import {parseRule, syncFixedPrices} from './non-eu-prices.js';
+import {US_SALES} from './us-sales.ts';
 import {runWholesaleSync, type WholesaleEnv, type WholesaleSyncResult} from './wholesale-sync.ts';
 
 type OpsEnv = Parameters<typeof syncPriceTiers>[0] & Partial<Pick<Env, 'STAGING_PASSWORD' | 'PREORDER_HOLDS_ENABLED'>> & WholesaleEnv;
@@ -79,7 +81,17 @@ export async function reconcilePreorders(
     if (units) {
       try {
         ({changed, skipped} = await syncPriceTiers(env, config, units, {apply: true, fetcher}));
-        recordOps('priceSync', {detail: changed.length ? `stepped ${changed.map((c) => c.sku).join(', ')}` : undefined});
+        // The International and UK lists hold fixed prices derived from the EU
+        // price: a step moves them too, or non-EU buyers keep the old step.
+        const nonEu = changed.length
+          ? await syncFixedPrices(
+            <T,>(query: string, variables: Record<string, unknown>) => admin<T>(env, query, variables, fetcher),
+            parseRule(US_SALES),
+          )
+          : [];
+        const detail = [changed.length ? `stepped ${changed.map((c) => c.sku).join(', ')}` : '', nonEu.length ? `non-EU ${nonEu.join(', ')}` : '']
+          .filter(Boolean).join('; ');
+        recordOps('priceSync', {detail: detail || undefined});
       } catch (error) {
         recordOps('priceSync', {error});
         priceError = errorText(error, 'price sync failed');
