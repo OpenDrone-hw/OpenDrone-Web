@@ -90,7 +90,8 @@ function adminEndpoint(env: TierEnv): {url: string; token: string} {
   return {url: `https://${domain}/admin/api/${version}/graphql.json`, token};
 }
 
-async function admin<T>(
+/** One Admin GraphQL call with the price-step credentials. */
+export async function admin<T>(
   env: TierEnv,
   query: string,
   variables: Record<string, unknown>,
