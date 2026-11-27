@@ -8,6 +8,7 @@ import {handleAppMedia} from '~/lib/commerce/app-media';
 import {handleVideoLink} from '~/lib/commerce/video-links';
 import {warmPaidCounts} from '~/lib/catalog-client';
 import {createAppLoadContext} from '~/lib/context';
+import {httpsRedirect} from '~/lib/https-redirect';
 import {handleStagingFirmware} from '~/lib/flasher/staging-serve';
 import {stagingChallenge, stagingCredentialsOk} from '~/lib/staging-auth';
 import {NO_FRAMING_HEADERS, NO_FRAMING_PATH} from '~/lib/csp';
@@ -94,6 +95,11 @@ async function handleFetch(
       const firmware = await handleStagingFirmware(request, {password: env.STAGING_PASSWORD, store: env.FIRMWARE_STAGING});
       if (firmware) return firmware;
     }
+
+    // Plain HTTP on the production host moves to HTTPS before anything else
+    // answers (app/lib/https-redirect.ts); dev and other hosts pass through.
+    const upgrade = httpsRedirect(request);
+    if (upgrade) return upgrade;
 
     // www.opendrone.be is a Cloudflare custom domain too (both point at
     // this Worker); redirect it to the apex so it never serves a mirror.

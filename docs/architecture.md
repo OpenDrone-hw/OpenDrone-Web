@@ -142,9 +142,9 @@ companions `-G2` to `-G4` (`app/lib/wholesale-codes.ts`) through
 scoped to the variants of one price group, because Shopify takes a percentage
 off the live price, not off compare-at. `scripts/wholesale-onboard.py` (VIES
 check, customer, tag `wholesale`, EU reverse charge exemption only for a valid
-VIES number outside BE, the codes) and `scripts/wholesale-sync.py` (re-points
-the groups after a price step; daily job `wholesale-sync` in the workspace) are
-dry run by default; `--apply` writes and reads back. The storefront passes no
+VIES number outside BE, the codes) and `scripts/wholesale-sync.py` (the manual
+fallback: the Worker re-points the groups after every price step and in an
+hourly catch-up, `app/lib/wholesale-sync.ts`) are dry run by default; `--apply` writes and reads back. The storefront passes no
 buyer identity to checkout (the sign-in drops Shopify's access token on
 purpose), so the retailer signs in at Shopify checkout with the approved email
 for the exemption and the customer-limited codes to apply. Procedure, VAT per

@@ -48,6 +48,12 @@ describe('noticeText', () => {
     assert.equal(noticeText('US', 'en'), 'Shipping to United States: Not shipping to the US yet.');
     assert.equal(noticeText('US', 'en', true), 'Shipping to United States: Pre-order, ships March 2027.');
   });
+  it('on a cart with lines names only the destination, never the region stock line', () => {
+    assert.equal(noticeText('DE', 'en', false, true), 'Shipping to Germany.');
+    assert.equal(noticeText('BE', 'en', false, true), 'Shipping to Belgium.');
+    assert.doesNotMatch(noticeText('BE', 'en', false, true)!, /in stock|working days/i);
+    assert.equal(noticeText('DE', 'fr', false, true), 'Livraison vers Allemagne.');
+  });
   it('has copy in every locale', () => {
     for (const locale of ['en', 'nl', 'fr'] as const) {
       assert.match(GEO_NOTICE_COPY[locale].line, /\{country\}.*\{line\}/);

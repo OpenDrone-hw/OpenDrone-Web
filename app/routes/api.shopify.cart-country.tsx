@@ -5,6 +5,11 @@ import {appCommerceEnabled} from '~/lib/commerce/app-api';
 import {CART_KEY} from './api.shopify.cart';
 import type {Route} from './+types/api.shopify.cart-country';
 
+/** POST only: a GET (prefetch, bot, pasted link) is a method mismatch, not a server error. */
+export function loader() {
+  return new Response('Method Not Allowed', {status: 405, headers: {Allow: 'POST'}});
+}
+
 /** Put the destination picked in the cart on the Shopify cart and rewrite
  *  its ship promises for that region (see the lib). */
 export function action({request, context}: Route.ActionArgs) {
