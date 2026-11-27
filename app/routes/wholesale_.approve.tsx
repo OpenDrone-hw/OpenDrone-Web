@@ -1,5 +1,5 @@
 import type {ReactNode} from 'react';
-import {data, Form, useActionData, useLoaderData, useNavigation} from 'react-router';
+import {data, Form, useActionData, useLoaderData, useNavigation, type ShouldRevalidateFunction} from 'react-router';
 import type {Route} from './+types/wholesale_.approve';
 import {sameOrigin} from '~/lib/accounts/config';
 import {verifyApproval, type ApprovalPayload} from '~/lib/wholesale-approve-token';
@@ -26,8 +26,14 @@ function denied(status: number): never {
   throw new Response(null, {status, headers: NO_STORE});
 }
 
+// After Approve the outcome is the page: a dry run re-read on top of it would
+// call VIES again within a second (it refuses with MS_MAX_CONCURRENT_REQ) and
+// show a stale refusal under "Approved".
+export const shouldRevalidate: ShouldRevalidateFunction = ({formMethod, defaultShouldRevalidate}) =>
+  formMethod === 'POST' ? false : defaultShouldRevalidate;
+
 function application(p: ApprovalPayload) {
-  return {email: p.email, country: p.country, vat: p.vat, company: p.company, contact: p.contact, lang: p.lang};
+  return {email: p.email, country: p.country, vat: p.vat, company: p.company, contact: p.contact};
 }
 
 type Loaded = {token: string; payload: ApprovalPayload; plan: OnboardPlan | null; problem: string | null; writes: boolean};
@@ -152,6 +158,7 @@ export default function WholesaleApprove() {
   const {token, payload, plan, problem, writes} = useLoaderData<typeof loader>() as Loaded;
   const acted = useActionData<Acted>();
   const busy = useNavigation().state !== 'idle';
+  const done = acted?.result?.status === 'approved' || acted?.result?.status === 'mismatch';
   const blocked = !plan || Boolean(plan.refusal) || !writes;
   return (
     <div className="page-shell">
@@ -165,13 +172,14 @@ export default function WholesaleApprove() {
             <Row k="Email">{payload.email}</Row>
             <Row k="Country">{payload.country}</Row>
             <Row k="VAT">{payload.vat || 'not given'}</Row>
-            <Row k="Mail language">{payload.lang === 'nl' ? 'Dutch' : 'English'}</Row>
           </tbody>
         </table>
         {acted ? <Outcome acted={acted} /> : null}
+        {done ? null : <>
         {problem ? <p role="alert" className="mt-6 text-sm text-[var(--od-pcb-copper)]">{problem}</p> : null}
         {plan?.refusal ? <p role="alert" className="mt-6 text-sm text-[var(--od-pcb-copper)]">Approve will refuse: {plan.refusal}</p> : null}
         {!writes ? <p className="mt-6 text-sm text-[var(--color-text-muted)]">Writes are off (WHOLESALE_APPROVE_WRITE_ENABLED is not <code>1</code>): this is a dry run only.</p> : null}
+        </>}
         {acted?.result && acted.result.status !== 'disabled' && acted.result.status !== 'refused' ? null : plan ? <PlanView plan={plan} /> : null}
         {acted?.result?.status === 'approved' || acted?.result?.status === 'mismatch' ? (
           <pre className="mt-6 whitespace-pre-wrap rounded-[var(--r-xs)] border border-[var(--color-border)] p-4 font-mono text-[12px] leading-relaxed">{acted.result.plan.mail.text}</pre>

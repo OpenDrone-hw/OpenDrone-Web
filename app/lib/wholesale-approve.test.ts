@@ -10,16 +10,11 @@ const NOW = new Date('2026-11-23T10:00:00Z');
 const APP = {email: 'einkauf@example.eu', country: 'DE', vat: 'DE 123.456.789', company: 'Beispiel GmbH', contact: 'Erika Example'};
 
 describe('approval link', () => {
-  it('signs and verifies the application, with Dutch only for BE and NL', async () => {
+  it('signs and verifies the application', async () => {
     const token = (await signApproval(SECRET, APP, NOW))!;
     const r = await verifyApproval(SECRET, token, NOW);
     if (!r.ok) throw new Error('not verified');
-    assert.deepEqual({...r.payload, exp: 0}, {v: 1, email: 'einkauf@example.eu', country: 'DE', vat: 'DE123456789', company: 'Beispiel GmbH', contact: 'Erika Example', lang: 'en', exp: 0});
-    for (const [country, lang] of [['BE', 'nl'], ['NL', 'nl'], ['FR', 'en'], ['US', 'en']]) {
-      const t = (await signApproval(SECRET, {...APP, country}, NOW))!;
-      const v = await verifyApproval(SECRET, t, NOW);
-      assert.ok(v.ok && v.payload.lang === lang, country);
-    }
+    assert.deepEqual({...r.payload, exp: 0}, {v: 1, email: 'einkauf@example.eu', country: 'DE', vat: 'DE123456789', company: 'Beispiel GmbH', contact: 'Erika Example', exp: 0});
   });
 
   it('refuses unsigned, tampered, foreign and malformed links with 403', async () => {
@@ -134,7 +129,7 @@ function world({vies = {isValid: true, userError: 'VALID'} as unknown, customer 
 
 const ENV = {SHOPIFY_STORE_DOMAIN: 'shop.myshopify.com', SHOPIFY_ADMIN_API_TOKEN: 'token'};
 const ON = {...ENV, WHOLESALE_APPROVE_WRITE_ENABLED: '1', TRADE_MAIL_ENABLED: '1', RESEND_API_KEY: 'key', PUBLIC_COMPANY_EMAIL: 'contact@example.eu'};
-const app = (a: Omit<Application, 'lang'>): Application => ({...a, lang: a.country === 'BE' || a.country === 'NL' ? 'nl' : 'en'});
+const app = (a: Application): Application => a;
 const plan = (w: ReturnType<typeof world>, a: Application) => planOnboarding(adminClient(ENV, w.fetcher), a, {fetcher: w.fetcher, now: NOW});
 const slots = (p: Awaited<ReturnType<typeof plan>>) => p.slots.map((s) => [s.code, s.action, s.pct, s.variants.join(','), s.unitCents.toFixed(2), s.lineCents.toFixed(1)]);
 
@@ -320,7 +315,7 @@ describe('approve', () => {
 
 describe('welcome mail', () => {
   const base = {email: 'buyer@example.eu', contact: 'Sam Example', company: 'Example Shop', code: 'WS25-EXAMPLESHOP', vatShown: ''};
-  const mail = (lang: 'en' | 'nl', kind: MailCase, country: string, vatShown = '') => welcomeMail({...base, lang, kind, country, vatShown});
+  const mail = (kind: MailCase, country: string, vatShown = '') => welcomeMail({...base, kind, country, vatShown});
   const common = (text: string) => {
     assert.match(text, /WS25-EXAMPLESHOP/);
     assert.match(text, /https:\/\/opendrone\.be\/cart /);
@@ -330,26 +325,25 @@ describe('welcome mail', () => {
     assert.doesNotMatch(text, /\u2014|\u2013/);
   };
 
-  it('BE in Dutch: 21% Belgian VAT, Peppol', () => {
-    const {subject, text} = mail('nl', 'be', 'BE');
+  it('BE in English: 21% Belgian VAT, Peppol', () => {
+    const {subject, text} = mail('be', 'BE');
     common(text);
-    assert.equal(subject, 'Je OpenDrone wholesale-code: WS25-EXAMPLESHOP');
-    assert.match(text, /25% korting op de adviesprijs van alle OpenDrone-producten, zonder minimum/);
-    assert.match(text, /21% Belgische btw/);
-    assert.match(text, /via Peppol/);
-    assert.match(text, /bedrijfsnaam/);
+    assert.equal(subject, 'Your OpenDrone wholesale code: WS25-EXAMPLESHOP');
+    assert.match(text, /^Hello Sam Example,/);
+    assert.match(text, /You pay 21% Belgian VAT/);
+    assert.match(text, /through Peppol/);
   });
 
-  it('NL reverse charge in Dutch', () => {
-    const {text} = mail('nl', 'reverse-charge', 'NL', 'NL123456789B01');
+  it('NL reverse charge in English', () => {
+    const {text} = mail('reverse-charge', 'NL', 'NL123456789B01');
     common(text);
-    assert.match(text, /NL123456789B01 is geldig in VIES, dus je betaalt geen btw/);
-    assert.match(text, /75% van de netto adviesprijs, de adviesprijs zonder de 21% btw van Nederland/);
+    assert.match(text, /NL123456789B01 is valid in VIES, so you pay no VAT/);
+    assert.match(text, /75% of net retail, the retail price without the 21% VAT of Netherlands/);
     assert.doesNotMatch(text, /Peppol/);
   });
 
   it('DE reverse charge in English', () => {
-    const {subject, text} = mail('en', 'reverse-charge', 'DE', 'DE123456789');
+    const {subject, text} = mail('reverse-charge', 'DE', 'DE123456789');
     common(text);
     assert.equal(subject, 'Your OpenDrone wholesale code: WS25-EXAMPLESHOP');
     assert.match(text, /25% off retail on all OpenDrone products, with no minimum order/);
@@ -361,38 +355,38 @@ describe('welcome mail', () => {
   });
 
   it('HU without a valid number pays Hungarian VAT until it sends one', () => {
-    const invalid = mail('en', 'eu-vat', 'HU', 'HU12345678').text;
+    const invalid = mail('eu-vat', 'HU', 'HU12345678').text;
     assert.match(invalid, /could not confirm your VAT number HU12345678 in VIES, so you pay the VAT of Hungary \(27%\)/);
     assert.match(invalid, /Send us a valid VAT number/);
-    assert.match(mail('en', 'eu-vat', 'HU').text, /You did not give a VAT number, so you pay the VAT of Hungary \(27%\)/);
+    assert.match(mail('eu-vat', 'HU').text, /You did not give a VAT number, so you pay the VAT of Hungary \(27%\)/);
   });
 
   it('says what ships when: in-stock boards in days (by courier outside the EU), one parcel per order, EORI for the UK', () => {
-    const be = mail('nl', 'be', 'BE').text;
-    assert.match(be, /in voorraad zijn in België vertrekken binnen enkele werkdagen\. /);
-    assert.match(be, /Eén bestelling vertrekt als één pakket/);
-    const gb = mail('en', 'non-eu', 'GB').text;
+    const be = mail('be', 'BE').text;
+    assert.match(be, /in stock in Belgium ship within a few working days\. /);
+    assert.match(be, /One order ships as one parcel/);
+    const gb = mail('non-eu', 'GB').text;
     assert.match(gb, /ship within a few working days, by courier\./);
     assert.match(gb, /One order ships as one parcel/);
     assert.match(gb, /VAT and EORI number/);
-    assert.doesNotMatch(mail('en', 'non-eu', 'PH').text, /EORI/);
-    const us = mail('en', 'us', 'US').text;
+    assert.doesNotMatch(mail('non-eu', 'PH').text, /EORI/);
+    const us = mail('us', 'US').text;
     assert.match(us, /Everything ships with the batch shown on its product page/);
     assert.doesNotMatch(us, /within a few working days/);
   });
 
   it('outside the EU: no EU VAT, duties are the buyer\'s; the US price includes duties', () => {
-    const ph = mail('en', 'non-eu', 'PH').text;
+    const ph = mail('non-eu', 'PH').text;
     common(ph);
     assert.match(ph, /no EU VAT/);
     assert.match(ph, /Import duties and local taxes are yours/);
-    assert.match(mail('en', 'us', 'US').text, /US price in USD, import duties included/);
+    assert.match(mail('us', 'US').text, /US price in USD, import duties included/);
   });
 
-  it('the plan picks the language and case from the application', async () => {
+  it('the plan picks the case from the application, always in English', async () => {
     const nl = await plan(world(), app({email: 'winkel@example.eu', country: 'NL', vat: 'NL123456789B01', company: 'Voorbeeld BV', contact: 'Piet Example'}));
     assert.equal(nl.mailCase, 'reverse-charge');
-    assert.match(nl.mail.text, /^Hallo Piet Example,/);
+    assert.match(nl.mail.text, /^Hello Piet Example,/);
     assert.match(nl.mail.text, /WS25-VOORBEELDBV/);
     const ph = await plan(world(), app({email: 'shop-ph@example.eu', country: 'PH', vat: '', company: 'Sample Trading Inc', contact: 'Maria Example'}));
     assert.match(ph.mail.text, /^Hello Maria Example,/);
