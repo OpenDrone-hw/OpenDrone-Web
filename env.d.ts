@@ -228,7 +228,7 @@ declare global {
     DISCORD_SUPPORT_INVITE?: string;
     PUBLIC_DISCORD_INVITE?: string;
 
-    // Support tickets (app/lib/support/, README "Support"). SUPPORT_DB is
+    // Support tickets (app/lib/support/, docs/support.md "Support tickets"). SUPPORT_DB is
     // the D1 ticket index; the conversation itself lives in one private
     // Discord thread per ticket under DISCORD_SUPPORT_CHANNEL_ID.
     SUPPORT_DB?: D1Database;
@@ -243,7 +243,7 @@ declare global {
     SUPPORT_SESSION_SECRET?: string;
     // Bearer token for POST /api/support/cleanup.
     SUPPORT_CLEANUP_SECRET?: string;
-    // Support CRM (app/lib/support/crm.ts, README "Support tickets"). Both
+    // Support CRM (app/lib/support/crm.ts, docs/support.md "Support CRM (staff API and community route)"). Both
     // flags are [vars], "1" on, off by default. SUPPORT_FILES is the R2
     // bucket for attachments (declared in the wrangler files once it exists).
     // The token and the Access settings are Worker secrets.
@@ -280,7 +280,7 @@ declare global {
     SUPPORT_DEV_SHOPIFY_ADMIN_URL?: string;
     SUPPORT_DEV_GMAIL_API?: string;
 
-    // Customer mail drafts (app/lib/support/mail.ts, README "Mail"). SUPPORT_MAIL_INTAKE_ENABLED is a [var]: "1" on, "dry" report
+    // Customer mail drafts (app/lib/support/mail.ts, docs/support.md "Mail"). SUPPORT_MAIL_INTAKE_ENABLED is a [var]: "1" on, "dry" report
     // only, anything else off. SUPPORT_MAIL_SA_JSON (the service account key
     // file) and SUPPORT_MAIL_MAILBOX are Worker secrets; the allow and deny
     // lists may name suppliers, so they are secrets too, never in the repo.
@@ -300,7 +300,7 @@ declare global {
     RESEND_API_KEY?: string;
     SUPPORT_FROM_EMAIL?: string;
 
-    // ChatFPV (app/lib/support/chatfpv.ts, README "Support tickets"). The
+    // ChatFPV (app/lib/support/chatfpv.ts, docs/support.md "ChatFPV (AI)"). The
     // three switches are [vars], "1" to turn on; CHATFPV_KEY (the store key
     // for /v1/draft) is a Worker secret, read on the server only.
     CHATFPV_URL?: string;
@@ -313,7 +313,7 @@ declare global {
     /** "1": ChatFPV handoff tickets (`#cfh`) open the product page widget (app/lib/accounts/handoff.ts). */
     HANDOFF_ENABLED?: string;
 
-    // Shared accounts (app/lib/accounts/, README "Shared accounts").
+    // Shared accounts (app/lib/accounts/, docs/accounts.md "Shared accounts").
     // ACCOUNTS_ENABLED "1" turns on /account/login, /account/callback,
     // /account/logout, /account, /oauth/* and /api/account/widget-assertion.
     // ACCOUNTS_TEST_IDP is never set in production; it is honoured only on

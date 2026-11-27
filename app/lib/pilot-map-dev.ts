@@ -1,5 +1,5 @@
 /**
- * Local-development stand-in for Discord's OAuth screen (README "Owners map").
+ * Local-development stand-in for Discord's OAuth screen (docs/accounts.md "Owners map").
  *
  * Only the dev server loads this file: every caller imports it dynamically
  * behind `import.meta.env.DEV`, a production build replaces that with `false`

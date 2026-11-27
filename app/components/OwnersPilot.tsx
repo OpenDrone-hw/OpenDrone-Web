@@ -8,7 +8,7 @@ import type {OwnPin} from '~/lib/pilot-map-data';
 import type {PilotPanel} from '~/lib/pilot-map-server';
 
 /**
- * The pilot block of the owners card (README "Owners map"). The server decides
+ * The pilot block of the owners card (docs/accounts.md "Owners map"). The server decides
  * what this viewer may see (`pilotPanel`, app/lib/pilot-map-server.ts); this
  * component only draws what it was given:
  *

@@ -1,4 +1,4 @@
--- Shared accounts (README "Shared accounts", app/lib/accounts/). Times are
+-- Shared accounts (docs/accounts.md "Shared accounts", app/lib/accounts/). Times are
 -- epoch milliseconds. No email or name: Shopify owns the customer record.
 -- od_sessions.id_hash is SHA-256 of the __Host-od_sid cookie value and is
 -- also the `sid` given to chatfpv.com; shopify_id_token is AES-GCM sealed

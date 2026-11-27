@@ -2,9 +2,9 @@
 
 Repository topics describe roadmap lifecycle. Display status and server-side
 purchase authorization are separate gates; a topic change does not open orders.
-Opening or closing checkout is a production configuration change (README
-"Open or close the shop") and needs the founder's go. A merge to `main`
-deploys production.
+Opening or closing checkout is a production configuration change
+([selling.md](selling.md#open-or-close-the-shop)) and needs the founder's go.
+A merge to `main` deploys production.
 
 ## Roadmap taxonomy
 

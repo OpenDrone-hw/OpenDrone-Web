@@ -966,8 +966,8 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
     const existingId = dependencies.getCartId?.();
 
     if (intent === 'discount') {
-      // The cart's discount code field. A retailer's personal code (README
-      // "Trade") goes in with its price-group companions and opens the
+      // The cart's discount code field. A retailer's personal code (docs/wholesale.md
+      // "Login and checkout") goes in with its price-group companions and opens the
       // retailer lane; any other code goes to Shopify as typed. An empty
       // field clears the codes.
       if (!existingId || !dependencies.setDiscountCodes) throw fail('Cart is empty.', 409);

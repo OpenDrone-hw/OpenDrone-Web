@@ -135,7 +135,7 @@ function buildRevision(): string {
 export default defineConfig({
   // Worktrees that share one node_modules also share node_modules/.vite, and
   // two dev servers on one cache serve each other's stale deps. A dev server
-  // started with VITE_CACHE_DIR=.vite-cache keeps its own (README "Test
+  // started with VITE_CACHE_DIR=.vite-cache keeps its own (docs/support.md "Test
   // support locally").
   cacheDir: process.env.VITE_CACHE_DIR || undefined,
   define: {

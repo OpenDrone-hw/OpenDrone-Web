@@ -1,5 +1,5 @@
 /**
- * The owners map's privacy rules, as pure functions (README "Owners map").
+ * The owners map's privacy rules, as pure functions (docs/accounts.md "Owners map").
  *
  * Input: how many distinct paying customers ship to each country and, for the
  * United States, each state. Output: the only thing the site ever stores and
@@ -207,7 +207,7 @@ export function tallyOwners(orders: OwnerOrder[]): RawCounts {
 
 /**
  * Aggregate counts shaped like the real thing, for local development. Never
- * read orders in dev: this stands in for them (OWNER_MAP_FIXTURE, README).
+ * read orders in dev: this stands in for them (OWNER_MAP_FIXTURE, docs/accounts.md "Owners map").
  */
 export function fixtureCounts(): RawCounts {
   const usStates: Record<string, number> = {

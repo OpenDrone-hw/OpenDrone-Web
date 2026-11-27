@@ -1,5 +1,5 @@
 /**
- * The Gmail draft for a customer mail (README "Mail"): a plain text UTF-8
+ * The Gmail draft for a customer mail (docs/support.md "Mail"): a plain text UTF-8
  * reply in the customer's Gmail thread, built as an RFC 2822 message and
  * encoded base64url for `users.drafts.create`. A person edits and sends it
  * from Gmail; nothing here sends anything.

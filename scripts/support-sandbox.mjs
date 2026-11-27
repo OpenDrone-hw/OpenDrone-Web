@@ -4,7 +4,7 @@
  * Shopify Admin API and an empty Storefront catalogue, so the ticket system
  * runs end to end on the dev server without posting to the real Discord or
  * touching the real Shopify store.
- * README "Test support locally" has the walkthrough.
+ * docs/support.md "Test support locally" has the walkthrough.
  *
  *   npm run support:sandbox -- [--port 5196] [--dev-port 5195] [--moderation off|enforce] [--write-env]
  *       applies migrations/ to this worktree's local D1, prints (or with

@@ -11,7 +11,7 @@ import {publicSnapshot, type PublicSnapshot} from '~/lib/owner-map';
 
 /**
  * The public owners map: which countries and US states have owners, never
- * how many (app/lib/owner-map.ts holds the suppression rules, README
+ * how many (app/lib/owner-map.ts holds the suppression rules, docs/accounts.md
  * "Owners map" the whole feature). The loader sends names-free ids, shading
  * levels, a milestone and a country floor, and no other number. Words live in `content/copy/owners.json`.
  *

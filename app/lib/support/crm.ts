@@ -1,5 +1,5 @@
 /**
- * Staff actions of the CRM (README "Support tickets"). The staff API
+ * Staff actions of the CRM (docs/support.md "Support CRM (staff API and community route)"). The staff API
  * (staff-api.ts) calls these; each is a rule on its own, tested without HTTP.
  * Staff replies are written to the customer-visible conversation; the ticket
  * page shows them at once and the cron's reply notice mails the customer, the
