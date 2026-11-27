@@ -302,66 +302,21 @@ export async function approveApplication(
 
 const SHOP = 'https://opendrone.be';
 
-function countryName(cc: string, lang: 'en' | 'nl'): string {
+function countryName(cc: string): string {
   try {
-    return new Intl.DisplayNames(lang, {type: 'region'}).of(cc) ?? cc;
+    return new Intl.DisplayNames('en', {type: 'region'}).of(cc) ?? cc;
   } catch {
     return cc;
   }
 }
 
-/** The welcome mail, plain text, in the retailer's language (Dutch for BE and NL, English otherwise). */
+/** The welcome mail, plain text, in English for every retailer (Belgium alone has three languages). */
 export function welcomeMail(m: {
-  lang: 'en' | 'nl'; kind: MailCase; email: string; contact: string; company: string; country: string; code: string; vatShown: string;
+  kind: MailCase; email: string; contact: string; company: string; country: string; code: string; vatShown: string;
 }): {subject: string; text: string} {
-  const land = countryName(m.country, m.lang);
+  const land = countryName(m.country);
   const rate = EU_VAT[m.country];
-  const company = m.company || (m.lang === 'nl' ? 'je bedrijf' : 'your company');
-  if (m.lang === 'nl') {
-    const vat: Record<MailCase, string> = {
-      be: 'Je betaalt 21% Belgische btw, inbegrepen in de prijs.',
-      'reverse-charge': `Je btw-nummer ${m.vatShown} is geldig in VIES, dus je betaalt geen btw: de btw is verlegd en je geeft ze zelf aan in ${land}. Je prijzen zijn 75% van de netto adviesprijs, de adviesprijs zonder de ${rate}% btw van ${land}. Bij het afrekenen staat er geen btw-lijn.`,
-      'eu-vat': `${m.vatShown ? `We konden je btw-nummer ${m.vatShown} niet bevestigen in VIES` : 'Je gaf geen btw-nummer op'}, dus je betaalt de btw van ${land} (${rate}%), zoals bij elke bestelling naar ${land}. Stuur ons een geldig btw-nummer, dan zetten we je over naar verlegging: geen btw, aan 75% van de netto adviesprijs.`,
-      us: 'Bestellingen naar de Verenigde Staten dragen geen EU-btw: je betaalt 75% van onze Amerikaanse prijs in USD, invoerrechten inbegrepen.',
-      'non-eu': 'Bestellingen buiten de EU dragen geen EU-btw: je betaalt 75% van onze internationale prijs, die zonder EU-btw is. Invoerrechten en lokale belastingen zijn voor jou.',
-    };
-    return {
-      subject: `Je OpenDrone wholesale-code: ${m.code}`,
-      text: [
-        `Hallo ${m.contact},`,
-        '',
-        `Je wholesale-account voor ${company} bij OpenDrone staat klaar. Je krijgt 25% korting op de adviesprijs van alle OpenDrone-producten, zonder minimum bestelling.`,
-        '',
-        `Je wholesale-code: ${m.code}`,
-        '',
-        'Zo bestel je',
-        `1. Leg de producten in je winkelwagen op ${SHOP}.`,
-        `2. Open je winkelwagen op ${SHOP}/cart en vul ${m.code} in bij Discount code. Onder elke lijn zie je de korting.`,
-        `3. Meld je bij het afrekenen aan met precies dit e-mailadres: ${m.email}. Shopify mailt je een inlogcode. De code werkt alleen voor dit adres: meldt Shop Pay je aan met een ander adres, dan valt de code weg en zie je de volle prijs. Meld je dan daar af bij Shop Pay en meld je aan met ${m.email}.`,
-        `4. Vul bij het afrekenen je bedrijfsnaam in (${company}) en betaal. Verzending wordt normaal aangerekend.`,
-        '',
-        'Wat vertrekt wanneer',
-        m.kind === 'us'
-          ? 'Alles vertrekt met de batch die op de productpagina staat.'
-          : `FC's en ESC's die in voorraad zijn in België vertrekken binnen enkele werkdagen${m.kind === 'non-eu' ? ', per koerier' : ''}. De rest vertrekt met de batch die op de productpagina staat.`,
-        "Eén bestelling vertrekt als één pakket: zit er iets in dat op een batch wacht, dan wacht de hele bestelling. Bestel de FC's en ESC's apart om ze meteen te krijgen.",
-        '',
-        'Btw',
-        vat[m.kind],
-        '',
-        'Factuur',
-        m.country === 'BE'
-          ? 'Bij elke bestelling volgt een factuur op naam van je bedrijf, via Peppol.'
-          : 'Bij elke bestelling volgt een factuur op naam van je bedrijf per e-mail.',
-        '',
-        'Actuele prijzen en batchdata staan op elke productpagina.',
-        '',
-        'Vragen? Antwoord op deze mail.',
-        '',
-        'OpenDrone',
-      ].join('\n'),
-    };
-  }
+  const company = m.company || 'your company';
   const vat: Record<MailCase, string> = {
     be: 'You pay 21% Belgian VAT, included in the price.',
     'reverse-charge': `Your VAT number ${m.vatShown} is valid in VIES, so you pay no VAT: reverse charge, you account for the VAT in ${land}. Your prices are 75% of net retail, the retail price without the ${rate}% VAT of ${land}. Checkout shows no VAT line.`,
