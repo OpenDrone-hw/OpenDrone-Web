@@ -270,7 +270,7 @@ summary{cursor:pointer;color:var(--muted)}
 <main>
 <h1>OpenDrone emails</h1>
 <p class="muted">${cards.length} email previews${catalog ? `, generated ${esc(catalog.generatedAt)}` : ''}${live ? '. Refreshes as your agent makes changes' : ''}. All names and addresses are examples.</p>
-<p class="review-flow">Pick an email and review its desktop and phone previews. Tell your agent the email name, scenario and requested changes here or in Notion. The agent updates the previews and installs approved notification templates in Shopify. Review and send the launch campaign in Shopify Email.</p>
+<p class="review-flow">Pick an email and review its desktop and phone previews. Tell your agent the email name, scenario and requested changes here or on the task. The agent updates the previews and installs approved notification templates in Shopify. Review and send the launch campaign in Shopify Email.</p>
 ${fatal}${summary}
 <div class="filters">
 <label>Find an email<input id="email-search" type="search" placeholder="Order, refund, US receiver…"></label>
